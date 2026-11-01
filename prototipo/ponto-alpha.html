@@ -28,7 +28,7 @@
                             redDark: '#4a1717',
                             komonaBlue: '#3b5266',
                             textGlow: '#8fad88',
-                            textMuted: '#687a66'
+                            textMuted: '#9bb095'
                         }
                     },
                     fontFamily: {
@@ -120,23 +120,23 @@
         <header class="bg-mil-panel border-b border-mil-border p-2 z-20 flex justify-between items-center text-xs">
             <div class="flex items-center gap-2">
                 <span class="inline-block w-2.5 h-2.5 bg-mil-greenMuted rounded-sm animate-pulse"></span>
-                <span class="font-bold tracking-widest text-mil-textGlow text-[11px] uppercase">KOMONA // TERMINAL ALPHA</span>
+                <span class="font-bold tracking-widest text-mil-textGlow text-[13px] uppercase whitespace-nowrap">KOMONA // TERMINAL ALPHA</span>
             </div>
             <!-- Audio Toggle & Time Speed Controls -->
             <div class="flex items-center gap-1.5">
-                <button id="btn-audio" onclick="toggleAudio()" class="px-2 py-0.5 rounded btn-tactical text-[10px]" title="Sons Sintetizados de Campo">
+                <button id="btn-audio" onclick="toggleAudio()" class="px-2 py-0.5 rounded btn-tactical text-xs" title="Sons Sintetizados de Campo">
                     <i id="ico-audio" class="fa-solid fa-volume-xmark text-red-400"></i>
                 </button>
                 <div class="h-4 w-px bg-mil-border"></div>
-                <button id="btn-sp-0" onclick="setSpeed(0)" class="px-2 py-0.5 rounded btn-tactical text-[10px]">⏸</button>
-                <button id="btn-sp-1" onclick="setSpeed(1)" class="px-2 py-0.5 rounded btn-tactical btn-active-order text-[10px] font-bold">1x</button>
-                <button id="btn-sp-2" onclick="setSpeed(2)" class="px-2 py-0.5 rounded btn-tactical text-[10px]">2x</button>
-                <button id="btn-sp-4" onclick="setSpeed(4)" class="px-2 py-0.5 rounded btn-tactical text-[10px]">4x</button>
+                <button id="btn-sp-0" onclick="setSpeed(0)" class="px-2 py-0.5 rounded btn-tactical text-xs">⏸</button>
+                <button id="btn-sp-1" onclick="setSpeed(1)" class="px-2 py-0.5 rounded btn-tactical btn-active-order text-xs font-bold">1x</button>
+                <button id="btn-sp-2" onclick="setSpeed(2)" class="px-2 py-0.5 rounded btn-tactical text-xs">2x</button>
+                <button id="btn-sp-4" onclick="setSpeed(4)" class="px-2 py-0.5 rounded btn-tactical text-xs">4x</button>
             </div>
         </header>
 
         <!-- SUB-HEADER: DATE, TIME & WEATHER BAR -->
-        <div class="bg-mil-bg border-b border-mil-border px-3 py-1 flex justify-between items-center text-[11px] text-mil-textMuted font-mono z-20">
+        <div class="bg-mil-bg border-b border-mil-border px-3 py-1 flex justify-between items-center text-[13px] text-mil-textMuted font-mono z-20">
             <div class="flex items-center gap-2">
                 <i class="fa-regular fa-clock text-mil-greenMuted"></i>
                 <span>DIA <strong id="lbl-day" class="text-mil-textGlow font-bold">1</strong>/30</span>
@@ -145,7 +145,7 @@
             </div>
             <div class="flex items-center gap-1.5">
                 <i id="ico-weather" class="fa-solid fa-cloud-sun text-mil-amberMuted"></i>
-                <span id="lbl-weather" class="text-mil-textGlow uppercase text-[10px]">Nublado</span>
+                <span id="lbl-weather" class="text-mil-textGlow uppercase text-xs">Nublado</span>
             </div>
         </div>
 
@@ -156,7 +156,7 @@
             <div class="relative bg-mil-panel border-tactical rounded overflow-hidden flex flex-col shadow-2xl">
 
                 <!-- TOPOGRAPHIC MAP BAR -->
-                <div class="bg-black/80 px-2 py-1 flex justify-between items-center text-[10px] text-mil-textMuted border-b border-mil-border z-20">
+                <div class="bg-black/80 px-2 py-1 flex justify-between items-center text-xs text-mil-textMuted border-b border-mil-border z-20">
                     <span class="flex items-center gap-1.5">
                         <i class="fa-solid fa-compass text-mil-greenMuted"></i> SEÇÃO DEFENSIVA (0m - 300m)
                     </span>
@@ -171,21 +171,21 @@
                     <div id="fog-warning" class="hidden absolute inset-0 bg-black/90 flex flex-col items-center justify-center text-center p-4 z-30">
                         <i class="fa-solid fa-eye-slash text-mil-redAlert text-3xl mb-2 animate-bounce"></i>
                         <span class="text-mil-redAlert font-bold text-xs uppercase tracking-widest">NENHUM SOLDADO EM VIGÍLIA</span>
-                        <p class="text-mil-textMuted text-[10px] mt-1 max-w-xs">Perímetro sem observação. Riscos graves de emboscada sem inteligência do terreno.</p>
+                        <p class="text-mil-textMuted text-xs mt-1 max-w-xs">Perímetro sem observação. Riscos graves de emboscada sem inteligência do terreno.</p>
                     </div>
 
                     <!-- COMBAT ALERT BANNER -->
-                    <div id="map-alert-banner" class="hidden absolute top-2 left-2 right-2 bg-mil-redDark/90 border border-mil-redAlert px-2 py-1 rounded text-[10px] text-red-200 flex items-center justify-between z-20 shadow-2xl animate-alert-pulse">
+                    <div id="map-alert-banner" class="hidden absolute top-2 left-2 right-2 bg-mil-redDark/90 border border-mil-redAlert px-2 py-1 rounded text-xs text-red-200 flex items-center justify-between z-20 shadow-2xl animate-alert-pulse">
                         <span class="flex items-center gap-1.5 font-bold">
                             <i class="fa-solid fa-triangle-exclamation text-red-400"></i>
                             <span id="map-alert-text">CONTATO INIMIGO A 200M</span>
                         </span>
-                        <span class="text-[9px] text-red-300 italic">ASSALTO NORTE</span>
+                        <span class="text-xs text-red-300 italic">ASSALTO NORTE</span>
                     </div>
                 </div>
 
                 <!-- QUICK ORDERS PANEL -->
-                <div class="grid grid-cols-2 gap-1 p-1 bg-mil-bg border-t border-mil-border text-[10px]">
+                <div class="grid grid-cols-2 gap-1 p-1 bg-mil-bg border-t border-mil-border text-xs">
                     <button id="btn-ord-suppress" onclick="toggleTacticalOrder('SUPPRESSION')" class="py-1.5 px-2 btn-tactical rounded flex items-center justify-center gap-1.5">
                         <i class="fa-solid fa-burst text-mil-amberMuted"></i> Fogo Supressão
                     </button>
@@ -202,7 +202,7 @@
             </div>
 
             <!-- TACTICAL FEED LOG (Terminal Output Style) -->
-            <div class="bg-black/90 border-tactical rounded p-2 text-[10px] h-20 overflow-y-auto flex flex-col gap-1 font-mono text-mil-textGlow" id="feed-log">
+            <div class="bg-black/90 border-tactical rounded p-2 text-xs h-20 overflow-y-auto flex flex-col gap-1 font-mono text-mil-textGlow" id="feed-log">
                 <div class="text-mil-amberMuted">[08:00] Ponto Alpha estabelecido. Comandante assumiu posições de defesa em Komona.</div>
             </div>
 
@@ -210,7 +210,7 @@
             <div class="flex-1 flex flex-col bg-mil-panel border-tactical rounded overflow-hidden">
 
                 <!-- PANEL TABS -->
-                <div class="grid grid-cols-4 bg-black/60 border-b border-mil-border text-[10px] text-center font-bold">
+                <div class="grid grid-cols-4 bg-black/60 border-b border-mil-border text-xs text-center font-bold">
                     <button onclick="switchTab('squad')" id="tab-squad" class="py-2 border-b-2 border-mil-greenMuted text-mil-textGlow bg-mil-panel">
                         1. ESQUADRÃO
                     </button>
@@ -230,7 +230,7 @@
 
                     <!-- 1. SQUAD STATUS PANEL -->
                     <div id="panel-squad" class="space-y-2">
-                        <div class="text-[9px] text-mil-textMuted flex justify-between items-center mb-1 border-b border-mil-borderDark pb-1">
+                        <div class="text-xs text-mil-textMuted flex justify-between items-center mb-1 border-b border-mil-borderDark pb-1">
                             <span>RELAÇÃO DO ESQUADRÃO (6 EFETIVOS)</span>
                             <span class="text-mil-amberMuted">ALOCAÇÃO DE FUNÇÕES</span>
                         </div>
@@ -243,25 +243,25 @@
                     <div id="panel-logistics" class="hidden space-y-3">
                         <!-- SUPPLY LINE EFFICIENCY -->
                         <div class="bg-mil-bg border border-mil-border p-2 rounded">
-                            <div class="flex justify-between items-center text-[11px] mb-1">
+                            <div class="flex justify-between items-center text-[13px] mb-1">
                                 <span class="font-bold text-mil-textGlow">EFICIÊNCIA DA LINHA DE SUPRIMENTOS</span>
                                 <span id="lbl-supply-eff" class="font-bold text-mil-greenMuted">85%</span>
                             </div>
                             <div class="w-full bg-black h-2 rounded border border-mil-border overflow-hidden">
                                 <div id="bar-supply-eff" class="bg-mil-greenMuted h-full transition-all duration-300" style="width: 85%"></div>
                             </div>
-                            <p id="lbl-supply-status" class="text-[9px] text-mil-textMuted mt-1">Estradas desimpedidas na retaguarda. Entregas em ritmo regular.</p>
+                            <p id="lbl-supply-status" class="text-xs text-mil-textMuted mt-1">Estradas desimpedidas na retaguarda. Entregas em ritmo regular.</p>
                         </div>
 
                         <!-- METERS GRID -->
-                        <div class="grid grid-cols-2 gap-2 text-[10px]">
+                        <div class="grid grid-cols-2 gap-2 text-xs">
                             <!-- Rations -->
                             <div class="bg-mil-bg border border-mil-border p-2 rounded">
                                 <div class="flex justify-between text-mil-textMuted">
                                     <span><i class="fa-solid fa-utensils text-mil-amberMuted"></i> Ração</span>
                                     <span id="val-rations" class="font-bold text-mil-textGlow">36 un</span>
                                 </div>
-                                <div class="text-[8px] text-mil-textMuted mt-1">Consumo: ~7un / dia</div>
+                                <div class="text-[11px] text-mil-textMuted mt-1">Consumo: ~7un / dia</div>
                             </div>
                             <!-- Water -->
                             <div class="bg-mil-bg border border-mil-border p-2 rounded">
@@ -269,7 +269,7 @@
                                     <span><i class="fa-solid fa-bottle-water text-mil-komonaBlue"></i> Água</span>
                                     <span id="val-water" class="font-bold text-mil-textGlow">48 L</span>
                                 </div>
-                                <div class="text-[8px] text-mil-textMuted mt-1">Consumo: ~7L / dia</div>
+                                <div class="text-[11px] text-mil-textMuted mt-1">Consumo: ~7L / dia</div>
                             </div>
                             <!-- Light Ammo -->
                             <div class="bg-mil-bg border border-mil-border p-2 rounded">
@@ -277,7 +277,7 @@
                                     <span><i class="fa-solid fa-gun text-mil-greenMuted"></i> Mun. Leve</span>
                                     <span id="val-ammo-rifle" class="font-bold text-mil-textGlow">550 cart.</span>
                                 </div>
-                                <div class="text-[8px] text-mil-textMuted mt-1">Uso em Fuzis / Snipers</div>
+                                <div class="text-[11px] text-mil-textMuted mt-1">Uso em Fuzis / Snipers</div>
                             </div>
                             <!-- Heavy Ammo -->
                             <div class="bg-mil-bg border border-mil-border p-2 rounded">
@@ -285,17 +285,17 @@
                                     <span><i class="fa-solid fa-burst text-red-500"></i> Mun. Pesada</span>
                                     <span id="val-ammo-heavy" class="font-bold text-mil-textGlow">200 cart.</span>
                                 </div>
-                                <div class="text-[8px] text-mil-textMuted mt-1">Uso em Fogo Supressivo</div>
+                                <div class="text-[11px] text-mil-textMuted mt-1">Uso em Fogo Supressivo</div>
                             </div>
                         </div>
 
                         <!-- Medkits -->
-                        <div class="bg-mil-bg border border-mil-border p-2 rounded flex justify-between items-center text-[11px]">
+                        <div class="bg-mil-bg border border-mil-border p-2 rounded flex justify-between items-center text-[13px]">
                             <div class="flex items-center gap-2">
                                 <i class="fa-solid fa-kit-medical text-red-500 text-base"></i>
                                 <div>
                                     <div class="font-bold text-mil-textGlow">Kits Médicos de Campo</div>
-                                    <div class="text-[9px] text-mil-textMuted">Tratamento imediato de feridos</div>
+                                    <div class="text-xs text-mil-textMuted">Tratamento imediato de feridos</div>
                                 </div>
                             </div>
                             <span id="val-medkits" class="font-bold text-red-400 text-sm">3 kits</span>
@@ -306,23 +306,23 @@
                     <div id="panel-radio" class="hidden space-y-3">
                         <div class="bg-mil-bg border border-mil-border p-2 rounded flex justify-between items-center">
                             <div>
-                                <span class="text-[9px] text-mil-textMuted block">PRESTÍGIO COM O COMANDO</span>
+                                <span class="text-xs text-mil-textMuted block">PRESTÍGIO COM O COMANDO</span>
                                 <span id="lbl-prestige" class="text-lg font-bold text-mil-amberMuted">150 PTS</span>
                             </div>
-                            <button onclick="sendIntelReport()" class="px-3 py-1.5 btn-tactical rounded font-bold text-[10px] flex items-center gap-1">
+                            <button onclick="sendIntelReport()" class="px-3 py-1.5 btn-tactical rounded font-bold text-xs flex items-center gap-1">
                                 <i class="fa-solid fa-paper-plane text-mil-greenMuted"></i> Enviar Relatório (+50)
                             </button>
                         </div>
 
-                        <div class="text-[9px] text-mil-textMuted uppercase font-bold tracking-wider mt-1">APOIOS OPERACIONAIS</div>
+                        <div class="text-xs text-mil-textMuted uppercase font-bold tracking-wider mt-1">APOIOS OPERACIONAIS</div>
 
-                        <div class="space-y-2 text-[10px]">
+                        <div class="space-y-2 text-xs">
                             <div class="bg-mil-bg border border-mil-border p-2 rounded flex justify-between items-center">
                                 <div>
                                     <div class="font-bold text-red-400"><i class="fa-solid fa-bomb"></i> Fogo de Artilharia</div>
-                                    <div class="text-[8px] text-mil-textMuted">Elimina formações de infantaria inimiga</div>
+                                    <div class="text-[11px] text-mil-textMuted">Elimina formações de infantaria inimiga</div>
                                 </div>
-                                <button onclick="requestSupport('ARTILLERY')" class="px-2 py-1 btn-tactical rounded font-bold text-[10px]">
+                                <button onclick="requestSupport('ARTILLERY')" class="px-2 py-1 btn-tactical rounded font-bold text-xs">
                                     100 PTS
                                 </button>
                             </div>
@@ -330,9 +330,9 @@
                             <div class="bg-mil-bg border border-mil-border p-2 rounded flex justify-between items-center">
                                 <div>
                                     <div class="font-bold text-blue-400"><i class="fa-solid fa-truck-medical"></i> Evacuação Médica</div>
-                                    <div class="text-[8px] text-mil-textMuted">Resgata e recupera feridos graves</div>
+                                    <div class="text-[11px] text-mil-textMuted">Resgata e recupera feridos graves</div>
                                 </div>
-                                <button onclick="requestSupport('MEDEVAC')" class="px-2 py-1 btn-tactical rounded font-bold text-[10px]">
+                                <button onclick="requestSupport('MEDEVAC')" class="px-2 py-1 btn-tactical rounded font-bold text-xs">
                                     150 PTS
                                 </button>
                             </div>
@@ -340,9 +340,9 @@
                             <div class="bg-mil-bg border border-mil-border p-2 rounded flex justify-between items-center">
                                 <div>
                                     <div class="font-bold text-mil-amberMuted"><i class="fa-solid fa-parachute-box"></i> Carga Emergencial</div>
-                                    <div class="text-[8px] text-mil-textMuted">+20 Ração, +30L Água, +250 Mun.</div>
+                                    <div class="text-[11px] text-mil-textMuted">+20 Ração, +30L Água, +250 Mun.</div>
                                 </div>
-                                <button onclick="requestSupport('SUPPLY')" class="px-2 py-1 btn-tactical rounded font-bold text-[10px]">
+                                <button onclick="requestSupport('SUPPLY')" class="px-2 py-1 btn-tactical rounded font-bold text-xs">
                                     120 PTS
                                 </button>
                             </div>
@@ -351,8 +351,8 @@
 
                     <!-- 4. DIARY & CRISIS PANEL -->
                     <div id="panel-diary" class="hidden space-y-2">
-                        <div class="text-[9px] text-mil-textMuted mb-1">DIÁRIO DE GUERRA DO SARGENTO</div>
-                        <div id="diary-entries" class="space-y-2 text-[10px] text-mil-textGlow">
+                        <div class="text-xs text-mil-textMuted mb-1">DIÁRIO DE GUERRA DO SARGENTO</div>
+                        <div id="diary-entries" class="space-y-2 text-xs text-mil-textGlow">
                             <div class="bg-mil-bg border-l-2 border-mil-amberMuted p-2 rounded">
                                 <span class="text-mil-amberMuted font-bold">[DIA 1 - 08:00]</span>
                                 <p class="mt-1 font-typewriter">Assumimos a defesa da trincheira Alpha em Komona. O vento sopra frio do Norte. Devemos resistir 30 dias até a chegada do exército principal.</p>
@@ -372,7 +372,7 @@
                     <i class="fa-solid fa-triangle-exclamation text-lg animate-pulse"></i>
                     <span id="crisis-title">CRISE OPERACIONAL</span>
                 </div>
-                <p id="crisis-description" class="text-[11px] text-mil-textGlow leading-relaxed font-typewriter">
+                <p id="crisis-description" class="text-[13px] text-mil-textGlow leading-relaxed font-typewriter">
                     A água congelou esta noite. O Soldado Silva apresenta febre alta.
                 </p>
                 <div id="crisis-options" class="space-y-2 pt-1 text-xs">
@@ -585,7 +585,7 @@
                 // Height Label on Contour
                 if (idx % 2 === 0) {
                     ctx.fillStyle = '#2d3b31';
-                    ctx.font = '8px "Courier Prime"';
+                    ctx.font = '11px "Courier Prime"';
                     ctx.fillText(`${120 + idx * 25}m`, (points[0].x / 400) * w, (points[0].y / 250) * h);
                 }
             });
@@ -658,7 +658,7 @@
 
                     // Distance text
                     ctx.fillStyle = '#c86464';
-                    ctx.font = '9px "Courier Prime"';
+                    ctx.font = '12px "Courier Prime"';
                     ctx.fillText(`${Math.round(enemy.distance)}m`, ex - 12, ey - 10);
                 });
             } else {
@@ -1071,17 +1071,17 @@
                 card.className = `p-2 rounded border flex flex-col gap-1 ${hp <= 0 ? 'bg-mil-redDark/30 border-red-900 opacity-60' : 'bg-mil-bg border-mil-border'}`;
 
                 card.innerHTML = `
-                    <div class="flex justify-between items-center text-[11px]">
+                    <div class="flex justify-between items-center text-[13px]">
                         <div>
                             <span class="font-bold ${hp <= 0 ? 'line-through text-red-500' : 'text-mil-textGlow'}">${soldier.rank} ${soldier.name}</span>
-                            <span class="text-[8px] text-mil-textMuted block uppercase">${soldier.class}</span>
+                            <span class="text-[11px] text-mil-textMuted block uppercase">${soldier.class}</span>
                         </div>
-                        <span class="text-[9px] font-bold px-1.5 py-0.5 rounded ${hp > 50 ? 'bg-mil-oliveDark text-mil-greenMuted border border-mil-border' : 'bg-red-950 text-red-400 border border-red-900'}">
+                        <span class="text-xs font-bold px-1.5 py-0.5 rounded ${hp > 50 ? 'bg-mil-oliveDark text-mil-greenMuted border border-mil-border' : 'bg-red-950 text-red-400 border border-red-900'}">
                             HP: ${hp}%
                         </span>
                     </div>
 
-                    <div class="grid grid-cols-4 gap-1 text-[8px] text-mil-textMuted">
+                    <div class="grid grid-cols-4 gap-1 text-[11px] text-mil-textMuted">
                         <div>Fadiga: <strong class="${soldier.fatigue > 70 ? 'text-red-400' : 'text-mil-textGlow'}">${Math.round(soldier.fatigue)}%</strong></div>
                         <div>Fome: <strong class="${soldier.hunger > 70 ? 'text-red-400' : 'text-mil-textGlow'}">${Math.round(soldier.hunger)}%</strong></div>
                         <div>Sede: <strong class="${soldier.thirst > 70 ? 'text-red-400' : 'text-mil-textGlow'}">${Math.round(soldier.thirst)}%</strong></div>
@@ -1089,7 +1089,7 @@
                     </div>
 
                     ${hp > 0 ? `
-                        <div class="grid grid-cols-4 gap-1 text-[8px] pt-1 border-t border-mil-borderDark">
+                        <div class="grid grid-cols-4 gap-1 text-[11px] pt-1 border-t border-mil-borderDark">
                             <button onclick="setSoldierDuty(${soldier.id}, 'WATCH')" class="py-1 rounded text-center font-bold ${soldier.duty === 'WATCH' ? 'bg-mil-olive text-white border border-mil-greenMuted' : 'bg-black/50 text-mil-textMuted'}">
                                 Vigília
                             </button>
@@ -1103,7 +1103,7 @@
                                 Cozinha
                             </button>
                         </div>
-                    ` : '<div class="text-[9px] text-red-500 font-bold italic">INATIVO (MORTO EM AÇÃO)</div>'}
+                    ` : '<div class="text-xs text-red-500 font-bold italic">INATIVO (MORTO EM AÇÃO)</div>'}
                 `;
                 squadContainer.appendChild(card);
             });
