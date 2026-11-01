@@ -310,8 +310,8 @@
                                 <span class="text-xs text-mil-textMuted block">PRESTÍGIO COM O COMANDO</span>
                                 <span id="lbl-prestige" class="text-lg font-bold text-mil-amberMuted">150 PTS</span>
                             </div>
-                            <button onclick="sendIntelReport()" class="px-3 py-1.5 btn-tactical rounded font-bold text-xs flex items-center gap-1">
-                                <i class="fa-solid fa-paper-plane text-mil-greenMuted"></i> Enviar Relatório (+50)
+                            <button id="btn-intel" onclick="sendIntelReport()" class="px-3 py-1.5 btn-tactical rounded font-bold text-xs flex items-center gap-1">
+                                <i class="fa-solid fa-paper-plane text-mil-greenMuted"></i> <span id="lbl-intel">Enviar Relatório (+50)</span>
                             </button>
                         </div>
 
@@ -510,6 +510,7 @@
             ],
             enemies: [],
             rainParticles: [],
+            lastIntelDay: 0, // dia em que o último relatório foi enviado
             activeCrisis: null
         };
 
@@ -1063,6 +1064,13 @@
             document.getElementById('lbl-prestige').textContent = `${gameState.prestige} PTS`;
 
             // Squad list render
+            // Relatório de patrulha: um envio por dia
+            const intelSent = gameState.lastIntelDay === gameState.day;
+            const intelBtn = document.getElementById('btn-intel');
+            intelBtn.classList.toggle('opacity-40', intelSent);
+            intelBtn.disabled = intelSent;
+            document.getElementById('lbl-intel').textContent = intelSent ? 'Enviado hoje' : 'Enviar Relatório (+50)';
+
             const squadContainer = document.getElementById('squad-list');
             squadContainer.innerHTML = '';
 
@@ -1143,6 +1151,11 @@
            RADIO SUPPORT ACTIONS
            ========================================================================== */
         function sendIntelReport() {
+            if (gameState.lastIntelDay === gameState.day) {
+                logFeed('Relatório de hoje já foi transmitido. Próximo envio disponível amanhã.', 'text-mil-amberMuted');
+                return;
+            }
+            gameState.lastIntelDay = gameState.day;
             gameState.prestige += 50;
             logFeed('Relatório de patrulha transmitido ao Comando Geral (+50 Prestígio).', 'text-mil-greenMuted');
             updateUI();

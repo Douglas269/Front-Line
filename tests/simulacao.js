@@ -45,6 +45,13 @@ async function run() {
     switchTab('radio');
     const pBefore = gameState.prestige; requestSupport('SUPPLY');
     c.cargaCustaPrestigio = gameState.prestige - pBefore === -120;
+    // Relatório de patrulha: só um envio por dia
+    const pRel = gameState.prestige;
+    sendIntelReport(); sendIntelReport();
+    c.relatorioUmaVezPorDia = gameState.prestige - pRel === 50;
+    gameState.day++; sendIntelReport();
+    c.relatorioNovoDia = gameState.prestige - pRel === 100;
+    gameState.day--; gameState.lastIntelDay = 0;
     toggleTacticalOrder('SHELTER'); c.ordemAtiva = gameState.tacticalOrders.SHELTER === true;
     triggerCrisisModal(CRISES_POOL[1]);
     c.modalCrise = !document.getElementById('modal-crisis').classList.contains('hidden');
