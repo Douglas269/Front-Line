@@ -164,6 +164,19 @@
                 <div class="relative w-full h-56 bg-[#0c0f0d] overflow-hidden flex items-center justify-center">
                     <canvas id="topoCanvas" class="w-full h-full block"></canvas>
 
+                    <!-- BÚSSOLA: norte sempre para cima -->
+                    <div class="absolute top-2 right-2 z-30 pointer-events-none" title="Norte">
+                        <svg viewBox="0 0 64 64" width="54" height="54" aria-label="Bússola: norte para cima">
+                            <circle cx="32" cy="32" r="31" fill="rgba(8,10,9,0.88)" stroke="#8fad88" stroke-width="2"/>
+                            <polygon points="32,19 37,32 27,32" fill="#ff5c5c"/>
+                            <polygon points="32,45 37,32 27,32" fill="#b3c4ae"/>
+                            <text x="32" y="13" text-anchor="middle" font-family="Courier Prime, monospace" font-weight="700" font-size="12" fill="#ff5c5c">N</text>
+                            <text x="32" y="60" text-anchor="middle" font-family="Courier Prime, monospace" font-weight="700" font-size="11" fill="#d6e3d1">S</text>
+                            <text x="55" y="36" text-anchor="middle" font-family="Courier Prime, monospace" font-weight="700" font-size="11" fill="#d6e3d1">L</text>
+                            <text x="9" y="36" text-anchor="middle" font-family="Courier Prime, monospace" font-weight="700" font-size="11" fill="#d6e3d1">O</text>
+                        </svg>
+                    </div>
+
                     <!-- FOG OF WAR NO VIGILANCE WARNING -->
                     <div id="fog-warning" class="hidden absolute inset-0 bg-black/90 flex flex-col items-center justify-center text-center p-4 z-30">
                         <i class="fa-solid fa-eye-slash text-mil-redAlert text-3xl mb-2 animate-bounce"></i>
@@ -172,7 +185,7 @@
                     </div>
 
                     <!-- COMBAT ALERT BANNER -->
-                    <div id="map-alert-banner" class="hidden absolute top-2 left-2 right-2 bg-mil-redDark/90 border border-mil-redAlert px-2 py-1 rounded text-xs text-red-200 flex items-center justify-between z-20 shadow-2xl animate-alert-pulse">
+                    <div id="map-alert-banner" class="hidden absolute top-2 left-2 right-16 bg-mil-redDark/90 border border-mil-redAlert px-2 py-1 rounded text-xs text-red-200 flex items-center justify-between z-20 shadow-2xl animate-alert-pulse">
                         <span class="flex items-center gap-1.5 font-bold">
                             <i class="fa-solid fa-triangle-exclamation text-red-400"></i>
                             <span id="map-alert-text">CONTATO INIMIGO A 200M</span>
