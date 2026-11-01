@@ -202,6 +202,11 @@
                 </div>
             </div>
 
+            <!-- END OF TURN -->
+            <button id="btn-end-turn" onclick="endTurn()" class="w-full py-2 btn-tactical rounded font-bold text-xs flex items-center justify-center gap-2 uppercase tracking-wider">
+                <i class="fa-solid fa-flag-checkered text-mil-amberMuted"></i> <span id="lbl-end-turn">Finalizar turno</span>
+            </button>
+
             <!-- TACTICAL FEED LOG (Terminal Output Style) -->
             <div class="bg-black/90 border-tactical rounded p-2 text-xs h-20 overflow-y-auto flex flex-col gap-1 font-mono text-mil-textGlow" id="feed-log">
                 <div class="text-mil-amberMuted">[08:00] Ponto Alpha estabelecido. Comandante assumiu posições de defesa em Komona.</div>
@@ -706,14 +711,13 @@
         }, GAME_CONFIG.UPDATE_INTERVAL_MS);
 
         function updateGameTick() {
-            gameState.timeSeconds++;
-
-            // 240 seconds = 1 Day
+            // Ao fim dos 4 períodos o relógio do turno congela; só "Finalizar turno" avança o dia
             if (gameState.timeSeconds >= GAME_CONFIG.DAY_DURATION_SEC) {
-                gameState.timeSeconds = 0;
-                gameState.day++;
-                onNewDay();
+                updateClockAndUI();
+                updateUI();
+                return;
             }
+            gameState.timeSeconds++;
 
             processSquadNeeds();
             processEnemiesAndCombat();
@@ -721,6 +725,17 @@
             checkWinLoss();
             updateClockAndUI();
             updateUI();
+        }
+
+        // Finaliza o turno: o dia só muda por aqui, nunca pelo tempo
+        function endTurn() {
+            if (gameEnded) return;
+            gameState.day++;
+            gameState.timeSeconds = 0;
+            onNewDay();
+            updateClockAndUI();
+            updateUI();
+            checkWinLoss();
         }
 
         function onNewDay() {
@@ -1069,6 +1084,8 @@
             const intelBtn = document.getElementById('btn-intel');
             intelBtn.classList.toggle('opacity-40', intelSent);
             intelBtn.disabled = intelSent;
+            document.getElementById('lbl-end-turn').textContent = gameState.timeSeconds >= GAME_CONFIG.DAY_DURATION_SEC
+                ? 'Fim do período: finalizar turno' : 'Finalizar turno';
             document.getElementById('lbl-intel').textContent = intelSent ? 'Enviado hoje' : 'Enviar Relatório (+50)';
 
             const squadContainer = document.getElementById('squad-list');

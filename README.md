@@ -21,6 +21,7 @@ Jogo de estratégia tático com foco em realismo de comando, combate blindado e 
 - Fadiga: vigília +0,9 a cada 10 s; outras funções +0,5; descanso −3,5.
 - Moral: cai 0,5 a cada 10 s com fadiga ≥ 85; recupera 0,2 a cada 10 s com fadiga < 70 e fome/sede < 50.
 - Dano de invasão: 20 por soldado (`GAME_CONFIG.INVASION_DAMAGE`).
+- Turnos: o dia só muda pelo botão **Finalizar turno**. O relógio percorre os 4 períodos (manhã, tarde, noite, madrugada) e congela no fim, esperando a finalização.
 
 ## Testes
 

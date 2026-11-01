@@ -32,8 +32,11 @@ async function run() {
     // Fixa o sorteio em tempo bom (Nublado, 90% de eficiência) para o teste ser determinístico
     const sorteioReal = Math.random; Math.random = () => 0.1;
     for (let i = 0; i < 240; i++) updateGameTick();
+    c.tempoNaoMudaODia = gameState.day === 1 && gameState.timeSeconds === 240;
+    c.periodoCongela = (updateGameTick(), gameState.timeSeconds === 240);
+    endTurn();
     Math.random = sorteioReal;
-    c.diaAvancou = gameState.day === 2;
+    c.finalizarTurnoAvancaDia = gameState.day === 2 && gameState.timeSeconds === 0;
     c.racoesEntregues = gameState.resources.rations > 36;
     c.cardsRenderizados = document.querySelectorAll('#squad-list > div').length === 6;
 
@@ -71,8 +74,10 @@ async function run() {
       Object.assign(gameState, { day: 1, timeSeconds: 0, speed: 0, prestige: 150, weather: 'Nublado', supplyLineEff: 85, enemies: [], activeCrisis: null,
         tacticalOrders: { SUPPRESSION: false, SHELTER: false, CONSERVE: false, FULL_VIGILANCE: false },
         resources: { rations: 36, water: 48, ammoRifle: 550, ammoHeavy: 200, medkits: 3 }, squad: init.map(s => ({ ...s })) });
+      gameEnded = false; // a verificação de fim de jogo acima pode tê-lo deixado ligado
       let ticks = 0, minR = 1e9, minW = 1e9;
       while (gameState.day <= 30 && gameState.squad.some(s => s.hp > 0) && ticks < 30 * 240 + 10) {
+        if (gameState.timeSeconds >= 240) { endTurn(); continue; } // jogador finaliza o turno
         const hpAntes = gameState.squad.map(s => s.hp);
         const invadindo = gameState.enemies.some(e => e.distance <= 0.85);
         updateGameTick(); ticks++;
