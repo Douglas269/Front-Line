@@ -368,8 +368,8 @@
         </div>
 
         <!-- TRILHAS SONORAS (CC0, ver assets/music/LICENSE.md) -->
-    <audio id="bgm-war" src="assets/music/war_theme.mp3" loop preload="auto"></audio>
-    <audio id="bgm-battle" src="assets/music/to_battle.mp3" loop preload="auto"></audio>
+    <audio id="bgm-war" loop preload="auto"></audio>
+    <audio id="bgm-battle" loop preload="auto"></audio>
 
     <!-- CRISIS POPUP MODAL -->
         <div id="modal-crisis" class="hidden absolute inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
@@ -417,6 +417,10 @@
            Ambiente: vento gerado no navegador, bem mais baixo que a música. */
         const bgmWar = document.getElementById('bgm-war');
         const bgmBattle = document.getElementById('bgm-battle');
+        // Caminho das trilhas: a raiz do site (Vercel) mostra este arquivo sem mudar o endereço
+        const musicBase = location.pathname.endsWith('.html') ? '' : 'prototipo/';
+        bgmWar.src = musicBase + 'assets/music/war_theme.mp3';
+        bgmBattle.src = musicBase + 'assets/music/to_battle.mp3';
         bgmWar.volume = 0.45;
         bgmBattle.volume = 0.45;
         let ambientNodes = null;
