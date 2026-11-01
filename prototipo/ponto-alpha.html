@@ -269,7 +269,7 @@
                                     <span><i class="fa-solid fa-bottle-water text-mil-komonaBlue"></i> Água</span>
                                     <span id="val-water" class="font-bold text-mil-textGlow">48 L</span>
                                 </div>
-                                <div class="text-[8px] text-mil-textMuted mt-1">Consumo: ~36L / dia</div>
+                                <div class="text-[8px] text-mil-textMuted mt-1">Consumo: ~7L / dia</div>
                             </div>
                             <!-- Light Ammo -->
                             <div class="bg-mil-bg border border-mil-border p-2 rounded">
@@ -470,7 +470,9 @@
             DAY_DURATION_SEC: 240, // 4 mins = 1 day
             UPDATE_INTERVAL_MS: 1000,
             // Consumo de ração por soldado a cada 10s (6 soldados × 0,05 × 24 ciclos/dia ≈ 7,2/dia)
-            RATION_USE_PER_TICK: 0.05
+            RATION_USE_PER_TICK: 0.05,
+            // Consumo de água por soldado a cada 10s (mesma lógica das rações, ≈ 7,2 L/dia)
+            WATER_USE_PER_TICK: 0.05
         };
 
         const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
@@ -768,7 +770,7 @@
                 }
 
                 if (gameState.resources.water > 0) {
-                    gameState.resources.water = Math.max(0, gameState.resources.water - (0.25 * rMult));
+                    gameState.resources.water = Math.max(0, gameState.resources.water - (GAME_CONFIG.WATER_USE_PER_TICK * rMult));
                     soldier.thirst = Math.max(0, soldier.thirst - 3); // beber reduz a sede
                 } else {
                     soldier.thirst = Math.min(100, soldier.thirst + 3);
