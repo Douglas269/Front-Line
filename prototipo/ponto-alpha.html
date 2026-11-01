@@ -472,7 +472,9 @@
             // Consumo de ração por soldado a cada 10s (6 soldados × 0,05 × 24 ciclos/dia ≈ 7,2/dia)
             RATION_USE_PER_TICK: 0.05,
             // Consumo de água por soldado a cada 10s (mesma lógica das rações, ≈ 7,2 L/dia)
-            WATER_USE_PER_TICK: 0.05
+            WATER_USE_PER_TICK: 0.05,
+            // Dano sofrido por cada soldado quando um inimigo invade a trincheira
+            INVASION_DAMAGE: 20
         };
 
         const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
@@ -781,9 +783,9 @@
                     soldier.fatigue = Math.max(0, soldier.fatigue - 3.5);
                     soldier.hp = Math.min(100, soldier.hp + 0.4);
                 } else if (soldier.duty === 'WATCH') {
-                    soldier.fatigue = Math.min(100, soldier.fatigue + 1.2);
+                    soldier.fatigue = Math.min(100, soldier.fatigue + 0.9);
                 } else {
-                    soldier.fatigue = Math.min(100, soldier.fatigue + 0.8);
+                    soldier.fatigue = Math.min(100, soldier.fatigue + 0.5);
                 }
 
                 if (soldier.duty === 'MAINTENANCE') {
@@ -800,7 +802,10 @@
                     soldier.moral = Math.max(0, soldier.moral - 1.5);
                 }
                 if (soldier.fatigue >= 85) {
-                    soldier.moral = Math.max(0, soldier.moral - 1);
+                    soldier.moral = Math.max(0, soldier.moral - 0.5);
+                } else if (soldier.fatigue < 70 && soldier.hunger < 50 && soldier.thirst < 50) {
+                    // Soldado descansado e alimentado recupera moral aos poucos
+                    soldier.moral = Math.min(100, soldier.moral + 0.2);
                 }
             });
         }
@@ -877,7 +882,7 @@
                         logFeed(`🚨 INVASÃO DE TRINCHEIRA! COMBATE A CURTA DISTÂNCIA!`, 'text-red-500 font-bold');
                         alive.forEach(s => {
                             if (s.hp <= 0) return;
-                            s.hp = Math.max(0, s.hp - 20);
+                            s.hp = Math.max(0, s.hp - GAME_CONFIG.INVASION_DAMAGE);
                             if (s.hp <= 0) {
                                 logFeed(`❌ BAIXA NA INVASÃO: ${s.rank} ${s.name} foi morto!`, 'text-red-500 font-bold');
                             }
