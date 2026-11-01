@@ -261,7 +261,7 @@
                                     <span><i class="fa-solid fa-utensils text-mil-amberMuted"></i> Ração</span>
                                     <span id="val-rations" class="font-bold text-mil-textGlow">36 un</span>
                                 </div>
-                                <div class="text-[8px] text-mil-textMuted mt-1">Consumo: ~22un / dia</div>
+                                <div class="text-[8px] text-mil-textMuted mt-1">Consumo: ~7un / dia</div>
                             </div>
                             <!-- Water -->
                             <div class="bg-mil-bg border border-mil-border p-2 rounded">
@@ -468,7 +468,9 @@
         const GAME_CONFIG = {
             TOTAL_DAYS: 30,
             DAY_DURATION_SEC: 240, // 4 mins = 1 day
-            UPDATE_INTERVAL_MS: 1000
+            UPDATE_INTERVAL_MS: 1000,
+            // Consumo de ração por soldado a cada 10s (6 soldados × 0,05 × 24 ciclos/dia ≈ 7,2/dia)
+            RATION_USE_PER_TICK: 0.05
         };
 
         const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
@@ -759,7 +761,7 @@
 
                 // Consumo compartilhado de rações e água
                 if (gameState.resources.rations > 0) {
-                    gameState.resources.rations = Math.max(0, gameState.resources.rations - (0.15 * rMult));
+                    gameState.resources.rations = Math.max(0, gameState.resources.rations - (GAME_CONFIG.RATION_USE_PER_TICK * rMult));
                     soldier.hunger = Math.max(0, soldier.hunger - 3); // comer reduz a fome
                 } else {
                     soldier.hunger = Math.min(100, soldier.hunger + 2);
