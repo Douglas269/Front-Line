@@ -11,3 +11,7 @@ Jogo de estratégia tático com foco em realismo de comando, combate blindado e 
 ## Campanha atual
 
 **O Guardião de Voznesensk**, capítulo 2. A sessão começa na crise do Esquadrão Charlie no topo da torre do silo.
+
+## Protótipo: Ponto Alpha
+
+`prototipo/ponto-alpha.html` é um protótipo jogável em um único arquivo. Abra no navegador (precisa de internet para o Tailwind e os ícones carregarem).
