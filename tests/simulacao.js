@@ -28,7 +28,7 @@ async function run() {
   // Verificações funcionais
   results.checks = await page.evaluate((init) => {
     const c = {};
-    setSpeed(0);
+    gameState.speed = 0; // sem controle de velocidade na interface; o teste pausa direto
     // Fixa o sorteio em tempo bom (Nublado, 90% de eficiência) para o teste ser determinístico
     const sorteioReal = Math.random; Math.random = () => 0.1;
     for (let i = 0; i < 240; i++) updateGameTick();

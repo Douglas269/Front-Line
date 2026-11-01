@@ -129,10 +129,6 @@
                     <i id="ico-audio" class="fa-solid fa-volume-xmark text-red-400"></i>
                 </button>
                 <div class="h-4 w-px bg-mil-border"></div>
-                <button id="btn-sp-0" onclick="setSpeed(0)" class="px-2 py-0.5 rounded btn-tactical text-xs">⏸</button>
-                <button id="btn-sp-1" onclick="setSpeed(1)" class="px-2 py-0.5 rounded btn-tactical btn-active-order text-xs font-bold">1x</button>
-                <button id="btn-sp-2" onclick="setSpeed(2)" class="px-2 py-0.5 rounded btn-tactical text-xs">2x</button>
-                <button id="btn-sp-4" onclick="setSpeed(4)" class="px-2 py-0.5 rounded btn-tactical text-xs">4x</button>
             </div>
         </header>
 
@@ -1020,14 +1016,6 @@
         /* ==========================================================================
            INTERFACE UPDATES & CONTROLS
            ========================================================================== */
-        function setSpeed(spd) {
-            gameState.speed = spd;
-            ['btn-sp-0', 'btn-sp-1', 'btn-sp-2', 'btn-sp-4'].forEach(id => {
-                document.getElementById(id).classList.remove('btn-active-order');
-            });
-            document.getElementById(`btn-sp-${spd}`).classList.add('btn-active-order');
-            playTacticalBeep(700, 0.03);
-        }
 
         function toggleTacticalOrder(order) {
             gameState.tacticalOrders[order] = !gameState.tacticalOrders[order];
