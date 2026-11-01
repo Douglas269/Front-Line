@@ -367,7 +367,11 @@
 
         </div>
 
-        <!-- CRISIS POPUP MODAL -->
+        <!-- TRILHAS SONORAS (CC0, ver assets/music/LICENSE.md) -->
+    <audio id="bgm-war" src="assets/music/war_theme.mp3" loop preload="auto"></audio>
+    <audio id="bgm-battle" src="assets/music/to_battle.mp3" loop preload="auto"></audio>
+
+    <!-- CRISIS POPUP MODAL -->
         <div id="modal-crisis" class="hidden absolute inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
             <div class="bg-mil-panel border-2 border-mil-redAlert rounded p-4 max-w-sm w-full space-y-3 shadow-2xl">
                 <div class="flex items-center gap-2 text-red-500 font-bold border-b border-mil-border pb-2 text-xs">
@@ -409,14 +413,79 @@
             }
         }
 
+        /* Música: trilha de guerra no turno; trilha de combate quando há inimigos.
+           Ambiente: vento gerado no navegador, bem mais baixo que a música. */
+        const bgmWar = document.getElementById('bgm-war');
+        const bgmBattle = document.getElementById('bgm-battle');
+        bgmWar.volume = 0.45;
+        bgmBattle.volume = 0.45;
+        let ambientNodes = null;
+
+        function startAmbient() {
+            if (!audioCtx || ambientNodes) return;
+            // Ruído marrom (vento) filtrado, com rajadas lentas
+            const len = audioCtx.sampleRate * 2;
+            const buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+            const d = buf.getChannelData(0);
+            let last = 0;
+            for (let i = 0; i < len; i++) {
+                last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02;
+                d[i] = last * 3;
+            }
+            const src = audioCtx.createBufferSource();
+            src.buffer = buf;
+            src.loop = true;
+            const lp = audioCtx.createBiquadFilter();
+            lp.type = 'lowpass';
+            lp.frequency.value = 500;
+            const gain = audioCtx.createGain();
+            gain.gain.value = 0.10;
+            const lfo = audioCtx.createOscillator();
+            lfo.frequency.value = 0.07;
+            const lfoGain = audioCtx.createGain();
+            lfoGain.gain.value = 0.04;
+            lfo.connect(lfoGain);
+            lfoGain.connect(gain.gain);
+            src.connect(lp);
+            lp.connect(gain);
+            gain.connect(audioCtx.destination);
+            src.start();
+            lfo.start();
+            ambientNodes = { src, lfo };
+        }
+
+        function stopAmbient() {
+            if (!ambientNodes) return;
+            try { ambientNodes.src.stop(); ambientNodes.lfo.stop(); } catch (e) {}
+            ambientNodes = null;
+        }
+
+        function syncMusic() {
+            if (isAudioMuted) return;
+            const want = gameState.enemies.length > 0 ? bgmBattle : bgmWar;
+            const other = want === bgmBattle ? bgmWar : bgmBattle;
+            if (!other.paused) other.pause();
+            if (want.paused) want.play().catch(() => {});
+        }
+
+        function stopAllAudio() {
+            bgmWar.pause();
+            bgmBattle.pause();
+            stopAmbient();
+        }
+
         function toggleAudio() {
             initAudio();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
             isAudioMuted = !isAudioMuted;
             const ico = document.getElementById('ico-audio');
             if (isAudioMuted) {
                 ico.className = 'fa-solid fa-volume-xmark text-red-400';
+                stopAllAudio();
             } else {
                 ico.className = 'fa-solid fa-volume-high text-mil-greenMuted';
+                startAmbient();
+                syncMusic();
                 playTacticalBeep(800, 0.05);
             }
         }
@@ -717,6 +786,7 @@
 
             processSquadNeeds();
             processEnemiesAndCombat();
+            syncMusic();
             randomCrisisCheck();
             checkWinLoss();
             updateClockAndUI();
@@ -1205,6 +1275,7 @@
            ========================================================================== */
         function endGame(icon, title, titleClass, body) {
             gameState.speed = 0;
+            stopAllAudio();
             document.getElementById('end-icon').innerHTML = icon;
             document.getElementById('end-title').textContent = title;
             document.getElementById('end-title').className = `text-xl font-bold tracking-wider mb-2 ${titleClass}`;
