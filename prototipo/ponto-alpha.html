@@ -215,6 +215,9 @@
             <button id="btn-end-turn" onclick="endTurn()" class="w-full py-2 btn-tactical rounded font-bold text-xs flex items-center justify-center gap-2 uppercase tracking-wider">
                 <i class="fa-solid fa-flag-checkered text-mil-amberMuted"></i> <span id="lbl-end-turn">Finalizar turno</span>
             </button>
+            <div class="text-right">
+                <button onclick="novaPartida()" class="text-xs underline text-mil-textMuted hover:text-mil-textGlow">Nova partida</button>
+            </div>
 
             <!-- TACTICAL FEED LOG (Terminal Output Style) -->
             <div class="bg-black/90 border-tactical rounded p-2 text-xs h-20 overflow-y-auto flex flex-col gap-1 font-mono text-mil-textGlow" id="feed-log">
@@ -919,6 +922,70 @@
             checkWinLoss();
             updateClockAndUI();
             updateUI();
+            if (gameState.speed > 0 && gameState.timeSeconds % 5 === 0) saveGame();
+        }
+
+        /* ==========================================================================
+           SALVAMENTO NO NAVEGADOR (progresso fica no próprio aparelho)
+           ========================================================================== */
+        const SAVE_KEY = 'frontline-ponto-alpha-v1';
+
+        function saveGame() {
+            try {
+                localStorage.setItem(SAVE_KEY, JSON.stringify({
+                    v: 1,
+                    day: gameState.day,
+                    timeSeconds: gameState.timeSeconds,
+                    prestige: gameState.prestige,
+                    weather: gameState.weather,
+                    tacticalOrders: gameState.tacticalOrders,
+                    supplyLineEff: gameState.supplyLineEff,
+                    resources: gameState.resources,
+                    squad: gameState.squad,
+                    enemies: gameState.enemies,
+                    lastIntelDay: gameState.lastIntelDay,
+                    feed: document.getElementById('feed-log').innerHTML,
+                    diary: document.getElementById('diary-entries').innerHTML
+                }));
+            } catch (e) { /* armazenamento indisponível: o jogo continua sem salvar */ }
+        }
+
+        function clearSave() {
+            try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
+        }
+
+        function loadGame() {
+            let data = null;
+            try { data = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); } catch (e) { return false; }
+            if (!data || data.v !== 1) return false;
+            // Partidas já encerradas não são restauradas
+            if (!data.squad.some(s => s.hp > 0) || data.day > GAME_CONFIG.TOTAL_DAYS) return false;
+            Object.assign(gameState, {
+                day: data.day,
+                timeSeconds: data.timeSeconds,
+                prestige: data.prestige,
+                weather: data.weather,
+                tacticalOrders: data.tacticalOrders,
+                supplyLineEff: data.supplyLineEff,
+                resources: data.resources,
+                squad: data.squad,
+                enemies: data.enemies,
+                lastIntelDay: data.lastIntelDay,
+                activeCrisis: null,
+                speed: 1
+            });
+            document.getElementById('feed-log').innerHTML = data.feed;
+            document.getElementById('diary-entries').innerHTML = data.diary;
+            return true;
+        }
+
+        let skipPageHideSave = false; // evita regravar a partida antiga ao recarregar após "Nova partida"
+
+        function novaPartida() {
+            if (!confirm('Começar uma nova partida? O progresso atual será apagado.')) return;
+            skipPageHideSave = true;
+            clearSave();
+            location.reload();
         }
 
         // Finaliza o turno: o dia só muda por aqui, nunca pelo tempo
@@ -930,6 +997,7 @@
             updateClockAndUI();
             updateUI();
             checkWinLoss();
+            if (gameState.speed > 0) saveGame();
         }
 
         function onNewDay() {
@@ -1410,6 +1478,7 @@
         function endGame(icon, title, titleClass, body) {
             gameState.speed = 0;
             stopAllAudio();
+            clearSave();
             document.getElementById('end-icon').innerHTML = icon;
             document.getElementById('end-title').textContent = title;
             document.getElementById('end-title').className = `text-xl font-bold tracking-wider mb-2 ${titleClass}`;
@@ -1436,6 +1505,12 @@
             }
         }
 
+        // Restaura a partida salva, se houver, e salva ao sair da página
+        if (loadGame()) {
+            logFeed('Partida restaurada do último salvamento.', 'text-mil-greenMuted');
+        }
+        window.addEventListener('pagehide', () => { if (gameState.speed > 0 && !skipPageHideSave) saveGame(); });
+        updateClockAndUI();
         updateUI();
     </script>
 </body>
