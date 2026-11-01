@@ -1,0 +1,26 @@
+{
+  "campanha": "O Guardião de Voznesensk",
+  "comandante": "Águia 1",
+  "batalhao": "Fênix",
+  "base": {
+    "nome": "Silo de Grãos de Voznesensk",
+    "status": "Fortificado"
+  },
+  "pontoDePausa": {
+    "capitulo": 2,
+    "situacao": "Esquadrão Charlie encurralado no topo da torre do silo sob fogo de 30 mm após falha crítica de organização (1 no 1d5). Inimigo cruzou a ponte destruída.",
+    "decisaoPendente": ["sacrificar um Leopard 2A6", "enviar recrutas em carga suicida"]
+  },
+  "efetivo": [
+    { "esquadrao": "Alpha", "nivel": "Veterano", "homens": 18 },
+    { "esquadrao": "Bravo", "nivel": "Veterano", "homens": 20 },
+    { "esquadrao": "Charlie", "nivel": "Especialista", "homens": 10, "statusAtual": "Encurralado, Desorganizado" },
+    { "esquadrao": "Delta", "nivel": "Recruta", "homens": 20 }
+  ],
+  "blindados": [
+    { "modelo": "Leopard 2A6", "quantidade": 2, "status": "Operacional" },
+    { "modelo": "T-90M", "quantidade": 2, "status": "Operacional" },
+    { "modelo": "Bradley M2", "quantidade": 1, "status": "Operacional" }
+  ],
+  "baixasAcumuladas": 17
+}
