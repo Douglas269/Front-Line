@@ -413,7 +413,7 @@
                                 <div>
                                     <div class="font-bold text-mil-amberMuted"><i class="fa-solid fa-parachute-box"></i> Carga Emergencial</div>
                                     <div class="text-xs text-mil-textMuted">+20 Ração, +30L Água, +250 Mun.</div>
-                                    <div class="text-xs text-mil-textMuted">Chega em 4 a 19 s (2d5 da Central)</div>
+                                    <div id="txt-supply-eta" class="text-xs text-mil-textMuted">Chega em 30 s (+5 s por nível)</div>
                                 </div>
                                 <button id="btn-supply" onclick="requestSupport('SUPPLY')" class="px-2 py-1 btn-tactical rounded font-bold text-xs">
                                     <span id="lbl-supply-btn">120 PTS</span>
@@ -677,6 +677,8 @@
         const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
         // Converte segundos de jogo em segundos reais (para os textos e contagens)
         const seg = (ticks) => Math.max(0, Math.ceil(ticks / GAME_CONFIG.TICKS_PER_SECOND));
+        // Carga emergencial: 30 s reais no nível 1, +5 s por nível (nível 25: 150 s)
+        const esperaCarga = () => (30 + 5 * (Math.max(1, gameState.level || 1) - 1)) * GAME_CONFIG.TICKS_PER_SECOND;
         let jogoPausado = false;
 
         let gameState = {
@@ -2254,6 +2256,7 @@
             // Carga emergencial: mostra a contagem enquanto está a caminho
             const supplyBtn = document.getElementById('btn-supply');
             supplyBtn.disabled = !!gameState.pendingSupply;
+            document.getElementById('txt-supply-eta').textContent = `Chega em ${seg(esperaCarga())} s (nível ${gameState.level || 1}; dobra com a linha cortada)`;
             supplyBtn.classList.toggle('opacity-60', !!gameState.pendingSupply);
             document.getElementById('lbl-supply-btn').textContent = gameState.pendingSupply
                 ? `A CAMINHO ${seg(gameState.pendingSupply.ticks)}s` : `${custo(120)} PTS`;
@@ -2435,12 +2438,11 @@
                 if (gameState.pendingSupply) return logFeed('Já existe uma carga emergencial a caminho.', 'text-mil-amberMuted');
                 if (gameState.prestige < custo(120)) return logFeed('Prestígio insuficiente!', 'text-red-400');
                 gameState.prestige -= custo(120);
-                // Apoio da Central (2d5): define o tempo de resposta
-                const rolagem = (1 + Math.floor(Math.random() * 5)) + (1 + Math.floor(Math.random() * 5));
+                // Tempo de resposta fixo pelo nível: 30 s reais no nível 1, +5 s a cada nível
                 const linhaCortada = gameState.supplyLineEff <= 30;
-                const espera = rolagem * 15 * (linhaCortada ? 2 : 1);
+                const espera = esperaCarga() * (linhaCortada ? 2 : 1);
                 gameState.pendingSupply = { ticks: espera };
-                logFeed(`📦 Carga solicitada à Central (2d5 = ${rolagem}). Chegada em ${seg(espera)}s${linhaCortada ? ' (linha cortada: atraso dobrado)' : ''}.`, 'text-mil-amberMuted font-bold');
+                logFeed(`📦 Carga solicitada à Central. Chegada em ${seg(espera)}s${linhaCortada ? ' (linha cortada: atraso dobrado)' : ''}.`, 'text-mil-amberMuted font-bold');
             }
 
             updateUI();
