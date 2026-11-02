@@ -566,10 +566,14 @@
             TOTAL_DAYS: 30,
             DAY_DURATION_SEC: 240, // 4 mins = 1 day
             UPDATE_INTERVAL_MS: 1000,
-            // Consumo de ração por soldado a cada 10s (6 soldados × 0,05 × 24 ciclos/dia ≈ 7,2/dia)
-            RATION_USE_PER_TICK: 0.05,
-            // Consumo de água por soldado a cada 10s (mesma lógica das rações, ≈ 7,2 L/dia)
-            WATER_USE_PER_TICK: 0.05,
+            // Refeições: 3 por turno (manhã, tarde, noite). Porção por soldado por refeição:
+            // 6 soldados × 3 refeições × 0,4 ≈ 7,2 de ração e 7,2 L de água por dia
+            MEAL_RATION: 0.4,
+            MEAL_WATER: 0.4,
+            MEAL_HUNGER_RELIEF: 25,   // quanto a refeição reduz a fome
+            MEAL_THIRST_RELIEF: 30,   // quanto a refeição reduz a sede
+            HUNGER_RISE: 1.5,         // fome sobe a cada 10 s (≈ +36 por turno)
+            THIRST_RISE: 2,           // sede sobe a cada 10 s (≈ +48 por turno)
             // Dano sofrido por cada soldado quando um inimigo invade a trincheira
             INVASION_DAMAGE: 20
         };
@@ -1064,6 +1068,31 @@
             }
         }
 
+        // Serve uma refeição: cada soldado vivo recebe uma porção de ração e de água.
+        // Com estoque insuficiente, todos recebem uma parte proporcional.
+        function serveMeal(nome, rMult) {
+            const vivos = gameState.squad.filter(s => s.hp > 0);
+            if (vivos.length === 0) return;
+            const r = gameState.resources;
+            const precisaRacao = vivos.length * GAME_CONFIG.MEAL_RATION * rMult;
+            const precisaAgua = vivos.length * GAME_CONFIG.MEAL_WATER * rMult;
+            const fracRacao = Math.min(1, r.rations / precisaRacao);
+            const fracAgua = Math.min(1, r.water / precisaAgua);
+            r.rations = Math.max(0, r.rations - precisaRacao * fracRacao);
+            r.water = Math.max(0, r.water - precisaAgua * fracAgua);
+            vivos.forEach(s => {
+                s.hunger = Math.max(0, s.hunger - GAME_CONFIG.MEAL_HUNGER_RELIEF * fracRacao);
+                s.thirst = Math.max(0, s.thirst - GAME_CONFIG.MEAL_THIRST_RELIEF * fracAgua);
+            });
+            if (fracRacao >= 1 && fracAgua >= 1) {
+                logFeed(`🍽️ Refeição da ${nome} servida.`, 'text-mil-greenMuted');
+            } else if (fracRacao <= 0 && fracAgua <= 0) {
+                logFeed(`🍽️ Sem ração nem água para a refeição da ${nome}!`, 'text-red-400 font-bold');
+            } else {
+                logFeed(`🍽️ Refeição da ${nome} racionada: estoque insuficiente.`, 'text-mil-amberMuted');
+            }
+        }
+
         function processSquadNeeds() {
             if (gameState.timeSeconds % 10 !== 0) return;
 
@@ -1077,23 +1106,17 @@
                 if (ferido) ferido.hp = Math.min(100, ferido.hp + 0.6);
             }
 
+            // Refeição no primeiro ciclo da manhã, da tarde e da noite (não há na madrugada)
+            const periodo = Math.floor((gameState.timeSeconds - 1) / 60);
+            const horaDaRefeicao = gameState.timeSeconds % 60 === 10 && periodo < 3;
+            if (horaDaRefeicao) serveMeal(['manhã', 'tarde', 'noite'][periodo], rMult);
+
             gameState.squad.forEach(soldier => {
                 if (soldier.hp <= 0) return;
 
-                // Consumo compartilhado de rações e água
-                if (gameState.resources.rations > 0) {
-                    gameState.resources.rations = Math.max(0, gameState.resources.rations - (GAME_CONFIG.RATION_USE_PER_TICK * rMult));
-                    soldier.hunger = Math.max(0, soldier.hunger - 8); // comer reduz a fome
-                } else {
-                    soldier.hunger = Math.min(100, soldier.hunger + 2);
-                }
-
-                if (gameState.resources.water > 0) {
-                    gameState.resources.water = Math.max(0, gameState.resources.water - (GAME_CONFIG.WATER_USE_PER_TICK * rMult));
-                    soldier.thirst = Math.max(0, soldier.thirst - 8); // beber reduz a sede
-                } else {
-                    soldier.thirst = Math.min(100, soldier.thirst + 3);
-                }
+                // Fome e sede sobem com o tempo; só caem nas refeições
+                soldier.hunger = Math.min(100, soldier.hunger + GAME_CONFIG.HUNGER_RISE);
+                soldier.thirst = Math.min(100, soldier.thirst + GAME_CONFIG.THIRST_RISE);
 
                 // Efeitos de função
                 if (soldier.duty === 'REST') {
