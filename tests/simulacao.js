@@ -68,6 +68,14 @@ async function run() {
     c.modalCriseFecha = document.getElementById('modal-crisis').classList.contains('hidden');
     gameState.squad.forEach(s => s.hp = 0); updateGameTick();
     c.fimDeJogo = !document.getElementById('modal-end').classList.contains('hidden') && gameState.speed === 0;
+
+    // Vencer sobe o nível salvo; perder não muda
+    gameEnded = false; localStorage.setItem('frontline-ponto-alpha-nivel', '1'); gameState.level = 1;
+    gameState.squad.forEach(s => s.hp = 50); gameState.day = 31; checkWinLoss();
+    c.vitoriaSobeNivel = localStorage.getItem('frontline-ponto-alpha-nivel') === '2';
+    gameEnded = false; gameState.level = 2; gameState.day = 10; gameState.squad.forEach(s => s.hp = 0); checkWinLoss();
+    c.derrotaMantemNivel = localStorage.getItem('frontline-ponto-alpha-nivel') === '2';
+    localStorage.setItem('frontline-ponto-alpha-nivel', '1'); gameState.level = 1;
     return c;
   }, INITIAL_SQUAD());
 

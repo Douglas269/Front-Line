@@ -25,9 +25,25 @@ Jogo de estratégia tático com foco em realismo de comando, combate blindado e 
 - Médico do esquadrão cura 0,6 de HP a cada 10 s no soldado mais ferido.
 - Ordens táticas: Fogo Supressão (ataque +60%, inimigos 70% mais lentos, gasta munição), Abrigo Reforçado (dano recebido −75%, ataque −60%), Economizar Munição (gasto −65%, ataque −30%) e Vigília Total (mapa visível sem vigias, +0,4 de fadiga a cada 10 s para todos).
 - Carga Emergencial: chega 2d5 × 15 s depois do pedido (30 a 150 s); o prazo dobra com a linha de suprimento cortada. Só uma carga a caminho por vez.
-- Sem ação do jogador, o esquadrão vence cerca de 28% das partidas simuladas. Comer e beber reduzem fome e sede em 8 por ciclo de 10 s.
+- Sem ação do jogador, no nível 1, o esquadrão vence cerca de 28% a 36% das partidas simuladas. Comer e beber reduzem fome e sede em 8 por ciclo de 10 s.
 - Áudio: trilha de guerra no turno e trilha de combate quando há inimigos (`prototipo/assets/music/`, CC0). Vento ambiente gerado no navegador, em volume bem menor que a música. Tudo começa ao ligar o alto-falante no cabeçalho.
 - Turnos: o dia só muda pelo botão **Finalizar turno**. O relógio percorre os 4 períodos (manhã, tarde, noite, madrugada) e congela no fim, esperando a finalização.
+
+### Níveis de dificuldade
+- 10 níveis. Cada vitória sobe um nível; derrota mantém o nível. O nível fica salvo no navegador, mesmo com "Nova partida".
+- A cada nível, sobem a frequência de eventos, a vida e o dano dos inimigos e o tamanho das ondas; caem a entrega diária de suprimentos e o prestígio ganho; os apoios da Central ficam mais caros.
+- Vitórias medidas em 25 partidas por nível (`node tests/niveis.js`):
+
+| Nível | Sem ação | Jogador atento (automático) |
+|---|---|---|
+| 1 | ~36% | 100% |
+| 2–3 | 0% | 100% |
+| 7 | 0% | 100% |
+| 8 | 0% | 96% |
+| 9 | 0% | 52% |
+| 10 | 0% | 4% |
+
+O "jogador atento" é um robô simples: reveza descanso, usa abrigo antes da artilharia, supressão com inimigos à vista, e pede apoios quando pode pagar.
 
 ## Testes
 
