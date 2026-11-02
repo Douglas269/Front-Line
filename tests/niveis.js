@@ -1,7 +1,7 @@
 // Calibração dos níveis de dificuldade do Ponto Alpha.
 // Mede a taxa de vitória em cada nível com dois perfis de jogador:
 //   parado: nenhuma ação
-//   atento: jogador automático com decisões razoáveis (revezamento, abrigo, apoios)
+//   atento: jogador automático com decisões razoáveis (cozinha, descanso, abrigo, apoios)
 // Uso: node tests/niveis.js [níveis separados por vírgula] [partidas por perfil]
 //   ex.: node tests/niveis.js 1,4,7,10 30
 const path = require('path');
@@ -28,9 +28,19 @@ async function measure(page, level, policy) {
     // Jogador atento: decide antes de cada segundo de jogo
     function atento() {
       const vivos = gameState.squad.filter(s => s.hp > 0);
+      const est = gameState.resources;
+      const temComida = est.rations > 0 || est.water > 0;
       vivos.forEach(s => {
-        if (s.fatigue > 75) s.duty = 'REST';
-        else if (s.duty === 'REST' && s.fatigue < 15) s.duty = 'WATCH';
+        // Cozinha: vai comer com fome ou sede >= 40; volta saciado ou sem estoque
+        if (s.duty === 'RATIONING') {
+          if ((s.hunger < 5 && s.thirst < 5) || !temComida) s.duty = 'WATCH';
+        } else if ((s.hunger >= 40 || s.thirst >= 40) && temComida) {
+          s.duty = 'RATIONING';
+        } else if (s.fatigue > 75) {
+          s.duty = 'REST';
+        } else if (s.duty === 'REST' && s.fatigue < 15) {
+          s.duty = 'WATCH';
+        }
       });
       if (!vivos.some(s => s.duty === 'WATCH')) {
         const menosCansado = vivos.slice().sort((a, b) => a.fatigue - b.fatigue)[0];

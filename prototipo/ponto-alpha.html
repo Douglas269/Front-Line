@@ -566,12 +566,13 @@
             TOTAL_DAYS: 30,
             DAY_DURATION_SEC: 240, // 4 mins = 1 day
             UPDATE_INTERVAL_MS: 1000,
-            // Refeições: 3 por turno (manhã, tarde, noite). Porção por soldado por refeição:
-            // 6 soldados × 3 refeições × 0,4 ≈ 7,2 de ração e 7,2 L de água por dia
-            MEAL_RATION: 0.4,
-            MEAL_WATER: 0.4,
-            MEAL_HUNGER_RELIEF: 25,   // quanto a refeição reduz a fome
-            MEAL_THIRST_RELIEF: 30,   // quanto a refeição reduz a sede
+            // Fome e sede só caem para quem está na Cozinha. A cada 10 s na cozinha,
+            // o soldado come e bebe até estes limites, gastando estoque proporcional:
+            // ~36 de fome por dia ÷ 10 = 3,6 ciclos × 0,33 ≈ 1,2 ração por soldado/dia (≈ 7,2 no esquadrão)
+            KITCHEN_HUNGER_RELIEF: 10,
+            KITCHEN_THIRST_RELIEF: 12,
+            KITCHEN_RATION: 0.33,     // ração gasta por ciclo de 10 s comendo
+            KITCHEN_WATER: 0.3,       // água gasta por ciclo de 10 s bebendo
             HUNGER_RISE: 1.5,         // fome sobe a cada 10 s (≈ +36 por turno)
             THIRST_RISE: 2,           // sede sobe a cada 10 s (≈ +48 por turno)
             // Dano sofrido por cada soldado quando um inimigo invade a trincheira
@@ -1068,36 +1069,29 @@
             }
         }
 
-        // Serve uma refeição: cada soldado vivo recebe uma porção de ração e de água.
-        // Com estoque insuficiente, todos recebem uma parte proporcional.
-        function serveMeal(nome, rMult) {
-            const vivos = gameState.squad.filter(s => s.hp > 0);
-            if (vivos.length === 0) return;
+        // Soldado na Cozinha come e bebe: alivia até o limite por ciclo e gasta o
+        // estoque proporcional ao que realmente consumiu (não desperdiça se já está saciado).
+        function eatInKitchen(soldier) {
             const r = gameState.resources;
-            const precisaRacao = vivos.length * GAME_CONFIG.MEAL_RATION * rMult;
-            const precisaAgua = vivos.length * GAME_CONFIG.MEAL_WATER * rMult;
-            const fracRacao = Math.min(1, r.rations / precisaRacao);
-            const fracAgua = Math.min(1, r.water / precisaAgua);
-            r.rations = Math.max(0, r.rations - precisaRacao * fracRacao);
-            r.water = Math.max(0, r.water - precisaAgua * fracAgua);
-            vivos.forEach(s => {
-                s.hunger = Math.max(0, s.hunger - GAME_CONFIG.MEAL_HUNGER_RELIEF * fracRacao);
-                s.thirst = Math.max(0, s.thirst - GAME_CONFIG.MEAL_THIRST_RELIEF * fracAgua);
-            });
-            if (fracRacao >= 1 && fracAgua >= 1) {
-                logFeed(`🍽️ Refeição da ${nome} servida.`, 'text-mil-greenMuted');
-            } else if (fracRacao <= 0 && fracAgua <= 0) {
-                logFeed(`🍽️ Sem ração nem água para a refeição da ${nome}!`, 'text-red-400 font-bold');
-            } else {
-                logFeed(`🍽️ Refeição da ${nome} racionada: estoque insuficiente.`, 'text-mil-amberMuted');
+            const cfg = GAME_CONFIG;
+            const querFome = Math.min(soldier.hunger, cfg.KITCHEN_HUNGER_RELIEF);
+            if (querFome > 0 && r.rations > 0) {
+                const custo = cfg.KITCHEN_RATION * (querFome / cfg.KITCHEN_HUNGER_RELIEF);
+                const frac = Math.min(1, r.rations / custo);
+                r.rations = Math.max(0, r.rations - custo * frac);
+                soldier.hunger = Math.max(0, soldier.hunger - querFome * frac);
+            }
+            const querSede = Math.min(soldier.thirst, cfg.KITCHEN_THIRST_RELIEF);
+            if (querSede > 0 && r.water > 0) {
+                const custo = cfg.KITCHEN_WATER * (querSede / cfg.KITCHEN_THIRST_RELIEF);
+                const frac = Math.min(1, r.water / custo);
+                r.water = Math.max(0, r.water - custo * frac);
+                soldier.thirst = Math.max(0, soldier.thirst - querSede * frac);
             }
         }
 
         function processSquadNeeds() {
             if (gameState.timeSeconds % 10 !== 0) return;
-
-            const rationers = gameState.squad.filter(s => s.duty === 'RATIONING' && s.hp > 0).length;
-            const rMult = rationers > 0 ? 0.75 : 1.0;
 
             // Médico vivo cura 0,6 de HP por ciclo no soldado mais ferido
             const medico = gameState.squad.find(s => s.class === 'Médico' && s.hp > 0);
@@ -1106,17 +1100,13 @@
                 if (ferido) ferido.hp = Math.min(100, ferido.hp + 0.6);
             }
 
-            // Refeição no primeiro ciclo da manhã, da tarde e da noite (não há na madrugada)
-            const periodo = Math.floor((gameState.timeSeconds - 1) / 60);
-            const horaDaRefeicao = gameState.timeSeconds % 60 === 10 && periodo < 3;
-            if (horaDaRefeicao) serveMeal(['manhã', 'tarde', 'noite'][periodo], rMult);
-
             gameState.squad.forEach(soldier => {
                 if (soldier.hp <= 0) return;
 
-                // Fome e sede sobem com o tempo; só caem nas refeições
+                // Fome e sede sobem com o tempo; só caem comendo e bebendo na Cozinha
                 soldier.hunger = Math.min(100, soldier.hunger + GAME_CONFIG.HUNGER_RISE);
                 soldier.thirst = Math.min(100, soldier.thirst + GAME_CONFIG.THIRST_RISE);
+                if (soldier.duty === 'RATIONING') eatInKitchen(soldier);
 
                 // Efeitos de função
                 if (soldier.duty === 'REST') {
