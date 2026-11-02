@@ -1138,12 +1138,12 @@
            ========================================================================== */
         /* Dificuldade por nível: sobe uma etapa a cada vitória, até o nível máximo.
            d = 0 no nível 1 (o equilíbrio original) e cresce aos poucos. */
-        const MAX_LEVEL = 10;
+        const MAX_LEVEL = 25;
         const LEVEL_KEY = 'frontline-ponto-alpha-nivel';
 
         function diff() {
-            // Cada nível acima do 1 soma 0,8 de dificuldade (nível 10 = 7,2)
-            const d = 0.8 * Math.max(0, Math.min(MAX_LEVEL, gameState.level) - 1);
+            // Cada nível acima do 1 soma 0,3 de dificuldade (nível 25 = 7,2, o teto)
+            const d = 0.3 * Math.max(0, Math.min(MAX_LEVEL, gameState.level) - 1);
             return {
                 eventMult: 1 + 0.30 * d,                  // frequência de eventos
                 enemyHpMult: 1 + 0.15 * d,                // vida dos inimigos
