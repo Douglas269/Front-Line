@@ -142,6 +142,14 @@ async function run() {
     prepCombate(); gameState.squad.forEach(s => s.duty = 'WATCH');
     gameState.enemies = [{ type: 'infantaria', distance: 250, hp: 1000, offsetX: 0 }]; processEnemiesAndCombat();
     c.municaoGastaTriplicada = Math.abs((500 - gameState.resources.ammoRifle) - 1.8) < 0.001;
+    // Paiol: munição leve não passa da capacidade
+    gameState.resources.ammoRifle = PRESSURE.AMMO_CAP_RIFLE - 10;
+    c.paiolLimita = addAmmoRifle(250) === 10 && gameState.resources.ammoRifle === PRESSURE.AMMO_CAP_RIFLE;
+    gameState.resources.ammoRifle = 500;
+    // Vida do inimigo: (100 + 5·dia) × multiplicadores
+    { const d0 = gameState.day; gameState.day = 10; const n = gameState.enemies.length; spawnEnemy('infantaria', 260);
+      const e = gameState.enemies[n]; c.vidaInimigoReduzida = Math.abs(e.maxHp - 150 * diff().enemyHpMult) < 0.01;
+      gameState.enemies.splice(n, 1); gameState.day = d0; }
     prepCombate(); gameState.squad.forEach(s => s.duty = 'WATCH');
     gameState.tacticalOrders.SIGNAL_JAM = true; Math.random = () => 0.01;
     gameState.enemies = [{ type: 'drone', distance: 250, hp: 1000, offsetX: 0 }]; processEnemiesAndCombat();

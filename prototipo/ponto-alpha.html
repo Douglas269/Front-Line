@@ -341,7 +341,7 @@
                             <div class="bg-mil-bg border border-mil-border p-2 rounded">
                                 <div class="flex justify-between text-mil-textMuted">
                                     <span><i class="fa-solid fa-gun text-mil-greenMuted"></i> Mun. Leve</span>
-                                    <span id="val-ammo-rifle" class="font-bold text-mil-textGlow">550 cart.</span>
+                                    <span id="val-ammo-rifle" class="font-bold text-mil-textGlow">900 / 2000</span>
                                 </div>
                                 <div class="text-xs text-mil-textMuted mt-1">Uso em Fuzis / Snipers</div>
                             </div>
@@ -349,7 +349,7 @@
                             <div class="bg-mil-bg border border-mil-border p-2 rounded">
                                 <div class="flex justify-between text-mil-textMuted">
                                     <span><i class="fa-solid fa-burst text-red-500"></i> Mun. Pesada</span>
-                                    <span id="val-ammo-heavy" class="font-bold text-mil-textGlow">200 cart.</span>
+                                    <span id="val-ammo-heavy" class="font-bold text-mil-textGlow">350 / 600</span>
                                 </div>
                                 <div class="text-xs text-mil-textMuted mt-1">Uso em Fogo Supressivo</div>
                             </div>
@@ -718,8 +718,8 @@
             resources: {
                 rations: 36,
                 water: 48,
-                ammoRifle: 550,
-                ammoHeavy: 200,
+                ammoRifle: 900,
+                ammoHeavy: 350,
                 medkits: 3
             },
             squad: [
@@ -1268,11 +1268,11 @@
                 const r1 = Math.floor(delRations * recebida), w1 = Math.floor(delWater * recebida), a1 = Math.floor(delAmmo * recebida);
                 gameState.resources.rations += r1;
                 gameState.resources.water += w1;
-                gameState.resources.ammoRifle += a1;
+                const a1Real = addAmmoRifle(a1);
                 if (recebida < 1) {
-                    logFeed(`📦 Comboio chegou sem ninguém para descarregar (todos de vigília): metade da carga se perdeu. Recebido: +${r1} Rações, +${w1}L Água, +${a1} Mun.`, 'text-red-400 font-bold');
+                    logFeed(`📦 Comboio chegou sem ninguém para descarregar (todos de vigília): metade da carga se perdeu. Recebido: +${r1} Rações, +${w1}L Água, +${a1Real} Mun.${a1Real < a1 ? ' (paiol cheio)' : ''}`, 'text-red-400 font-bold');
                 } else {
-                    logFeed(`Suprimentos entregues: +${r1} Rações, +${w1}L Água, +${a1} Mun.`, 'text-mil-greenMuted');
+                    logFeed(`Suprimentos entregues: +${r1} Rações, +${w1}L Água, +${a1Real} Mun.${a1Real < a1 ? ' (paiol cheio)' : ''}`, 'text-mil-greenMuted');
                 }
                 addEffect('convoy', 0, 0);
             } else {
@@ -1458,7 +1458,8 @@
             WAVE_BASE: 7,          // soldados na primeira onda de infantaria
             WAVE_EVERY_DAYS: 5,    // +1 soldado por onda a cada 5 dias
             WAVE_CAP: 12,          // máximo por onda (fora extras de nível e de patrulha)
-            ENEMY_HP: 1.35,        // inimigos com 35% mais vida
+            ENEMY_HP: 1.0,         // multiplicador geral da vida dos inimigos
+            ENEMY_HP_PER_DAY: 5,   // vida base cresce +5 por dia (era +8)
             ENEMY_DAMAGE: 0.4,     // dano de cada inimigo (ondas maiores e resistentes já somam muito dano no total)
             GENERAL_INCOME: 2.0,   // ritmo de ataques do general (1 = ritmo do antigo sorteio)
             CONVOY_EVERY_DAYS: 2,  // comboio de suprimentos a cada 2 dias
@@ -1467,8 +1468,16 @@
             WAVE_PLUS_EVERY_LEVELS: 5,    // +1 soldado por onda a cada 5 níveis (nível 21+: +4)
             ATTACK_RATE_PER_LEVEL: 0.02,  // general ataca 2% mais rápido (nível 25: +48%)
             AMMO_SPEND: 3,              // gasto de munição em combate (leve e pesada) ×3 desde o nível 1
+            AMMO_CAP_RIFLE: 2000,       // capacidade do paiol: munição leve
+            AMMO_CAP_HEAVY: 600,        // capacidade do paiol: munição pesada
         };
 
+        // Entrada de munição leve respeitando a capacidade do paiol; devolve o que coube
+        function addAmmoRifle(qtd) {
+            const antes = gameState.resources.ammoRifle;
+            gameState.resources.ammoRifle = Math.min(PRESSURE.AMMO_CAP_RIFLE, antes + qtd);
+            return Math.max(0, Math.round(gameState.resources.ammoRifle - antes));
+        }
         const nivelAcima = () => Math.max(0, Math.min(MAX_LEVEL, gameState.level) - 1);
         const comidaDoNivel = () => Math.max(0.3, 1 - PRESSURE.FOOD_LOSS_PER_LEVEL * nivelAcima());
         const ondaDoNivel = () => Math.floor(nivelAcima() / PRESSURE.WAVE_PLUS_EVERY_LEVELS);
@@ -1519,7 +1528,7 @@
 
         function spawnEnemy(type, startDist) {
             const t = ENEMY_TYPES[type];
-            const vida = (100 + gameState.day * 8) * t.hpMult * diff().enemyHpMult * PRESSURE.ENEMY_HP;
+            const vida = (100 + gameState.day * PRESSURE.ENEMY_HP_PER_DAY) * t.hpMult * diff().enemyHpMult * PRESSURE.ENEMY_HP;
             gameState.enemies.push({
                 id: Date.now() + Math.random(),
                 type,
@@ -1721,7 +1730,7 @@
             const recebida = supplyReceivers() > 0 ? 1 : 0.5;
             gameState.resources.rations += Math.floor(20 * recebida);
             gameState.resources.water += Math.floor(30 * recebida);
-            gameState.resources.ammoRifle += Math.floor(250 * recebida);
+            addAmmoRifle(Math.floor(250 * recebida));
             addEffect('convoy', 0, 0);
             if (recebida < 1) {
                 logFeed('📦 CARGA EMERGENCIAL chegou sem ninguém para descarregar: metade se perdeu.', 'text-red-400 font-bold');
@@ -2251,8 +2260,8 @@
         function updateUI() {
             document.getElementById('val-rations').textContent = `${Math.round(gameState.resources.rations)} un`;
             document.getElementById('val-water').textContent = `${Math.round(gameState.resources.water)} L`;
-            document.getElementById('val-ammo-rifle').textContent = `${Math.round(gameState.resources.ammoRifle)} cart.`;
-            document.getElementById('val-ammo-heavy').textContent = `${Math.round(gameState.resources.ammoHeavy)} cart.`;
+            document.getElementById('val-ammo-rifle').textContent = `${Math.round(gameState.resources.ammoRifle)} / ${PRESSURE.AMMO_CAP_RIFLE}`;
+            document.getElementById('val-ammo-heavy').textContent = `${Math.round(gameState.resources.ammoHeavy)} / ${PRESSURE.AMMO_CAP_HEAVY}`;
             document.getElementById('val-medkits').textContent = `${gameState.resources.medkits} kits`;
 
             document.getElementById('lbl-supply-eff').textContent = `${gameState.supplyLineEff}%`;
