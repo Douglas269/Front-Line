@@ -503,6 +503,26 @@
             </div>
         </div>
 
+        <!-- PERFIL DO SOLDADO (toque no nome no card do esquadrão) -->
+        <div id="modal-perfil" class="hidden absolute inset-0 bg-black/90 z-50 flex items-center justify-center p-4" onclick="if (event.target === this) fecharPerfil()">
+            <div class="bg-mil-panel border-2 border-mil-border rounded p-4 max-w-sm w-full space-y-3 shadow-2xl max-h-[90vh] overflow-y-auto">
+                <div class="flex gap-3 items-start">
+                    <div id="perfil-foto" class="relative w-28 shrink-0 rounded border-2 border-mil-borderDark overflow-hidden bg-black"></div>
+                    <div class="min-w-0 space-y-1">
+                        <div id="perfil-nome" class="text-mil-textGlow font-bold text-sm"></div>
+                        <div id="perfil-classe" class="text-xs text-mil-amberMuted uppercase"></div>
+                        <div id="perfil-dados" class="text-xs text-mil-textMuted leading-relaxed"></div>
+                        <div id="perfil-estado" class="text-xs font-bold"></div>
+                    </div>
+                </div>
+                <p id="perfil-historia" class="text-[13px] text-mil-textGlow leading-relaxed font-normal border-t border-mil-border pt-2"></p>
+                <p id="perfil-frase" class="text-xs text-mil-textMuted italic"></p>
+                <div class="flex justify-end">
+                    <button onclick="fecharPerfil()" class="px-3 py-1.5 btn-tactical rounded text-xs font-bold">Fechar</button>
+                </div>
+            </div>
+        </div>
+
         <!-- ENDING MODAL -->
         <div id="modal-end" class="hidden absolute inset-0 bg-black/95 z-50 flex flex-col items-center justify-center p-6 text-center">
             <div id="end-icon" class="text-5xl mb-3"></div>
@@ -1063,7 +1083,7 @@
 
         function updateGameTick() {
             // Pausado, com crise, tutorial ou login aberto: o relógio para
-            if (jogoPausado || gameState.activeCrisis || tutorialAberto || loginAberto) return;
+            if (jogoPausado || gameState.activeCrisis || tutorialAberto || loginAberto || perfilAberto) return;
             gameState.timeSeconds++;
 
             normalizeOrders();
@@ -2308,9 +2328,12 @@
 
                 card.innerHTML = `
                     <div class="flex justify-between items-center text-[13px]">
-                        <div>
-                            <span class="font-bold ${hp <= 0 ? 'line-through text-red-500' : 'text-mil-textGlow'}">${soldier.rank} ${soldier.name}</span>
+                        <div onclick="abrirPerfil(${soldier.id})" class="cursor-pointer flex items-center gap-2" title="Ver perfil">
+                            <div class="w-8 h-9 shrink-0 rounded-sm overflow-hidden border border-mil-borderDark bg-black ${hp <= 0 ? 'grayscale' : ''}">${retrato(soldier.id)}</div>
+                            <div>
+                            <span class="font-bold ${hp <= 0 ? 'line-through text-red-500' : 'text-mil-textGlow'}">${soldier.rank} ${soldier.name}</span> <i class="fa-solid fa-id-card text-[10px] text-mil-textMuted"></i>
                             <span class="text-xs text-mil-textMuted block uppercase">${soldier.class}</span>
+                            </div>
                         </div>
                         <span class="text-xs font-bold px-1.5 py-0.5 rounded ${hp > 50 ? 'bg-mil-oliveDark text-mil-greenMuted border border-mil-border' : 'bg-red-950 text-red-400 border border-red-900'}">
                             HP: ${hp}%
@@ -2680,6 +2703,107 @@
             { t: '📻 Rádio e o general inimigo', x: 'Envie o relatório uma vez por dia para ganhar prestígio. Prestígio paga artilharia, evacuação, carga emergencial e contra-bateria. O general inimigo aprende o seu jeito de jogar e muda de tática: o painel dele no Rádio mostra o que ele já percebeu.' },
             { t: '✅ Para começar', x: 'Um bom começo: 2 soldados de vigília, 1 na cozinha, o Engenheiro na manutenção e o resto descansando. Reveze quando a fadiga, a fome ou a sede subirem. Você pode rever este guia em "Como jogar". Boa sorte, comandante.' }
         ];
+
+        // ===== Perfis dos soldados (só imersão: não mudam regras) =====
+        const PERFIS = {
+            1: { nome: 'Rafael Silva', idade: 38, origem: 'Curitiba (PR)', servico: '17 anos de serviço',
+                 historia: 'Entrou no Exército aos 21 para fugir do balcão da padaria do pai. Lutou em duas missões de paz antes de Komona e já enterrou mais amigos do que gosta de contar. É quem acorda primeiro e dorme por último. Carrega no bolso do colete uma foto das duas filhas, dobrada tantas vezes que já quase não dá para ver o rosto delas.',
+                 frase: '"Ninguém fica para trás. Nem o corpo."',
+                 visual: { pele: '#c99a74', cabelo: '#3a2c22', barba: 'rala', cicatriz: true, oculos: false, cobertura: 'capacete', rugas: true } },
+            2: { nome: 'Diego Santos', idade: 29, origem: 'Salvador (BA)', servico: '8 anos de serviço',
+                 historia: 'Ex-estivador do porto, aguenta a metralhadora no braço como se fosse uma saca de café. Fala alto, ri mais alto ainda e canta samba de roda nas noites de guarda até alguém mandar calar. Prometeu à mãe que voltaria para o aniversário de 60 anos dela. Faltam quatro meses.',
+                 frase: '"Enquanto tiver fita, eles não passam."',
+                 visual: { pele: '#7a4f33', cabelo: '#141010', barba: 'bigode', cicatriz: false, oculos: false, cobertura: 'capacete', rugas: false } },
+            3: { nome: 'Lucas Ferreira', idade: 20, origem: 'Uberlândia (MG)', servico: '1 ano de serviço',
+                 historia: 'O mais novo do esquadrão. Alistou-se depois que a fazenda da família foi vendida para pagar dívidas. Ainda se assusta com a artilharia e nunca conta isso a ninguém. Escreve cartas para a namorada todos os dias, mesmo sem saber se alguma delas chegou.',
+                 frase: '"Sargento, é normal a mão tremer assim?"',
+                 visual: { pele: '#e2b996', cabelo: '#8a5a2b', barba: 'nenhuma', cicatriz: false, oculos: false, cobertura: 'capacete', rugas: false } },
+            4: { nome: 'Ana Costa', idade: 33, origem: 'Recife (PE)', servico: '6 anos de serviço',
+                 historia: 'Enfermeira de pronto-socorro antes de vestir a farda. Diz que a trincheira é mais calma que plantão de sábado à noite, e ninguém sabe se ela está brincando. Conhece o tipo sanguíneo de cada um de cor. Guarda um caderno com o nome de todos que não conseguiu salvar.',
+                 frase: '"Respira. Olha pra mim. Você vai ver sua família."',
+                 visual: { pele: '#a8714c', cabelo: '#1e1410', barba: 'nenhuma', cicatriz: false, oculos: false, cobertura: 'boina-medica', rugas: false, coque: true } },
+            5: { nome: 'Marcos Oliveira', idade: 41, origem: 'Porto Alegre (RS)', servico: '12 anos de serviço',
+                 historia: 'Era mestre de obras e construiu metade de um bairro antes de ser convocado. Olha para a trincheira como quem olha para uma casa mal feita: sempre tem uma viga para escorar. Conserta rádio, fogareiro e bota furada com o mesmo canivete e uma paciência que irrita o resto do esquadrão.',
+                 frase: '"Trincheira boa é a que ainda está de pé amanhã."',
+                 visual: { pele: '#d9a988', cabelo: '#6b6b66', barba: 'cheia', cicatriz: false, oculos: true, cobertura: 'capacete', rugas: true } },
+            6: { nome: 'Júlia Mendes', idade: 27, origem: 'Manaus (AM)', servico: '5 anos de serviço',
+                 historia: 'Aprendeu a atirar caçando com o avô no interior do Amazonas, onde errar o tiro significava não jantar. Fala pouco e observa muito. Fica horas imóvel na lama esperando o alvo certo. Anota cada disparo num caderninho com capa de couro e nunca deixou ninguém ler.',
+                 frase: '"Um tiro. Só preciso de um."',
+                 visual: { pele: '#b98159', cabelo: '#0f0c0a', barba: 'nenhuma', cicatriz: false, oculos: false, cobertura: 'bandana', rugas: false, pintura: true } }
+        };
+
+        // Retrato em estilo de foto de ficha militar, desenhado em SVG
+        function retrato(id) {
+            const v = (PERFIS[id] || PERFIS[1]).visual;
+            const sombra = 'rgba(0,0,0,0.28)';
+            let cob = '';
+            if (v.cobertura === 'capacete') {
+                cob = `<path d="M24 58 Q24 22 60 20 Q96 22 96 58 L100 62 L20 62 Z" fill="#3e4a33"/><path d="M28 50 Q60 40 92 50" stroke="#2c3524" stroke-width="3" fill="none"/><path d="M20 62 L100 62" stroke="#2a3221" stroke-width="4"/>`;
+            } else if (v.cobertura === 'boina-medica') {
+                cob = `<path d="M30 46 Q32 24 64 24 Q92 26 92 46 Q60 40 30 46Z" fill="#5b6447"/><rect x="54" y="29" width="12" height="12" fill="#e8e3d6"/><rect x="58" y="31" width="4" height="8" fill="#b4252a"/><rect x="56" y="33" width="8" height="4" fill="#b4252a"/>`;
+            } else if (v.cobertura === 'bandana') {
+                cob = `<path d="M31 44 Q34 24 60 23 Q88 24 90 44 Q60 36 31 44Z" fill="#4c5a3a"/><path d="M33 38 L45 36 M55 33 L68 34 M75 36 L87 39" stroke="#2f3a25" stroke-width="3"/>`;
+            }
+            const cabelo = v.coque
+                ? `<path d="M33 52 Q32 30 60 29 Q88 30 87 52 Q84 40 60 38 Q36 40 33 52Z" fill="${v.cabelo}"/><circle cx="60" cy="27" r="9" fill="${v.cabelo}"/>`
+                : `<path d="M34 52 Q34 32 60 31 Q86 32 86 52 Q82 42 60 41 Q38 42 34 52Z" fill="${v.cabelo}"/>`;
+            let barba = '';
+            if (v.barba === 'bigode') barba = `<path d="M49 83 Q60 78 71 83 Q60 81 49 83Z" fill="${v.cabelo}" stroke="${v.cabelo}" stroke-width="3"/>`;
+            if (v.barba === 'rala') barba = `<path d="M38 74 Q42 98 60 101 Q78 98 82 74 Q78 92 60 94 Q42 92 38 74Z" fill="${v.cabelo}" opacity="0.45"/>`;
+            if (v.barba === 'cheia') barba = `<path d="M37 70 Q40 102 60 105 Q80 102 83 70 Q80 88 70 90 Q60 84 50 90 Q40 88 37 70Z" fill="${v.cabelo}"/><path d="M49 83 Q60 79 71 83" stroke="${v.cabelo}" stroke-width="4" fill="none"/>`;
+            const rugas = v.rugas ? `<path d="M44 60 Q50 58 54 60 M66 60 Q70 58 76 60" stroke="${sombra}" stroke-width="1"/><path d="M41 69 L43 72 M79 69 L77 72" stroke="${sombra}" stroke-width="1"/>` : '';
+            const cicatriz = v.cicatriz ? `<path d="M73 60 L80 76" stroke="#8c4e3d" stroke-width="2" stroke-linecap="round"/>` : '';
+            const oculos = v.oculos ? `<g fill="none" stroke="#1a1a18" stroke-width="2"><rect x="41" y="62" width="15" height="10" rx="2"/><rect x="64" y="62" width="15" height="10" rx="2"/><path d="M56 66 L64 66"/></g>` : '';
+            const pintura = v.pintura ? `<path d="M37 70 L56 66 L56 71 L38 76Z M64 66 L83 70 L82 76 L64 71Z" fill="#3c4a2c" opacity="0.75"/>` : '';
+            return `<svg viewBox="0 0 120 140" xmlns="http://www.w3.org/2000/svg" class="w-full h-full block" preserveAspectRatio="xMidYMid slice">
+                <rect width="120" height="140" fill="#1d231b"/>
+                <g stroke="#2b3328" stroke-width="1">${[20,40,60,80,100,120].map(y => `<path d="M0 ${y} H120"/>`).join('')}</g>
+                <path d="M14 140 Q16 112 44 106 L76 106 Q104 112 106 140Z" fill="#46553a"/>
+                <path d="M44 106 L60 122 L76 106" fill="#384530"/>
+                <rect x="50" y="94" width="20" height="16" fill="${v.pele}"/>
+                <rect x="50" y="102" width="20" height="5" fill="${sombra}"/>
+                <ellipse cx="60" cy="68" rx="25" ry="31" fill="${v.pele}"/>
+                <ellipse cx="35" cy="70" rx="4" ry="7" fill="${v.pele}"/><ellipse cx="85" cy="70" rx="4" ry="7" fill="${v.pele}"/>
+                ${cabelo}${pintura}
+                <path d="M44 60 L55 59 M65 59 L76 60" stroke="#241a14" stroke-width="2.5" stroke-linecap="round"/>
+                <ellipse cx="50" cy="67" rx="3" ry="2.2" fill="#1a1410"/><ellipse cx="70" cy="67" rx="3" ry="2.2" fill="#1a1410"/>
+                <path d="M60 67 L57 79 L62 80" stroke="${sombra}" stroke-width="1.6" fill="none"/>
+                <path d="M52 88 Q60 90 68 88" stroke="#5a3428" stroke-width="2" fill="none" stroke-linecap="round"/>
+                ${rugas}${cicatriz}${barba}${oculos}${cob}
+                <rect width="120" height="140" fill="#7a8a5a" opacity="0.12"/>
+                <rect x="0" y="126" width="120" height="14" fill="rgba(0,0,0,0.55)"/>
+                <text x="6" y="136" font-family="monospace" font-size="8" fill="#b9c4a0">FA-${String(1000 + id * 137).slice(-4)}-KMN</text>
+            </svg>`;
+        }
+
+        let perfilAberto = false;
+        function abrirPerfil(id) {
+            const s = gameState.squad.find(x => x.id === id);
+            const p = PERFIS[id];
+            if (!s || !p) return;
+            perfilAberto = true;
+            const morto = s.hp <= 0;
+            const funcoes = { WATCH: 'Vigília', REST: 'Descanso', MAINTENANCE: 'Manutenção', RATIONING: 'Cozinha' };
+            const foto = document.getElementById('perfil-foto');
+            foto.style.aspectRatio = '120 / 140';
+            foto.style.filter = morto ? 'grayscale(1) brightness(0.7)' : '';
+            foto.innerHTML = retrato(id) + (morto ? `<div class="absolute inset-0 flex items-center justify-center"><span class="text-red-500 border-2 border-red-500 font-bold text-[11px] px-1 rotate-[-18deg] bg-black/60">${s.deserted ? 'DESERTOR' : 'KIA'}</span></div>` : '');
+            document.getElementById('perfil-nome').textContent = `${s.rank} ${p.nome}`;
+            document.getElementById('perfil-classe').textContent = s.class;
+            document.getElementById('perfil-dados').innerHTML = `${p.idade} anos · ${p.origem}<br>${p.servico}`;
+            const est = document.getElementById('perfil-estado');
+            if (morto) { est.className = 'text-xs font-bold text-red-500'; est.textContent = s.deserted ? 'Abandonou a posição' : 'Morto em ação'; }
+            else { est.className = 'text-xs font-bold text-mil-greenMuted'; est.textContent = `Na linha · ${funcoes[s.duty] || s.duty} · HP ${Math.round(s.hp)}% · Moral ${Math.round(s.moral)}%`; }
+            document.getElementById('perfil-historia').textContent = p.historia;
+            document.getElementById('perfil-frase').textContent = p.frase;
+            document.getElementById('modal-perfil').classList.remove('hidden');
+            playTacticalBeep(700, 0.02);
+        }
+        function fecharPerfil() {
+            perfilAberto = false;
+            document.getElementById('modal-perfil').classList.add('hidden');
+        }
+
         let tutorialAberto = false;
         let tutorialPasso = 0;
 

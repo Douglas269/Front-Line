@@ -31,6 +31,9 @@ Jogo de estratégia tático com foco em realismo de comando, combate blindado e 
 ### Tutorial
 - Na primeira vez que o jogo é aberto, aparece um guia de 7 passos (objetivo, funções, fome/sede/trincheira, mapa, ordens, rádio e general, como começar). O relógio fica parado enquanto ele está aberto. Dá para pular, voltar e rever pelo link **Como jogar**, ao lado de "Nova partida".
 
+### Perfis dos soldados
+- Toque no retrato ou no nome de um soldado (aba Esquadrão) para abrir a ficha: retrato em estilo de foto de ficha militar (desenhado em SVG no próprio código), nome completo, idade, cidade, tempo de serviço, uma pequena história e uma frase. A ficha mostra o estado atual (função, HP, moral) ou "Morto em ação"/"Desertor". O relógio para enquanto a ficha está aberta. Os perfis ficam em `PERFIS` e não mudam as regras.
+
 ### Balanceamento atual (resumo)
 - Rações e água: só quem está na função **Cozinha** come e bebe. A cada 10 s na cozinha, o soldado alivia até 10 de fome e 12 de sede, gastando 0,33 de ração e 0,3 L de água por ciclo completo (proporcional ao que realmente consome; saciado, não gasta). Com todos comendo o necessário, o esquadrão gasta ~7 rações e ~7 L por dia. A entrega diária cai nos níveis altos.
 - Fadiga: vigília +0,9 a cada 10 s; outras funções +0,5; descanso −3,5.
