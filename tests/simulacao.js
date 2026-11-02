@@ -46,8 +46,14 @@ async function run() {
     c.dutyMuda = gameState.squad.find(s => s.id === 2).duty === 'REST';
     switchTab('logistics'); c.abaLogistica = !document.getElementById('panel-logistics').classList.contains('hidden');
     switchTab('radio');
-    const pBefore = gameState.prestige; requestSupport('SUPPLY');
+    const pBefore = gameState.prestige; const rBefore = gameState.resources.rations; requestSupport('SUPPLY');
     c.cargaCustaPrestigio = gameState.prestige - pBefore === -120;
+    // A carga emergencial demora (2d5 × 15 s) e não chega na hora
+    c.cargaNaoChegaNaHora = !!gameState.pendingSupply && gameState.resources.rations === rBefore;
+    const espera = gameState.pendingSupply ? gameState.pendingSupply.ticks : 0;
+    c.cargaEsperaValida = espera >= 30 && espera <= 300;
+    for (let i = 0; i < espera; i++) processPendingSupply();
+    c.cargaChegaDepois = !gameState.pendingSupply && gameState.resources.rations >= rBefore + 20;
     // Relatório de patrulha: só um envio por dia
     const pRel = gameState.prestige;
     sendIntelReport(); sendIntelReport();
