@@ -1142,8 +1142,10 @@
         const LEVEL_KEY = 'frontline-ponto-alpha-nivel';
 
         function diff() {
-            // Cada nível acima do 1 soma 0,3 de dificuldade (nível 25 = 7,2, o teto)
-            const d = 0.3 * Math.max(0, Math.min(MAX_LEVEL, gameState.level) - 1);
+            // Duas fases: até o nível 15 a dificuldade sobe rápido (chega a 6,2);
+            // do 15 ao 25 sobe devagar (0,06 por nível), até o teto de 6,8
+            const lv = Math.max(1, Math.min(MAX_LEVEL, gameState.level));
+            const d = lv <= 15 ? (6.2 / 14) * (lv - 1) : 6.2 + 0.06 * (lv - 15);
             return {
                 eventMult: 1 + 0.30 * d,                  // frequência de eventos
                 enemyHpMult: 1 + 0.15 * d,                // vida dos inimigos

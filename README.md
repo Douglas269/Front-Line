@@ -31,19 +31,21 @@ Jogo de estratégia tático com foco em realismo de comando, combate blindado e 
 
 ### Níveis de dificuldade
 - 25 níveis. Cada vitória sobe um nível; derrota mantém o nível. O nível fica salvo no navegador, mesmo com "Nova partida".
-- A cada nível, sobem a frequência de eventos, a vida e o dano dos inimigos e o tamanho das ondas; caem a entrega diária de suprimentos e o prestígio ganho; os apoios da Central ficam mais caros. A subida é lenta (0,3 por nível) e o nível 25 é o teto.
-- Vitórias medidas em 20 partidas por nível (`node tests/niveis.js`); "dias" é a média de dias sobrevividos:
+- A cada nível, sobem a frequência de eventos, a vida e o dano dos inimigos e o tamanho das ondas; caem a entrega diária de suprimentos e o prestígio ganho; os apoios da Central ficam mais caros.
+- Curva em duas fases: até o nível 15 a dificuldade sobe rápido; do 15 ao 25 sobe devagar, para a chance cair aos poucos.
+- Vitórias medidas em 20 partidas por nível (`node tests/niveis.js`); entre parênteses, a média de dias sobrevividos. Com 20 partidas, a margem é de cerca de 10 pontos.
 
 | Nível | Sem ação | Jogador atento (automático) |
 |---|---|---|
 | 1 | ~30% | 100% |
-| 2 | 0% (26 dias) | 100% |
-| 7 | 0% (20 dias) | 100% |
-| 10 | 0% (15 dias) | 100% |
-| 15 | 0% (12 dias) | 100% |
-| 20 | 0% (10 dias) | 95% |
-| 23 | 0% (9 dias) | 15% |
-| 25 | 0% (8 dias) | 0% (25 dias) |
+| 5 | 0% (19 dias) | 100% |
+| 10 | 0% (13 dias) | 100% |
+| 12 | 0% (10 dias) | 100% |
+| 15 | 0% (9 dias) | 75% |
+| 18 | 0% (10 dias) | 65% |
+| 21 | 0% (10 dias) | 20% |
+| 23 | 0% (8 dias) | 10% |
+| 25 | 0% (8 dias) | 10% |
 
 O "jogador atento" é um robô simples: reveza descanso, usa abrigo antes da artilharia, supressão com inimigos à vista, e pede apoios quando pode pagar.
 
