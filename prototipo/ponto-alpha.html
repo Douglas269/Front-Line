@@ -305,7 +305,7 @@
                             <div class="w-full bg-black h-2 rounded border border-mil-border overflow-hidden">
                                 <div id="bar-trench" class="bg-mil-greenMuted h-full transition-all duration-300" style="width: 100%"></div>
                             </div>
-                            <p class="text-xs text-mil-textMuted mt-1">Artilharia e invasões estragam a trincheira. Estragada, as invasões ferem mais e o abrigo protege menos. Quem está na Manutenção repara; o Engenheiro repara bem mais rápido.</p>
+                            <p class="text-xs text-mil-textMuted mt-1">A trincheira se desgasta sozinha (mais na chuva forte) e com artilharia e invasões. Estragada, as invasões ferem mais e o abrigo protege menos. Em 20% ou menos ela ROMPE: o abrigo deixa de proteger e uma invasão pode matar todo o esquadrão. Quem está na Manutenção repara; o Engenheiro repara bem mais rápido.</p>
                         </div>
 
                         <!-- METERS GRID -->
@@ -381,7 +381,7 @@
                             <div class="bg-mil-bg border border-mil-border p-2 rounded flex justify-between items-center">
                                 <div>
                                     <div class="font-bold text-red-400"><i class="fa-solid fa-bomb"></i> Fogo de Artilharia</div>
-                                    <div class="text-xs text-mil-textMuted">Elimina formações de infantaria inimiga</div>
+                                    <div class="text-xs text-mil-textMuted">Dano pesado em todos os inimigos no setor (200 cada)</div>
                                 </div>
                                 <button onclick="requestSupport('ARTILLERY')" class="px-2 py-1 btn-tactical rounded font-bold text-xs">
                                     <span id="lbl-cost-artillery">100 PTS</span>
@@ -783,7 +783,7 @@
             // Estado da trincheira, logo acima da linha
             const tr = Math.round(gameState.trench);
             const corTr = tr >= 70 ? '#b3c4ae' : tr >= 40 ? '#d9a35a' : '#e08a8a';
-            drawLabel(`TRINCHEIRA ${tr}%`, 6, trenchY - 22, 'left', corTr);
+            drawLabel(`TRINCHEIRA ${tr}%${trincheiraRompida() ? ' · ROMPIDA' : ''}`, 6, trenchY - 22, 'left', trincheiraRompida() ? '#ff5c5c' : corTr);
 
             // 2. Alcance de tiro do inimigo (140m)
             const yRange = trenchY - ((140 / 300) * (h - 60)) - 10;
@@ -1202,11 +1202,16 @@
         /* Trincheira: conservação de 0 a 100%. Inteira, tudo funciona como sempre;
            estragada, as invasões ferem mais e o Abrigo Reforçado protege menos. */
         const TRENCH = {
-            DAMAGE_BARRAGE: 4,       // por impacto de artilharia inimiga
-            DAMAGE_INVASION: 6,      // por soldado de infantaria que invade (patrulha: metade)
+            DAMAGE_BARRAGE: 7,       // por impacto de artilharia inimiga
+            DAMAGE_INVASION: 10,     // por soldado de infantaria que invade (patrulha: metade)
+            WEAR: 0.3,               // desgaste natural a cada 10 s (~7% por dia)
+            WEAR_RAIN: 0.4,          // desgaste extra a cada 10 s com chuva forte
+            BREACH_AT: 20,           // em 20% ou menos a trincheira está rompida
             REPAIR_SOLDIER: 0.8,     // por ciclo de 10 s na Manutenção
             REPAIR_ENGINEER: 3       // por ciclo de 10 s, Engenheiro na Manutenção
         };
+
+        const trincheiraRompida = () => gameState.trench <= TRENCH.BREACH_AT;
 
         function trenchDamage(qtd, motivo) {
             const antes = gameState.trench;
@@ -1214,15 +1219,25 @@
             if (antes >= 50 && gameState.trench < 50) {
                 logFeed(`🧱 Trincheira muito danificada (${Math.round(gameState.trench)}%) após ${motivo}. Coloque o Engenheiro na Manutenção.`, 'text-red-400 font-bold');
             }
+            if (antes >= 35 && gameState.trench < 35) {
+                logFeed(`🧱 TRINCHEIRA PRESTES A ROMPER (${Math.round(gameState.trench)}%)! Em 20% ou menos, uma invasão vira massacre.`, 'text-red-500 font-bold');
+            }
+            if (antes > TRENCH.BREACH_AT && trincheiraRompida()) {
+                logFeed('🧱 TRINCHEIRA ROMPIDA! O abrigo não protege mais e a próxima invasão pode matar todo o esquadrão.', 'text-red-500 font-bold');
+            }
         }
 
         // Invasões ferem até 80% a mais com a trincheira destruída
+        // Invasões ferem até 80% a mais com a trincheira estragada
+        // (rompida, a invasão de infantaria é um massacre: ver processEnemiesAndCombat)
         function trenchInvasionMult() {
             return 1 + 0.8 * (1 - gameState.trench / 100);
         }
 
-        // Abrigo Reforçado: deixa passar 25% do dano com a trincheira inteira, até 60% destruída
+        // Abrigo Reforçado: deixa passar 25% do dano com a trincheira inteira, até 60% estragada;
+        // com a trincheira rompida não há onde se abrigar
         function shelterMult() {
+            if (trincheiraRompida()) return 1;
             return 0.25 + 0.35 * (1 - gameState.trench / 100);
         }
 
@@ -1255,6 +1270,9 @@
 
         function processSquadNeeds() {
             if (gameState.timeSeconds % 10 !== 0) return;
+
+            // Desgaste natural da trincheira (mais rápido com chuva forte)
+            trenchDamage(TRENCH.WEAR + (gameState.weather === 'Chuva Forte' ? TRENCH.WEAR_RAIN : 0), 'o desgaste');
 
             // Médico vivo cura 0,6 de HP por ciclo no soldado mais ferido
             const medico = gameState.squad.find(s => s.class === 'Médico' && s.hp > 0);
@@ -1355,11 +1373,11 @@
         /* Pressão do inimigo e ritmo de suprimentos, num lugar só para ajustar fácil.
            Valores pensados para o nível 1 já ser pesado; os níveis somam por cima. */
         const PRESSURE = {
-            WAVE_BASE: 4,          // soldados na primeira onda de infantaria
-            WAVE_EVERY_DAYS: 6,    // +1 soldado por onda a cada 6 dias
-            WAVE_CAP: 7,           // máximo por onda (fora extras de nível e de patrulha)
+            WAVE_BASE: 7,          // soldados na primeira onda de infantaria
+            WAVE_EVERY_DAYS: 5,    // +1 soldado por onda a cada 5 dias
+            WAVE_CAP: 12,          // máximo por onda (fora extras de nível e de patrulha)
             ENEMY_HP: 1.35,        // inimigos com 35% mais vida
-            ENEMY_DAMAGE: 1.35,    // inimigos com 35% mais dano (tiros, invasão e artilharia)
+            ENEMY_DAMAGE: 0.4,     // dano de cada inimigo (ondas maiores e resistentes já somam muito dano no total)
             GENERAL_INCOME: 2.0,   // ritmo de ataques do general (1 = ritmo do antigo sorteio)
             CONVOY_EVERY_DAYS: 2,  // comboio de suprimentos a cada 2 dias
             // A cada nível acima do 1:
@@ -1375,11 +1393,16 @@
 
         // Tipos de inimigo: velocidade, vida relativa, chance de atacar e dano por ataque
         const ENEMY_TYPES = {
-            infantaria: { label: 'INFANTARIA', speed: 0.85, hpMult: 1.0, attackChance: 0.35, dmg: (e) => (e.hp / 100) * 1.6 },
-            patrulha:   { label: 'PATRULHA',   speed: 1.15, hpMult: 0.6, attackChance: 0.30, dmg: (e) => (e.hp / 100) * 1.2 },
+            // Dano: cai com os ferimentos (vida atual / vida máxima) e cresce com os dias,
+            // mas não acompanha os bônus de vida (senão vida extra viraria dano em dobro)
+            infantaria: { label: 'INFANTARIA', speed: 0.85, hpMult: 1.0, attackChance: 0.35, dmg: (e) => 1.6 * (e.hp / (e.maxHp || e.hp)) * (1 + 0.08 * gameState.day) },
+            patrulha:   { label: 'PATRULHA',   speed: 1.15, hpMult: 0.6, attackChance: 0.30, dmg: (e) => 1.2 * (e.hp / (e.maxHp || e.hp)) * (1 + 0.08 * gameState.day) },
             drone:      { label: 'DRONE',      speed: 1.5,  hpMult: 0.35, attackChance: 0.15, dmg: () => 2 }
         };
         const BARRAGE_WARNING_TICKS = 20;  // segundos de aviso antes da artilharia cair
+        const ARTILLERY_SUPPORT_DAMAGE = 200; // dano da artilharia de apoio em cada inimigo
+        const SQUAD_FIREPOWER = 0.35;         // dano do esquadrão por segundo (dividido entre os alvos)
+        const INVASION_TARGETS = 2;           // soldados atingidos por cada invasor (todos, se a trincheira romper)
         const DRONE_SPOT_ARTILLERY = 1.5;  // drone observando: artilharia inimiga +50% de dano
         const DRONE_SPOT_FIRE = 1.2;       // drone observando: tiros inimigos +20% de dano
         const JAM_DRONE_CRASH = 0.4;       // bloqueio de sinal: chance por segundo de cada drone cair
@@ -1413,11 +1436,13 @@
 
         function spawnEnemy(type, startDist) {
             const t = ENEMY_TYPES[type];
+            const vida = (100 + gameState.day * 8) * t.hpMult * diff().enemyHpMult * PRESSURE.ENEMY_HP;
             gameState.enemies.push({
                 id: Date.now() + Math.random(),
                 type,
                 distance: startDist + Math.random() * 20,
-                hp: (100 + gameState.day * 8) * t.hpMult * diff().enemyHpMult * PRESSURE.ENEMY_HP,
+                hp: vida,
+                maxHp: vida,
                 offsetX: (Math.random() - 0.5) * 160
             });
         }
@@ -1699,6 +1724,16 @@
                 if (!temVisao()) squadPower *= BLIND_FIRE; // sem vigia: tiro às cegas
                 const observando = droneObservando();
 
+                // O fogo do esquadrão é dividido: metade no inimigo mais próximo,
+                // metade espalhada entre os demais (uma onda grande aguenta mais)
+                // Munição: um gasto por segundo de combate (o fogo já é dividido entre os alvos)
+                const temMunicao = gameState.resources.ammoRifle > 0;
+                if (temMunicao) gameState.resources.ammoRifle = Math.max(0, gameState.resources.ammoRifle - 0.6 * ammoConsumption);
+
+                const totalInimigos = gameState.enemies.length;
+                const maisProximo = gameState.enemies.reduce((a, e) => (e.distance < a.distance ? e : a), gameState.enemies[0]);
+                const parteDoFogo = (e) => totalInimigos === 1 ? 1 : (e === maisProximo ? 0.5 : 0.5 / (totalInimigos - 1));
+
                 for (let i = gameState.enemies.length - 1; i >= 0; i--) {
                     const enemy = gameState.enemies[i];
                     const tipo = ENEMY_TYPES[enemy.type];
@@ -1734,12 +1769,11 @@
                         }
                     }
 
-                    if (gameState.resources.ammoRifle > 0) {
-                        gameState.resources.ammoRifle = Math.max(0, gameState.resources.ammoRifle - (0.5 * ammoConsumption));
-                        enemy.hp -= squadPower * 0.16;
+                    if (temMunicao) {
+                        enemy.hp -= squadPower * SQUAD_FIREPOWER * parteDoFogo(enemy);
                         if (Math.random() < 0.2) playGunshotSound();
                     } else {
-                        enemy.hp -= squadPower * 0.02;
+                        enemy.hp -= squadPower * SQUAD_FIREPOWER * 0.125 * parteDoFogo(enemy); // sem munição: só baioneta e pistola
                     }
 
                     // Inimigo ataca em alcance de tiro
@@ -1772,11 +1806,23 @@
                         if (enemy.type === 'drone') {
                             logFeed('🛸 Drone escapou após sobrevoar a trincheira.', 'text-mil-amberMuted');
                         } else {
-                            const dano = (enemy.type === 'infantaria' ? GAME_CONFIG.INVASION_DAMAGE : GAME_CONFIG.INVASION_DAMAGE / 2) * diff().enemyDmgMult * PRESSURE.ENEMY_DAMAGE * trenchInvasionMult();
+                            const massacre = trincheiraRompida() && enemy.type === 'infantaria';
+                            // Trincheira rompida: a infantaria entra e mata quem estiver na linha
+                            const dano = massacre ? Infinity
+                                : (enemy.type === 'infantaria' ? GAME_CONFIG.INVASION_DAMAGE : GAME_CONFIG.INVASION_DAMAGE / 2) * diff().enemyDmgMult * PRESSURE.ENEMY_DAMAGE * trenchInvasionMult();
                             trenchDamage(enemy.type === 'infantaria' ? TRENCH.DAMAGE_INVASION : TRENCH.DAMAGE_INVASION / 2, 'a invasão');
                             addEffect('blast', 0.5, (canvas.height - 35) / canvas.height);
-                            logFeed(`🚨 ${enemy.type === 'infantaria' ? 'INVASÃO DE TRINCHEIRA!' : 'PATRULHA NA TRINCHEIRA!'} COMBATE A CURTA DISTÂNCIA!`, 'text-red-500 font-bold');
-                            alive.forEach(s => {
+                            if (trincheiraRompida() && enemy.type === 'infantaria') {
+                                logFeed('☠️ A INFANTARIA ENTROU PELA TRINCHEIRA ROMPIDA! MASSACRE NA LINHA!', 'text-red-500 font-bold');
+                            } else {
+                                logFeed(`🚨 ${enemy.type === 'infantaria' ? 'INVASÃO DE TRINCHEIRA!' : 'PATRULHA NA TRINCHEIRA!'} COMBATE A CURTA DISTÂNCIA!`, 'text-red-500 font-bold');
+                            }
+                            // Cada invasor luta com 2 soldados; com a trincheira rompida, com todos
+                            const vivosAgoraNaLinha = alive.filter(s => s.hp > 0);
+                            const atingidos = massacre
+                                ? vivosAgoraNaLinha
+                                : vivosAgoraNaLinha.sort(() => Math.random() - 0.5).slice(0, INVASION_TARGETS);
+                            atingidos.forEach(s => {
                                 if (s.hp <= 0) return;
                                 s.hp = Math.max(0, s.hp - dano);
                                 if (s.hp <= 0) {
@@ -2133,7 +2179,7 @@
             // Trincheira e recebimento de suprimentos
             const tr = Math.round(gameState.trench);
             const trEl = document.getElementById('lbl-trench');
-            trEl.textContent = `${tr}%`;
+            trEl.textContent = trincheiraRompida() ? `${tr}% · ROMPIDA` : `${tr}%`;
             trEl.className = `font-bold ${tr >= 70 ? 'text-mil-greenMuted' : tr >= 40 ? 'text-mil-amberMuted' : 'text-red-400'}`;
             const trBar = document.getElementById('bar-trench');
             trBar.style.width = `${tr}%`;
@@ -2307,9 +2353,12 @@
                 if (gameState.prestige < custo(100)) return logFeed('Prestígio insuficiente para Artilharia!', 'text-red-400');
                 if (gameState.enemies.length === 0) return logFeed('Nenhum alvo identificado no setor.', 'text-mil-amberMuted');
                 gameState.prestige -= custo(100);
-                gameState.enemies.forEach(en => { const pa = enemyFrac(en); addEffect('artillery', pa.fx, pa.fy); });
-                gameState.enemies = [];
-                logFeed('💣 FOGO DE ARTILHARIA EXECUTADO! Setor limpo.', 'text-mil-greenMuted font-bold');
+                // Dano pesado em todos os inimigos (não apaga ondas inteiras de uma vez)
+                const antes = gameState.enemies.length;
+                gameState.enemies.forEach(en => { const pa = enemyFrac(en); addEffect('artillery', pa.fx, pa.fy); en.hp -= ARTILLERY_SUPPORT_DAMAGE; });
+                gameState.enemies = gameState.enemies.filter(en => en.hp > 0);
+                const abatidos = antes - gameState.enemies.length;
+                logFeed(`💣 FOGO DE ARTILHARIA EXECUTADO! ${abatidos} de ${antes} inimigos abatidos${gameState.enemies.length ? `; ${gameState.enemies.length} ainda avançam feridos` : '. Setor limpo'}.`, 'text-mil-greenMuted font-bold');
             }
 
             if (type === 'MEDEVAC') {

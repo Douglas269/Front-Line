@@ -158,6 +158,17 @@ async function run() {
     gameState.level = nivelOrig;
     c.niveisAltosApertam = comida1 === 1 && Math.abs(comida25 - 0.64) < 0.001 && onda1 === 0 && onda25 === 4 && ritmo1 === 1 && Math.abs(ritmo25 - 1.48) < 0.001;
 
+    // Trincheira rompida: a invasão de infantaria vira massacre
+    const sorteioR = Math.random; Math.random = () => 0.99;
+    gameState.squad.forEach(s => { s.hp = 100; s.deserted = false; s.duty = 'WATCH'; });
+    Object.assign(gameState.tacticalOrders, { SUPPRESSION: false, SHELTER: true, CONSERVE: false, FULL_VIGILANCE: false, SIGNAL_JAM: false });
+    gameState.trench = 15; gameState.barrage = null; gameState.counterBattery = null;
+    gameState.enemies = [{ type: 'infantaria', distance: 0.5, hp: 1e6, offsetX: 0 }];
+    processEnemiesAndCombat();
+    c.trincheiraRompidaMassacre = gameState.squad.every(s => s.hp <= 0);
+    Math.random = sorteioR; gameState.trench = 100; gameState.enemies = []; gameState.tacticalOrders.SHELTER = false;
+    gameState.squad.forEach(s => { s.hp = 100; });
+
     // Bugs corrigidos na revisão
     gameState.tacticalOrders.SHELTER = true; updateUI();
     c.botaoOrdemReflete = document.getElementById('btn-ord-cover').classList.contains('btn-active-order');
@@ -175,7 +186,8 @@ async function run() {
     gameState.trench = 50; gameState.timeSeconds = 10;
     gameState.squad.find(s => s.class === 'Engenheiro').duty = 'MAINTENANCE';
     processSquadNeeds();
-    c.engenheiroRepara = gameState.trench === 53;
+    const desgaste = TRENCH.WEAR + (gameState.weather === 'Chuva Forte' ? TRENCH.WEAR_RAIN : 0);
+    c.engenheiroRepara = Math.abs(gameState.trench - (50 - desgaste + TRENCH.REPAIR_ENGINEER)) < 1e-9;
 
     // Recebimento: todos de vigília -> metade da entrega se perde
     gameState.squad.forEach(s => s.duty = 'WATCH');
