@@ -151,6 +151,13 @@ async function run() {
     localStorage.removeItem('frontline-ponto-alpha-v1');
     Math.random = sorteioG; gameState.general = newGeneral(); gameState.enemies = []; gameState.barrage = null; gameState.day = 2;
 
+    // Níveis altos: menos comida no comboio, ondas maiores e ataques mais rápidos
+    const nivelOrig = gameState.level;
+    gameState.level = 1; const comida1 = comidaDoNivel(), onda1 = ondaDoNivel(), ritmo1 = ritmoDoNivel();
+    gameState.level = 25; const comida25 = comidaDoNivel(), onda25 = ondaDoNivel(), ritmo25 = ritmoDoNivel();
+    gameState.level = nivelOrig;
+    c.niveisAltosApertam = comida1 === 1 && Math.abs(comida25 - 0.64) < 0.001 && onda1 === 0 && onda25 === 4 && ritmo1 === 1 && Math.abs(ritmo25 - 1.48) < 0.001;
+
     // Bugs corrigidos na revisão
     gameState.tacticalOrders.SHELTER = true; updateUI();
     c.botaoOrdemReflete = document.getElementById('btn-ord-cover').classList.contains('btn-active-order');

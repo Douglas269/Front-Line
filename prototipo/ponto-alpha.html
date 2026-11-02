@@ -1178,8 +1178,8 @@
                 // sem entrega hoje
             } else if (gameState.supplyLineEff > 30) {
                 const sm = diff().supplyMult;
-                const delRations = Math.floor(10 * sm * (gameState.supplyLineEff / 100));
-                const delWater = Math.floor(15 * sm * (gameState.supplyLineEff / 100));
+                const delRations = Math.floor(10 * sm * comidaDoNivel() * (gameState.supplyLineEff / 100));
+                const delWater = Math.floor(15 * sm * comidaDoNivel() * (gameState.supplyLineEff / 100));
                 const delAmmo = Math.floor(120 * sm * (gameState.supplyLineEff / 100));
 
                 // Sem ninguém fora da vigília para descarregar, metade da carga se perde
@@ -1361,8 +1361,17 @@
             ENEMY_HP: 1.35,        // inimigos com 35% mais vida
             ENEMY_DAMAGE: 1.35,    // inimigos com 35% mais dano (tiros, invasão e artilharia)
             GENERAL_INCOME: 2.0,   // ritmo de ataques do general (1 = ritmo do antigo sorteio)
-            CONVOY_EVERY_DAYS: 2   // comboio de suprimentos a cada 2 dias
+            CONVOY_EVERY_DAYS: 2,  // comboio de suprimentos a cada 2 dias
+            // A cada nível acima do 1:
+            FOOD_LOSS_PER_LEVEL: 0.015,   // −1,5% de ração e água no comboio (nível 25: −36%)
+            WAVE_PLUS_EVERY_LEVELS: 5,    // +1 soldado por onda a cada 5 níveis (nível 21+: +4)
+            ATTACK_RATE_PER_LEVEL: 0.02   // general ataca 2% mais rápido (nível 25: +48%)
         };
+
+        const nivelAcima = () => Math.max(0, Math.min(MAX_LEVEL, gameState.level) - 1);
+        const comidaDoNivel = () => Math.max(0.3, 1 - PRESSURE.FOOD_LOSS_PER_LEVEL * nivelAcima());
+        const ondaDoNivel = () => Math.floor(nivelAcima() / PRESSURE.WAVE_PLUS_EVERY_LEVELS);
+        const ritmoDoNivel = () => 1 + PRESSURE.ATTACK_RATE_PER_LEVEL * nivelAcima();
 
         // Tipos de inimigo: velocidade, vida relativa, chance de atacar e dano por ataque
         const ENEMY_TYPES = {
@@ -1389,7 +1398,7 @@
             const marcada = gameState.nextWaveBoost || 0;
             gameState.nextWaveBoost = 0;
             const base = Math.min(PRESSURE.WAVE_CAP, PRESSURE.WAVE_BASE + Math.floor((gameState.day - 1) / PRESSURE.WAVE_EVERY_DAYS));
-            const count = base + Math.max(0, extra - 2) + marcada;
+            const count = base + Math.max(0, extra - 2) + ondaDoNivel() + marcada;
             if (marcada) logFeed(`🎯 A patrulha marcou a posição: esta onda vem com ${marcada} soldados a mais.`, 'text-red-400 font-bold');
             for (let i = 0; i < count; i++) spawnEnemy('infantaria', startDist);
             logFeed(`🚨 ALERTA: Tropa inimiga avança sobre o setor!`, 'text-red-400 font-bold');
@@ -1466,7 +1475,7 @@
         function generalIncome() {
             if (gameState.day < 2) return 0;
             const p = Math.min(0.05, Math.min(0.02, 0.0025 + gameState.day * 0.0005) * diff().eventMult);
-            return p * 2.75 * PRESSURE.GENERAL_INCOME;
+            return p * 2.75 * PRESSURE.GENERAL_INCOME * ritmoDoNivel();
         }
 
         function situacao() {

@@ -49,6 +49,7 @@ Jogo de estratégia tático com foco em realismo de comando, combate blindado e 
 ### Níveis de dificuldade
 - 25 níveis. Cada vitória sobe um nível; derrota mantém o nível. O nível fica salvo no navegador, mesmo com "Nova partida".
 - Cada nível define uma dificuldade que aumenta a frequência de eventos, a vida e o dano dos inimigos e o tamanho das ondas, e diminui a entrega diária de suprimentos e o prestígio ganho; os apoios da Central ficam mais caros.
+- Além disso, cada nível acima do 1 aperta de forma visível (bloco `PRESSURE`): −1,5% de ração e água no comboio (nível 25: −36%), +1 soldado por onda a cada 5 níveis (nível 21+: +4) e ataques do general 2% mais rápidos (nível 25: +48%).
 - Calibrado para quem joga bem: ~10% de vitória do nível 1 ao 12, caindo cerca de 0,5 ponto por nível até ~3% no nível 25. Ficar parado não vence em nenhum nível.
 - Vitórias medidas com `node tests/niveis.js` (100 partidas por nível medido; margem de cerca de 3 a 6 pontos):
 
