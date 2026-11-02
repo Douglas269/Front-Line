@@ -343,7 +343,7 @@
                                     <span><i class="fa-solid fa-gun text-mil-greenMuted"></i> Mun. Leve</span>
                                     <span id="val-ammo-rifle" class="font-bold text-mil-textGlow">900 / 2000</span>
                                 </div>
-                                <div class="text-xs text-mil-textMuted mt-1">Uso em Fuzis / Snipers</div>
+                                <div id="txt-balas-inimigo" class="text-xs text-mil-textMuted mt-1">Uso em Fuzis / Snipers</div>
                             </div>
                             <!-- Heavy Ammo -->
                             <div class="bg-mil-bg border border-mil-border p-2 rounded">
@@ -735,6 +735,7 @@
             effects: [], // explosões, impactos e comboio no mapa
             barrage: null, // artilharia inimiga prevista: { ticks } ou null
             pendingSupply: null, // carga emergencial a caminho: { ticks } ou null
+            combate: { tiros: 0, acertos: 0, abates: 0 }, // tiros do dia
             level: 1, // nível de dificuldade (sobe a cada vitória)
             trench: 100, // conservação da trincheira em % (cai com artilharia e invasões)
             lastIntelDay: 0, // dia em que o último relatório foi enviado
@@ -867,6 +868,8 @@
             ctx.stroke();
             ctx.setLineDash([]);
             drawLabel('ALCANCE DE TIRO 140m', 6, yRange - 4, 'left', '#d9a35a');
+            const cbt = gameState.combate;
+            if (cbt && cbt.tiros > 0) drawLabel(`TIROS ${cbt.tiros} · ACERTOS ${cbt.acertos} · ABATES ${cbt.abates}`, w - 6, trenchY - 22, 'right', '#b9c4a0');
 
             // 3. Rastro de aproximação: cada inimigo vem do norte (topo do mapa)
             gameState.enemies.forEach(en => {
@@ -1122,6 +1125,7 @@
                     enemies: gameState.enemies,
                     lastIntelDay: gameState.lastIntelDay,
                     pendingSupply: gameState.pendingSupply,
+                    combate: gameState.combate,
                     trench: gameState.trench,
                     barrage: gameState.barrage,
                     activeCrisis: gameState.activeCrisis,
@@ -1161,6 +1165,7 @@
                 enemies: data.enemies,
                 lastIntelDay: data.lastIntelDay,
                 pendingSupply: data.pendingSupply || null,
+                combate: data.combate || { tiros: 0, acertos: 0, abates: 0 },
                 trench: typeof data.trench === 'number' ? data.trench : 100,
                 barrage: data.barrage || null,
                 activeCrisis: data.activeCrisis && CRISES[data.activeCrisis.id] ? data.activeCrisis : null,
@@ -1215,6 +1220,13 @@
         }
 
         function onNewDay() {
+            const cb = gameState.combate || { tiros: 0, acertos: 0, abates: 0 };
+            if (cb.tiros > 0) {
+                const resumo = `Dia ${gameState.day - 1} em combate: ${cb.tiros} tiros, ${cb.acertos} acertos (${Math.round(100 * cb.acertos / cb.tiros)}%), ${cb.abates} inimigos abatidos.`;
+                logFeed(`🎯 ${resumo}`, 'text-mil-textMuted');
+                addDiaryEntry(resumo);
+            }
+            gameState.combate = { tiros: 0, acertos: 0, abates: 0 };
             logFeed(`=== DIA ${gameState.day} INICIADO ===`, 'text-mil-amberMuted font-bold');
             playTacticalBeep(1000, 0.08);
 
@@ -1455,7 +1467,7 @@
         /* Pressão do inimigo e ritmo de suprimentos, num lugar só para ajustar fácil.
            Valores pensados para o nível 1 já ser pesado; os níveis somam por cima. */
         const PRESSURE = {
-            WAVE_BASE: 7,          // soldados na primeira onda de infantaria
+            WAVE_BASE: 6,          // soldados na primeira onda de infantaria (era 7)
             WAVE_EVERY_DAYS: 5,    // +1 soldado por onda a cada 5 dias
             WAVE_CAP: 12,          // máximo por onda (fora extras de nível e de patrulha)
             ENEMY_HP: 1.0,         // multiplicador geral da vida dos inimigos
@@ -1465,9 +1477,9 @@
             CONVOY_EVERY_DAYS: 2,  // comboio de suprimentos a cada 2 dias
             // A cada nível acima do 1:
             FOOD_LOSS_PER_LEVEL: 0.015,   // −1,5% de ração e água no comboio (nível 25: −36%)
-            WAVE_PLUS_EVERY_LEVELS: 5,    // +1 soldado por onda a cada 5 níveis (nível 21+: +4)
+            WAVE_PLUS_EVERY_LEVELS: 6,    // +1 soldado por onda a cada 6 níveis (7, 13, 19, 25: +4)
             ATTACK_RATE_PER_LEVEL: 0.02,  // general ataca 2% mais rápido (nível 25: +48%)
-            AMMO_SPEND: 3,              // gasto de munição em combate (leve e pesada) ×3 desde o nível 1
+            AMMO_SPEND: 3,              // gasto de munição pesada na supressão ×3 (a leve agora é bala a bala)
             AMMO_CAP_RIFLE: 2000,       // capacidade do paiol: munição leve
             AMMO_CAP_HEAVY: 600,        // capacidade do paiol: munição pesada
         };
@@ -1493,8 +1505,7 @@
         };
         const BARRAGE_WARNING_TICKS = 64;  // aviso antes da artilharia cair (8 s reais)
         const ARTILLERY_SUPPORT_DAMAGE = 200; // dano da artilharia de apoio em cada inimigo
-        const SQUAD_FIREPOWER = 0.35;         // dano do esquadrão por segundo (dividido entre os alvos)
-        const INVASION_TARGETS = 2;           // soldados atingidos por cada invasor (todos, se a trincheira romper)
+                const INVASION_TARGETS = 2;           // soldados atingidos por cada invasor (todos, se a trincheira romper)
         const DRONE_SPOT_ARTILLERY = 1.5;  // drone observando: artilharia inimiga +50% de dano
         const DRONE_SPOT_FIRE = 1.2;       // drone observando: tiros inimigos +20% de dano
         const JAM_DRONE_CRASH = 0.06;      // bloqueio de sinal: chance por tick de cada drone cair (~40% por segundo real)
@@ -1507,6 +1518,109 @@
         const temVisao = () => gameState.tacticalOrders.FULL_VIGILANCE || gameState.squad.some(s => s.hp > 0 && s.duty === 'WATCH');
         const BARRAGE_SHOTS = 3;
         const BARRAGE_DAMAGE = 13;
+
+
+        // ===== Tiro de verdade =====
+        // Cada arma: balas por segundo de jogo (8 por segundo real), chance base de acerto e dano por acerto
+        const ARMAS = {
+            'Fuzileiro Regular': { cadencia: 0.3125, precisao: 0.42, dano: 48 },  // ~2,5 balas/s real
+            'Metralhador':       { cadencia: 0.875,  precisao: 0.30, dano: 40 },  // ~7 balas/s real
+            'Atirador de Elite': { cadencia: 0.075,  precisao: 0.90, dano: 160 }, // ~0,6 bala/s real
+            'Médico':            { cadencia: 0.25,   precisao: 0.30, dano: 40 },
+            'Engenheiro':        { cadencia: 0.25,   precisao: 0.30, dano: 40 }
+        };
+        const PISTOLA = { cadencia: 0.15, precisao: 0.20, dano: 20 }; // sem munição leve: pistola e baioneta
+        const TIRO = {
+            FORA_DA_VIGILIA: 0.75,  // quem está na cozinha, descanso ou manutenção atira menos
+            SUPRESSAO: { cad: 2.5, prec: 0.7 },
+            ECONOMIA:  { cad: 0.4, prec: 1.5 },
+            ABRIGO:    { cad: 0.4, prec: 0.8 },
+            NOITE: 0.85, NEVOA: 0.8, CHUVA: 0.9, DRONE_ALVO: 0.8, ALCANCE: 300 // alcance máximo do fuzil (300 m)
+        };
+        const statsDe = (s) => (s.stats = s.stats || { tiros: 0, acertos: 0, abates: 0 });
+        const ehNoite = () => gameState.timeSeconds >= 120;
+
+        // Precisão de um soldado contra um alvo, já com todos os modificadores
+        function chanceDeAcerto(s, arma, enemy) {
+            const o = gameState.tacticalOrders;
+            let p = arma.precisao;
+            p *= 0.6 + 0.4 * Math.max(0, s.hp) / 100;
+            p *= 0.7 + 0.3 * Math.max(0, s.moral) / 100;
+            if (s.fatigue > 70) p *= 0.85;
+            if (o.SUPPRESSION) p *= TIRO.SUPRESSAO.prec;
+            if (o.CONSERVE) p *= TIRO.ECONOMIA.prec;
+            if (o.SHELTER) p *= TIRO.ABRIGO.prec;
+            if (!temVisao()) p *= BLIND_FIRE;
+            if (ehNoite() && !o.FULL_VIGILANCE) p *= TIRO.NOITE;
+            if (gameState.weather === 'Névoa Espessa') p *= TIRO.NEVOA;
+            if (gameState.weather === 'Chuva Forte') p *= TIRO.CHUVA;
+            if (enemy) {
+                if (enemy.type === 'drone') p *= TIRO.DRONE_ALVO;
+                const d = Math.max(0, Math.min(TIRO.ALCANCE, enemy.distance));
+                p *= 1.3 - 0.6 * d / TIRO.ALCANCE; // perto: mais fácil; no limite (300 m): bem mais difícil
+            }
+            return Math.min(0.95, p);
+        }
+        function cadenciaDe(s, arma) {
+            const o = gameState.tacticalOrders;
+            let c = arma.cadencia;
+            if (s.duty !== 'WATCH') c *= TIRO.FORA_DA_VIGILIA;
+            if (o.SUPPRESSION) c *= TIRO.SUPRESSAO.cad;
+            if (o.CONSERVE) c *= TIRO.ECONOMIA.cad;
+            if (o.SHELTER) c *= TIRO.ABRIGO.cad;
+            return c;
+        }
+
+        function dispararEsquadrao(alive) {
+            const inimigos = gameState.enemies.filter(e => e.distance <= TIRO.ALCANCE);
+            if (!inimigos.length) return; // ninguém ao alcance: o esquadrão segura o fogo
+            const maisProximo = inimigos.reduce((a, e) => (e.distance < a.distance ? e : a), inimigos[0]);
+            const escolherAlvo = () => {
+                const vivos = inimigos.filter(e => e.hp > 0);
+                if (!vivos.length) return null;
+                if (maisProximo.hp > 0 && (vivos.length === 1 || Math.random() < 0.5)) return maisProximo;
+                return vivos[Math.floor(Math.random() * vivos.length)];
+            };
+            let disparou = false;
+            alive.forEach(s => {
+                const temBala = gameState.resources.ammoRifle >= 1;
+                const arma = temBala ? (ARMAS[s.class] || ARMAS['Fuzileiro Regular']) : PISTOLA;
+                s.cadAcc = (s.cadAcc || 0) + cadenciaDe(s, arma);
+                const st = statsDe(s);
+                while (s.cadAcc >= 1) {
+                    s.cadAcc -= 1;
+                    const alvo = escolherAlvo();
+                    if (!alvo) { s.cadAcc = 0; break; }
+                    if (arma !== PISTOLA) {
+                        if (gameState.resources.ammoRifle < 1) break;
+                        gameState.resources.ammoRifle -= 1;
+                    }
+                    st.tiros++; gameState.combate.tiros++; disparou = true;
+                    if (Math.random() < chanceDeAcerto(s, arma, alvo)) {
+                        st.acertos++; gameState.combate.acertos++;
+                        alvo.hp -= arma.dano;
+                        if (alvo.hp <= 0 && !alvo.abatidoPor) alvo.abatidoPor = s.id;
+                    }
+                }
+            });
+            if (disparou && Math.random() < 0.25) playGunshotSound();
+        }
+
+        // Estimativa de balas para derrubar um soldado de infantaria hoje (aba Logística)
+        function balasPorInimigo() {
+            const vivos = gameState.squad.filter(s => s.hp > 0);
+            if (!vivos.length) return 0;
+            const alvo = { type: 'infantaria', distance: 150 };
+            let dano = 0, balas = 0;
+            vivos.forEach(s => {
+                const a = ARMAS[s.class] || ARMAS['Fuzileiro Regular'];
+                const c = cadenciaDe(s, a);
+                balas += c; dano += c * chanceDeAcerto(s, a, alvo) * a.dano;
+            });
+            if (dano <= 0) return 0;
+            const vida = (100 + gameState.day * PRESSURE.ENEMY_HP_PER_DAY) * diff().enemyHpMult * PRESSURE.ENEMY_HP;
+            return Math.ceil(vida / (dano / balas));
+        }
 
         function spawnEnemyAssault(startDist = 270) {
             const extra = diff().waveExtra;
@@ -1798,33 +1912,10 @@
                 statusEl.textContent = '⚠️ ENGAJAMENTO DE COMBATE';
                 statusEl.className = 'text-red-400 font-bold animate-pulse';
 
-                let squadPower = 0;
-                let ammoConsumption = gameState.tacticalOrders.CONSERVE ? 0.35 : 1.0;
-                if (gameState.tacticalOrders.SUPPRESSION) ammoConsumption *= 2.2;
-
                 const alive = gameState.squad.filter(s => s.hp > 0);
-                alive.forEach(s => {
-                    let pwr = 10 * (s.hp / 100) * (s.moral / 100);
-                    if (s.class === 'Atirador de Elite') pwr *= 1.8;
-                    if (s.class === 'Metralhador') pwr *= 1.4;
-                    squadPower += pwr;
-                });
-
-                if (gameState.tacticalOrders.SHELTER) squadPower *= 0.4;
-                if (gameState.tacticalOrders.SUPPRESSION) squadPower *= 1.6;
-                if (gameState.tacticalOrders.CONSERVE) squadPower *= 0.7; // atira menos para poupar munição
-                if (!temVisao()) squadPower *= BLIND_FIRE; // sem vigia: tiro às cegas
                 const observando = droneObservando();
-
-                // O fogo do esquadrão é dividido: metade no inimigo mais próximo,
-                // metade espalhada entre os demais (uma onda grande aguenta mais)
-                // Munição: um gasto por segundo de combate (o fogo já é dividido entre os alvos)
-                const temMunicao = gameState.resources.ammoRifle > 0;
-                if (temMunicao) gameState.resources.ammoRifle = Math.max(0, gameState.resources.ammoRifle - 0.6 * PRESSURE.AMMO_SPEND * ammoConsumption);
-
-                const totalInimigos = gameState.enemies.length;
-                const maisProximo = gameState.enemies.reduce((a, e) => (e.distance < a.distance ? e : a), gameState.enemies[0]);
-                const parteDoFogo = (e) => totalInimigos === 1 ? 1 : (e === maisProximo ? 0.5 : 0.5 / (totalInimigos - 1));
+                // Tiro de verdade: cada soldado dispara balas; cada bala tem chance de acertar
+                dispararEsquadrao(alive);
 
                 for (let i = gameState.enemies.length - 1; i >= 0; i--) {
                     const enemy = gameState.enemies[i];
@@ -1861,15 +1952,8 @@
                         }
                     }
 
-                    if (temMunicao) {
-                        enemy.hp -= squadPower * SQUAD_FIREPOWER * parteDoFogo(enemy);
-                        if (Math.random() < 0.2) playGunshotSound();
-                    } else {
-                        enemy.hp -= squadPower * SQUAD_FIREPOWER * 0.125 * parteDoFogo(enemy); // sem munição: só baioneta e pistola
-                    }
-
                     // Inimigo ataca em alcance de tiro
-                    if (enemy.distance < 140 && alive.length > 0 && Math.random() < tipo.attackChance) {
+                    if (enemy.hp > 0 && enemy.distance < 140 && alive.length > 0 && Math.random() < tipo.attackChance) {
                         let dmg = tipo.dmg(enemy) * diff().enemyDmgMult * PRESSURE.ENEMY_DAMAGE * (observando ? DRONE_SPOT_FIRE : 1);
                         if (gameState.tacticalOrders.SHELTER) dmg *= shelterMult();
 
@@ -1889,7 +1973,9 @@
                     if (enemy.hp <= 0) {
                         const pk = enemyFrac(enemy);
                         addEffect('kill', pk.fx, pk.fy);
-                        logFeed(`✅ ${tipo.label} NEUTRALIZADO NO SETOR!`, 'text-mil-greenMuted font-bold');
+                        const atirador = enemy.abatidoPor ? gameState.squad.find(m => m.id === enemy.abatidoPor) : null;
+                        if (atirador) { statsDe(atirador).abates++; gameState.combate.abates++; }
+                        logFeed(`✅ ${tipo.label} NEUTRALIZADO NO SETOR${atirador ? ` por ${atirador.rank} ${atirador.name}` : ''}!`, 'text-mil-greenMuted font-bold');
                         if (enemy.type === 'patrulha' && gameState.general) lembrar('abatePatrulha', 1, 0.3);
                         gameState.prestige += ganho(enemy.type === 'drone' ? 20 : 30);
                         gameState.enemies.splice(i, 1);
@@ -2261,6 +2347,7 @@
             document.getElementById('val-rations').textContent = `${Math.round(gameState.resources.rations)} un`;
             document.getElementById('val-water').textContent = `${Math.round(gameState.resources.water)} L`;
             document.getElementById('val-ammo-rifle').textContent = `${Math.round(gameState.resources.ammoRifle)} / ${PRESSURE.AMMO_CAP_RIFLE}`;
+            { const b = balasPorInimigo(); document.getElementById('txt-balas-inimigo').textContent = b ? `≈ ${b} balas por inimigo hoje` : 'Uso em Fuzis / Snipers'; }
             document.getElementById('val-ammo-heavy').textContent = `${Math.round(gameState.resources.ammoHeavy)} / ${PRESSURE.AMMO_CAP_HEAVY}`;
             document.getElementById('val-medkits').textContent = `${gameState.resources.medkits} kits`;
 
@@ -2803,6 +2890,8 @@
             const est = document.getElementById('perfil-estado');
             if (morto) { est.className = 'text-xs font-bold text-red-500'; est.textContent = s.deserted ? 'Abandonou a posição' : 'Morto em ação'; }
             else { est.className = 'text-xs font-bold text-mil-greenMuted'; est.textContent = `Na linha · ${funcoes[s.duty] || s.duty} · HP ${Math.round(s.hp)}% · Moral ${Math.round(s.moral)}%`; }
+            const st = statsDe(s);
+            document.getElementById('perfil-dados').innerHTML += `<br>Em combate: ${st.tiros} tiros · ${st.acertos} acertos${st.tiros ? ` (${Math.round(100 * st.acertos / st.tiros)}%)` : ''} · ${st.abates} abates`;
             document.getElementById('perfil-historia').textContent = p.historia;
             document.getElementById('perfil-frase').textContent = p.frase;
             document.getElementById('modal-perfil').classList.remove('hidden');

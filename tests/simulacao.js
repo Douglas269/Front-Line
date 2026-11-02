@@ -131,17 +131,40 @@ async function run() {
       Object.assign(gameState.tacticalOrders, { SUPPRESSION: false, SHELTER: false, CONSERVE: false, FULL_VIGILANCE: false, SIGNAL_JAM: false });
       gameState.barrage = null; gameState.counterBattery = null; gameState.nextWaveBoost = 0; gameState.resources.ammoRifle = 500; };
     Math.random = () => 0.99; // inimigo não acerta; sem eventos
-    prepCombate(); gameState.squad.forEach(s => s.duty = 'WATCH');
-    gameState.enemies = [{ type: 'infantaria', distance: 250, hp: 1000, offsetX: 0 }]; processEnemiesAndCombat();
-    const danoComVigia = 1000 - gameState.enemies[0].hp;
-    prepCombate(); gameState.squad.forEach(s => s.duty = 'REST');
-    gameState.enemies = [{ type: 'infantaria', distance: 250, hp: 1000, offsetX: 0 }]; processEnemiesAndCombat();
-    const danoSemVigia = 1000 - gameState.enemies[0].hp;
-    c.semVigiaAtiraAsCegas = Math.abs(danoSemVigia - danoComVigia * 0.5) < 0.01;
-    // Munição: gasto triplicado (1,8 cartucho por segundo de jogo em combate, sem ordens)
-    prepCombate(); gameState.squad.forEach(s => s.duty = 'WATCH');
-    gameState.enemies = [{ type: 'infantaria', distance: 250, hp: 1000, offsetX: 0 }]; processEnemiesAndCombat();
-    c.municaoGastaTriplicada = Math.abs((500 - gameState.resources.ammoRifle) - 1.8) < 0.001;
+    // Tiro bala a bala
+    prepCombate(); gameState.squad.forEach(s => { s.duty = 'WATCH'; s.cadAcc = 0; s.stats = null; });
+    const alvoTeste = { type: 'infantaria', distance: 150 };
+    const mendes = gameState.squad.find(s => s.class === 'Atirador de Elite');
+    const pComVigia = chanceDeAcerto(mendes, ARMAS[mendes.class], alvoTeste);
+    gameState.squad.forEach(s => s.duty = 'REST');
+    const pSemVigia = chanceDeAcerto(mendes, ARMAS[mendes.class], alvoTeste);
+    c.semVigiaAtiraAsCegas = Math.abs(pSemVigia - pComVigia * 0.5) < 1e-9;
+    c.pertoAcertaMais = chanceDeAcerto(mendes, ARMAS[mendes.class], { type: 'infantaria', distance: 20 }) > chanceDeAcerto(mendes, ARMAS[mendes.class], { type: 'infantaria', distance: 280 });
+    // 1 segundo real (8 ticks) com todos de vigília: ~16 balas, cada uma descontada do paiol
+    const gastoEm1s = (ordens) => { prepCombate(); Object.assign(gameState.tacticalOrders, ordens);
+      gameState.squad.forEach(s => { s.duty = 'WATCH'; s.cadAcc = 0; });
+      gameState.enemies = [{ type: 'infantaria', distance: 250, hp: 1e9, maxHp: 1e9, offsetX: 0 }];
+      for (let k = 0; k < 8; k++) processEnemiesAndCombat(); return 500 - gameState.resources.ammoRifle; };
+    const gNormal = gastoEm1s({}), gSup = gastoEm1s({ SUPPRESSION: true }), gEco = gastoEm1s({ CONSERVE: true });
+    c.balaABala = gNormal >= 14 && gNormal <= 17 && Number.isInteger(gNormal);
+    c.supressaoGastaMais = gSup > gNormal * 2;
+    c.economiaGastaMenos = gEco < gNormal / 2;
+    c.tirosContados = gameState.combate.tiros > 0;
+    // Acerto certo (sorteio 0): a Atiradora derruba e recebe o abate
+    prepCombate(); Math.random = () => 0;
+    gameState.squad.forEach(s => { s.duty = 'REST'; s.hp = 0; s.cadAcc = 0; s.stats = null; });
+    mendes.hp = 100; mendes.duty = 'WATCH'; mendes.cadAcc = 0.99;
+    gameState.enemies = [{ type: 'infantaria', distance: 100, hp: 100, maxHp: 100, offsetX: 0 }];
+    processEnemiesAndCombat();
+    c.abateCreditado = gameState.enemies.length === 0 && mendes.stats.abates === 1 && mendes.stats.acertos === 1;
+    Math.random = () => 0.99;
+    gameState.squad.forEach(s => { s.hp = 100; });
+    // Sem munição: pistola, não gasta paiol
+    prepCombate(); gameState.resources.ammoRifle = 0; gameState.squad.forEach(s => { s.duty = 'WATCH'; s.cadAcc = 0; });
+    gameState.enemies = [{ type: 'infantaria', distance: 250, hp: 1e9, maxHp: 1e9, offsetX: 0 }];
+    { const t0 = gameState.combate.tiros; for (let k = 0; k < 8; k++) processEnemiesAndCombat();
+      c.semMunicaoUsaPistola = gameState.resources.ammoRifle === 0 && gameState.combate.tiros > t0; }
+    gameState.resources.ammoRifle = 500;
     // Paiol: munição leve não passa da capacidade
     gameState.resources.ammoRifle = PRESSURE.AMMO_CAP_RIFLE - 10;
     c.paiolLimita = addAmmoRifle(250) === 10 && gameState.resources.ammoRifle === PRESSURE.AMMO_CAP_RIFLE;
