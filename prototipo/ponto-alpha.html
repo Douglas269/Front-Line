@@ -1071,14 +1071,14 @@
                 // Consumo compartilhado de rações e água
                 if (gameState.resources.rations > 0) {
                     gameState.resources.rations = Math.max(0, gameState.resources.rations - (GAME_CONFIG.RATION_USE_PER_TICK * rMult));
-                    soldier.hunger = Math.max(0, soldier.hunger - 3); // comer reduz a fome
+                    soldier.hunger = Math.max(0, soldier.hunger - 8); // comer reduz a fome
                 } else {
                     soldier.hunger = Math.min(100, soldier.hunger + 2);
                 }
 
                 if (gameState.resources.water > 0) {
                     gameState.resources.water = Math.max(0, gameState.resources.water - (GAME_CONFIG.WATER_USE_PER_TICK * rMult));
-                    soldier.thirst = Math.max(0, soldier.thirst - 3); // beber reduz a sede
+                    soldier.thirst = Math.max(0, soldier.thirst - 8); // beber reduz a sede
                 } else {
                     soldier.thirst = Math.min(100, soldier.thirst + 3);
                 }
@@ -1127,7 +1127,7 @@
         };
         const BARRAGE_WARNING_TICKS = 20;  // segundos de aviso antes da artilharia cair
         const BARRAGE_SHOTS = 3;
-        const BARRAGE_DAMAGE = 12;
+        const BARRAGE_DAMAGE = 13;
 
         function spawnEnemyAssault() {
             const count = Math.min(3, 1 + Math.floor(gameState.day / 9));
