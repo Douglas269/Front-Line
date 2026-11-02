@@ -22,6 +22,9 @@ Jogo de estratégia tático com foco em realismo de comando, combate blindado e 
 - Arquivos: `prototipo/manifest.webmanifest`, `prototipo/sw.js` e `prototipo/icons/` (ícone vetorial `icon.svg` e PNGs de 16, 32, 180, 192 e 512 px gerados a partir dele). O `vercel.json` publica esses arquivos também na raiz do site.
 - O service worker busca sempre a versão mais nova na rede; a cópia salva só é usada sem conexão. Sem internet, o jogo abre, mas o visual depende do Tailwind e das fontes, que vêm de fora.
 
+### Tutorial
+- Na primeira vez que o jogo é aberto, aparece um guia de 7 passos (objetivo, funções, fome/sede/trincheira, mapa, ordens, rádio e general, como começar). O relógio fica parado enquanto ele está aberto. Dá para pular, voltar e rever pelo link **Como jogar**, ao lado de "Nova partida".
+
 ### Balanceamento atual (resumo)
 - Rações e água: só quem está na função **Cozinha** come e bebe. A cada 10 s na cozinha, o soldado alivia até 10 de fome e 12 de sede, gastando 0,33 de ração e 0,3 L de água por ciclo completo (proporcional ao que realmente consome; saciado, não gasta). Com todos comendo o necessário, o esquadrão gasta ~7 rações e ~7 L por dia. A entrega diária cai nos níveis altos.
 - Fadiga: vigília +0,9 a cada 10 s; outras funções +0,5; descanso −3,5.

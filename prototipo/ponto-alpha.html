@@ -240,7 +240,10 @@
                     <button id="btn-install" onclick="instalarApp()" class="hidden text-xs px-2 py-1 btn-tactical rounded font-bold"><i class="fa-solid fa-mobile-screen-button"></i> Instalar no celular</button>
                     <span id="hint-ios" class="hidden text-xs text-mil-textMuted">No iPhone: Compartilhar → Adicionar à Tela de Início</span>
                 </div>
-                <button onclick="novaPartida()" class="text-xs underline text-mil-textMuted hover:text-mil-textGlow whitespace-nowrap">Nova partida</button>
+                <div class="flex gap-3">
+                    <button onclick="abrirTutorial()" class="text-xs underline text-mil-textMuted hover:text-mil-textGlow whitespace-nowrap">Como jogar</button>
+                    <button onclick="novaPartida()" class="text-xs underline text-mil-textMuted hover:text-mil-textGlow whitespace-nowrap">Nova partida</button>
+                </div>
             </div>
 
             <!-- TACTICAL FEED LOG (Terminal Output Style) -->
@@ -453,6 +456,24 @@
                 </p>
                 <div id="crisis-options" class="space-y-2 pt-1 text-xs">
                     <!-- Dynamic crisis choice buttons -->
+                </div>
+            </div>
+        </div>
+
+        <!-- TUTORIAL (primeira vez e pelo link "Como jogar") -->
+        <div id="modal-tutorial" class="hidden absolute inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
+            <div class="bg-mil-panel border-2 border-mil-greenMuted rounded p-4 max-w-sm w-full space-y-3 shadow-2xl">
+                <div class="flex justify-between items-center border-b border-mil-border pb-2">
+                    <span id="tut-title" class="text-mil-textGlow font-bold text-sm"></span>
+                    <span id="tut-step" class="text-xs text-mil-textMuted"></span>
+                </div>
+                <p id="tut-text" class="text-[13px] text-mil-textGlow leading-relaxed font-normal"></p>
+                <div class="flex justify-between items-center pt-1">
+                    <button onclick="fecharTutorial()" class="text-xs underline text-mil-textMuted">Pular</button>
+                    <div class="flex gap-2">
+                        <button id="tut-back" onclick="passoTutorial(-1)" class="px-3 py-1.5 btn-tactical rounded text-xs">Voltar</button>
+                        <button id="tut-next" onclick="passoTutorial(1)" class="px-3 py-1.5 btn-tactical rounded text-xs font-bold">Próximo</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1010,8 +1031,8 @@
         }, GAME_CONFIG.UPDATE_INTERVAL_MS);
 
         function updateGameTick() {
-            // Com uma crise aberta, o relógio para até o jogador decidir
-            if (gameState.activeCrisis) return;
+            // Com uma crise ou o tutorial aberto, o relógio para
+            if (gameState.activeCrisis || tutorialAberto) return;
             // Ao fim dos 4 períodos o relógio do turno congela; só "Finalizar turno" avança o dia
             if (gameState.timeSeconds >= GAME_CONFIG.DAY_DURATION_SEC) {
                 updateClockAndUI();
@@ -2425,6 +2446,54 @@
             }
         }
 
+        /* ==========================================================================
+           TUTORIAL: passos curtos para quem joga pela primeira vez
+           ========================================================================== */
+        const TUTORIAL_KEY = 'frontline-tutorial-v1';
+        const TUTORIAL = [
+            { t: '🎯 Objetivo', x: 'Segure a trincheira por 30 dias. O relógio corre pelos períodos do dia, e o dia só vira quando você toca em "Finalizar turno". Se o esquadrão inteiro cair, a posição está perdida. Vencer sobe o nível, e cada nível é mais difícil.' },
+            { t: '🪖 Funções do esquadrão', x: 'Na aba Esquadrão, cada soldado tem uma função: Vigília (vê o inimigo e acerta melhor), Descanso (recupera fadiga e vida), Manutenção (conserta a trincheira; o Engenheiro conserta bem mais rápido) e Cozinha (o único lugar onde se come e bebe). O segredo é revezar.' },
+            { t: '🍞 Fome, sede e trincheira', x: 'Fome e sede sobem o tempo todo: passe cada soldado pela Cozinha antes de chegar a 75%. A trincheira se desgasta com o tempo, a chuva e os ataques. Abaixo de 20% ela rompe, e uma invasão mata todo mundo. Veja tudo na aba Logística.' },
+            { t: '🗺️ Lendo o mapa', x: 'O inimigo vem do norte (topo do mapa). Losango = infantaria, quadrado = patrulha, círculo = drone. A linha amarela é o alcance de tiro deles. O aviso vermelho em cima avisa contato ou artilharia chegando, com a contagem.' },
+            { t: '⚔️ Ordens táticas', x: 'Fogo Supressão: mais dano e freia o inimigo, gasta munição. Abrigo Reforçado: protege do dano (use na artilharia). Economizar: poupa munição. Vigília Total: vê tudo, cansa todos. Bloqueio de Sinal: derruba drones, mas corta o rádio. Algumas ordens se anulam.' },
+            { t: '📻 Rádio e o general inimigo', x: 'Envie o relatório uma vez por dia para ganhar prestígio. Prestígio paga artilharia, evacuação, carga emergencial e contra-bateria. O general inimigo aprende o seu jeito de jogar e muda de tática: o painel dele no Rádio mostra o que ele já percebeu.' },
+            { t: '✅ Para começar', x: 'Um bom começo: 2 soldados de vigília, 1 na cozinha, o Engenheiro na manutenção e o resto descansando. Reveze quando a fadiga, a fome ou a sede subirem. Você pode rever este guia em "Como jogar". Boa sorte, comandante.' }
+        ];
+        let tutorialAberto = false;
+        let tutorialPasso = 0;
+
+        function abrirTutorial() {
+            tutorialAberto = true;
+            tutorialPasso = 0;
+            mostrarPassoTutorial();
+            document.getElementById('modal-tutorial').classList.remove('hidden');
+        }
+
+        function mostrarPassoTutorial() {
+            const passo = TUTORIAL[tutorialPasso];
+            document.getElementById('tut-title').textContent = passo.t;
+            document.getElementById('tut-text').textContent = passo.x;
+            document.getElementById('tut-step').textContent = `${tutorialPasso + 1}/${TUTORIAL.length}`;
+            const voltar = document.getElementById('tut-back');
+            voltar.disabled = tutorialPasso === 0;
+            voltar.classList.toggle('opacity-40', tutorialPasso === 0);
+            document.getElementById('tut-next').textContent = tutorialPasso === TUTORIAL.length - 1 ? 'Começar' : 'Próximo';
+        }
+
+        function passoTutorial(delta) {
+            const novo = tutorialPasso + delta;
+            if (novo >= TUTORIAL.length) return fecharTutorial();
+            if (novo < 0) return;
+            tutorialPasso = novo;
+            mostrarPassoTutorial();
+        }
+
+        function fecharTutorial() {
+            tutorialAberto = false;
+            document.getElementById('modal-tutorial').classList.add('hidden');
+            try { localStorage.setItem(TUTORIAL_KEY, '1'); } catch (e) {}
+        }
+
         // Nível atual (fica salvo mesmo entre partidas)
         gameState.level = loadLevel();
         gameState.general = newGeneral();
@@ -2472,6 +2541,8 @@
         if (/iphone|ipad|ipod/i.test(navigator.userAgent) && !rodandoInstalado) {
             document.getElementById('hint-ios').classList.remove('hidden');
         }
+        // Primeira vez no jogo: mostra o tutorial
+        try { if (!localStorage.getItem(TUTORIAL_KEY)) abrirTutorial(); } catch (e) {}
         updateClockAndUI();
         updateUI();
     </script>

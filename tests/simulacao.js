@@ -23,11 +23,22 @@ async function run() {
   await page.goto(GAME, { waitUntil: 'load', timeout: 30000 });
   await page.waitForTimeout(1000);
 
+  // Tutorial: abre na primeira vez e pausa o relógio; depois é fechado para os testes
+  const tutorial = await page.evaluate(() => {
+    const abriu = tutorialAberto && !document.getElementById('modal-tutorial').classList.contains('hidden');
+    const t0 = gameState.timeSeconds; updateGameTick(); const pausou = gameState.timeSeconds === t0;
+    passoTutorial(1); const avancou = document.getElementById('tut-step').textContent === `2/${TUTORIAL.length}`;
+    fecharTutorial();
+    const fechou = !tutorialAberto && localStorage.getItem('frontline-tutorial-v1') === '1';
+    return { abriu, pausou, avancou, fechou };
+  });
+
   const results = { checks: {}, sim: {} };
 
   // Verificações funcionais
-  results.checks = await page.evaluate((init) => {
+  results.checks = await page.evaluate(([init, TUTORIAL_RESULT]) => {
     const c = {};
+    Object.assign(c, TUTORIAL_RESULT);
     gameState.speed = 0; // sem controle de velocidade na interface; o teste pausa direto
     // Fixa o sorteio em tempo bom (Nublado, 90% de eficiência) para o teste ser determinístico
     const sorteioReal = Math.random; Math.random = () => 0.1;
@@ -214,7 +225,7 @@ async function run() {
     c.derrotaMantemNivel = localStorage.getItem('frontline-ponto-alpha-nivel') === '2';
     localStorage.setItem('frontline-ponto-alpha-nivel', '1'); gameState.level = 1;
     return c;
-  }, INITIAL_SQUAD());
+  }, [INITIAL_SQUAD(), { tutorialAbrePrimeiraVez: tutorial.abriu, tutorialPausaRelogio: tutorial.pausou, tutorialAvanca: tutorial.avancou, tutorialFecha: tutorial.fechou }]);
 
   // Simulações sem intervenção do jogador (renderização desligada para velocidade; lógica idêntica)
   results.sim = await page.evaluate((init) => {

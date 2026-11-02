@@ -23,6 +23,7 @@ const INITIAL_SQUAD = [
 async function measure(page, level, policy) {
   return page.evaluate(({ init, level, policy, N }) => {
     updateUI = () => {}; logFeed = () => {}; addDiaryEntry = () => {};
+    if (typeof fecharTutorial === 'function') fecharTutorial();
     playTacticalBeep = () => {}; playGunshotSound = () => {}; saveGame = () => {}; saveLevel = () => {};
 
     // Jogador atento: decide antes de cada segundo de jogo
