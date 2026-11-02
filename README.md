@@ -23,6 +23,8 @@ Jogo de estratégia tático com foco em realismo de comando, combate blindado e 
 - Dano de invasão: 20 por soldado (`GAME_CONFIG.INVASION_DAMAGE`).
 - Eventos durante o turno (a partir do dia 2): infantaria (ondas), patrulha (rápida e fraca), drone (rápido, dano baixo, pode ser abatido) e artilharia (aviso de 20 s; depois 3 impactos de 13 de dano, reduzidos com Abrigo Reforçado).
 - Médico do esquadrão cura 0,6 de HP a cada 10 s no soldado mais ferido.
+- Trincheira: conservação de 0 a 100%. Cada impacto de artilharia tira 4%; cada soldado de infantaria que invade tira 6% (patrulha, 3%). Estragada, as invasões ferem até 80% mais e o Abrigo Reforçado deixa passar até 60% do dano (25% com ela inteira). Quem está na Manutenção repara 0,8% a cada 10 s; o Engenheiro, 3%.
+- Recebimento: ao chegar suprimento (entrega diária ou carga emergencial), alguém fora da vigília precisa descarregar. Com todos de vigília, metade da carga se perde.
 - Ordens táticas: Fogo Supressão (ataque +60%, inimigos 70% mais lentos, gasta munição), Abrigo Reforçado (dano recebido −75%, ataque −60%), Economizar Munição (gasto −65%, ataque −30%) e Vigília Total (mapa visível sem vigias, +0,4 de fadiga a cada 10 s para todos).
 - Carga Emergencial: chega 2d5 × 15 s depois do pedido (30 a 150 s); o prazo dobra com a linha de suprimento cortada. Só uma carga a caminho por vez.
 - Fome e sede sobem com o tempo para todos (+1,5 e +2 a cada 10 s, ou ~36 e ~48 por turno) e só caem na Cozinha. É preciso revezar os soldados na cozinha. A partir de 75%, fome ou sede tiram vida e moral.
@@ -37,12 +39,12 @@ Jogo de estratégia tático com foco em realismo de comando, combate blindado e 
 
 | Nível | Sem ação | Jogador atento (automático) |
 |---|---|---|
-| 1 a 12 | 0% (~4 dias) | ~10% |
-| 25 | 0% | ~2% |
+| 1 a 12 | 0% (~4 dias) | ~9% |
+| 25 | 0% | ~4% |
 
 Entre o 12 e o 25 a dificuldade sobe em linha reta, então a chance cai aos poucos entre esses valores. Diferenças de 0,5 ponto por nível são pequenas demais para medir partida a partida.
 
-O "jogador atento" é um robô simples: manda à cozinha quem passa de 40 de fome ou sede, reveza descanso, usa abrigo antes da artilharia, supressão com inimigos à vista, e pede apoios quando pode pagar.
+O "jogador atento" é um robô simples: manda à cozinha quem passa de 40 de fome ou sede, reveza descanso, põe o Engenheiro para reparar a trincheira abaixo de 70%, mantém alguém fora da vigília para descarregar, usa abrigo antes da artilharia, supressão com inimigos à vista, e pede apoios quando pode pagar.
 
 ## Testes
 

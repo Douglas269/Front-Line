@@ -1,7 +1,7 @@
 // Calibração dos níveis de dificuldade do Ponto Alpha.
 // Mede a taxa de vitória em cada nível com dois perfis de jogador:
 //   parado: nenhuma ação
-//   atento: jogador automático com decisões razoáveis (cozinha, descanso, abrigo, apoios)
+//   atento: jogador automático com decisões razoáveis (cozinha, descanso, reparo, abrigo, apoios)
 // Uso: node tests/niveis.js [níveis separados por vírgula] [partidas por perfil]
 //   ex.: node tests/niveis.js 1,4,7,10 30
 const path = require('path');
@@ -42,6 +42,16 @@ async function measure(page, level, policy) {
           s.duty = 'WATCH';
         }
       });
+      // Engenheiro repara a trincheira abaixo de 70% (até 95%), se não estiver comendo ou descansando
+      const eng = vivos.find(s => s.class === 'Engenheiro');
+      if (eng && eng.duty !== 'RATIONING' && eng.duty !== 'REST') {
+        if (gameState.trench < 70) eng.duty = 'MAINTENANCE';
+        else if (eng.duty === 'MAINTENANCE' && gameState.trench >= 95) eng.duty = 'WATCH';
+      }
+      // Sempre alguém fora da vigília para descarregar o comboio
+      if (vivos.length > 1 && vivos.every(s => s.duty === 'WATCH')) {
+        vivos.slice().sort((a, b) => b.fatigue - a.fatigue)[0].duty = 'REST';
+      }
       if (!vivos.some(s => s.duty === 'WATCH')) {
         const menosCansado = vivos.slice().sort((a, b) => a.fatigue - b.fatigue)[0];
         if (menosCansado) menosCansado.duty = 'WATCH';
@@ -63,7 +73,7 @@ async function measure(page, level, policy) {
       gameEnded = false;
       Object.assign(gameState, {
         level, day: 1, timeSeconds: 0, speed: 0, prestige: 150, weather: 'Nublado', supplyLineEff: 85,
-        enemies: [], activeCrisis: null, barrage: null, pendingSupply: null, lastIntelDay: 0, effects: [],
+        enemies: [], activeCrisis: null, barrage: null, pendingSupply: null, lastIntelDay: 0, effects: [], trench: 100,
         tacticalOrders: { SUPPRESSION: false, SHELTER: false, CONSERVE: false, FULL_VIGILANCE: false },
         resources: { rations: 36, water: 48, ammoRifle: 550, ammoHeavy: 200, medkits: 3 },
         squad: init.map(s => ({ ...s }))

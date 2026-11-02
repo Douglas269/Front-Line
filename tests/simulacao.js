@@ -68,6 +68,24 @@ async function run() {
     c.modalCrise = !document.getElementById('modal-crisis').classList.contains('hidden');
     document.querySelector('#crisis-options button').click();
     c.modalCriseFecha = document.getElementById('modal-crisis').classList.contains('hidden');
+    // Trincheira: artilharia estraga, Engenheiro na Manutenção repara
+    gameState.squad.forEach(s => { s.hp = 100; s.duty = 'WATCH'; });
+    gameState.trench = 100; gameState.barrage = { ticks: 1 }; processBarrage();
+    c.artilhariaEstragaTrincheira = gameState.trench === 100 - 3 * TRENCH.DAMAGE_BARRAGE;
+    gameState.trench = 50; gameState.timeSeconds = 10;
+    gameState.squad.find(s => s.class === 'Engenheiro').duty = 'MAINTENANCE';
+    processSquadNeeds();
+    c.engenheiroRepara = gameState.trench === 53;
+
+    // Recebimento: todos de vigília -> metade da entrega se perde
+    gameState.squad.forEach(s => s.duty = 'WATCH');
+    const sorteio2 = Math.random; Math.random = () => 0.1;
+    const rAntes2 = gameState.resources.rations; endTurn(); const recebidoVigilia = gameState.resources.rations - rAntes2;
+    gameState.squad[2].duty = 'REST';
+    const rAntes3 = gameState.resources.rations; endTurn(); const recebidoNormal = gameState.resources.rations - rAntes3;
+    Math.random = sorteio2;
+    c.comboioPerdeMetadeSemDescarregar = recebidoNormal > 0 && recebidoVigilia === Math.floor(recebidoNormal * 0.5);
+
     gameState.squad.forEach(s => s.hp = 0); updateGameTick();
     c.fimDeJogo = !document.getElementById('modal-end').classList.contains('hidden') && gameState.speed === 0;
 

@@ -274,6 +274,19 @@
                                 <div id="bar-supply-eff" class="bg-mil-greenMuted h-full transition-all duration-300" style="width: 85%"></div>
                             </div>
                             <p id="lbl-supply-status" class="text-xs text-mil-textMuted mt-1">Estradas desimpedidas na retaguarda. Entregas em ritmo regular.</p>
+                            <p id="lbl-receivers" class="text-xs mt-1"></p>
+                        </div>
+
+                        <!-- TRENCH CONDITION -->
+                        <div class="bg-mil-bg border border-mil-border p-2 rounded">
+                            <div class="flex justify-between items-center text-[13px] mb-1">
+                                <span class="font-bold text-mil-textGlow">CONSERVAÇÃO DA TRINCHEIRA</span>
+                                <span id="lbl-trench" class="font-bold text-mil-greenMuted">100%</span>
+                            </div>
+                            <div class="w-full bg-black h-2 rounded border border-mil-border overflow-hidden">
+                                <div id="bar-trench" class="bg-mil-greenMuted h-full transition-all duration-300" style="width: 100%"></div>
+                            </div>
+                            <p class="text-xs text-mil-textMuted mt-1">Artilharia e invasões estragam a trincheira. Estragada, as invasões ferem mais e o abrigo protege menos. Quem está na Manutenção repara; o Engenheiro repara bem mais rápido.</p>
                         </div>
 
                         <!-- METERS GRID -->
@@ -615,6 +628,7 @@
             barrage: null, // artilharia inimiga prevista: { ticks } ou null
             pendingSupply: null, // carga emergencial a caminho: { ticks } ou null
             level: 1, // nível de dificuldade (sobe a cada vitória)
+            trench: 100, // conservação da trincheira em % (cai com artilharia e invasões)
             lastIntelDay: 0, // dia em que o último relatório foi enviado
             activeCrisis: null
         };
@@ -714,6 +728,11 @@
 
             drawLabel((ok ? 'SUPRIMENTO ' : 'LINHA CORTADA ') + gameState.supplyLineEff + '%', 6, h - 6, 'left', ok ? '#b3c4ae' : '#e08a8a');
             drawLabel('RETAGUARDA', w - 6, h - 6, 'right', '#b3c4ae');
+
+            // Estado da trincheira, logo acima da linha
+            const tr = Math.round(gameState.trench);
+            const corTr = tr >= 70 ? '#b3c4ae' : tr >= 40 ? '#d9a35a' : '#e08a8a';
+            drawLabel(`TRINCHEIRA ${tr}%`, 6, trenchY - 22, 'left', corTr);
 
             // 2. Alcance de tiro do inimigo (140m)
             const yRange = trenchY - ((140 / 300) * (h - 60)) - 10;
@@ -977,6 +996,7 @@
                     enemies: gameState.enemies,
                     lastIntelDay: gameState.lastIntelDay,
                     pendingSupply: gameState.pendingSupply,
+                    trench: gameState.trench,
                     feed: document.getElementById('feed-log').innerHTML,
                     diary: document.getElementById('diary-entries').innerHTML
                 }));
@@ -1005,6 +1025,7 @@
                 enemies: data.enemies,
                 lastIntelDay: data.lastIntelDay,
                 pendingSupply: data.pendingSupply || null,
+                trench: typeof data.trench === 'number' ? data.trench : 100,
                 activeCrisis: null,
                 speed: 1
             });
@@ -1059,14 +1080,54 @@
                 const delWater = Math.floor(15 * sm * (gameState.supplyLineEff / 100));
                 const delAmmo = Math.floor(120 * sm * (gameState.supplyLineEff / 100));
 
-                gameState.resources.rations += delRations;
-                gameState.resources.water += delWater;
-                gameState.resources.ammoRifle += delAmmo;
-                logFeed(`Suprimentos entregues: +${delRations} Rações, +${delWater}L Água, +${delAmmo} Mun.`, 'text-mil-greenMuted');
+                // Sem ninguém fora da vigília para descarregar, metade da carga se perde
+                const recebida = supplyReceivers() > 0 ? 1 : 0.5;
+                const r1 = Math.floor(delRations * recebida), w1 = Math.floor(delWater * recebida), a1 = Math.floor(delAmmo * recebida);
+                gameState.resources.rations += r1;
+                gameState.resources.water += w1;
+                gameState.resources.ammoRifle += a1;
+                if (recebida < 1) {
+                    logFeed(`📦 Comboio chegou sem ninguém para descarregar (todos de vigília): metade da carga se perdeu. Recebido: +${r1} Rações, +${w1}L Água, +${a1} Mun.`, 'text-red-400 font-bold');
+                } else {
+                    logFeed(`Suprimentos entregues: +${r1} Rações, +${w1}L Água, +${a1} Mun.`, 'text-mil-greenMuted');
+                }
                 addEffect('convoy', 0, 0);
             } else {
                 logFeed(`SUPRIMENTOS BLOQUEADOS: Linha de retaguarda inativa.`, 'text-red-400 font-bold');
             }
+        }
+
+        /* Trincheira: conservação de 0 a 100%. Inteira, tudo funciona como sempre;
+           estragada, as invasões ferem mais e o Abrigo Reforçado protege menos. */
+        const TRENCH = {
+            DAMAGE_BARRAGE: 4,       // por impacto de artilharia inimiga
+            DAMAGE_INVASION: 6,      // por soldado de infantaria que invade (patrulha: metade)
+            REPAIR_SOLDIER: 0.8,     // por ciclo de 10 s na Manutenção
+            REPAIR_ENGINEER: 3       // por ciclo de 10 s, Engenheiro na Manutenção
+        };
+
+        function trenchDamage(qtd, motivo) {
+            const antes = gameState.trench;
+            gameState.trench = Math.max(0, gameState.trench - qtd);
+            if (antes >= 50 && gameState.trench < 50) {
+                logFeed(`🧱 Trincheira muito danificada (${Math.round(gameState.trench)}%) após ${motivo}. Coloque o Engenheiro na Manutenção.`, 'text-red-400 font-bold');
+            }
+        }
+
+        // Invasões ferem até 80% a mais com a trincheira destruída
+        function trenchInvasionMult() {
+            return 1 + 0.8 * (1 - gameState.trench / 100);
+        }
+
+        // Abrigo Reforçado: deixa passar 25% do dano com a trincheira inteira, até 60% destruída
+        function shelterMult() {
+            return 0.25 + 0.35 * (1 - gameState.trench / 100);
+        }
+
+        /* Recebimento de suprimentos: alguém fora da vigília precisa descarregar.
+           Sem ninguém disponível, metade da carga se perde. */
+        function supplyReceivers() {
+            return gameState.squad.filter(s => s.hp > 0 && s.duty !== 'WATCH').length;
         }
 
         // Soldado na Cozinha come e bebe: alivia até o limite por ciclo e gasta o
@@ -1125,6 +1186,8 @@
 
                 if (soldier.duty === 'MAINTENANCE') {
                     soldier.moral = Math.min(100, soldier.moral + 0.4);
+                    const reparo = soldier.class === 'Engenheiro' ? TRENCH.REPAIR_ENGINEER : TRENCH.REPAIR_SOLDIER;
+                    gameState.trench = Math.min(100, gameState.trench + reparo);
                 }
 
                 // Médico do esquadrão trata o ferido mais grave (ver abaixo)
@@ -1156,9 +1219,10 @@
 
         function diff() {
             // Calibrado para quem joga bem: ~10% de vitória do nível 1 ao 12
-            // (dificuldade 6,76) e queda de ~0,5 ponto por nível até ~3,5% no 25 (6,94).
+            // (dificuldade 5,96) e queda de ~0,5 ponto por nível até ~3% no 25 (6,05).
+            // Recalibrado depois da cozinha, da trincheira e do recebimento de suprimentos.
             const lv = Math.max(1, Math.min(MAX_LEVEL, gameState.level));
-            const d = lv <= 12 ? 6.76 : 6.76 + (6.94 - 6.76) * (lv - 12) / 13;
+            const d = lv <= 12 ? 5.96 : 5.96 + (6.05 - 5.96) * (lv - 12) / 13;
             return {
                 eventMult: 1 + 0.30 * d,                  // frequência de eventos
                 enemyHpMult: 1 + 0.15 * d,                // vida dos inimigos
@@ -1253,11 +1317,16 @@
             gameState.pendingSupply.ticks--;
             if (gameState.pendingSupply.ticks > 0) return;
             gameState.pendingSupply = null;
-            gameState.resources.rations += 20;
-            gameState.resources.water += 30;
-            gameState.resources.ammoRifle += 250;
+            const recebida = supplyReceivers() > 0 ? 1 : 0.5;
+            gameState.resources.rations += Math.floor(20 * recebida);
+            gameState.resources.water += Math.floor(30 * recebida);
+            gameState.resources.ammoRifle += Math.floor(250 * recebida);
             addEffect('convoy', 0, 0);
-            logFeed('📦 CARGA EMERGENCIAL ENTREGUE NO PERÍMETRO.', 'text-mil-amberMuted font-bold');
+            if (recebida < 1) {
+                logFeed('📦 CARGA EMERGENCIAL chegou sem ninguém para descarregar: metade se perdeu.', 'text-red-400 font-bold');
+            } else {
+                logFeed('📦 CARGA EMERGENCIAL ENTREGUE NO PERÍMETRO.', 'text-mil-amberMuted font-bold');
+            }
         }
 
         // Contagem regressiva e impactos da artilharia inimiga
@@ -1271,7 +1340,8 @@
             for (let i = 0; i < BARRAGE_SHOTS && alive.length > 0; i++) {
                 const alvo = alive[Math.floor(Math.random() * alive.length)];
                 let dano = BARRAGE_DAMAGE * diff().enemyDmgMult;
-                if (gameState.tacticalOrders.SHELTER) dano *= 0.25;
+                if (gameState.tacticalOrders.SHELTER) dano *= shelterMult();
+                trenchDamage(TRENCH.DAMAGE_BARRAGE, 'o bombardeio');
                 alvo.hp = Math.max(0, alvo.hp - dano);
                 alvo.moral = Math.max(0, alvo.moral - 2);
                 const idx = gameState.squad.indexOf(alvo);
@@ -1335,7 +1405,7 @@
                     // Inimigo ataca em alcance de tiro
                     if (enemy.distance < 140 && alive.length > 0 && Math.random() < tipo.attackChance) {
                         let dmg = tipo.dmg(enemy) * diff().enemyDmgMult;
-                        if (gameState.tacticalOrders.SHELTER) dmg *= 0.25;
+                        if (gameState.tacticalOrders.SHELTER) dmg *= shelterMult();
 
                         const target = alive[Math.floor(Math.random() * alive.length)];
                         if (target.hp > 0) {
@@ -1360,7 +1430,8 @@
                         if (enemy.type === 'drone') {
                             logFeed('🛸 Drone escapou após sobrevoar a trincheira.', 'text-mil-amberMuted');
                         } else {
-                            const dano = (enemy.type === 'infantaria' ? GAME_CONFIG.INVASION_DAMAGE : GAME_CONFIG.INVASION_DAMAGE / 2) * diff().enemyDmgMult;
+                            const dano = (enemy.type === 'infantaria' ? GAME_CONFIG.INVASION_DAMAGE : GAME_CONFIG.INVASION_DAMAGE / 2) * diff().enemyDmgMult * trenchInvasionMult();
+                            trenchDamage(enemy.type === 'infantaria' ? TRENCH.DAMAGE_INVASION : TRENCH.DAMAGE_INVASION / 2, 'a invasão');
                             addEffect('blast', 0.5, (canvas.height - 35) / canvas.height);
                             logFeed(`🚨 ${enemy.type === 'infantaria' ? 'INVASÃO DE TRINCHEIRA!' : 'PATRULHA NA TRINCHEIRA!'} COMBATE A CURTA DISTÂNCIA!`, 'text-red-500 font-bold');
                             alive.forEach(s => {
@@ -1535,6 +1606,21 @@
             document.getElementById('lbl-supply-eff').textContent = `${gameState.supplyLineEff}%`;
             document.getElementById('bar-supply-eff').style.width = `${gameState.supplyLineEff}%`;
             document.getElementById('lbl-prestige').textContent = `${gameState.prestige} PTS`;
+
+            // Trincheira e recebimento de suprimentos
+            const tr = Math.round(gameState.trench);
+            const trEl = document.getElementById('lbl-trench');
+            trEl.textContent = `${tr}%`;
+            trEl.className = `font-bold ${tr >= 70 ? 'text-mil-greenMuted' : tr >= 40 ? 'text-mil-amberMuted' : 'text-red-400'}`;
+            const trBar = document.getElementById('bar-trench');
+            trBar.style.width = `${tr}%`;
+            trBar.className = `h-full transition-all duration-300 ${tr >= 70 ? 'bg-mil-greenMuted' : tr >= 40 ? 'bg-mil-amberMuted' : 'bg-red-700'}`;
+            const livres = supplyReceivers();
+            const recEl = document.getElementById('lbl-receivers');
+            recEl.textContent = livres > 0
+                ? `Para descarregar: ${livres} soldado(s) fora da vigília.`
+                : 'Ninguém fora da vigília: metade do próximo comboio vai se perder!';
+            recEl.className = `text-xs mt-1 ${livres > 0 ? 'text-mil-textMuted' : 'text-red-400 font-bold'}`;
 
             // Squad list render
             // Carga emergencial: mostra a contagem enquanto está a caminho
