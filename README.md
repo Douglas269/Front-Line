@@ -17,6 +17,7 @@ Jogo de estratégia tático com foco em realismo de comando, combate blindado e 
 `prototipo/ponto-alpha.html` é um protótipo jogável em um único arquivo. Abra no navegador (precisa de internet para o Tailwind e os ícones carregarem).
 
 ### App instalável (PWA)
+- O app instalado se chama **FrontLine** (manifesto, título da aba e nome no iPhone). "Ponto Alpha" continua sendo o nome da trincheira dentro da missão.
 - Publicado em https://frontline-zeta.vercel.app. No Android (Chrome), aparece o botão **Instalar no celular** abaixo de "Finalizar turno", ou pelo menu do navegador → Instalar app. No iPhone (Safari): Compartilhar → Adicionar à Tela de Início.
 - Arquivos: `prototipo/manifest.webmanifest`, `prototipo/sw.js` e `prototipo/icons/` (ícone vetorial `icon.svg` e PNGs de 16, 32, 180, 192 e 512 px gerados a partir dele). O `vercel.json` publica esses arquivos também na raiz do site.
 - O service worker busca sempre a versão mais nova na rede; a cópia salva só é usada sem conexão. Sem internet, o jogo abre, mas o visual depende do Tailwind e das fontes, que vêm de fora.
