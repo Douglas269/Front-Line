@@ -138,6 +138,10 @@ async function run() {
     gameState.enemies = [{ type: 'infantaria', distance: 250, hp: 1000, offsetX: 0 }]; processEnemiesAndCombat();
     const danoSemVigia = 1000 - gameState.enemies[0].hp;
     c.semVigiaAtiraAsCegas = Math.abs(danoSemVigia - danoComVigia * 0.5) < 0.01;
+    // Munição: gasto triplicado (1,8 cartucho por segundo de jogo em combate, sem ordens)
+    prepCombate(); gameState.squad.forEach(s => s.duty = 'WATCH');
+    gameState.enemies = [{ type: 'infantaria', distance: 250, hp: 1000, offsetX: 0 }]; processEnemiesAndCombat();
+    c.municaoGastaTriplicada = Math.abs((500 - gameState.resources.ammoRifle) - 1.8) < 0.001;
     prepCombate(); gameState.squad.forEach(s => s.duty = 'WATCH');
     gameState.tacticalOrders.SIGNAL_JAM = true; Math.random = () => 0.01;
     gameState.enemies = [{ type: 'drone', distance: 250, hp: 1000, offsetX: 0 }]; processEnemiesAndCombat();

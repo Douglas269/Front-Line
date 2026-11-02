@@ -1445,7 +1445,8 @@
             // A cada nível acima do 1:
             FOOD_LOSS_PER_LEVEL: 0.015,   // −1,5% de ração e água no comboio (nível 25: −36%)
             WAVE_PLUS_EVERY_LEVELS: 5,    // +1 soldado por onda a cada 5 níveis (nível 21+: +4)
-            ATTACK_RATE_PER_LEVEL: 0.02   // general ataca 2% mais rápido (nível 25: +48%)
+            ATTACK_RATE_PER_LEVEL: 0.02,  // general ataca 2% mais rápido (nível 25: +48%)
+            AMMO_SPEND: 3,              // gasto de munição em combate (leve e pesada) ×3 desde o nível 1
         };
 
         const nivelAcima = () => Math.max(0, Math.min(MAX_LEVEL, gameState.level) - 1);
@@ -1790,7 +1791,7 @@
                 // metade espalhada entre os demais (uma onda grande aguenta mais)
                 // Munição: um gasto por segundo de combate (o fogo já é dividido entre os alvos)
                 const temMunicao = gameState.resources.ammoRifle > 0;
-                if (temMunicao) gameState.resources.ammoRifle = Math.max(0, gameState.resources.ammoRifle - 0.6 * ammoConsumption);
+                if (temMunicao) gameState.resources.ammoRifle = Math.max(0, gameState.resources.ammoRifle - 0.6 * PRESSURE.AMMO_SPEND * ammoConsumption);
 
                 const totalInimigos = gameState.enemies.length;
                 const maisProximo = gameState.enemies.reduce((a, e) => (e.distance < a.distance ? e : a), gameState.enemies[0]);
@@ -1803,7 +1804,7 @@
 
                     if (gameState.tacticalOrders.SUPPRESSION && gameState.resources.ammoHeavy > 3) {
                         speed *= 0.3;
-                        gameState.resources.ammoHeavy = Math.max(0, gameState.resources.ammoHeavy - 0.4);
+                        gameState.resources.ammoHeavy = Math.max(0, gameState.resources.ammoHeavy - 0.4 * PRESSURE.AMMO_SPEND);
                         playGunshotSound();
                     }
 
