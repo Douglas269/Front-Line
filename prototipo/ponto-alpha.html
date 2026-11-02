@@ -1127,6 +1127,12 @@
             if (gameState.speed > 0) saveGame();
         }
 
+        // Próximo dia com comboio de suprimentos
+        function proximoComboio() {
+            const n = PRESSURE.CONVOY_EVERY_DAYS;
+            return gameState.day + (n - (gameState.day % n));
+        }
+
         function onNewDay() {
             logFeed(`=== DIA ${gameState.day} INICIADO ===`, 'text-mil-amberMuted font-bold');
             playTacticalBeep(1000, 0.08);
@@ -1149,6 +1155,12 @@
             const vivosHoje = gameState.squad.filter(s => s.hp > 0).length;
             const climaTexto = { 'Nublado': 'Céu fechado sobre Komona.', 'Névoa Espessa': 'A névoa cobre os campos de Komona.', 'Chuva Forte': 'Chuva forte alaga o fundo da trincheira.', 'Neve': 'A neve cai sobre as posições.' };
             addDiaryEntry(`Dia ${gameState.day}: ${climaTexto[gameState.weather] || ''} Restam ${vivosHoje} homens na linha. Trincheira em ${Math.round(gameState.trench)}%.`);
+
+            // Comboio só nos dias pares (a cada PRESSURE.CONVOY_EVERY_DAYS dias)
+            if (gameState.day % PRESSURE.CONVOY_EVERY_DAYS !== 0) {
+                logFeed(`Sem comboio hoje. Próximo comboio: dia ${proximoComboio()}.`, 'text-mil-textMuted');
+                return;
+            }
 
             // Emboscada (crise): o comboio pela estrada vigiada tem 50% de chance de se perder
             let emboscado = false;
@@ -1340,6 +1352,18 @@
             try { localStorage.setItem(LEVEL_KEY, String(n)); } catch (e) {}
         }
 
+        /* Pressão do inimigo e ritmo de suprimentos, num lugar só para ajustar fácil.
+           Valores pensados para o nível 1 já ser pesado; os níveis somam por cima. */
+        const PRESSURE = {
+            WAVE_BASE: 4,          // soldados na primeira onda de infantaria
+            WAVE_EVERY_DAYS: 6,    // +1 soldado por onda a cada 6 dias
+            WAVE_CAP: 7,           // máximo por onda (fora extras de nível e de patrulha)
+            ENEMY_HP: 1.35,        // inimigos com 35% mais vida
+            ENEMY_DAMAGE: 1.35,    // inimigos com 35% mais dano (tiros, invasão e artilharia)
+            GENERAL_INCOME: 2.0,   // ritmo de ataques do general (1 = ritmo do antigo sorteio)
+            CONVOY_EVERY_DAYS: 2   // comboio de suprimentos a cada 2 dias
+        };
+
         // Tipos de inimigo: velocidade, vida relativa, chance de atacar e dano por ataque
         const ENEMY_TYPES = {
             infantaria: { label: 'INFANTARIA', speed: 0.85, hpMult: 1.0, attackChance: 0.35, dmg: (e) => (e.hp / 100) * 1.6 },
@@ -1364,7 +1388,8 @@
             const extra = diff().waveExtra;
             const marcada = gameState.nextWaveBoost || 0;
             gameState.nextWaveBoost = 0;
-            const count = Math.min(3 + extra, 1 + Math.floor(gameState.day / 9) + extra) + marcada;
+            const base = Math.min(PRESSURE.WAVE_CAP, PRESSURE.WAVE_BASE + Math.floor((gameState.day - 1) / PRESSURE.WAVE_EVERY_DAYS));
+            const count = base + Math.max(0, extra - 2) + marcada;
             if (marcada) logFeed(`🎯 A patrulha marcou a posição: esta onda vem com ${marcada} soldados a mais.`, 'text-red-400 font-bold');
             for (let i = 0; i < count; i++) spawnEnemy('infantaria', startDist);
             logFeed(`🚨 ALERTA: Tropa inimiga avança sobre o setor!`, 'text-red-400 font-bold');
@@ -1383,7 +1408,7 @@
                 id: Date.now() + Math.random(),
                 type,
                 distance: startDist + Math.random() * 20,
-                hp: (100 + gameState.day * 8) * t.hpMult * diff().enemyHpMult,
+                hp: (100 + gameState.day * 8) * t.hpMult * diff().enemyHpMult * PRESSURE.ENEMY_HP,
                 offsetX: (Math.random() - 0.5) * 160
             });
         }
@@ -1436,12 +1461,12 @@
             return Math.round(BARRAGE_WARNING_TICKS - 12 * Math.min(1, gameState.general ? gameState.general.memoria.contraBateria : 0));
         }
 
-        // Orçamento por segundo: o ritmo do antigo sorteio de eventos, com 50% a mais
-        // porque o general gasta em planos maiores e mais caros
+        // Orçamento por segundo: o ritmo do antigo sorteio de eventos multiplicado por
+        // PRESSURE.GENERAL_INCOME (o general gasta em planos maiores e mais caros)
         function generalIncome() {
             if (gameState.day < 2) return 0;
             const p = Math.min(0.05, Math.min(0.02, 0.0025 + gameState.day * 0.0005) * diff().eventMult);
-            return p * 2.75 * 1.5;
+            return p * 2.75 * PRESSURE.GENERAL_INCOME;
         }
 
         function situacao() {
@@ -1620,7 +1645,7 @@
             const alive = gameState.squad.filter(s => s.hp > 0);
             for (let i = 0; i < BARRAGE_SHOTS && alive.length > 0; i++) {
                 const alvo = alive[Math.floor(Math.random() * alive.length)];
-                let dano = BARRAGE_DAMAGE * diff().enemyDmgMult * (observada ? DRONE_SPOT_ARTILLERY : 1);
+                let dano = BARRAGE_DAMAGE * diff().enemyDmgMult * PRESSURE.ENEMY_DAMAGE * (observada ? DRONE_SPOT_ARTILLERY : 1);
                 if (gameState.tacticalOrders.SHELTER) dano *= shelterMult();
                 trenchDamage(TRENCH.DAMAGE_BARRAGE, 'o bombardeio');
                 alvo.hp = Math.max(0, alvo.hp - dano);
@@ -1710,7 +1735,7 @@
 
                     // Inimigo ataca em alcance de tiro
                     if (enemy.distance < 140 && alive.length > 0 && Math.random() < tipo.attackChance) {
-                        let dmg = tipo.dmg(enemy) * diff().enemyDmgMult * (observando ? DRONE_SPOT_FIRE : 1);
+                        let dmg = tipo.dmg(enemy) * diff().enemyDmgMult * PRESSURE.ENEMY_DAMAGE * (observando ? DRONE_SPOT_FIRE : 1);
                         if (gameState.tacticalOrders.SHELTER) dmg *= shelterMult();
 
                         const target = alive[Math.floor(Math.random() * alive.length)];
@@ -1738,7 +1763,7 @@
                         if (enemy.type === 'drone') {
                             logFeed('🛸 Drone escapou após sobrevoar a trincheira.', 'text-mil-amberMuted');
                         } else {
-                            const dano = (enemy.type === 'infantaria' ? GAME_CONFIG.INVASION_DAMAGE : GAME_CONFIG.INVASION_DAMAGE / 2) * diff().enemyDmgMult * trenchInvasionMult();
+                            const dano = (enemy.type === 'infantaria' ? GAME_CONFIG.INVASION_DAMAGE : GAME_CONFIG.INVASION_DAMAGE / 2) * diff().enemyDmgMult * PRESSURE.ENEMY_DAMAGE * trenchInvasionMult();
                             trenchDamage(enemy.type === 'infantaria' ? TRENCH.DAMAGE_INVASION : TRENCH.DAMAGE_INVASION / 2, 'a invasão');
                             addEffect('blast', 0.5, (canvas.height - 35) / canvas.height);
                             logFeed(`🚨 ${enemy.type === 'infantaria' ? 'INVASÃO DE TRINCHEIRA!' : 'PATRULHA NA TRINCHEIRA!'} COMBATE A CURTA DISTÂNCIA!`, 'text-red-500 font-bold');
@@ -2146,10 +2171,10 @@
             const vivos = gameState.squad.filter(s => s.hp > 0).length;
             document.getElementById('lbl-squad-count').textContent = `RELAÇÃO DO ESQUADRÃO (${vivos} EFETIVOS)`;
             const eff = gameState.supplyLineEff;
-            document.getElementById('lbl-supply-status').textContent = eff > 70
-                ? 'Estradas desimpedidas na retaguarda. Entregas em ritmo regular.'
+            document.getElementById('lbl-supply-status').textContent = (eff > 70
+                ? 'Estradas desimpedidas na retaguarda.'
                 : eff > 30 ? 'Mau tempo na retaguarda: entregas reduzidas.'
-                : 'Linha de suprimento cortada: sem entrega diária.';
+                : 'Linha de suprimento cortada: o comboio não passa.') + ` Próximo comboio: dia ${proximoComboio()}.`;
 
             // Lista do esquadrão: só redesenha quando algo visível muda. Redesenhar a cada
             // segundo trocava os botões no meio do toque e o celular perdia o clique.

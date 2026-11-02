@@ -173,9 +173,14 @@ async function run() {
     // Recebimento: todos de vigília -> metade da entrega se perde
     gameState.squad.forEach(s => s.duty = 'WATCH');
     const sorteio2 = Math.random; Math.random = () => 0.1;
+    gameState.day = 3; // o próximo dia (4) tem comboio
     const rAntes2 = gameState.resources.rations; endTurn(); const recebidoVigilia = gameState.resources.rations - rAntes2;
     gameState.squad[2].duty = 'REST';
+    gameState.day = 5; // o próximo dia (6) tem comboio
     const rAntes3 = gameState.resources.rations; endTurn(); const recebidoNormal = gameState.resources.rations - rAntes3;
+    // Comboio a cada 2 dias: num dia ímpar não chega nada
+    gameState.day = 6; const rAntes4 = gameState.resources.rations; endTurn();
+    c.comboioACada2Dias = gameState.resources.rations === rAntes4 && proximoComboio() === 8;
     Math.random = sorteio2;
     c.comboioPerdeMetadeSemDescarregar = recebidoNormal > 0 && recebidoVigilia === Math.floor(recebidoNormal * 0.5);
 

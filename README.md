@@ -34,6 +34,7 @@ Jogo de estratégia tático com foco em realismo de comando, combate blindado e 
 - Ordens táticas: Fogo Supressão (ataque +60%, inimigos 70% mais lentos, gasta munição), Abrigo Reforçado (dano recebido −75%, ataque −60%), Economizar Munição (gasto −65%, ataque −30%) e Vigília Total (mapa visível sem vigias, +0,4 de fadiga a cada 10 s para todos). Pares que se contradizem não ficam ligados juntos: Fogo Supressão × Economizar Munição e Abrigo Reforçado × Vigília Total (ligar uma desliga a outra).
 - Carga Emergencial: chega 2d5 × 15 s depois do pedido (30 a 150 s); o prazo dobra com a linha de suprimento cortada. Só uma carga a caminho por vez.
 - Fome e sede sobem com o tempo para todos (+1,5 e +2 a cada 10 s, ou ~36 e ~48 por turno) e só caem na Cozinha. É preciso revezar os soldados na cozinha. A partir de 75%, fome ou sede tiram vida e moral.
+- Pressão (bloco `PRESSURE` no código, fácil de ajustar): ondas de infantaria começam com 4 soldados e ganham +1 a cada 6 dias (máximo 7, mais extras de nível e de patrulha); inimigos com +35% de vida e +35% de dano; general ataca no dobro do ritmo do antigo sorteio; comboio de suprimentos a cada 2 dias (dias pares). A aba Logística mostra o dia do próximo comboio.
 - General inimigo (bot): os ataques não são mais sorteados. O general acumula um orçamento de ofensiva e, a cada 10 s, avalia a situação (noite, névoa, vigias, trincheira, cansaço, munição) e escolhe um plano: patrulha, drone, bombardeio, onda de infantaria, reconhecimento e bombardeio (drone + artilharia guiada), marcar e atacar (patrulha + onda) ou bombardeio e assalto (artilharia + infantaria avançando atrás da barragem). Se o plano preferido é caro, ele junta forças. Ele aprende o jeito de jogar: se o jogador se abriga sempre, usa bombardeio e assalto; se usa muita contra-bateria, o aviso de artilharia cai de 20 até 8 s; se bloqueia drones, troca por patrulhas; se abate patrulhas, troca por drones. O rádio dá pistas dos planos (mais vigias, mais chance) e a aba Rádio mostra a postura do general e o que ele já percebeu. A memória dele entra no salvamento.
 - Ameaças e defesas:
   - Drone observador: enquanto houver drone no setor (e o sinal dele não estiver bloqueado), a artilharia inimiga causa +50% de dano, os tiros inimigos +20% e a artilharia fica mais provável.
@@ -53,7 +54,7 @@ Jogo de estratégia tático com foco em realismo de comando, combate blindado e 
 
 | Nível | Sem ação | Jogador atento (automático) |
 |---|---|---|
-| 1 a 12 | 0% (~5 dias) | ~10% |
+| 1 a 12 | 0% (~4 dias) | ~0% (aguenta ~18 dias) |
 | 25 | 0% | ~4% |
 
 Entre o 12 e o 25 a dificuldade sobe em linha reta, então a chance cai aos poucos entre esses valores. Diferenças de 0,5 ponto por nível são pequenas demais para medir partida a partida.
