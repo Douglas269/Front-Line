@@ -601,6 +601,7 @@
             enemies: [],
             rainParticles: [],
             effects: [], // explosões, impactos e comboio no mapa
+            barrage: null, // artilharia inimiga prevista: { ticks } ou null
             lastIntelDay: 0, // dia em que o último relatório foi enviado
             activeCrisis: null
         };
@@ -844,24 +845,40 @@
                     const ey = trenchY - (distRatio * (h - 60)) - 10;
                     const ex = (w / 2) + ((enemy.offsetX / 200) * (w * 0.4));
 
-                    // NATO Diamond Enemy Symbol
-                    ctx.fillStyle = '#4a1717';
-                    ctx.strokeStyle = '#8a2b2b';
-                    ctx.lineWidth = 1.5;
+                    // Símbolo por tipo: losango = infantaria, quadrado = patrulha, círculo = drone
+                    if (enemy.type === 'drone') {
+                        ctx.fillStyle = '#1f3a4d';
+                        ctx.strokeStyle = '#6fb3c9';
+                        ctx.lineWidth = 1.5;
+                        ctx.beginPath();
+                        ctx.arc(ex, ey, 6, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.stroke();
+                    } else if (enemy.type === 'patrulha') {
+                        ctx.fillStyle = '#4a3a17';
+                        ctx.strokeStyle = '#d9a35a';
+                        ctx.lineWidth = 1.5;
+                        ctx.fillRect(ex - 6, ey - 6, 12, 12);
+                        ctx.strokeRect(ex - 6, ey - 6, 12, 12);
+                    } else {
+                        ctx.fillStyle = '#4a1717';
+                        ctx.strokeStyle = '#8a2b2b';
+                        ctx.lineWidth = 1.5;
+                        ctx.beginPath();
+                        ctx.moveTo(ex, ey - 7);
+                        ctx.lineTo(ex + 7, ey);
+                        ctx.lineTo(ex, ey + 7);
+                        ctx.lineTo(ex - 7, ey);
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.stroke();
+                    }
 
-                    ctx.beginPath();
-                    ctx.moveTo(ex, ey - 7);
-                    ctx.lineTo(ex + 7, ey);
-                    ctx.lineTo(ex, ey + 7);
-                    ctx.lineTo(ex - 7, ey);
-                    ctx.closePath();
-                    ctx.fill();
-                    ctx.stroke();
-
-                    // Distance text
-                    ctx.fillStyle = '#c86464';
+                    // Rótulo com tipo e distância
+                    const rotulo = enemy.type === 'infantaria' ? '' : ENEMY_TYPES[enemy.type].label.slice(0, 3) + ' ';
+                    ctx.fillStyle = enemy.type === 'drone' ? '#8fc4d8' : '#c86464';
                     ctx.font = '12px "Courier Prime"';
-                    ctx.fillText(`${Math.round(enemy.distance)}m`, ex - 12, ey - 10);
+                    ctx.fillText(`${rotulo}${Math.round(enemy.distance)}m`, ex - 14, ey - 10);
                 });
                 drawWarLayer(w, h, trenchY);
             } else {
@@ -916,6 +933,7 @@
             gameState.timeSeconds++;
 
             processSquadNeeds();
+            randomEventCheck();
             processEnemiesAndCombat();
             syncMusic();
             randomCrisisCheck();
@@ -1040,6 +1058,13 @@
             const rationers = gameState.squad.filter(s => s.duty === 'RATIONING' && s.hp > 0).length;
             const rMult = rationers > 0 ? 0.75 : 1.0;
 
+            // Médico vivo cura 0,6 de HP por ciclo no soldado mais ferido
+            const medico = gameState.squad.find(s => s.class === 'Médico' && s.hp > 0);
+            if (medico) {
+                const ferido = gameState.squad.filter(s => s.hp > 0 && s.hp < 100).sort((a, b) => a.hp - b.hp)[0];
+                if (ferido) ferido.hp = Math.min(100, ferido.hp + 0.6);
+            }
+
             gameState.squad.forEach(soldier => {
                 if (soldier.hp <= 0) return;
 
@@ -1072,6 +1097,7 @@
                     soldier.moral = Math.min(100, soldier.moral + 0.4);
                 }
 
+                // Médico do esquadrão trata o ferido mais grave (ver abaixo)
                 // Penalidades de fome, sede e estresse
                 if (soldier.hunger >= 75) {
                     soldier.hp = Math.max(0, soldier.hp - 1);
@@ -1090,16 +1116,103 @@
             });
         }
 
-        function processEnemiesAndCombat() {
-            // Spawn Enemy Assaults
-            if (gameState.enemies.length === 0 && gameState.day >= 2) {
-                if (Math.random() < 0.003 * (1 + gameState.day * 0.1)) {
-                    spawnEnemyAssault();
+        /* ==========================================================================
+           INIMIGOS E EVENTOS
+           ========================================================================== */
+        // Tipos de inimigo: velocidade, vida relativa, chance de atacar e dano por ataque
+        const ENEMY_TYPES = {
+            infantaria: { label: 'INFANTARIA', speed: 0.85, hpMult: 1.0, attackChance: 0.35, dmg: (e) => (e.hp / 100) * 1.6 },
+            patrulha:   { label: 'PATRULHA',   speed: 1.15, hpMult: 0.6, attackChance: 0.30, dmg: (e) => (e.hp / 100) * 1.2 },
+            drone:      { label: 'DRONE',      speed: 1.5,  hpMult: 0.35, attackChance: 0.15, dmg: () => 2 }
+        };
+        const BARRAGE_WARNING_TICKS = 20;  // segundos de aviso antes da artilharia cair
+        const BARRAGE_SHOTS = 3;
+        const BARRAGE_DAMAGE = 12;
+
+        function spawnEnemyAssault() {
+            const count = Math.min(3, 1 + Math.floor(gameState.day / 9));
+            gameState.enemies = gameState.enemies.filter(e => e.type !== 'infantaria');
+            for (let i = 0; i < count; i++) spawnEnemy('infantaria', 270);
+            logFeed(`🚨 ALERTA: Tropa inimiga avança sobre o setor!`, 'text-red-400 font-bold');
+            playTacticalBeep(400, 0.2);
+        }
+
+        function spawnEnemy(type, startDist) {
+            const t = ENEMY_TYPES[type];
+            gameState.enemies.push({
+                id: Date.now() + Math.random(),
+                type,
+                distance: startDist + Math.random() * 20,
+                hp: (100 + gameState.day * 8) * t.hpMult,
+                offsetX: (Math.random() - 0.5) * 160
+            });
+        }
+
+        // Sorteio de eventos durante o turno (depois do dia 1)
+        function randomEventCheck() {
+            if (gameState.day < 2) return;
+            const pEvent = Math.min(0.02, 0.0025 + gameState.day * 0.0005);
+            if (Math.random() >= pEvent) return;
+
+            const opcoes = [];
+            const temInfantaria = gameState.enemies.some(e => e.type === 'infantaria');
+            if (!temInfantaria && gameState.enemies.length === 0) opcoes.push('infantaria', 'infantaria');
+            if (gameState.enemies.length < 3) opcoes.push('patrulha', 'patrulha');
+            if (gameState.enemies.length < 3 && gameState.day >= 3) opcoes.push('drone');
+            if (!gameState.barrage) opcoes.push('artilharia');
+            if (opcoes.length === 0) return;
+
+            const escolha = opcoes[Math.floor(Math.random() * opcoes.length)];
+            if (escolha === 'infantaria') {
+                spawnEnemyAssault();
+            } else if (escolha === 'patrulha') {
+                const qtd = 1 + (Math.random() < 0.5 ? 1 : 0);
+                for (let i = 0; i < qtd; i++) spawnEnemy('patrulha', 250);
+                logFeed('👣 PATRULHA INIMIGA detectada ao norte, avançando sobre o setor.', 'text-red-400 font-bold');
+                playTacticalBeep(500, 0.1);
+            } else if (escolha === 'drone') {
+                spawnEnemy('drone', 260);
+                logFeed('🛸 DRONE INIMIGO sobrevoando o setor! Tire-o do céu ou use Abrigo Reforçado.', 'text-red-400 font-bold');
+                playTacticalBeep(900, 0.1);
+            } else if (escolha === 'artilharia') {
+                gameState.barrage = { ticks: BARRAGE_WARNING_TICKS };
+                logFeed(`💥 ARTILHARIA INIMIGA: impacto em ${BARRAGE_WARNING_TICKS}s! Abrigo Reforçado reduz o dano.`, 'text-red-500 font-bold');
+                playTacticalBeep(300, 0.3);
+            }
+        }
+
+        // Contagem regressiva e impactos da artilharia inimiga
+        function processBarrage() {
+            if (!gameState.barrage) return;
+            gameState.barrage.ticks--;
+            if (gameState.barrage.ticks > 0) return;
+            gameState.barrage = null;
+
+            const alive = gameState.squad.filter(s => s.hp > 0);
+            for (let i = 0; i < BARRAGE_SHOTS && alive.length > 0; i++) {
+                const alvo = alive[Math.floor(Math.random() * alive.length)];
+                let dano = BARRAGE_DAMAGE;
+                if (gameState.tacticalOrders.SHELTER) dano *= 0.25;
+                alvo.hp = Math.max(0, alvo.hp - dano);
+                alvo.moral = Math.max(0, alvo.moral - 2);
+                const idx = gameState.squad.indexOf(alvo);
+                addEffect('artillery', [0.15, 0.28, 0.42, 0.58, 0.72, 0.85][idx], (canvas.height - 43) / canvas.height);
+                if (alvo.hp <= 0) {
+                    logFeed(`❌ BAIXA NO BOMBARDEIO: ${alvo.rank} ${alvo.name} foi morto!`, 'text-red-500 font-bold');
+                    alive.splice(alive.indexOf(alvo), 1);
                 }
             }
+            logFeed('💥 Bombardeio inimigo concluído.', 'text-red-400');
+        }
+
+        function processEnemiesAndCombat() {
+            processBarrage();
+
+            const statusEl = document.getElementById('lbl-tactical-status');
+            const banner = document.getElementById('map-alert-banner');
+            const bannerText = document.getElementById('map-alert-text');
 
             if (gameState.enemies.length > 0) {
-                const statusEl = document.getElementById('lbl-tactical-status');
                 statusEl.textContent = '⚠️ ENGAJAMENTO DE COMBATE';
                 statusEl.className = 'text-red-400 font-bold animate-pulse';
 
@@ -1120,7 +1233,8 @@
 
                 for (let i = gameState.enemies.length - 1; i >= 0; i--) {
                     const enemy = gameState.enemies[i];
-                    let speed = 0.85;
+                    const tipo = ENEMY_TYPES[enemy.type];
+                    let speed = tipo.speed;
 
                     if (gameState.tacticalOrders.SUPPRESSION && gameState.resources.ammoHeavy > 3) {
                         speed *= 0.3;
@@ -1139,8 +1253,8 @@
                     }
 
                     // Inimigo ataca em alcance de tiro
-                    if (enemy.distance < 140 && alive.length > 0 && Math.random() < 0.35) {
-                        let dmg = (enemy.hp / 100) * 1.6;
+                    if (enemy.distance < 140 && alive.length > 0 && Math.random() < tipo.attackChance) {
+                        let dmg = tipo.dmg(enemy);
                         if (gameState.tacticalOrders.SHELTER) dmg *= 0.25;
 
                         const target = alive[Math.floor(Math.random() * alive.length)];
@@ -1158,51 +1272,46 @@
                     if (enemy.hp <= 0) {
                         const pk = enemyFrac(enemy);
                         addEffect('kill', pk.fx, pk.fy);
-                        logFeed(`✅ INVASORES REPELIDOS NO SETOR!`, 'text-mil-greenMuted font-bold');
-                        gameState.prestige += 30;
+                        logFeed(`✅ ${tipo.label} NEUTRALIZADO NO SETOR!`, 'text-mil-greenMuted font-bold');
+                        gameState.prestige += enemy.type === 'drone' ? 20 : 30;
                         gameState.enemies.splice(i, 1);
                     } else if (enemy.distance <= 0) {
-                        addEffect('blast', 0.5, (canvas.height - 35) / canvas.height);
-                        logFeed(`🚨 INVASÃO DE TRINCHEIRA! COMBATE A CURTA DISTÂNCIA!`, 'text-red-500 font-bold');
-                        alive.forEach(s => {
-                            if (s.hp <= 0) return;
-                            s.hp = Math.max(0, s.hp - GAME_CONFIG.INVASION_DAMAGE);
-                            if (s.hp <= 0) {
-                                logFeed(`❌ BAIXA NA INVASÃO: ${s.rank} ${s.name} foi morto!`, 'text-red-500 font-bold');
-                            }
-                        });
+                        // Chegou à trincheira: infantaria invade, patrulha fere, drone só sobrevoa
+                        if (enemy.type === 'drone') {
+                            logFeed('🛸 Drone escapou após sobrevoar a trincheira.', 'text-mil-amberMuted');
+                        } else {
+                            const dano = enemy.type === 'infantaria' ? GAME_CONFIG.INVASION_DAMAGE : GAME_CONFIG.INVASION_DAMAGE / 2;
+                            addEffect('blast', 0.5, (canvas.height - 35) / canvas.height);
+                            logFeed(`🚨 ${enemy.type === 'infantaria' ? 'INVASÃO DE TRINCHEIRA!' : 'PATRULHA NA TRINCHEIRA!'} COMBATE A CURTA DISTÂNCIA!`, 'text-red-500 font-bold');
+                            alive.forEach(s => {
+                                if (s.hp <= 0) return;
+                                s.hp = Math.max(0, s.hp - dano);
+                                if (s.hp <= 0) {
+                                    logFeed(`❌ BAIXA NA TRINCHEIRA: ${s.rank} ${s.name} foi morto!`, 'text-red-500 font-bold');
+                                }
+                            });
+                        }
                         gameState.enemies.splice(i, 1);
                     }
                 }
-
-                if (gameState.enemies.length > 0) {
-                    const nearestDist = Math.max(0, Math.round(Math.min(...gameState.enemies.map(e => e.distance))));
-                    document.getElementById('map-alert-banner').classList.remove('hidden');
-                    document.getElementById('map-alert-text').textContent = `CONTATO INIMIGO A ${nearestDist}M`;
-                } else {
-                    document.getElementById('map-alert-banner').classList.add('hidden');
-                }
             } else {
-                const statusEl = document.getElementById('lbl-tactical-status');
                 statusEl.textContent = 'SETORES LIMPOS';
                 statusEl.className = 'text-mil-greenMuted font-bold';
-                document.getElementById('map-alert-banner').classList.add('hidden');
             }
-        }
 
-        function spawnEnemyAssault() {
-            const count = Math.min(3, 1 + Math.floor(gameState.day / 9));
-            gameState.enemies = [];
-            for (let i = 0; i < count; i++) {
-                gameState.enemies.push({
-                    id: Date.now() + i,
-                    distance: 270 + Math.random() * 20,
-                    hp: 100 + (gameState.day * 8),
-                    offsetX: (Math.random() - 0.5) * 160
-                });
+            // Aviso no mapa: contato mais próximo ou artilharia prevista
+            if (gameState.barrage) {
+                banner.classList.remove('hidden');
+                bannerText.textContent = `ARTILHARIA INIMIGA EM ${gameState.barrage.ticks}s`;
+                statusEl.textContent = '💥 BOMBARDEIO PREVISTO';
+                statusEl.className = 'text-red-400 font-bold animate-pulse';
+            } else if (gameState.enemies.length > 0) {
+                const nearest = Math.max(0, Math.round(Math.min(...gameState.enemies.map(e => e.distance))));
+                banner.classList.remove('hidden');
+                bannerText.textContent = `CONTATO INIMIGO A ${nearest}M`;
+            } else {
+                banner.classList.add('hidden');
             }
-            logFeed(`🚨 ALERTA: Tropa inimiga avança sobre o setor!`, 'text-red-400 font-bold');
-            playTacticalBeep(400, 0.2);
         }
 
         /* ==========================================================================
