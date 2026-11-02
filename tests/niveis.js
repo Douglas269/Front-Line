@@ -79,7 +79,7 @@ async function measure(page, level, policy) {
       gameEnded = false;
       Object.assign(gameState, {
         level, day: 1, timeSeconds: 0, speed: 0, prestige: 150, weather: 'Nublado', supplyLineEff: 85,
-        enemies: [], activeCrisis: null, barrage: null, pendingSupply: null, lastIntelDay: 0, effects: [], trench: 100, crisisCooldown: 240, convoyAmbush: false, weakenNextWave: false, counterBattery: null, nextWaveBoost: 0,
+        enemies: [], activeCrisis: null, barrage: null, pendingSupply: null, lastIntelDay: 0, effects: [], trench: 100, crisisCooldown: 240, convoyAmbush: false, weakenNextWave: false, counterBattery: null, nextWaveBoost: 0, general: newGeneral(),
         tacticalOrders: { SUPPRESSION: false, SHELTER: false, CONSERVE: false, FULL_VIGILANCE: false, SIGNAL_JAM: false },
         resources: { rations: 36, water: 48, ammoRifle: 550, ammoHeavy: 200, medkits: 3 },
         squad: init.map(s => ({ ...s }))

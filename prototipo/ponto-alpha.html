@@ -369,6 +369,12 @@
                             </button>
                         </div>
 
+                        <div class="bg-mil-bg border border-red-900 p-2 rounded">
+                            <div class="text-xs text-red-300 uppercase font-bold tracking-wider"><i class="fa-solid fa-chess-knight"></i> General inimigo</div>
+                            <div class="text-xs text-mil-textGlow mt-1">Postura: <span id="lbl-general-posture">Observando</span></div>
+                            <ul id="lst-general-reads" class="text-xs text-mil-textMuted mt-1 list-disc pl-4 space-y-0.5"></ul>
+                        </div>
+
                         <div class="text-xs text-mil-textMuted uppercase font-bold tracking-wider mt-1">APOIOS OPERACIONAIS</div>
 
                         <div class="space-y-2 text-xs">
@@ -665,7 +671,8 @@
             convoyAmbush: false, // próximo comboio vai pela estrada vigiada
             weakenNextWave: false, // interceptação revelou a próxima onda
             counterBattery: null, // contra-bateria a caminho: { ticks } ou null
-            nextWaveBoost: 0 // soldados extras na próxima onda (patrulha marcou a posição)
+            nextWaveBoost: 0, // soldados extras na próxima onda (patrulha marcou a posição)
+            general: null // general inimigo (criado por newGeneral)
         };
 
         /* ==========================================================================
@@ -1054,6 +1061,7 @@
                     weakenNextWave: gameState.weakenNextWave,
                     counterBattery: gameState.counterBattery,
                     nextWaveBoost: gameState.nextWaveBoost,
+                    general: gameState.general,
                     feed: document.getElementById('feed-log').innerHTML,
                     diary: document.getElementById('diary-entries').innerHTML
                 }));
@@ -1090,6 +1098,7 @@
                 weakenNextWave: !!data.weakenNextWave,
                 counterBattery: data.counterBattery || null,
                 nextWaveBoost: data.nextWaveBoost || 0,
+                general: data.general || newGeneral(),
                 speed: 1
             });
             document.getElementById('feed-log').innerHTML = data.feed;
@@ -1351,14 +1360,13 @@
         const BARRAGE_SHOTS = 3;
         const BARRAGE_DAMAGE = 13;
 
-        function spawnEnemyAssault() {
+        function spawnEnemyAssault(startDist = 270) {
             const extra = diff().waveExtra;
             const marcada = gameState.nextWaveBoost || 0;
             gameState.nextWaveBoost = 0;
             const count = Math.min(3 + extra, 1 + Math.floor(gameState.day / 9) + extra) + marcada;
             if (marcada) logFeed(`🎯 A patrulha marcou a posição: esta onda vem com ${marcada} soldados a mais.`, 'text-red-400 font-bold');
-            gameState.enemies = gameState.enemies.filter(e => e.type !== 'infantaria');
-            for (let i = 0; i < count; i++) spawnEnemy('infantaria', 270);
+            for (let i = 0; i < count; i++) spawnEnemy('infantaria', startDist);
             logFeed(`🚨 ALERTA: Tropa inimiga avança sobre o setor!`, 'text-red-400 font-bold');
             if (gameState.weakenNextWave) {
                 // Interceptação revelou a posição: a onda chega 30% mais fraca
@@ -1380,38 +1388,186 @@
             });
         }
 
-        // Sorteio de eventos durante o turno (depois do dia 1)
-        function randomEventCheck() {
-            if (gameState.day < 2) return;
-            const pEvent = Math.min(0.05, Math.min(0.02, 0.0025 + gameState.day * 0.0005) * diff().eventMult);
-            if (Math.random() >= pEvent) return;
+        /* ==========================================================================
+           GENERAL INIMIGO: um "bot" que planeja os ataques em vez de sortear
+           - Acumula um orçamento de ofensiva no mesmo ritmo médio do antigo sorteio.
+           - A cada 10 s avalia a situação (noite, névoa, vigias, trincheira, cansaço,
+             munição) e escolhe o plano mais vantajoso; se o melhor plano ainda for
+             caro, espera e junta forças.
+           - Aprende o jeito de jogar (abrigo, contra-bateria, bloqueio, patrulhas)
+             e muda de tática para explorar o que o jogador repete.
+           ========================================================================== */
+        const GENERAL_THINK_EVERY = 10;   // segundos entre decisões
+        const GENERAL_PLANS = {
+            patrulha:     { nome: 'Patrulha de reconhecimento', custo: 2, passos: [{ a: 'patrulha', d: 0 }],
+                            pista: '📻 Rádio: batedores inimigos rondando o setor.' },
+            drone:        { nome: 'Drone de observação', custo: 2, passos: [{ a: 'drone', d: 0 }],
+                            pista: '📻 Rádio: zumbido de drones ao longe.' },
+            artilharia:   { nome: 'Bombardeio', custo: 3, passos: [{ a: 'artilharia', d: 0 }],
+                            pista: '📻 Rádio: baterias inimigas se posicionando.' },
+            onda:         { nome: 'Assalto de infantaria', custo: 4, passos: [{ a: 'infantaria', d: 0 }],
+                            pista: '📻 Rádio: movimento de tropas ao norte. Preparem a defesa.' },
+            reconBomb:    { nome: 'Reconhecimento e bombardeio', custo: 5, passos: [{ a: 'drone', d: 0 }, { a: 'artilharia', d: 8 }],
+                            pista: '📻 Rádio: drones e baterias se coordenando. Bombardeio guiado a caminho.' },
+            marcarOnda:   { nome: 'Marcar e atacar', custo: 6, passos: [{ a: 'patrulha', d: 0 }, { a: 'infantaria', d: 25 }],
+                            pista: '📻 Rádio: batedores à frente de uma coluna de infantaria.' },
+            bombAssalto:  { nome: 'Bombardeio e assalto', custo: 7, passos: [{ a: 'artilharia', d: 0 }, { a: 'infantariaPerto', d: 4 }],
+                            pista: '📻 Rádio: infantaria avançando atrás de uma barragem de artilharia!' }
+        };
 
-            const opcoes = [];
-            const temInfantaria = gameState.enemies.some(e => e.type === 'infantaria');
-            if (!temInfantaria && gameState.enemies.length === 0) opcoes.push('infantaria', 'infantaria');
-            if (gameState.enemies.length < 3) opcoes.push('patrulha', 'patrulha');
-            if (gameState.enemies.length < 3 && gameState.day >= 3) opcoes.push('drone');
-            if (!gameState.barrage) opcoes.push('artilharia');
-            if (!gameState.barrage && droneObservando()) opcoes.push('artilharia', 'artilharia'); // drone guia a artilharia
-            if (opcoes.length === 0) return;
+        function newGeneral() {
+            return {
+                budget: 0,
+                think: GENERAL_THINK_EVERY,
+                plan: null,          // { id, passos: [...] }
+                postura: 'Observando',
+                // Memória do jeito de jogar (0 a 1), começa neutra
+                memoria: { abrigo: 0.3, contraBateria: 0.2, bloqueio: 0.3, abatePatrulha: 0.5, vigias: 2 }
+            };
+        }
 
-            const escolha = opcoes[Math.floor(Math.random() * opcoes.length)];
-            if (escolha === 'infantaria') {
+        function lembrar(chave, valor, peso) {
+            const m = gameState.general.memoria;
+            m[chave] = m[chave] + (valor - m[chave]) * peso;
+        }
+
+        // Aviso de artilharia encurta se o jogador usa muita contra-bateria (baterias mudam de lugar)
+        function barrageWarning() {
+            return Math.round(BARRAGE_WARNING_TICKS - 12 * Math.min(1, gameState.general ? gameState.general.memoria.contraBateria : 0));
+        }
+
+        // Orçamento por segundo: o ritmo do antigo sorteio de eventos, com 50% a mais
+        // porque o general gasta em planos maiores e mais caros
+        function generalIncome() {
+            if (gameState.day < 2) return 0;
+            const p = Math.min(0.05, Math.min(0.02, 0.0025 + gameState.day * 0.0005) * diff().eventMult);
+            return p * 2.75 * 1.5;
+        }
+
+        function situacao() {
+            const vivos = gameState.squad.filter(s => s.hp > 0);
+            const media = (k) => vivos.reduce((t, s) => t + s[k], 0) / Math.max(1, vivos.length);
+            const vigias = vivos.filter(s => s.duty === 'WATCH').length;
+            return {
+                noite: gameState.timeSeconds >= 120,
+                nevoa: gameState.weather === 'Névoa Espessa',
+                vigiasFracos: vigias <= 1 && !gameState.tacticalOrders.FULL_VIGILANCE,
+                trincheiraFraca: gameState.trench < 60,
+                cansado: media('fatigue') > 60 || media('hunger') > 60 || media('thirst') > 60,
+                municaoBaixa: gameState.resources.ammoRifle < 150,
+                vigias
+            };
+        }
+
+        // Quanto o general "gosta" de cada plano agora (maior = melhor)
+        function utilidadePlano(id, sit, m) {
+            const b = (x) => (x ? 1 : 0);
+            switch (id) {
+                case 'onda':        return 1.0 + 0.5 * b(sit.noite) + 0.4 * b(sit.nevoa) + 0.6 * b(sit.vigiasFracos) + 0.5 * b(sit.trincheiraFraca) + 0.4 * b(sit.cansado) + 0.4 * b(sit.municaoBaixa);
+                case 'patrulha':    return 0.6 + 0.6 * (1 - m.abatePatrulha);
+                case 'drone':       return 0.5 + 0.6 * (1 - m.bloqueio);
+                case 'artilharia':  return 0.7 + 0.5 * (1 - m.abrigo) + 0.4 * b(sit.trincheiraFraca) - 0.2 * m.contraBateria;
+                case 'reconBomb':   return 0.9 + 0.6 * (1 - m.bloqueio) + 0.3 * (1 - m.abrigo) - 0.2 * m.contraBateria;
+                case 'marcarOnda':  return 0.9 + 0.7 * (1 - m.abatePatrulha) + 0.3 * b(sit.noite);
+                case 'bombAssalto': return 0.8 + 1.0 * m.abrigo + 0.3 * b(sit.trincheiraFraca) - 0.1 * m.contraBateria;
+            }
+            return 0;
+        }
+
+        // Pode executar o plano agora? (não empilha bombardeios nem lota o mapa)
+        function planoViavel(id) {
+            const plano = GENERAL_PLANS[id];
+            if (plano.passos.some(p => p.a === 'artilharia') && gameState.barrage) return false;
+            // Uma onda de infantaria por vez: não manda outra enquanto a anterior avança
+            if (plano.passos.some(p => p.a.startsWith('infantaria')) && gameState.enemies.some(e => e.type === 'infantaria')) return false;
+            if (gameState.enemies.length >= 4) return false;
+            if (id === 'drone' && gameState.day < 3) return false;
+            return true;
+        }
+
+        function generalThink() {
+            const g = gameState.general;
+            const sit = situacao();
+            const m = g.memoria;
+            // Avalia todos os planos, com um pouco de imprevisibilidade
+            const notas = Object.keys(GENERAL_PLANS)
+                .filter(planoViavel)
+                .map(id => ({ id, nota: utilidadePlano(id, sit, m) + Math.random() * 0.25 }))
+                .sort((x, y) => y.nota - x.nota);
+            if (notas.length === 0) { g.postura = 'Reagrupando'; return; }
+            const melhor = notas[0];
+            const acessivel = notas.find(n => GENERAL_PLANS[n.id].custo <= g.budget);
+            // Se o plano preferido ainda é caro e vale bem mais, junta forças
+            if (!acessivel || (GENERAL_PLANS[melhor.id].custo > g.budget && melhor.nota > acessivel.nota + 0.3)) {
+                g.postura = `Acumulando forças para: ${GENERAL_PLANS[melhor.id].nome}`;
+                return;
+            }
+            const plano = GENERAL_PLANS[acessivel.id];
+            g.budget -= plano.custo;
+            g.plan = { id: acessivel.id, passos: plano.passos.map(p => ({ ...p })) };
+            g.postura = `Executando: ${plano.nome}`;
+            // Pista no rádio: mais vigias, mais chance de perceber o movimento
+            if (Math.random() < Math.min(0.8, 0.3 + 0.1 * sit.vigias)) logFeed(plano.pista, 'text-mil-amberMuted font-bold');
+        }
+
+        function executarPasso(acao) {
+            if (acao === 'infantaria') {
                 spawnEnemyAssault();
-            } else if (escolha === 'patrulha') {
+            } else if (acao === 'infantariaPerto') {
+                // Avança atrás da barragem: chega ao alcance logo depois do bombardeio
+                spawnEnemyAssault(170);
+            } else if (acao === 'patrulha') {
                 const qtd = 1 + (Math.random() < 0.5 ? 1 : 0);
                 for (let i = 0; i < qtd; i++) spawnEnemy('patrulha', 250);
                 logFeed('👣 PATRULHA INIMIGA detectada ao norte, avançando sobre o setor.', 'text-red-400 font-bold');
                 playTacticalBeep(500, 0.1);
-            } else if (escolha === 'drone') {
+            } else if (acao === 'drone') {
                 spawnEnemy('drone', 260);
-                logFeed('🛸 DRONE INIMIGO sobrevoando o setor! Tire-o do céu ou use Abrigo Reforçado.', 'text-red-400 font-bold');
+                logFeed('🛸 DRONE INIMIGO sobrevoando o setor! Bloqueio de Sinal cega o drone.', 'text-red-400 font-bold');
                 playTacticalBeep(900, 0.1);
-            } else if (escolha === 'artilharia') {
-                gameState.barrage = { ticks: BARRAGE_WARNING_TICKS };
-                logFeed(`💥 ARTILHARIA INIMIGA: impacto em ${BARRAGE_WARNING_TICKS}s! Abrigo Reforçado reduz o dano.`, 'text-red-500 font-bold');
+            } else if (acao === 'artilharia' && !gameState.barrage) {
+                const aviso = barrageWarning();
+                gameState.barrage = { ticks: aviso };
+                logFeed(`💥 ARTILHARIA INIMIGA: impacto em ${aviso}s! Abrigo Reforçado reduz o dano.`, 'text-red-500 font-bold');
                 playTacticalBeep(300, 0.3);
             }
+        }
+
+        // Um segundo do general: junta orçamento, avança o plano em curso ou pensa no próximo
+        function randomEventCheck() {
+            if (!gameState.general) gameState.general = newGeneral();
+            const g = gameState.general;
+            if (gameState.day < 2) { g.postura = 'Observando'; return; }
+            g.budget = Math.min(12, g.budget + generalIncome());
+            lembrar('vigias', gameState.squad.filter(s => s.hp > 0 && s.duty === 'WATCH').length, 0.01);
+            if (gameState.enemies.some(e => e.type === 'drone')) lembrar('bloqueio', gameState.tacticalOrders.SIGNAL_JAM ? 1 : 0, 0.02);
+
+            if (g.plan) {
+                const passo = g.plan.passos[0];
+                if (passo.d > 0) { passo.d--; return; }
+                executarPasso(passo.a);
+                g.plan.passos.shift();
+                if (g.plan.passos.length === 0) { g.plan = null; g.think = GENERAL_THINK_EVERY; }
+                return;
+            }
+            if (--g.think > 0) return;
+            g.think = GENERAL_THINK_EVERY;
+            generalThink();
+        }
+
+        // O que o general já percebeu do jogador (aparece na aba Rádio)
+        function leiturasDoGeneral() {
+            const m = gameState.general ? gameState.general.memoria : null;
+            if (!m) return [];
+            const l = [];
+            if (m.abrigo > 0.6) l.push('Percebeu que vocês se abrigam na artilharia: espere infantaria junto com os bombardeios.');
+            if (m.contraBateria > 0.4) l.push(`Está mudando as baterias de lugar por causa da contra-bateria: aviso de artilharia em ${barrageWarning()}s.`);
+            if (m.bloqueio > 0.6) l.push('Os drones dele estão sendo bloqueados: está trocando drones por patrulhas.');
+            if (m.abatePatrulha > 0.7) l.push('As patrulhas dele estão sendo abatidas: espere mais drones.');
+            if (m.abatePatrulha < 0.3) l.push('As patrulhas dele estão marcando a posição de vocês: espere ondas maiores.');
+            if (m.vigias < 1.2) l.push('Sabe que a vigilância está fraca: espere ataques à noite e com névoa.');
+            if (l.length === 0) l.push('Ainda estudando o jeito de vocês defenderem.');
+            return l.slice(0, 3);
         }
 
         // Carga emergencial a caminho: entrega quando a contagem chega a zero
@@ -1442,6 +1598,7 @@
                 gameState.barrage = null;
                 addEffect('artillery', 0.5, 0.05);
                 logFeed('💥 CONTRA-BATERIA: a artilharia inimiga foi silenciada antes de disparar!', 'text-mil-greenMuted font-bold');
+                if (gameState.general) lembrar('contraBateria', 1, 0.3);
             } else {
                 logFeed('💥 A contra-bateria chegou tarde: o bombardeio já tinha caído.', 'text-mil-amberMuted');
             }
@@ -1454,6 +1611,10 @@
             if (gameState.barrage.ticks > 0) return;
             gameState.barrage = null;
 
+            if (gameState.general) {
+                lembrar('abrigo', gameState.tacticalOrders.SHELTER ? 1 : 0, 0.3);
+                lembrar('contraBateria', 0, 0.3);
+            }
             const observada = droneObservando();
             if (observada) logFeed('🛸 O drone inimigo guiou o bombardeio: impactos mais precisos!', 'text-red-500 font-bold');
             const alive = gameState.squad.filter(s => s.hp > 0);
@@ -1533,6 +1694,7 @@
                         if (enemy.spotTicks >= PATROL_MARK_TICKS) {
                             gameState.nextWaveBoost = Math.min(4, (gameState.nextWaveBoost || 0) + PATROL_MARK_BOOST);
                             logFeed('👣 A patrulha marcou a posição de vocês e recuou! A próxima onda virá maior.', 'text-red-500 font-bold');
+                            if (gameState.general) lembrar('abatePatrulha', 0, 0.3);
                             gameState.enemies.splice(i, 1);
                             continue;
                         }
@@ -1568,6 +1730,7 @@
                         const pk = enemyFrac(enemy);
                         addEffect('kill', pk.fx, pk.fy);
                         logFeed(`✅ ${tipo.label} NEUTRALIZADO NO SETOR!`, 'text-mil-greenMuted font-bold');
+                        if (enemy.type === 'patrulha' && gameState.general) lembrar('abatePatrulha', 1, 0.3);
                         gameState.prestige += ganho(enemy.type === 'drone' ? 20 : 30);
                         gameState.enemies.splice(i, 1);
                     } else if (enemy.distance <= 0) {
@@ -1973,6 +2136,13 @@
             document.getElementById('lbl-intel').textContent = intelSent ? 'Enviado hoje' : `Enviar Relatório (+${ganho(50)})`;
 
             syncOrderButtons();
+            // General inimigo: postura e o que ele já percebeu do jogador
+            if (gameState.general) {
+                document.getElementById('lbl-general-posture').textContent = gameState.general.postura;
+                const leituras = leiturasDoGeneral().map(t => `<li>${t}</li>`).join('');
+                const lista = document.getElementById('lst-general-reads');
+                if (lista.innerHTML !== leituras) lista.innerHTML = leituras;
+            }
             const vivos = gameState.squad.filter(s => s.hp > 0).length;
             document.getElementById('lbl-squad-count').textContent = `RELAÇÃO DO ESQUADRÃO (${vivos} EFETIVOS)`;
             const eff = gameState.supplyLineEff;
@@ -2174,6 +2344,7 @@
 
         // Nível atual (fica salvo mesmo entre partidas)
         gameState.level = loadLevel();
+        gameState.general = newGeneral();
         document.getElementById('lbl-level').textContent = `NÍVEL ${gameState.level}`;
 
         // Restaura a partida salva, se houver, e salva ao sair da página

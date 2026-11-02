@@ -131,6 +131,26 @@ async function run() {
     c.ordensContraditoriasExclusivas = oo.CONSERVE && !oo.SUPPRESSION && oo.FULL_VIGILANCE && !oo.SHELTER;
     Object.assign(gameState.tacticalOrders, { SUPPRESSION: false, SHELTER: false, CONSERVE: false, FULL_VIGILANCE: false, SIGNAL_JAM: false }); syncOrderButtons();
 
+    // General inimigo: planeja, executa, aprende e entra no salvamento
+    const sorteioG = Math.random; Math.random = () => 0;
+    gameState.day = 5; gameState.enemies = []; gameState.barrage = null; gameState.general = newGeneral();
+    gameState.general.budget = 12; gameState.general.think = 1;
+    randomEventCheck();
+    c.generalEscolhePlano = !!gameState.general.plan;
+    for (let k = 0; k < 40 && gameState.general.plan; k++) randomEventCheck();
+    c.generalExecutaPlano = gameState.enemies.length > 0 || !!gameState.barrage;
+    gameState.enemies = []; gameState.barrage = null;
+    gameState.general = newGeneral(); gameState.general.budget = 12;
+    Object.assign(gameState.general.memoria, { abrigo: 1, contraBateria: 0, bloqueio: 0.3, abatePatrulha: 0.5 });
+    generalThink();
+    c.generalExploraQuemSeAbriga = gameState.general.plan && gameState.general.plan.id === 'bombAssalto';
+    gameState.general.memoria.contraBateria = 1;
+    c.generalEncurtaAvisoComContraBateria = barrageWarning() === 8;
+    saveGame();
+    c.generalEntraNoSalvamento = JSON.parse(localStorage.getItem('frontline-ponto-alpha-v1')).general.memoria.contraBateria === 1;
+    localStorage.removeItem('frontline-ponto-alpha-v1');
+    Math.random = sorteioG; gameState.general = newGeneral(); gameState.enemies = []; gameState.barrage = null; gameState.day = 2;
+
     // Bugs corrigidos na revisão
     gameState.tacticalOrders.SHELTER = true; updateUI();
     c.botaoOrdemReflete = document.getElementById('btn-ord-cover').classList.contains('btn-active-order');
@@ -180,7 +200,7 @@ async function run() {
     for (let run = 0; run < N; run++) {
       Object.assign(gameState, { day: 1, timeSeconds: 0, speed: 0, prestige: 150, weather: 'Nublado', supplyLineEff: 85, enemies: [], activeCrisis: null,
         tacticalOrders: { SUPPRESSION: false, SHELTER: false, CONSERVE: false, FULL_VIGILANCE: false },
-        crisisCooldown: 240, convoyAmbush: false, weakenNextWave: false, barrage: null, trench: 100, counterBattery: null, nextWaveBoost: 0,
+        crisisCooldown: 240, convoyAmbush: false, weakenNextWave: false, barrage: null, trench: 100, counterBattery: null, nextWaveBoost: 0, general: newGeneral(),
         resources: { rations: 36, water: 48, ammoRifle: 550, ammoHeavy: 200, medkits: 3 }, squad: init.map(s => ({ ...s })) });
       gameEnded = false; // a verificação de fim de jogo acima pode tê-lo deixado ligado
       let ticks = 0, minR = 1e9, minW = 1e9;
