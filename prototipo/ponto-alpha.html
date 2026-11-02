@@ -181,6 +181,9 @@
                 <div class="relative w-full h-56 bg-[#0c0f0d] overflow-hidden flex items-center justify-center">
                     <canvas id="topoCanvas" class="w-full h-full block"></canvas>
 
+                    <!-- SELO DE PAUSA -->
+                    <div id="map-paused" class="hidden absolute top-12 left-1/2 -translate-x-1/2 z-30 px-2 py-1 rounded bg-black/85 border border-mil-amberMuted text-xs text-mil-amberMuted font-bold whitespace-nowrap">⏸ PAUSADO · decida com calma</div>
+
                     <!-- BÚSSOLA: norte sempre para cima -->
                     <div class="absolute top-2 right-2 z-30 pointer-events-none" title="Norte">
                         <svg viewBox="0 0 64 64" width="54" height="54" aria-label="Bússola: norte para cima">
@@ -237,8 +240,8 @@
             </div>
 
             <!-- END OF TURN -->
-            <button id="btn-end-turn" onclick="finalizarTurnoBotao()" class="w-full py-2 btn-tactical rounded font-bold text-xs flex items-center justify-center gap-2 uppercase tracking-wider">
-                <i class="fa-solid fa-flag-checkered text-mil-amberMuted"></i> <span id="lbl-end-turn">Finalizar turno</span>
+            <button id="btn-pause" onclick="alternarPausa()" class="w-full py-2 btn-tactical rounded font-bold text-xs flex items-center justify-center gap-2 uppercase tracking-wider">
+                <i id="ico-pause" class="fa-solid fa-pause text-mil-amberMuted"></i> <span id="lbl-pause">Pausar</span>
             </button>
             <div class="flex justify-between items-center gap-2">
                 <div>
@@ -410,7 +413,7 @@
                                 <div>
                                     <div class="font-bold text-mil-amberMuted"><i class="fa-solid fa-parachute-box"></i> Carga Emergencial</div>
                                     <div class="text-xs text-mil-textMuted">+20 Ração, +30L Água, +250 Mun.</div>
-                                    <div class="text-xs text-mil-textMuted">Chega em 30 a 150 s (2d5 da Central)</div>
+                                    <div class="text-xs text-mil-textMuted">Chega em 4 a 19 s (2d5 da Central)</div>
                                 </div>
                                 <button id="btn-supply" onclick="requestSupport('SUPPLY')" class="px-2 py-1 btn-tactical rounded font-bold text-xs">
                                     <span id="lbl-supply-btn">120 PTS</span>
@@ -420,7 +423,7 @@
                             <div class="bg-mil-bg border border-mil-border p-2 rounded flex justify-between items-center">
                                 <div>
                                     <div class="font-bold text-red-300"><i class="fa-solid fa-crosshairs"></i> Contra-bateria</div>
-                                    <div class="text-xs text-mil-textMuted">Só durante aviso de artilharia inimiga. Chega em 2d5 s: se chegar antes do impacto, cancela o bombardeio.</div>
+                                    <div class="text-xs text-mil-textMuted">Só durante aviso de artilharia inimiga. Chega em 1 a 5 s (2d5): se chegar antes do impacto, cancela o bombardeio.</div>
                                 </div>
                                 <button id="btn-counter" onclick="requestSupport('COUNTER')" class="px-2 py-1 btn-tactical rounded font-bold text-xs">
                                     <span id="lbl-counter-btn">50 PTS</span>
@@ -655,8 +658,9 @@
            ========================================================================== */
         const GAME_CONFIG = {
             TOTAL_DAYS: 30,
-            DAY_DURATION_SEC: 240, // 4 mins = 1 day
-            UPDATE_INTERVAL_MS: 1000,
+            DAY_DURATION_SEC: 240, // segundos de jogo por dia (30 s reais)
+            TICKS_PER_SECOND: 8,       // 8 segundos de jogo por segundo real: o dia (240) dura 30 s
+            UPDATE_INTERVAL_MS: 125,
             // Fome e sede só caem para quem está na Cozinha. A cada 10 s na cozinha,
             // o soldado come e bebe até estes limites, gastando estoque proporcional:
             // ~36 de fome por dia ÷ 10 = 3,6 ciclos × 0,33 ≈ 1,2 ração por soldado/dia (≈ 7,2 no esquadrão)
@@ -671,6 +675,9 @@
         };
 
         const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
+        // Converte segundos de jogo em segundos reais (para os textos e contagens)
+        const seg = (ticks) => Math.max(0, Math.ceil(ticks / GAME_CONFIG.TICKS_PER_SECOND));
+        let jogoPausado = false;
 
         let gameState = {
             day: 1,
@@ -1053,14 +1060,8 @@
         }, GAME_CONFIG.UPDATE_INTERVAL_MS);
 
         function updateGameTick() {
-            // Com uma crise ou o tutorial aberto, o relógio para
-            if (gameState.activeCrisis || tutorialAberto || loginAberto) return;
-            // Ao fim dos 4 períodos o relógio do turno congela; só "Finalizar turno" avança o dia
-            if (gameState.timeSeconds >= GAME_CONFIG.DAY_DURATION_SEC) {
-                updateClockAndUI();
-                updateUI();
-                return;
-            }
+            // Pausado, com crise, tutorial ou login aberto: o relógio para
+            if (jogoPausado || gameState.activeCrisis || tutorialAberto || loginAberto) return;
             gameState.timeSeconds++;
 
             normalizeOrders();
@@ -1071,9 +1072,11 @@
             syncMusic();
             randomCrisisCheck();
             checkWinLoss();
+            // Fim da madrugada: o dia vira sozinho
+            if (gameState.timeSeconds >= GAME_CONFIG.DAY_DURATION_SEC) endTurn();
             updateClockAndUI();
             updateUI();
-            if (gameState.speed > 0 && gameState.timeSeconds % 5 === 0) saveGame();
+            if (gameState.speed > 0 && gameState.timeSeconds % 40 === 0) saveGame(); // a cada ~5 s reais
         }
 
         /* ==========================================================================
@@ -1161,23 +1164,17 @@
             location.reload();
         }
 
-        // Tempo que falta para o período do turno acabar (m:ss)
-        function tempoRestanteTurno() {
-            const resto = Math.max(0, GAME_CONFIG.DAY_DURATION_SEC - gameState.timeSeconds);
-            return `${Math.floor(resto / 60)}:${String(resto % 60).padStart(2, '0')}`;
+        // Pausa: nada acontece; dá para trocar funções, ordens e pedir apoios com calma
+        function alternarPausa(forcar) {
+            jogoPausado = typeof forcar === 'boolean' ? forcar : !jogoPausado;
+            document.getElementById('lbl-pause').textContent = jogoPausado ? 'Continuar' : 'Pausar';
+            document.getElementById('ico-pause').className = `fa-solid ${jogoPausado ? 'fa-play' : 'fa-pause'} text-mil-amberMuted`;
+            document.getElementById('btn-pause').classList.toggle('btn-active-order', jogoPausado);
+            document.getElementById('map-paused').classList.toggle('hidden', !jogoPausado);
+            if (jogoPausado && gameState.speed > 0) saveGame();
         }
 
-        // Botão "Finalizar turno": só funciona com o período encerrado. Antes, tocar
-        // repetidas vezes pulava os 30 dias sem fome, sede nem ataques.
-        function finalizarTurnoBotao() {
-            if (gameState.timeSeconds < GAME_CONFIG.DAY_DURATION_SEC) {
-                logFeed(`⏳ O turno ainda está em andamento. Faltam ${tempoRestanteTurno()} para o fim do período.`, 'text-mil-amberMuted');
-                return;
-            }
-            endTurn();
-        }
-
-        // Finaliza o turno: o dia só muda por aqui, nunca pelo tempo
+        // Vira o dia (chamado sozinho no fim da madrugada)
         function endTurn() {
             if (gameEnded) return;
             gameState.day++;
@@ -1462,15 +1459,15 @@
             patrulha:   { label: 'PATRULHA',   speed: 1.15, hpMult: 0.6, attackChance: 0.30, dmg: (e) => 1.2 * (e.hp / (e.maxHp || e.hp)) * (1 + 0.08 * gameState.day) },
             drone:      { label: 'DRONE',      speed: 1.5,  hpMult: 0.35, attackChance: 0.15, dmg: () => 2 }
         };
-        const BARRAGE_WARNING_TICKS = 20;  // segundos de aviso antes da artilharia cair
+        const BARRAGE_WARNING_TICKS = 64;  // aviso antes da artilharia cair (8 s reais)
         const ARTILLERY_SUPPORT_DAMAGE = 200; // dano da artilharia de apoio em cada inimigo
         const SQUAD_FIREPOWER = 0.35;         // dano do esquadrão por segundo (dividido entre os alvos)
         const INVASION_TARGETS = 2;           // soldados atingidos por cada invasor (todos, se a trincheira romper)
         const DRONE_SPOT_ARTILLERY = 1.5;  // drone observando: artilharia inimiga +50% de dano
         const DRONE_SPOT_FIRE = 1.2;       // drone observando: tiros inimigos +20% de dano
-        const JAM_DRONE_CRASH = 0.4;       // bloqueio de sinal: chance por segundo de cada drone cair
+        const JAM_DRONE_CRASH = 0.06;      // bloqueio de sinal: chance por tick de cada drone cair (~40% por segundo real)
         const BLIND_FIRE = 0.5;            // sem vigia: o esquadrão atira às cegas
-        const PATROL_MARK_TICKS = 20;      // patrulha no alcance por 20 s marca a posição
+        const PATROL_MARK_TICKS = 80;      // patrulha no alcance por 10 s reais marca a posição
         const PATROL_MARK_BOOST = 1;       // soldado extra na próxima onda
 
         // Drone só guia a artilharia e os tiros se o sinal dele não estiver bloqueado
@@ -1555,7 +1552,7 @@
 
         // Aviso de artilharia encurta se o jogador usa muita contra-bateria (baterias mudam de lugar)
         function barrageWarning() {
-            return Math.round(BARRAGE_WARNING_TICKS - 12 * Math.min(1, gameState.general ? gameState.general.memoria.contraBateria : 0));
+            return Math.round(BARRAGE_WARNING_TICKS - 32 * Math.min(1, gameState.general ? gameState.general.memoria.contraBateria : 0)); // 8 s até 4 s
         }
 
         // Orçamento por segundo: o ritmo do antigo sorteio de eventos multiplicado por
@@ -1650,7 +1647,7 @@
             } else if (acao === 'artilharia' && !gameState.barrage) {
                 const aviso = barrageWarning();
                 gameState.barrage = { ticks: aviso };
-                logFeed(`💥 ARTILHARIA INIMIGA: impacto em ${aviso}s! Abrigo Reforçado reduz o dano.`, 'text-red-500 font-bold');
+                logFeed(`💥 ARTILHARIA INIMIGA: impacto em ${seg(aviso)}s! Pause se precisar; Abrigo Reforçado reduz o dano.`, 'text-red-500 font-bold');
                 playTacticalBeep(300, 0.3);
             }
         }
@@ -1683,7 +1680,7 @@
             if (!m) return [];
             const l = [];
             if (m.abrigo > 0.6) l.push('Percebeu que vocês se abrigam na artilharia: espere infantaria junto com os bombardeios.');
-            if (m.contraBateria > 0.4) l.push(`Está mudando as baterias de lugar por causa da contra-bateria: aviso de artilharia em ${barrageWarning()}s.`);
+            if (m.contraBateria > 0.4) l.push(`Está mudando as baterias de lugar por causa da contra-bateria: aviso de artilharia em ${seg(barrageWarning())}s.`);
             if (m.bloqueio > 0.6) l.push('Os drones dele estão sendo bloqueados: está trocando drones por patrulhas.');
             if (m.abatePatrulha > 0.7) l.push('As patrulhas dele estão sendo abatidas: espere mais drones.');
             if (m.abatePatrulha < 0.3) l.push('As patrulhas dele estão marcando a posição de vocês: espere ondas maiores.');
@@ -1904,7 +1901,7 @@
             // Aviso no mapa: contato mais próximo ou artilharia prevista
             if (gameState.barrage) {
                 banner.classList.remove('hidden');
-                bannerText.textContent = `ARTILHARIA INIMIGA EM ${gameState.barrage.ticks}s${droneObservando() ? ' · GUIADA POR DRONE' : ''}${gameState.counterBattery ? ` · CONTRA-BATERIA EM ${gameState.counterBattery.ticks}s` : ''}`;
+                bannerText.textContent = `ARTILHARIA INIMIGA EM ${seg(gameState.barrage.ticks)}s${droneObservando() ? ' · GUIADA POR DRONE' : ''}${gameState.counterBattery ? ` · CONTRA-BATERIA EM ${seg(gameState.counterBattery.ticks)}s` : ''}`;
                 statusEl.textContent = '💥 BOMBARDEIO PREVISTO';
                 statusEl.className = 'text-red-400 font-bold animate-pulse';
             } else if (gameState.enemies.length > 0) {
@@ -1918,8 +1915,8 @@
 
         /* ==========================================================================
            CRISES: decisões raras com custo real
-           No máximo uma por turno (intervalo mínimo de 240 s) e, em média, uma a cada
-           ~3 turnos no nível 1. Só aparecem fora de combate, e o relógio para enquanto
+           No máximo uma por dia (intervalo mínimo de 240 s de jogo) e, em média, uma a cada
+           ~3 dias no nível 1. Só aparecem fora de combate, e o relógio para enquanto
            a crise está aberta. Cada uma tem uma opção que custa agora e outra que custa
            mais depois. Gravidade e frequência sobem até 30% no nível máximo.
            ========================================================================== */
@@ -2068,8 +2065,8 @@
                               spawnEnemy('patrulha', 250);
                               logFeed(`📡 1d10 = ${d10}: o inimigo percebeu a escuta e mandou uma patrulha.`, 'text-red-400 font-bold');
                           } else {
-                              s.barrage = { ticks: Math.min(10, s.barrage ? s.barrage.ticks : 10) };
-                              logFeed('📡 1d10 = 1: o inimigo triangulou vocês! Artilharia em 10s.', 'text-red-500 font-bold');
+                              s.barrage = { ticks: Math.min(40, s.barrage ? s.barrage.ticks : 40) };
+                              logFeed('📡 1d10 = 1: o inimigo triangulou vocês! Artilharia em 5s.', 'text-red-500 font-bold');
                           }
                       } },
                     { texto: () => 'Ficar em silêncio de rádio (sem relatório de patrulha hoje)',
@@ -2259,7 +2256,7 @@
             supplyBtn.disabled = !!gameState.pendingSupply;
             supplyBtn.classList.toggle('opacity-60', !!gameState.pendingSupply);
             document.getElementById('lbl-supply-btn').textContent = gameState.pendingSupply
-                ? `A CAMINHO ${gameState.pendingSupply.ticks}s` : `${custo(120)} PTS`;
+                ? `A CAMINHO ${seg(gameState.pendingSupply.ticks)}s` : `${custo(120)} PTS`;
             document.getElementById('lbl-cost-artillery').textContent = `${custo(100)} PTS`;
             document.getElementById('lbl-cost-medevac').textContent = `${custo(150)} PTS`;
             const counterBtn = document.getElementById('btn-counter');
@@ -2267,18 +2264,13 @@
             counterBtn.disabled = !counterOk;
             counterBtn.classList.toggle('opacity-40', !counterOk);
             document.getElementById('lbl-counter-btn').textContent = gameState.counterBattery
-                ? `A CAMINHO ${gameState.counterBattery.ticks}s` : gameState.barrage ? `${custo(50)} PTS` : 'SEM ALVO';
+                ? `A CAMINHO ${seg(gameState.counterBattery.ticks)}s` : gameState.barrage ? `${custo(50)} PTS` : 'SEM ALVO';
 
             // Relatório de patrulha: um envio por dia
             const intelSent = gameState.lastIntelDay === gameState.day;
             const intelBtn = document.getElementById('btn-intel');
             intelBtn.classList.toggle('opacity-40', intelSent);
             intelBtn.disabled = intelSent;
-            // Botão de turno: só libera quando o período acaba (sem pular dias)
-            const turnoAcabou = gameState.timeSeconds >= GAME_CONFIG.DAY_DURATION_SEC;
-            document.getElementById('lbl-end-turn').textContent = turnoAcabou
-                ? 'Fim do período: finalizar turno' : `Turno em andamento · faltam ${tempoRestanteTurno()}`;
-            document.getElementById('btn-end-turn').classList.toggle('opacity-60', !turnoAcabou);
             document.getElementById('lbl-intel').textContent = intelSent ? 'Enviado hoje' : `Enviar Relatório (+${ganho(50)})`;
 
             syncOrderButtons();
@@ -2410,9 +2402,10 @@
                 gameState.prestige -= custo(50);
                 // Apoio da Central (2d5): tempo de resposta
                 const rolagem = (1 + Math.floor(Math.random() * 5)) + (1 + Math.floor(Math.random() * 5));
-                gameState.counterBattery = { ticks: rolagem };
-                const aTempo = rolagem < gameState.barrage.ticks;
-                logFeed(`💥 Contra-bateria pedida (2d5 = ${rolagem}s; impacto inimigo em ${gameState.barrage.ticks}s)${aTempo ? '.' : ': pode chegar tarde!'}`, 'text-mil-amberMuted font-bold');
+                // 2d5 × 4 ticks = 1 a 5 s reais
+                gameState.counterBattery = { ticks: rolagem * 4 };
+                const aTempo = gameState.counterBattery.ticks < gameState.barrage.ticks;
+                logFeed(`💥 Contra-bateria pedida (2d5 = ${rolagem}: chega em ${seg(gameState.counterBattery.ticks)}s; impacto inimigo em ${seg(gameState.barrage.ticks)}s)${aTempo ? '.' : ': pode chegar tarde!'}`, 'text-mil-amberMuted font-bold');
             }
 
             if (type === 'ARTILLERY') {
@@ -2447,7 +2440,7 @@
                 const linhaCortada = gameState.supplyLineEff <= 30;
                 const espera = rolagem * 15 * (linhaCortada ? 2 : 1);
                 gameState.pendingSupply = { ticks: espera };
-                logFeed(`📦 Carga solicitada à Central (2d5 = ${rolagem}). Chegada em ${espera}s${linhaCortada ? ' (linha cortada: atraso dobrado)' : ''}.`, 'text-mil-amberMuted font-bold');
+                logFeed(`📦 Carga solicitada à Central (2d5 = ${rolagem}). Chegada em ${seg(espera)}s${linhaCortada ? ' (linha cortada: atraso dobrado)' : ''}.`, 'text-mil-amberMuted font-bold');
             }
 
             updateUI();
@@ -2676,7 +2669,7 @@
            ========================================================================== */
         const TUTORIAL_KEY = 'frontline-tutorial-v1';
         const TUTORIAL = [
-            { t: '🎯 Objetivo', x: 'Segure a trincheira por 30 dias. O relógio corre pelos períodos do dia (cerca de 4 minutos por turno). Quando a madrugada acaba, o relógio para e você toca em "Finalizar turno" para virar o dia. Se o esquadrão inteiro cair, a posição está perdida. Vencer sobe o nível, e cada nível é mais difícil.' },
+            { t: '🎯 Objetivo', x: 'Segure a trincheira por 30 dias. Cada dia dura 30 segundos e vira sozinho. Use o botão "Pausar" sempre que precisar pensar: pausado, nada acontece e você pode reorganizar tudo. Se o esquadrão inteiro cair, a posição está perdida. Vencer sobe o nível, e cada nível é mais difícil.' },
             { t: '🪖 Funções do esquadrão', x: 'Na aba Esquadrão, cada soldado tem uma função: Vigília (vê o inimigo e acerta melhor), Descanso (recupera fadiga e vida), Manutenção (conserta a trincheira; o Engenheiro conserta bem mais rápido) e Cozinha (o único lugar onde se come e bebe). O segredo é revezar.' },
             { t: '🍞 Fome, sede e trincheira', x: 'Fome e sede sobem o tempo todo: passe cada soldado pela Cozinha antes de chegar a 75%. A trincheira se desgasta com o tempo, a chuva e os ataques. Abaixo de 20% ela rompe, e uma invasão mata todo mundo. Veja tudo na aba Logística.' },
             { t: '🗺️ Lendo o mapa', x: 'O inimigo vem do norte (topo do mapa). Losango = infantaria, quadrado = patrulha, círculo = drone. A linha amarela é o alcance de tiro deles. O aviso vermelho em cima avisa contato ou artilharia chegando, com a contagem.' },
@@ -2728,11 +2721,14 @@
         // Restaura a partida salva, se houver, e salva ao sair da página
         if (loadGame()) {
             normalizeOrders();
-            logFeed('Partida restaurada do último salvamento.', 'text-mil-greenMuted');
+            alternarPausa(true);
+            logFeed('Partida restaurada do último salvamento (pausada: toque em Continuar).', 'text-mil-greenMuted');
             // Crise que estava aberta volta a aparecer
             if (gameState.activeCrisis) openCrisis(gameState.activeCrisis.id, gameState.activeCrisis.ctx);
         }
         window.addEventListener('pagehide', () => { if (gameState.speed > 0 && !skipPageHideSave) saveGame(); });
+        // Saiu do app ou trocou de aba: pausa sozinho
+        document.addEventListener('visibilitychange', () => { if (document.hidden && !gameEnded) alternarPausa(true); });
 
         /* ==========================================================================
            APP INSTALÁVEL: service worker e botão de instalar

@@ -51,14 +51,22 @@ async function run() {
     gameState.speed = 0; // sem controle de velocidade na interface; o teste pausa direto
     // Fixa o sorteio em tempo bom (Nublado, 90% de eficiência) para o teste ser determinístico
     const sorteioReal = Math.random; Math.random = () => 0.1;
-    for (let i = 0; i < 240; i++) updateGameTick();
-    c.tempoNaoMudaODia = gameState.day === 1 && gameState.timeSeconds === 240;
-    c.periodoCongela = (updateGameTick(), gameState.timeSeconds === 240);
+    gameState.day = 1; gameState.timeSeconds = 0; // a página já rodou alguns segundos antes do teste
+    for (let i = 0; i < 239; i++) updateGameTick();
+    c.diaNaoViraAntesDaHora = gameState.day === 1 && gameState.timeSeconds === 239;
+    // Ninguém comendo no último segundo, para medir só a entrega do comboio
+    gameState.squad.forEach(s => { if (s.hp > 0) s.duty = 'REST'; });
     const racoesAntesDaEntrega = gameState.resources.rations;
-    endTurn();
+    updateGameTick(); // segundo 240: o dia vira sozinho
     Math.random = sorteioReal;
-    c.finalizarTurnoAvancaDia = gameState.day === 2 && gameState.timeSeconds === 0;
+    c.diaViraSozinho = gameState.day === 2 && gameState.timeSeconds === 0;
     c.racoesEntregues = gameState.resources.rations > racoesAntesDaEntrega;
+    // Pausa: nada acontece até continuar
+    alternarPausa(true); const tPausa = gameState.timeSeconds; updateGameTick(); updateGameTick();
+    c.pausaParaORelogio = gameState.timeSeconds === tPausa && !document.getElementById('map-paused').classList.contains('hidden');
+    alternarPausa(false); updateGameTick();
+    c.continuarRetomaORelogio = gameState.timeSeconds === tPausa + 1 && document.getElementById('map-paused').classList.contains('hidden');
+    gameState.timeSeconds = 0;
     c.cardsRenderizados = document.querySelectorAll('#squad-list > div').length === 6;
 
     Object.assign(gameState, { day: 1, timeSeconds: 0, enemies: [], activeCrisis: null, resources: { rations: 36, water: 48, ammoRifle: 550, ammoHeavy: 200, medkits: 3 }, squad: init });
@@ -128,18 +136,18 @@ async function run() {
     const danoSemVigia = 1000 - gameState.enemies[0].hp;
     c.semVigiaAtiraAsCegas = Math.abs(danoSemVigia - danoComVigia * 0.5) < 0.01;
     prepCombate(); gameState.squad.forEach(s => s.duty = 'WATCH');
-    gameState.tacticalOrders.SIGNAL_JAM = true; Math.random = () => 0.1;
+    gameState.tacticalOrders.SIGNAL_JAM = true; Math.random = () => 0.01;
     gameState.enemies = [{ type: 'drone', distance: 250, hp: 1000, offsetX: 0 }]; processEnemiesAndCombat();
     c.bloqueioDerrubaDrone = gameState.enemies.length === 0;
     const pRadio = gameState.prestige; gameState.lastIntelDay = 0; sendIntelReport();
     c.bloqueioOcupaRadio = gameState.prestige === pRadio;
     prepCombate(); gameState.enemies = []; gameState.prestige = 1000; gameState.barrage = { ticks: 20 };
     Math.random = () => 0; requestSupport('COUNTER'); // 2d5 = 2
-    processCounterBattery(); processCounterBattery();
+    for (let k = 0; k < 8; k++) processCounterBattery(); // 2d5 = 2 → 8 ticks (1 s real)
     c.contraBateriaCancela = gameState.barrage === null && gameState.prestige === 1000 - custo(50);
     prepCombate(); Math.random = () => 0.99;
     gameState.enemies = [{ type: 'patrulha', distance: 100, hp: 1e6, offsetX: 0 }];
-    for (let k = 0; k < 20; k++) processEnemiesAndCombat();
+    for (let k = 0; k < PATROL_MARK_TICKS; k++) processEnemiesAndCombat();
     c.patrulhaMarcaPosicao = gameState.nextWaveBoost === 1 && gameState.enemies.length === 0;
     Math.random = sorteioOrig; prepCombate(); gameState.enemies = [];
 
@@ -165,7 +173,7 @@ async function run() {
     generalThink();
     c.generalExploraQuemSeAbriga = gameState.general.plan && gameState.general.plan.id === 'bombAssalto';
     gameState.general.memoria.contraBateria = 1;
-    c.generalEncurtaAvisoComContraBateria = barrageWarning() === 8;
+    c.generalEncurtaAvisoComContraBateria = barrageWarning() === 32; // 4 s reais
     saveGame();
     c.generalEntraNoSalvamento = JSON.parse(localStorage.getItem('frontline-ponto-alpha-v1')).general.memoria.contraBateria === 1;
     localStorage.removeItem('frontline-ponto-alpha-v1');
@@ -188,14 +196,6 @@ async function run() {
     c.trincheiraRompidaMassacre = gameState.squad.every(s => s.hp <= 0);
     Math.random = sorteioR; gameState.trench = 100; gameState.enemies = []; gameState.tacticalOrders.SHELTER = false;
     gameState.squad.forEach(s => { s.hp = 100; });
-
-    // Botão de turno não pula dias antes do fim do período
-    gameState.timeSeconds = 30; const diaAntesBotao = gameState.day;
-    finalizarTurnoBotao(); finalizarTurnoBotao(); finalizarTurnoBotao();
-    c.botaoTurnoNaoPulaDias = gameState.day === diaAntesBotao;
-    gameState.timeSeconds = 240; finalizarTurnoBotao();
-    c.botaoTurnoFinalizaNoFim = gameState.day === diaAntesBotao + 1;
-    gameState.day = diaAntesBotao; gameState.timeSeconds = 0;
 
     // Bugs corrigidos na revisão
     gameState.tacticalOrders.SHELTER = true; updateUI();
