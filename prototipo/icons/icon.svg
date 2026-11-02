@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Fundo escuro do terminal tático (ocupa tudo, serve também como ícone "maskable") -->
+  <rect width="512" height="512" fill="#0c0f0d"/>
+  <!-- Linhas de relevo, como no mapa do jogo -->
+  <g fill="none" stroke="#232e26" stroke-width="6">
+    <ellipse cx="256" cy="262" rx="236" ry="196"/>
+    <ellipse cx="256" cy="262" rx="200" ry="164"/>
+    <ellipse cx="256" cy="262" rx="226" ry="226" stroke="#1a221d"/>
+  </g>
+  <!-- Linha da trincheira -->
+  <polyline points="70,392 160,384 256,398 352,386 442,392" fill="none" stroke="#3e4c3a" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Bússola -->
+  <circle cx="256" cy="240" r="150" fill="#0c0f0d" stroke="#8fad88" stroke-width="14"/>
+  <g stroke="#5a7356" stroke-width="8" stroke-linecap="round">
+    <line x1="256" y1="98" x2="256" y2="118"/>
+    <line x1="256" y1="362" x2="256" y2="382"/>
+    <line x1="114" y1="240" x2="134" y2="240"/>
+    <line x1="378" y1="240" x2="398" y2="240"/>
+  </g>
+  <!-- Agulha: norte vermelho, sul claro -->
+  <polygon points="256,128 292,240 220,240" fill="#ff5c5c"/>
+  <polygon points="256,352 292,240 220,240" fill="#b3c4ae"/>
+  <circle cx="256" cy="240" r="14" fill="#0c0f0d" stroke="#8fad88" stroke-width="6"/>
+</svg>

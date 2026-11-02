@@ -1,5 +1,23 @@
 {
   "rewrites": [
-    { "source": "/", "destination": "/prototipo/ponto-alpha.html" }
+    { "source": "/", "destination": "/prototipo/ponto-alpha.html" },
+    { "source": "/manifest.webmanifest", "destination": "/prototipo/manifest.webmanifest" },
+    { "source": "/sw.js", "destination": "/prototipo/sw.js" },
+    { "source": "/icons/:path*", "destination": "/prototipo/icons/:path*" }
+  ],
+  "headers": [
+    {
+      "source": "/(sw.js|prototipo/sw.js)",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache" },
+        { "key": "Service-Worker-Allowed", "value": "/" }
+      ]
+    },
+    {
+      "source": "/(manifest.webmanifest|prototipo/manifest.webmanifest)",
+      "headers": [
+        { "key": "Content-Type", "value": "application/manifest+json" }
+      ]
+    }
   ]
 }

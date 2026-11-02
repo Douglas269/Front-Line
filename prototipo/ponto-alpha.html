@@ -4,6 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Linha de Frente: Ponto Alpha - Terminal Tático</title>
+    <!-- App instalável (PWA): manifesto, ícones e cor da barra do navegador -->
+    <meta name="theme-color" content="#0c0f0d">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="Ponto Alpha">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
@@ -220,8 +231,12 @@
             <button id="btn-end-turn" onclick="endTurn()" class="w-full py-2 btn-tactical rounded font-bold text-xs flex items-center justify-center gap-2 uppercase tracking-wider">
                 <i class="fa-solid fa-flag-checkered text-mil-amberMuted"></i> <span id="lbl-end-turn">Finalizar turno</span>
             </button>
-            <div class="text-right">
-                <button onclick="novaPartida()" class="text-xs underline text-mil-textMuted hover:text-mil-textGlow">Nova partida</button>
+            <div class="flex justify-between items-center gap-2">
+                <div>
+                    <button id="btn-install" onclick="instalarApp()" class="hidden text-xs px-2 py-1 btn-tactical rounded font-bold"><i class="fa-solid fa-mobile-screen-button"></i> Instalar no celular</button>
+                    <span id="hint-ios" class="hidden text-xs text-mil-textMuted">No iPhone: Compartilhar → Adicionar à Tela de Início</span>
+                </div>
+                <button onclick="novaPartida()" class="text-xs underline text-mil-textMuted hover:text-mil-textGlow whitespace-nowrap">Nova partida</button>
             </div>
 
             <!-- TACTICAL FEED LOG (Terminal Output Style) -->
@@ -1815,6 +1830,40 @@
             logFeed('Partida restaurada do último salvamento.', 'text-mil-greenMuted');
         }
         window.addEventListener('pagehide', () => { if (gameState.speed > 0 && !skipPageHideSave) saveGame(); });
+
+        /* ==========================================================================
+           APP INSTALÁVEL: service worker e botão de instalar
+           ========================================================================== */
+        if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+            window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
+        }
+
+        let installPrompt = null;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            installPrompt = e;
+            document.getElementById('btn-install').classList.remove('hidden');
+        });
+
+        function instalarApp() {
+            if (!installPrompt) return;
+            installPrompt.prompt();
+            installPrompt.userChoice.finally(() => {
+                installPrompt = null;
+                document.getElementById('btn-install').classList.add('hidden');
+            });
+        }
+
+        window.addEventListener('appinstalled', () => {
+            document.getElementById('btn-install').classList.add('hidden');
+            logFeed('📲 Ponto Alpha instalado no aparelho.', 'text-mil-greenMuted');
+        });
+
+        // iPhone não oferece o botão de instalar: mostra o caminho manual
+        const rodandoInstalado = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+        if (/iphone|ipad|ipod/i.test(navigator.userAgent) && !rodandoInstalado) {
+            document.getElementById('hint-ios').classList.remove('hidden');
+        }
         updateClockAndUI();
         updateUI();
     </script>
