@@ -189,6 +189,14 @@ async function run() {
     Math.random = sorteioR; gameState.trench = 100; gameState.enemies = []; gameState.tacticalOrders.SHELTER = false;
     gameState.squad.forEach(s => { s.hp = 100; });
 
+    // Botão de turno não pula dias antes do fim do período
+    gameState.timeSeconds = 30; const diaAntesBotao = gameState.day;
+    finalizarTurnoBotao(); finalizarTurnoBotao(); finalizarTurnoBotao();
+    c.botaoTurnoNaoPulaDias = gameState.day === diaAntesBotao;
+    gameState.timeSeconds = 240; finalizarTurnoBotao();
+    c.botaoTurnoFinalizaNoFim = gameState.day === diaAntesBotao + 1;
+    gameState.day = diaAntesBotao; gameState.timeSeconds = 0;
+
     // Bugs corrigidos na revisão
     gameState.tacticalOrders.SHELTER = true; updateUI();
     c.botaoOrdemReflete = document.getElementById('btn-ord-cover').classList.contains('btn-active-order');

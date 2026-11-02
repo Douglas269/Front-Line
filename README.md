@@ -54,7 +54,7 @@ Jogo de estratégia tático com foco em realismo de comando, combate blindado e 
   - Sem ninguém de vigília (e sem Vigília Total), o esquadrão atira às cegas: metade do dano.
 - Crises: raras (no máximo uma por turno; na prática ~1 a cada 5 ou 6 turnos), só fora de combate, e o relógio para enquanto a crise está aberta. Oito tipos: congelamento (neve), infecção (chuva ou névoa), desabamento (chuva forte), ração estragada, deserção (moral < 30), emboscada no comboio, interceptação de rádio (1d10: 10 enfraquece a próxima onda, 7–9 dá prestígio, 2–4 atrai patrulha, 1 atrai artilharia) e franco-atirador (duelo do Atirador de Elite). Cada uma tem uma opção que custa agora e outra que custa mais depois; frequência e gravidade sobem até 30% no nível 25. A crise aberta entra no salvamento.
 - Áudio: trilha de guerra no turno e trilha de combate quando há inimigos (`prototipo/assets/music/`, CC0). Vento ambiente gerado no navegador, em volume bem menor que a música. Tudo começa ao ligar o alto-falante no cabeçalho.
-- Turnos: o dia só muda pelo botão **Finalizar turno**. O relógio percorre os 4 períodos (manhã, tarde, noite, madrugada) e congela no fim, esperando a finalização.
+- Turnos: o dia só muda pelo botão **Finalizar turno**, e ele só funciona quando o período acaba. O relógio percorre os 4 períodos (manhã, tarde, noite, madrugada; ~4 minutos) e congela no fim, esperando a finalização. Antes disso o botão mostra quanto falta.
 
 ### Níveis de dificuldade
 - 25 níveis. Cada vitória sobe um nível; derrota mantém o nível. O nível fica salvo no navegador, mesmo com "Nova partida".

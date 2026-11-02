@@ -237,7 +237,7 @@
             </div>
 
             <!-- END OF TURN -->
-            <button id="btn-end-turn" onclick="endTurn()" class="w-full py-2 btn-tactical rounded font-bold text-xs flex items-center justify-center gap-2 uppercase tracking-wider">
+            <button id="btn-end-turn" onclick="finalizarTurnoBotao()" class="w-full py-2 btn-tactical rounded font-bold text-xs flex items-center justify-center gap-2 uppercase tracking-wider">
                 <i class="fa-solid fa-flag-checkered text-mil-amberMuted"></i> <span id="lbl-end-turn">Finalizar turno</span>
             </button>
             <div class="flex justify-between items-center gap-2">
@@ -1159,6 +1159,22 @@
             skipPageHideSave = true;
             clearSave();
             location.reload();
+        }
+
+        // Tempo que falta para o período do turno acabar (m:ss)
+        function tempoRestanteTurno() {
+            const resto = Math.max(0, GAME_CONFIG.DAY_DURATION_SEC - gameState.timeSeconds);
+            return `${Math.floor(resto / 60)}:${String(resto % 60).padStart(2, '0')}`;
+        }
+
+        // Botão "Finalizar turno": só funciona com o período encerrado. Antes, tocar
+        // repetidas vezes pulava os 30 dias sem fome, sede nem ataques.
+        function finalizarTurnoBotao() {
+            if (gameState.timeSeconds < GAME_CONFIG.DAY_DURATION_SEC) {
+                logFeed(`⏳ O turno ainda está em andamento. Faltam ${tempoRestanteTurno()} para o fim do período.`, 'text-mil-amberMuted');
+                return;
+            }
+            endTurn();
         }
 
         // Finaliza o turno: o dia só muda por aqui, nunca pelo tempo
@@ -2258,8 +2274,11 @@
             const intelBtn = document.getElementById('btn-intel');
             intelBtn.classList.toggle('opacity-40', intelSent);
             intelBtn.disabled = intelSent;
-            document.getElementById('lbl-end-turn').textContent = gameState.timeSeconds >= GAME_CONFIG.DAY_DURATION_SEC
-                ? 'Fim do período: finalizar turno' : 'Finalizar turno';
+            // Botão de turno: só libera quando o período acaba (sem pular dias)
+            const turnoAcabou = gameState.timeSeconds >= GAME_CONFIG.DAY_DURATION_SEC;
+            document.getElementById('lbl-end-turn').textContent = turnoAcabou
+                ? 'Fim do período: finalizar turno' : `Turno em andamento · faltam ${tempoRestanteTurno()}`;
+            document.getElementById('btn-end-turn').classList.toggle('opacity-60', !turnoAcabou);
             document.getElementById('lbl-intel').textContent = intelSent ? 'Enviado hoje' : `Enviar Relatório (+${ganho(50)})`;
 
             syncOrderButtons();
@@ -2657,7 +2676,7 @@
            ========================================================================== */
         const TUTORIAL_KEY = 'frontline-tutorial-v1';
         const TUTORIAL = [
-            { t: '🎯 Objetivo', x: 'Segure a trincheira por 30 dias. O relógio corre pelos períodos do dia, e o dia só vira quando você toca em "Finalizar turno". Se o esquadrão inteiro cair, a posição está perdida. Vencer sobe o nível, e cada nível é mais difícil.' },
+            { t: '🎯 Objetivo', x: 'Segure a trincheira por 30 dias. O relógio corre pelos períodos do dia (cerca de 4 minutos por turno). Quando a madrugada acaba, o relógio para e você toca em "Finalizar turno" para virar o dia. Se o esquadrão inteiro cair, a posição está perdida. Vencer sobe o nível, e cada nível é mais difícil.' },
             { t: '🪖 Funções do esquadrão', x: 'Na aba Esquadrão, cada soldado tem uma função: Vigília (vê o inimigo e acerta melhor), Descanso (recupera fadiga e vida), Manutenção (conserta a trincheira; o Engenheiro conserta bem mais rápido) e Cozinha (o único lugar onde se come e bebe). O segredo é revezar.' },
             { t: '🍞 Fome, sede e trincheira', x: 'Fome e sede sobem o tempo todo: passe cada soldado pela Cozinha antes de chegar a 75%. A trincheira se desgasta com o tempo, a chuva e os ataques. Abaixo de 20% ela rompe, e uma invasão mata todo mundo. Veja tudo na aba Logística.' },
             { t: '🗺️ Lendo o mapa', x: 'O inimigo vem do norte (topo do mapa). Losango = infantaria, quadrado = patrulha, círculo = drone. A linha amarela é o alcance de tiro deles. O aviso vermelho em cima avisa contato ou artilharia chegando, com a contagem.' },
