@@ -94,6 +94,35 @@ async function run() {
     if (errosCrise.length) console.error(errosCrise.join(' | '));
     gameState.squad.forEach(s => { s.hp = 100; s.deserted = false; }); gameState.enemies = []; gameState.barrage = null; gameState.convoyAmbush = false; gameState.weakenNextWave = false; gameState.crisisCooldown = 240;
 
+    // Defesas e efeitos dos eventos de combate
+    const sorteioOrig = Math.random;
+    const prepCombate = () => { gameState.squad.forEach(s => { s.hp = 100; s.moral = 100; s.deserted = false; });
+      Object.assign(gameState.tacticalOrders, { SUPPRESSION: false, SHELTER: false, CONSERVE: false, FULL_VIGILANCE: false, SIGNAL_JAM: false });
+      gameState.barrage = null; gameState.counterBattery = null; gameState.nextWaveBoost = 0; gameState.resources.ammoRifle = 500; };
+    Math.random = () => 0.99; // inimigo não acerta; sem eventos
+    prepCombate(); gameState.squad.forEach(s => s.duty = 'WATCH');
+    gameState.enemies = [{ type: 'infantaria', distance: 250, hp: 1000, offsetX: 0 }]; processEnemiesAndCombat();
+    const danoComVigia = 1000 - gameState.enemies[0].hp;
+    prepCombate(); gameState.squad.forEach(s => s.duty = 'REST');
+    gameState.enemies = [{ type: 'infantaria', distance: 250, hp: 1000, offsetX: 0 }]; processEnemiesAndCombat();
+    const danoSemVigia = 1000 - gameState.enemies[0].hp;
+    c.semVigiaAtiraAsCegas = Math.abs(danoSemVigia - danoComVigia * 0.5) < 0.01;
+    prepCombate(); gameState.squad.forEach(s => s.duty = 'WATCH');
+    gameState.tacticalOrders.SIGNAL_JAM = true; Math.random = () => 0.1;
+    gameState.enemies = [{ type: 'drone', distance: 250, hp: 1000, offsetX: 0 }]; processEnemiesAndCombat();
+    c.bloqueioDerrubaDrone = gameState.enemies.length === 0;
+    const pRadio = gameState.prestige; gameState.lastIntelDay = 0; sendIntelReport();
+    c.bloqueioOcupaRadio = gameState.prestige === pRadio;
+    prepCombate(); gameState.enemies = []; gameState.prestige = 1000; gameState.barrage = { ticks: 20 };
+    Math.random = () => 0; requestSupport('COUNTER'); // 2d5 = 2
+    processCounterBattery(); processCounterBattery();
+    c.contraBateriaCancela = gameState.barrage === null && gameState.prestige === 1000 - custo(50);
+    prepCombate(); Math.random = () => 0.99;
+    gameState.enemies = [{ type: 'patrulha', distance: 100, hp: 1e6, offsetX: 0 }];
+    for (let k = 0; k < 20; k++) processEnemiesAndCombat();
+    c.patrulhaMarcaPosicao = gameState.nextWaveBoost === 1 && gameState.enemies.length === 0;
+    Math.random = sorteioOrig; prepCombate(); gameState.enemies = [];
+
     // Bugs corrigidos na revisão
     gameState.tacticalOrders.SHELTER = true; updateUI();
     c.botaoOrdemReflete = document.getElementById('btn-ord-cover').classList.contains('btn-active-order');
@@ -143,7 +172,7 @@ async function run() {
     for (let run = 0; run < N; run++) {
       Object.assign(gameState, { day: 1, timeSeconds: 0, speed: 0, prestige: 150, weather: 'Nublado', supplyLineEff: 85, enemies: [], activeCrisis: null,
         tacticalOrders: { SUPPRESSION: false, SHELTER: false, CONSERVE: false, FULL_VIGILANCE: false },
-        crisisCooldown: 240, convoyAmbush: false, weakenNextWave: false, barrage: null, trench: 100,
+        crisisCooldown: 240, convoyAmbush: false, weakenNextWave: false, barrage: null, trench: 100, counterBattery: null, nextWaveBoost: 0,
         resources: { rations: 36, water: 48, ammoRifle: 550, ammoHeavy: 200, medkits: 3 }, squad: init.map(s => ({ ...s })) });
       gameEnded = false; // a verificação de fim de jogo acima pode tê-lo deixado ligado
       let ticks = 0, minR = 1e9, minW = 1e9;

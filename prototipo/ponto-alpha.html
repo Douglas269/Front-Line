@@ -193,7 +193,7 @@
                     <div id="fog-warning" class="hidden absolute inset-0 bg-black/90 flex flex-col items-center justify-center text-center p-4 z-30">
                         <i class="fa-solid fa-eye-slash text-mil-redAlert text-3xl mb-2 animate-bounce"></i>
                         <span class="text-mil-redAlert font-bold text-xs uppercase tracking-widest">NENHUM SOLDADO EM VIGÍLIA</span>
-                        <p class="text-mil-textMuted text-xs mt-1 max-w-xs">Perímetro sem observação. Riscos graves de emboscada sem inteligência do terreno.</p>
+                        <p class="text-mil-textMuted text-xs mt-1 max-w-xs">Perímetro sem observação: o esquadrão atira às cegas (metade do dano). Coloque alguém de vigília.</p>
                     </div>
 
                     <!-- COMBAT ALERT BANNER -->
@@ -202,7 +202,6 @@
                             <i class="fa-solid fa-triangle-exclamation text-red-400"></i>
                             <span id="map-alert-text">CONTATO INIMIGO A 200M</span>
                         </span>
-                        <span class="text-xs text-red-300 italic">ASSALTO NORTE</span>
                     </div>
                 </div>
 
@@ -223,6 +222,10 @@
                     <button id="btn-ord-vigilance" onclick="toggleTacticalOrder('FULL_VIGILANCE')" class="py-1.5 px-2 btn-tactical rounded flex flex-col items-center justify-center">
                         <span class="flex items-center gap-1.5"><i class="fa-solid fa-binoculars text-mil-textGlow"></i> Vigília Total</span>
                         <span class="text-xs text-mil-textMuted font-normal">vê tudo · +fadiga</span>
+                    </button>
+                    <button id="btn-ord-jam" onclick="toggleTacticalOrder('SIGNAL_JAM')" class="col-span-2 py-1.5 px-2 btn-tactical rounded flex flex-col items-center justify-center">
+                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-tower-broadcast text-mil-komonaBlue"></i> Bloqueio de Sinal</span>
+                        <span class="text-xs text-mil-textMuted font-normal">cega e derruba drones · sem rádio</span>
                     </button>
                 </div>
             </div>
@@ -396,6 +399,16 @@
                                 </div>
                                 <button id="btn-supply" onclick="requestSupport('SUPPLY')" class="px-2 py-1 btn-tactical rounded font-bold text-xs">
                                     <span id="lbl-supply-btn">120 PTS</span>
+                                </button>
+                            </div>
+
+                            <div class="bg-mil-bg border border-mil-border p-2 rounded flex justify-between items-center">
+                                <div>
+                                    <div class="font-bold text-red-300"><i class="fa-solid fa-crosshairs"></i> Contra-bateria</div>
+                                    <div class="text-xs text-mil-textMuted">Só durante aviso de artilharia inimiga. Chega em 2d5 s: se chegar antes do impacto, cancela o bombardeio.</div>
+                                </div>
+                                <button id="btn-counter" onclick="requestSupport('COUNTER')" class="px-2 py-1 btn-tactical rounded font-bold text-xs">
+                                    <span id="lbl-counter-btn">50 PTS</span>
                                 </button>
                             </div>
                         </div>
@@ -619,7 +632,8 @@
                 SUPPRESSION: false,
                 SHELTER: false,
                 CONSERVE: false,
-                FULL_VIGILANCE: false
+                FULL_VIGILANCE: false,
+                SIGNAL_JAM: false
             },
             supplyLineEff: 85,
             resources: {
@@ -648,7 +662,9 @@
             activeCrisis: null, // crise aberta: { id, ctx } ou null (o relógio para)
             crisisCooldown: 240, // segundos até a próxima crise poder aparecer
             convoyAmbush: false, // próximo comboio vai pela estrada vigiada
-            weakenNextWave: false // interceptação revelou a próxima onda
+            weakenNextWave: false, // interceptação revelou a próxima onda
+            counterBattery: null, // contra-bateria a caminho: { ticks } ou null
+            nextWaveBoost: 0 // soldados extras na próxima onda (patrulha marcou a posição)
         };
 
         /* ==========================================================================
@@ -1034,6 +1050,8 @@
                     crisisCooldown: gameState.crisisCooldown,
                     convoyAmbush: gameState.convoyAmbush,
                     weakenNextWave: gameState.weakenNextWave,
+                    counterBattery: gameState.counterBattery,
+                    nextWaveBoost: gameState.nextWaveBoost,
                     feed: document.getElementById('feed-log').innerHTML,
                     diary: document.getElementById('diary-entries').innerHTML
                 }));
@@ -1055,7 +1073,7 @@
                 timeSeconds: data.timeSeconds,
                 prestige: data.prestige,
                 weather: data.weather,
-                tacticalOrders: data.tacticalOrders,
+                tacticalOrders: Object.assign({ SIGNAL_JAM: false }, data.tacticalOrders),
                 supplyLineEff: data.supplyLineEff,
                 resources: data.resources,
                 squad: data.squad,
@@ -1068,6 +1086,8 @@
                 crisisCooldown: typeof data.crisisCooldown === 'number' ? data.crisisCooldown : 240,
                 convoyAmbush: !!data.convoyAmbush,
                 weakenNextWave: !!data.weakenNextWave,
+                counterBattery: data.counterBattery || null,
+                nextWaveBoost: data.nextWaveBoost || 0,
                 speed: 1
             });
             document.getElementById('feed-log').innerHTML = data.feed;
@@ -1316,12 +1336,25 @@
             drone:      { label: 'DRONE',      speed: 1.5,  hpMult: 0.35, attackChance: 0.15, dmg: () => 2 }
         };
         const BARRAGE_WARNING_TICKS = 20;  // segundos de aviso antes da artilharia cair
+        const DRONE_SPOT_ARTILLERY = 1.5;  // drone observando: artilharia inimiga +50% de dano
+        const DRONE_SPOT_FIRE = 1.2;       // drone observando: tiros inimigos +20% de dano
+        const JAM_DRONE_CRASH = 0.4;       // bloqueio de sinal: chance por segundo de cada drone cair
+        const BLIND_FIRE = 0.5;            // sem vigia: o esquadrão atira às cegas
+        const PATROL_MARK_TICKS = 20;      // patrulha no alcance por 20 s marca a posição
+        const PATROL_MARK_BOOST = 1;       // soldado extra na próxima onda
+
+        // Drone só guia a artilharia e os tiros se o sinal dele não estiver bloqueado
+        const droneObservando = () => !gameState.tacticalOrders.SIGNAL_JAM && gameState.enemies.some(e => e.type === 'drone');
+        const temVisao = () => gameState.tacticalOrders.FULL_VIGILANCE || gameState.squad.some(s => s.hp > 0 && s.duty === 'WATCH');
         const BARRAGE_SHOTS = 3;
         const BARRAGE_DAMAGE = 13;
 
         function spawnEnemyAssault() {
             const extra = diff().waveExtra;
-            const count = Math.min(3 + extra, 1 + Math.floor(gameState.day / 9) + extra);
+            const marcada = gameState.nextWaveBoost || 0;
+            gameState.nextWaveBoost = 0;
+            const count = Math.min(3 + extra, 1 + Math.floor(gameState.day / 9) + extra) + marcada;
+            if (marcada) logFeed(`🎯 A patrulha marcou a posição: esta onda vem com ${marcada} soldados a mais.`, 'text-red-400 font-bold');
             gameState.enemies = gameState.enemies.filter(e => e.type !== 'infantaria');
             for (let i = 0; i < count; i++) spawnEnemy('infantaria', 270);
             logFeed(`🚨 ALERTA: Tropa inimiga avança sobre o setor!`, 'text-red-400 font-bold');
@@ -1357,6 +1390,7 @@
             if (gameState.enemies.length < 3) opcoes.push('patrulha', 'patrulha');
             if (gameState.enemies.length < 3 && gameState.day >= 3) opcoes.push('drone');
             if (!gameState.barrage) opcoes.push('artilharia');
+            if (!gameState.barrage && droneObservando()) opcoes.push('artilharia', 'artilharia'); // drone guia a artilharia
             if (opcoes.length === 0) return;
 
             const escolha = opcoes[Math.floor(Math.random() * opcoes.length)];
@@ -1396,6 +1430,21 @@
             }
         }
 
+        // Contra-bateria a caminho: se chegar antes do impacto, cancela o bombardeio
+        function processCounterBattery() {
+            if (!gameState.counterBattery) return;
+            gameState.counterBattery.ticks--;
+            if (gameState.counterBattery.ticks > 0) return;
+            gameState.counterBattery = null;
+            if (gameState.barrage) {
+                gameState.barrage = null;
+                addEffect('artillery', 0.5, 0.05);
+                logFeed('💥 CONTRA-BATERIA: a artilharia inimiga foi silenciada antes de disparar!', 'text-mil-greenMuted font-bold');
+            } else {
+                logFeed('💥 A contra-bateria chegou tarde: o bombardeio já tinha caído.', 'text-mil-amberMuted');
+            }
+        }
+
         // Contagem regressiva e impactos da artilharia inimiga
         function processBarrage() {
             if (!gameState.barrage) return;
@@ -1403,10 +1452,12 @@
             if (gameState.barrage.ticks > 0) return;
             gameState.barrage = null;
 
+            const observada = droneObservando();
+            if (observada) logFeed('🛸 O drone inimigo guiou o bombardeio: impactos mais precisos!', 'text-red-500 font-bold');
             const alive = gameState.squad.filter(s => s.hp > 0);
             for (let i = 0; i < BARRAGE_SHOTS && alive.length > 0; i++) {
                 const alvo = alive[Math.floor(Math.random() * alive.length)];
-                let dano = BARRAGE_DAMAGE * diff().enemyDmgMult;
+                let dano = BARRAGE_DAMAGE * diff().enemyDmgMult * (observada ? DRONE_SPOT_ARTILLERY : 1);
                 if (gameState.tacticalOrders.SHELTER) dano *= shelterMult();
                 trenchDamage(TRENCH.DAMAGE_BARRAGE, 'o bombardeio');
                 alvo.hp = Math.max(0, alvo.hp - dano);
@@ -1422,6 +1473,7 @@
         }
 
         function processEnemiesAndCombat() {
+            processCounterBattery();
             processBarrage();
 
             const statusEl = document.getElementById('lbl-tactical-status');
@@ -1447,6 +1499,8 @@
                 if (gameState.tacticalOrders.SHELTER) squadPower *= 0.4;
                 if (gameState.tacticalOrders.SUPPRESSION) squadPower *= 1.6;
                 if (gameState.tacticalOrders.CONSERVE) squadPower *= 0.7; // atira menos para poupar munição
+                if (!temVisao()) squadPower *= BLIND_FIRE; // sem vigia: tiro às cegas
+                const observando = droneObservando();
 
                 for (let i = gameState.enemies.length - 1; i >= 0; i--) {
                     const enemy = gameState.enemies[i];
@@ -1461,6 +1515,27 @@
 
                     enemy.distance -= speed;
 
+                    // Bloqueio de sinal: drones perdem o controle e caem
+                    if (enemy.type === 'drone' && gameState.tacticalOrders.SIGNAL_JAM && Math.random() < JAM_DRONE_CRASH) {
+                        const pd = enemyFrac(enemy);
+                        addEffect('kill', pd.fx, pd.fy);
+                        gameState.prestige += ganho(10);
+                        logFeed('📡 Bloqueio de sinal: drone inimigo perdeu o controle e caiu.', 'text-mil-greenMuted font-bold');
+                        gameState.enemies.splice(i, 1);
+                        continue;
+                    }
+
+                    // Patrulha no alcance por tempo demais marca a posição e recua
+                    if (enemy.type === 'patrulha' && enemy.distance < 140) {
+                        enemy.spotTicks = (enemy.spotTicks || 0) + 1;
+                        if (enemy.spotTicks >= PATROL_MARK_TICKS) {
+                            gameState.nextWaveBoost = Math.min(4, (gameState.nextWaveBoost || 0) + PATROL_MARK_BOOST);
+                            logFeed('👣 A patrulha marcou a posição de vocês e recuou! A próxima onda virá maior.', 'text-red-500 font-bold');
+                            gameState.enemies.splice(i, 1);
+                            continue;
+                        }
+                    }
+
                     if (gameState.resources.ammoRifle > 0) {
                         gameState.resources.ammoRifle = Math.max(0, gameState.resources.ammoRifle - (0.5 * ammoConsumption));
                         enemy.hp -= squadPower * 0.16;
@@ -1471,7 +1546,7 @@
 
                     // Inimigo ataca em alcance de tiro
                     if (enemy.distance < 140 && alive.length > 0 && Math.random() < tipo.attackChance) {
-                        let dmg = tipo.dmg(enemy) * diff().enemyDmgMult;
+                        let dmg = tipo.dmg(enemy) * diff().enemyDmgMult * (observando ? DRONE_SPOT_FIRE : 1);
                         if (gameState.tacticalOrders.SHELTER) dmg *= shelterMult();
 
                         const target = alive[Math.floor(Math.random() * alive.length)];
@@ -1521,7 +1596,7 @@
             // Aviso no mapa: contato mais próximo ou artilharia prevista
             if (gameState.barrage) {
                 banner.classList.remove('hidden');
-                bannerText.textContent = `ARTILHARIA INIMIGA EM ${gameState.barrage.ticks}s`;
+                bannerText.textContent = `ARTILHARIA INIMIGA EM ${gameState.barrage.ticks}s${droneObservando() ? ' · GUIADA POR DRONE' : ''}${gameState.counterBattery ? ` · CONTRA-BATERIA EM ${gameState.counterBattery.ticks}s` : ''}`;
                 statusEl.textContent = '💥 BOMBARDEIO PREVISTO';
                 statusEl.className = 'text-red-400 font-bold animate-pulse';
             } else if (gameState.enemies.length > 0) {
@@ -1770,14 +1845,16 @@
             SUPPRESSION: { nome: 'Fogo Supressão', desc: 'ataque +60% e inimigos 70% mais lentos; gasta munição pesada e o dobro de munição leve.' },
             SHELTER: { nome: 'Abrigo Reforçado', desc: 'dano recebido −75% (tiros, drones e artilharia); ataque −60%. Não protege contra invasão.' },
             CONSERVE: { nome: 'Economizar Munição', desc: 'gasto de munição leve −65%; ataque −30%.' },
-            FULL_VIGILANCE: { nome: 'Vigília Total', desc: 'mapa visível mesmo sem vigias; todo o esquadrão cansa mais rápido.' }
+            FULL_VIGILANCE: { nome: 'Vigília Total', desc: 'mapa visível e tiro com mira mesmo sem vigias; todo o esquadrão cansa mais rápido.' },
+            SIGNAL_JAM: { nome: 'Bloqueio de Sinal', desc: 'drones não guiam mais a artilharia nem os tiros inimigos, e cada um tem 40% de chance por segundo de cair; o rádio fica ocupado (sem relatório e sem apoios da Central).' }
         };
 
         const ORDER_BUTTONS = {
             SUPPRESSION: 'btn-ord-suppress',
             SHELTER: 'btn-ord-cover',
             CONSERVE: 'btn-ord-conserve',
-            FULL_VIGILANCE: 'btn-ord-vigilance'
+            FULL_VIGILANCE: 'btn-ord-vigilance',
+            SIGNAL_JAM: 'btn-ord-jam'
         };
 
         // Acende os botões conforme as ordens ligadas (também ao restaurar a partida)
@@ -1857,6 +1934,12 @@
                 ? `A CAMINHO ${gameState.pendingSupply.ticks}s` : `${custo(120)} PTS`;
             document.getElementById('lbl-cost-artillery').textContent = `${custo(100)} PTS`;
             document.getElementById('lbl-cost-medevac').textContent = `${custo(150)} PTS`;
+            const counterBtn = document.getElementById('btn-counter');
+            const counterOk = !!gameState.barrage && !gameState.counterBattery;
+            counterBtn.disabled = !counterOk;
+            counterBtn.classList.toggle('opacity-40', !counterOk);
+            document.getElementById('lbl-counter-btn').textContent = gameState.counterBattery
+                ? `A CAMINHO ${gameState.counterBattery.ticks}s` : gameState.barrage ? `${custo(50)} PTS` : 'SEM ALVO';
 
             // Relatório de patrulha: um envio por dia
             const intelSent = gameState.lastIntelDay === gameState.day;
@@ -1961,7 +2044,14 @@
         /* ==========================================================================
            RADIO SUPPORT ACTIONS
            ========================================================================== */
+        function radioOcupado() {
+            if (!gameState.tacticalOrders.SIGNAL_JAM) return false;
+            logFeed('📡 Rádio ocupado com o Bloqueio de Sinal. Desligue o bloqueio para falar com a Central.', 'text-mil-amberMuted');
+            return true;
+        }
+
         function sendIntelReport() {
+            if (radioOcupado()) return;
             if (gameState.lastIntelDay === gameState.day) {
                 logFeed('Relatório de hoje já foi transmitido. Próximo envio disponível amanhã.', 'text-mil-amberMuted');
                 return;
@@ -1974,6 +2064,19 @@
         }
 
         function requestSupport(type) {
+            if (radioOcupado()) return;
+            if (type === 'COUNTER') {
+                if (!gameState.barrage) return logFeed('Nenhuma artilharia inimiga detectada para contra-bateria.', 'text-mil-amberMuted');
+                if (gameState.counterBattery) return logFeed('A contra-bateria já está a caminho.', 'text-mil-amberMuted');
+                if (gameState.prestige < custo(50)) return logFeed('Prestígio insuficiente para contra-bateria!', 'text-red-400');
+                gameState.prestige -= custo(50);
+                // Apoio da Central (2d5): tempo de resposta
+                const rolagem = (1 + Math.floor(Math.random() * 5)) + (1 + Math.floor(Math.random() * 5));
+                gameState.counterBattery = { ticks: rolagem };
+                const aTempo = rolagem < gameState.barrage.ticks;
+                logFeed(`💥 Contra-bateria pedida (2d5 = ${rolagem}s; impacto inimigo em ${gameState.barrage.ticks}s)${aTempo ? '.' : ': pode chegar tarde!'}`, 'text-mil-amberMuted font-bold');
+            }
+
             if (type === 'ARTILLERY') {
                 if (gameState.prestige < custo(100)) return logFeed('Prestígio insuficiente para Artilharia!', 'text-red-400');
                 if (gameState.enemies.length === 0) return logFeed('Nenhum alvo identificado no setor.', 'text-mil-amberMuted');

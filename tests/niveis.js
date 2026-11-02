@@ -1,7 +1,7 @@
 // Calibração dos níveis de dificuldade do Ponto Alpha.
 // Mede a taxa de vitória em cada nível com dois perfis de jogador:
 //   parado: nenhuma ação
-//   atento: jogador automático com decisões razoáveis (cozinha, descanso, reparo, abrigo, apoios)
+//   atento: jogador automático com decisões razoáveis (cozinha, descanso, reparo, abrigo, bloqueio, contra-bateria, apoios)
 // Uso: node tests/niveis.js [níveis separados por vírgula] [partidas por perfil]
 //   ex.: node tests/niveis.js 1,4,7,10 30
 const path = require('path');
@@ -61,11 +61,16 @@ async function measure(page, level, policy) {
       o.SUPPRESSION = gameState.enemies.length > 0 && gameState.resources.ammoHeavy > 10 && !o.SHELTER;
       o.CONSERVE = gameState.resources.ammoRifle < 100;
       o.FULL_VIGILANCE = false;
+      // Rádio livre para os apoios; contra-bateria se ainda dá tempo antes do impacto
+      o.SIGNAL_JAM = false;
+      if (gameState.barrage && !gameState.counterBattery && gameState.barrage.ticks >= 8 && gameState.prestige >= custo(50)) requestSupport('COUNTER');
       if (gameState.lastIntelDay !== gameState.day) sendIntelReport();
       const r = gameState.resources;
       if (gameState.enemies.some(e => e.type === 'infantaria' && e.distance < 150) && gameState.prestige >= 100) requestSupport('ARTILLERY');
       if (!gameState.pendingSupply && gameState.prestige >= 120 && (r.rations < 12 || r.water < 15 || r.ammoRifle < 150)) requestSupport('SUPPLY');
       if (vivos.some(s => s.hp < 30) && gameState.prestige >= 150 && gameState.supplyLineEff >= 30) requestSupport('MEDEVAC');
+      // Bloqueio de sinal enquanto houver drone observando
+      o.SIGNAL_JAM = droneObservando();
     }
 
     let vitorias = 0, somaDias = 0;
@@ -73,8 +78,8 @@ async function measure(page, level, policy) {
       gameEnded = false;
       Object.assign(gameState, {
         level, day: 1, timeSeconds: 0, speed: 0, prestige: 150, weather: 'Nublado', supplyLineEff: 85,
-        enemies: [], activeCrisis: null, barrage: null, pendingSupply: null, lastIntelDay: 0, effects: [], trench: 100, crisisCooldown: 240, convoyAmbush: false, weakenNextWave: false,
-        tacticalOrders: { SUPPRESSION: false, SHELTER: false, CONSERVE: false, FULL_VIGILANCE: false },
+        enemies: [], activeCrisis: null, barrage: null, pendingSupply: null, lastIntelDay: 0, effects: [], trench: 100, crisisCooldown: 240, convoyAmbush: false, weakenNextWave: false, counterBattery: null, nextWaveBoost: 0,
+        tacticalOrders: { SUPPRESSION: false, SHELTER: false, CONSERVE: false, FULL_VIGILANCE: false, SIGNAL_JAM: false },
         resources: { rations: 36, water: 48, ammoRifle: 550, ammoHeavy: 200, medkits: 3 },
         squad: init.map(s => ({ ...s }))
       });
