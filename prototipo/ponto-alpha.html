@@ -1142,14 +1142,10 @@
         const LEVEL_KEY = 'frontline-ponto-alpha-nivel';
 
         function diff() {
-            // Duas fases: até o nível 15 a dificuldade sobe rápido (chega a 6,2).
-            // Do 15 ao 25, uma tabela calibrada: passos pequenos onde a chance de
-            // vitória despenca e maiores onde ela cai devagar, para a queda ser
-            // gradual até ~1% no nível 25.
-            // Alvo do 15 ao 25: ~75%, 68%, 60%, 53%, 45%, 38%, 30%, 23%, 15%, 8%, 1%
-            const LATE_CURVE = [6.2, 6.24, 6.28, 6.31, 6.35, 6.41, 6.48, 6.62, 6.8, 6.93, 7.2];
+            // Calibrado para quem joga bem: ~10% de vitória do nível 1 ao 12
+            // (dificuldade 6,76) e queda de ~0,5 ponto por nível até ~3,5% no 25 (6,94).
             const lv = Math.max(1, Math.min(MAX_LEVEL, gameState.level));
-            const d = lv <= 15 ? (6.2 / 14) * (lv - 1) : LATE_CURVE[lv - 15];
+            const d = lv <= 12 ? 6.76 : 6.76 + (6.94 - 6.76) * (lv - 12) / 13;
             return {
                 eventMult: 1 + 0.30 * d,                  // frequência de eventos
                 enemyHpMult: 1 + 0.15 * d,                // vida dos inimigos

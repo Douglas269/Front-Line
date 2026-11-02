@@ -25,27 +25,22 @@ Jogo de estratégia tático com foco em realismo de comando, combate blindado e 
 - Médico do esquadrão cura 0,6 de HP a cada 10 s no soldado mais ferido.
 - Ordens táticas: Fogo Supressão (ataque +60%, inimigos 70% mais lentos, gasta munição), Abrigo Reforçado (dano recebido −75%, ataque −60%), Economizar Munição (gasto −65%, ataque −30%) e Vigília Total (mapa visível sem vigias, +0,4 de fadiga a cada 10 s para todos).
 - Carga Emergencial: chega 2d5 × 15 s depois do pedido (30 a 150 s); o prazo dobra com a linha de suprimento cortada. Só uma carga a caminho por vez.
-- Sem ação do jogador, no nível 1, o esquadrão vence cerca de 28% a 36% das partidas simuladas. Comer e beber reduzem fome e sede em 8 por ciclo de 10 s.
+- Comer e beber reduzem fome e sede em 8 por ciclo de 10 s.
 - Áudio: trilha de guerra no turno e trilha de combate quando há inimigos (`prototipo/assets/music/`, CC0). Vento ambiente gerado no navegador, em volume bem menor que a música. Tudo começa ao ligar o alto-falante no cabeçalho.
 - Turnos: o dia só muda pelo botão **Finalizar turno**. O relógio percorre os 4 períodos (manhã, tarde, noite, madrugada) e congela no fim, esperando a finalização.
 
 ### Níveis de dificuldade
 - 25 níveis. Cada vitória sobe um nível; derrota mantém o nível. O nível fica salvo no navegador, mesmo com "Nova partida".
-- A cada nível, sobem a frequência de eventos, a vida e o dano dos inimigos e o tamanho das ondas; caem a entrega diária de suprimentos e o prestígio ganho; os apoios da Central ficam mais caros.
-- Curva em duas fases: até o nível 15 a dificuldade sobe rápido; do 15 ao 25 segue uma tabela calibrada para a chance cair em degraus parecidos, até ~1% no nível 25.
-- Vitórias medidas com `node tests/niveis.js` (30 partidas por nível; 100 no nível 25); entre parênteses, a média de dias sobrevividos. Com 30 partidas, a margem é de cerca de 8 pontos.
+- Cada nível define uma dificuldade que aumenta a frequência de eventos, a vida e o dano dos inimigos e o tamanho das ondas, e diminui a entrega diária de suprimentos e o prestígio ganho; os apoios da Central ficam mais caros.
+- Calibrado para quem joga bem: ~10% de vitória do nível 1 ao 12, caindo cerca de 0,5 ponto por nível até ~3% no nível 25. Ficar parado não vence em nenhum nível.
+- Vitórias medidas com `node tests/niveis.js` (100 partidas por nível medido; margem de cerca de 3 a 6 pontos):
 
 | Nível | Sem ação | Jogador atento (automático) |
 |---|---|---|
-| 1 | ~30% | 100% |
-| 5 | 0% (19 dias) | 100% |
-| 10 | 0% (13 dias) | 100% |
-| 12 | 0% (10 dias) | 100% |
-| 15 | 0% (9 dias) | ~75% |
-| 17 | 0% (9 dias) | 63% |
-| 20 | 0% (9 dias) | 33% |
-| 23 | 0% (9 dias) | 7% |
-| 25 | 0% (8 dias) | 1% |
+| 1 a 12 | 0% (~9 dias) | 10% |
+| 25 | 0% (~9 dias) | 2% |
+
+Entre o 12 e o 25 a dificuldade sobe em linha reta, então a chance cai aos poucos entre esses valores. Diferenças de 0,5 ponto por nível são pequenas demais para medir partida a partida.
 
 O "jogador atento" é um robô simples: reveza descanso, usa abrigo antes da artilharia, supressão com inimigos à vista, e pede apoios quando pode pagar.
 

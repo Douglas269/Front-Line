@@ -34,10 +34,11 @@ async function run() {
     for (let i = 0; i < 240; i++) updateGameTick();
     c.tempoNaoMudaODia = gameState.day === 1 && gameState.timeSeconds === 240;
     c.periodoCongela = (updateGameTick(), gameState.timeSeconds === 240);
+    const racoesAntesDaEntrega = gameState.resources.rations;
     endTurn();
     Math.random = sorteioReal;
     c.finalizarTurnoAvancaDia = gameState.day === 2 && gameState.timeSeconds === 0;
-    c.racoesEntregues = gameState.resources.rations > 36;
+    c.racoesEntregues = gameState.resources.rations > racoesAntesDaEntrega;
     c.cardsRenderizados = document.querySelectorAll('#squad-list > div').length === 6;
 
     Object.assign(gameState, { day: 1, timeSeconds: 0, enemies: [], activeCrisis: null, resources: { rations: 36, water: 48, ammoRifle: 550, ammoHeavy: 200, medkits: 3 }, squad: init });
@@ -46,8 +47,9 @@ async function run() {
     c.dutyMuda = gameState.squad.find(s => s.id === 2).duty === 'REST';
     switchTab('logistics'); c.abaLogistica = !document.getElementById('panel-logistics').classList.contains('hidden');
     switchTab('radio');
+    gameState.prestige = 1000; // garante prestígio para o pedido em qualquer nível
     const pBefore = gameState.prestige; const rBefore = gameState.resources.rations; requestSupport('SUPPLY');
-    c.cargaCustaPrestigio = gameState.prestige - pBefore === -120;
+    c.cargaCustaPrestigio = gameState.prestige - pBefore === -custo(120);
     // A carga emergencial demora (2d5 × 15 s) e não chega na hora
     c.cargaNaoChegaNaHora = !!gameState.pendingSupply && gameState.resources.rations === rBefore;
     const espera = gameState.pendingSupply ? gameState.pendingSupply.ticks : 0;
@@ -57,9 +59,9 @@ async function run() {
     // Relatório de patrulha: só um envio por dia
     const pRel = gameState.prestige;
     sendIntelReport(); sendIntelReport();
-    c.relatorioUmaVezPorDia = gameState.prestige - pRel === 50;
+    c.relatorioUmaVezPorDia = gameState.prestige - pRel === ganho(50);
     gameState.day++; sendIntelReport();
-    c.relatorioNovoDia = gameState.prestige - pRel === 100;
+    c.relatorioNovoDia = gameState.prestige - pRel === 2 * ganho(50);
     gameState.day--; gameState.lastIntelDay = 0;
     toggleTacticalOrder('SHELTER'); c.ordemAtiva = gameState.tacticalOrders.SHELTER === true;
     triggerCrisisModal(CRISES_POOL[1]);
