@@ -68,6 +68,16 @@ async function run() {
     c.modalCrise = !document.getElementById('modal-crisis').classList.contains('hidden');
     document.querySelector('#crisis-options button').click();
     c.modalCriseFecha = document.getElementById('modal-crisis').classList.contains('hidden');
+    // Bugs corrigidos na revisão
+    gameState.tacticalOrders.SHELTER = true; updateUI();
+    c.botaoOrdemReflete = document.getElementById('btn-ord-cover').classList.contains('btn-active-order');
+    gameState.tacticalOrders.SHELTER = false; updateUI();
+    gameState.barrage = { ticks: 12 }; saveGame();
+    c.artilhariaEntraNoSalvamento = JSON.parse(localStorage.getItem('frontline-ponto-alpha-v1')).barrage.ticks === 12;
+    gameState.barrage = null; localStorage.removeItem('frontline-ponto-alpha-v1');
+    gameState.squad.forEach(s => s.hp = 100); gameState.prestige = 1000; requestSupport('MEDEVAC');
+    c.medevacSemFeridoNaoCobra = gameState.prestige === 1000;
+
     // Trincheira: artilharia estraga, Engenheiro na Manutenção repara
     gameState.squad.forEach(s => { s.hp = 100; s.duty = 'WATCH'; });
     gameState.trench = 100; gameState.barrage = { ticks: 1 }; processBarrage();

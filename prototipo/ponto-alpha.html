@@ -269,7 +269,7 @@
                     <!-- 1. SQUAD STATUS PANEL -->
                     <div id="panel-squad" class="space-y-2">
                         <div class="text-xs text-mil-textMuted flex justify-between items-center mb-1 border-b border-mil-borderDark pb-1">
-                            <span>RELAÇÃO DO ESQUADRÃO (6 EFETIVOS)</span>
+                            <span id="lbl-squad-count">RELAÇÃO DO ESQUADRÃO (6 EFETIVOS)</span>
                             <span class="text-mil-amberMuted">ALOCAÇÃO DE FUNÇÕES</span>
                         </div>
                         <div id="squad-list" class="space-y-2">
@@ -312,7 +312,7 @@
                                     <span><i class="fa-solid fa-utensils text-mil-amberMuted"></i> Ração</span>
                                     <span id="val-rations" class="font-bold text-mil-textGlow">36 un</span>
                                 </div>
-                                <div class="text-xs text-mil-textMuted mt-1">Consumo: ~7un / dia</div>
+                                <div class="text-xs text-mil-textMuted mt-1">Só quem está na Cozinha come</div>
                             </div>
                             <!-- Water -->
                             <div class="bg-mil-bg border border-mil-border p-2 rounded">
@@ -320,7 +320,7 @@
                                     <span><i class="fa-solid fa-bottle-water text-mil-komonaBlue"></i> Água</span>
                                     <span id="val-water" class="font-bold text-mil-textGlow">48 L</span>
                                 </div>
-                                <div class="text-xs text-mil-textMuted mt-1">Consumo: ~7L / dia</div>
+                                <div class="text-xs text-mil-textMuted mt-1">Só quem está na Cozinha bebe</div>
                             </div>
                             <!-- Light Ammo -->
                             <div class="bg-mil-bg border border-mil-border p-2 rounded">
@@ -346,7 +346,7 @@
                                 <i class="fa-solid fa-kit-medical text-red-500 text-base"></i>
                                 <div>
                                     <div class="font-bold text-mil-textGlow">Kits Médicos de Campo</div>
-                                    <div class="text-xs text-mil-textMuted">Tratamento imediato de feridos</div>
+                                    <div class="text-xs text-mil-textMuted">Usados nas crises médicas</div>
                                 </div>
                             </div>
                             <span id="val-medkits" class="font-bold text-red-400 text-sm">3 kits</span>
@@ -706,7 +706,16 @@
             gameState.effects.push({ type, fx, fy, age: 0, life: EFFECT_LIFE[type] });
         }
 
-        // Mesma geometria usada para desenhar o inimigo
+        // Posição horizontal de cada soldado na trincheira (fração da largura do mapa)
+        const SQUAD_X = [0.15, 0.28, 0.42, 0.58, 0.72, 0.85];
+
+        // Posição de um soldado na trincheira, em frações da tela (para efeitos)
+        function squadFrac(soldier) {
+            const idx = gameState.squad.indexOf(soldier);
+            return { fx: SQUAD_X[idx] ?? 0.5, fy: (canvas.height - 43) / canvas.height };
+        }
+
+        // Posição de um inimigo, em frações da tela (mesma geometria do desenho)
         function enemyFrac(enemy) {
             const w = canvas.width, h = canvas.height;
             const trenchY = h - 35;
@@ -868,10 +877,9 @@
                 ctx.fill();
 
                 // 5. Draw Squad Markers (NATO Blue-Steel Rectangle Symbols)
-                const squadXPositions = [0.15, 0.28, 0.42, 0.58, 0.72, 0.85];
                 gameState.squad.forEach((soldier, idx) => {
                     if (soldier.hp <= 0) return;
-                    const sx = w * squadXPositions[idx];
+                    const sx = w * SQUAD_X[idx];
                     const sy = trenchY - 8;
 
                     // NATO Rectangle Symbol
@@ -888,9 +896,8 @@
 
                 // 6. Draw Enemies (NATO Dark-Red Diamond Symbols)
                 gameState.enemies.forEach(enemy => {
-                    const distRatio = enemy.distance / 300;
-                    const ey = trenchY - (distRatio * (h - 60)) - 10;
-                    const ex = (w / 2) + ((enemy.offsetX / 200) * (w * 0.4));
+                    const pos = enemyFrac(enemy);
+                    const ex = pos.fx * w, ey = pos.fy * h;
 
                     // Símbolo por tipo: losango = infantaria, quadrado = patrulha, círculo = drone
                     if (enemy.type === 'drone') {
@@ -934,8 +941,16 @@
                 ctx.fillRect(0, 0, w, h);
             }
 
-            // 7. Rain Weather Overlay Effect
-            if (gameState.weather === 'Chuva Forte' || gameState.weather === 'Nublado') {
+            // 7. Clima: chuva na chuva forte, flocos na neve
+            if (gameState.weather === 'Neve') {
+                ctx.fillStyle = 'rgba(220, 230, 225, 0.6)';
+                gameState.rainParticles.forEach(p => {
+                    ctx.fillRect(p.x, p.y, 2, 2);
+                    p.y += p.speed * 0.25;
+                    p.x += Math.sin(p.y / 20) * 0.3;
+                    if (p.y > h) { p.y = -4; p.x = Math.random() * w; }
+                });
+            } else if (gameState.weather === 'Chuva Forte') {
                 ctx.strokeStyle = 'rgba(120, 145, 130, 0.25)';
                 ctx.lineWidth = 0.8;
                 gameState.rainParticles.forEach(p => {
@@ -962,12 +977,9 @@
         /* ==========================================================================
            SIMULATION TICK & COMBAT ENGINE
            ========================================================================== */
+        // Um segundo de jogo por segundo real; speed = 0 para o relógio (fim de jogo)
         setInterval(() => {
-            if (gameState.speed === 0) return;
-            for (let i = 0; i < gameState.speed; i++) {
-                updateGameTick();
-                if (gameState.speed === 0) break; // fim de jogo no meio do lote
-            }
+            if (gameState.speed > 0) updateGameTick();
         }, GAME_CONFIG.UPDATE_INTERVAL_MS);
 
         function updateGameTick() {
@@ -1012,6 +1024,7 @@
                     lastIntelDay: gameState.lastIntelDay,
                     pendingSupply: gameState.pendingSupply,
                     trench: gameState.trench,
+                    barrage: gameState.barrage,
                     feed: document.getElementById('feed-log').innerHTML,
                     diary: document.getElementById('diary-entries').innerHTML
                 }));
@@ -1041,6 +1054,7 @@
                 lastIntelDay: data.lastIntelDay,
                 pendingSupply: data.pendingSupply || null,
                 trench: typeof data.trench === 'number' ? data.trench : 100,
+                barrage: data.barrage || null,
                 activeCrisis: null,
                 speed: 1
             });
@@ -1072,7 +1086,6 @@
 
         function onNewDay() {
             logFeed(`=== DIA ${gameState.day} INICIADO ===`, 'text-mil-amberMuted font-bold');
-            addDiaryEntry(`Dia ${gameState.day}: A névoa da manhã cobre os campos de Komona. As tropas permanecem vigilantes.`);
             playTacticalBeep(1000, 0.08);
 
             // Weather Transition
@@ -1088,6 +1101,11 @@
             if (gameState.weather === 'Neve') baseEff -= 35;
             if (gameState.weather === 'Névoa Espessa') baseEff -= 10;
             gameState.supplyLineEff = clamp(baseEff, 10, 100);
+
+            // Diário do dia, já com o clima sorteado
+            const vivosHoje = gameState.squad.filter(s => s.hp > 0).length;
+            const climaTexto = { 'Nublado': 'Céu fechado sobre Komona.', 'Névoa Espessa': 'A névoa cobre os campos de Komona.', 'Chuva Forte': 'Chuva forte alaga o fundo da trincheira.', 'Neve': 'A neve cai sobre as posições.' };
+            addDiaryEntry(`Dia ${gameState.day}: ${climaTexto[gameState.weather] || ''} Restam ${vivosHoje} homens na linha. Trincheira em ${Math.round(gameState.trench)}%.`);
 
             if (gameState.supplyLineEff > 30) {
                 const sm = diff().supplyMult;
@@ -1205,7 +1223,6 @@
                     gameState.trench = Math.min(100, gameState.trench + reparo);
                 }
 
-                // Médico do esquadrão trata o ferido mais grave (ver abaixo)
                 // Penalidades de fome, sede e estresse
                 if (soldier.hunger >= 75) {
                     soldier.hp = Math.max(0, soldier.hp - 1);
@@ -1228,7 +1245,7 @@
            INIMIGOS E EVENTOS
            ========================================================================== */
         /* Dificuldade por nível: sobe uma etapa a cada vitória, até o nível máximo.
-           d = 0 no nível 1 (o equilíbrio original) e cresce aos poucos. */
+           diff() traduz o nível num valor d e daí nos multiplicadores abaixo. */
         const MAX_LEVEL = 25;
         const LEVEL_KEY = 'frontline-ponto-alpha-nivel';
 
@@ -1359,8 +1376,8 @@
                 trenchDamage(TRENCH.DAMAGE_BARRAGE, 'o bombardeio');
                 alvo.hp = Math.max(0, alvo.hp - dano);
                 alvo.moral = Math.max(0, alvo.moral - 2);
-                const idx = gameState.squad.indexOf(alvo);
-                addEffect('artillery', [0.15, 0.28, 0.42, 0.58, 0.72, 0.85][idx], (canvas.height - 43) / canvas.height);
+                const pa = squadFrac(alvo);
+                addEffect('artillery', pa.fx, pa.fy);
                 if (alvo.hp <= 0) {
                     logFeed(`❌ BAIXA NO BOMBARDEIO: ${alvo.rank} ${alvo.name} foi morto!`, 'text-red-500 font-bold');
                     alive.splice(alive.indexOf(alvo), 1);
@@ -1426,7 +1443,8 @@
                         if (target.hp > 0) {
                             target.hp = Math.max(0, target.hp - dmg);
                             target.moral = Math.max(0, target.moral - 1.2);
-                            addEffect('hit', [0.15, 0.28, 0.42, 0.58, 0.72, 0.85][gameState.squad.indexOf(target)] || 0.5, (canvas.height - 43) / canvas.height);
+                            const ph = squadFrac(target);
+                            addEffect('hit', ph.fx, ph.fy);
 
                             if (target.hp <= 0) {
                                 logFeed(`❌ BAIXA EM COMBATE: ${target.rank} ${target.name} foi morto!`, 'text-red-500 font-bold');
@@ -1507,11 +1525,11 @@
                 desc: 'A umidade constante nas botas causou inflamação grave em um soldado de vigília.',
                 options: [
                     { text: 'Usar 1 Kit Médico emergencial', action: (s) => {
-                        const target = firstAliveSoldier();
+                        const target = s.squad.find(m => m.hp > 0 && m.duty === 'WATCH') || firstAliveSoldier();
                         if (s.resources.medkits > 0 && target) {
                             s.resources.medkits--;
                             target.hp = Math.min(100, target.hp + 30);
-                            logFeed('Medicamento aplicado.');
+                            logFeed(`Medicamento aplicado em ${target.rank} ${target.name}.`);
                         } else if (!target) {
                             logFeed('Nenhum soldado vivo para tratar.', 'text-red-400');
                         } else {
@@ -1570,19 +1588,26 @@
             FULL_VIGILANCE: { nome: 'Vigília Total', desc: 'mapa visível mesmo sem vigias; todo o esquadrão cansa mais rápido.' }
         };
 
+        const ORDER_BUTTONS = {
+            SUPPRESSION: 'btn-ord-suppress',
+            SHELTER: 'btn-ord-cover',
+            CONSERVE: 'btn-ord-conserve',
+            FULL_VIGILANCE: 'btn-ord-vigilance'
+        };
+
+        // Acende os botões conforme as ordens ligadas (também ao restaurar a partida)
+        function syncOrderButtons() {
+            Object.entries(ORDER_BUTTONS).forEach(([order, id]) => {
+                document.getElementById(id).classList.toggle('btn-active-order', !!gameState.tacticalOrders[order]);
+            });
+        }
+
         function toggleTacticalOrder(order) {
             gameState.tacticalOrders[order] = !gameState.tacticalOrders[order];
             const info = ORDER_INFO[order];
             const ligada = gameState.tacticalOrders[order];
             logFeed(`Ordem ${ligada ? 'ATIVADA' : 'DESATIVADA'}: ${info.nome}${ligada ? ' (' + info.desc + ')' : ''}`, 'text-mil-amberMuted');
-            const btnMap = {
-                SUPPRESSION: 'btn-ord-suppress',
-                SHELTER: 'btn-ord-cover',
-                CONSERVE: 'btn-ord-conserve',
-                FULL_VIGILANCE: 'btn-ord-vigilance'
-            };
-            const btn = document.getElementById(btnMap[order]);
-            btn.classList.toggle('btn-active-order', gameState.tacticalOrders[order]);
+            syncOrderButtons();
             playTacticalBeep(650, 0.03);
         }
 
@@ -1611,6 +1636,8 @@
             if (gameState.weather === 'Neve') ico.className = 'fa-solid fa-snowflake text-cyan-200';
         }
 
+        let lastSquadSignature = '';
+
         function updateUI() {
             document.getElementById('val-rations').textContent = `${Math.round(gameState.resources.rations)} un`;
             document.getElementById('val-water').textContent = `${Math.round(gameState.resources.water)} L`;
@@ -1637,7 +1664,6 @@
                 : 'Ninguém fora da vigília: metade do próximo comboio vai se perder!';
             recEl.className = `text-xs mt-1 ${livres > 0 ? 'text-mil-textMuted' : 'text-red-400 font-bold'}`;
 
-            // Squad list render
             // Carga emergencial: mostra a contagem enquanto está a caminho
             const supplyBtn = document.getElementById('btn-supply');
             supplyBtn.disabled = !!gameState.pendingSupply;
@@ -1656,6 +1682,20 @@
                 ? 'Fim do período: finalizar turno' : 'Finalizar turno';
             document.getElementById('lbl-intel').textContent = intelSent ? 'Enviado hoje' : `Enviar Relatório (+${ganho(50)})`;
 
+            syncOrderButtons();
+            const vivos = gameState.squad.filter(s => s.hp > 0).length;
+            document.getElementById('lbl-squad-count').textContent = `RELAÇÃO DO ESQUADRÃO (${vivos} EFETIVOS)`;
+            const eff = gameState.supplyLineEff;
+            document.getElementById('lbl-supply-status').textContent = eff > 70
+                ? 'Estradas desimpedidas na retaguarda. Entregas em ritmo regular.'
+                : eff > 30 ? 'Mau tempo na retaguarda: entregas reduzidas.'
+                : 'Linha de suprimento cortada: sem entrega diária.';
+
+            // Lista do esquadrão: só redesenha quando algo visível muda. Redesenhar a cada
+            // segundo trocava os botões no meio do toque e o celular perdia o clique.
+            const assinatura = JSON.stringify(gameState.squad.map(s => [Math.round(s.hp), Math.round(s.fatigue), Math.round(s.hunger), Math.round(s.thirst), Math.round(s.moral), s.duty]));
+            if (assinatura === lastSquadSignature) return;
+            lastSquadSignature = assinatura;
             const squadContainer = document.getElementById('squad-list');
             squadContainer.innerHTML = '';
 
@@ -1721,6 +1761,7 @@
             entry.className = style;
             entry.textContent = `[D${gameState.day} ${times[cycleIndex]}] ${msg}`;
             feed.appendChild(entry);
+            while (feed.childElementCount > 150) feed.removeChild(feed.firstElementChild);
             feed.scrollTop = feed.scrollHeight;
         }
 
@@ -1760,7 +1801,7 @@
             if (type === 'MEDEVAC') {
                 if (gameState.prestige < custo(150)) return logFeed('Prestígio insuficiente para MedEvac!', 'text-red-400');
                 if (gameState.supplyLineEff < 30) return logFeed('Linha de suprimento bloqueada para evacuação.', 'text-red-400');
-                const wounded = [...gameState.squad].filter(s => s.hp > 0).sort((a, b) => a.hp - b.hp)[0];
+                const wounded = gameState.squad.filter(s => s.hp > 0 && s.hp < 100).sort((a, b) => a.hp - b.hp)[0];
                 if (!wounded) return logFeed('Nenhum ferido para evacuar.', 'text-mil-amberMuted');
                 gameState.prestige -= custo(150);
                 wounded.hp = 100;
