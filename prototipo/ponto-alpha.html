@@ -699,12 +699,13 @@
         const seg = (ticks) => Math.max(0, Math.ceil(ticks / GAME_CONFIG.TICKS_PER_SECOND));
         // Carga emergencial: 150 s reais no nível 1, +10 s por nível (nível 25: 390 s)
         const esperaCarga = () => (150 + 10 * (Math.max(1, gameState.level || 1) - 1)) * GAME_CONFIG.TICKS_PER_SECOND;
+        // Relógio: um só mecanismo. jogoPausado = pausa do jogador; gameEnded = partida acabou (para de vez).
         let jogoPausado = false;
+        let gameEnded = false;
 
         let gameState = {
             day: 1,
             timeSeconds: 0,
-            speed: 1,
             prestige: 150,
             weather: 'Nublado',
             tacticalOrders: {
@@ -1079,14 +1080,12 @@
         /* ==========================================================================
            SIMULATION TICK & COMBAT ENGINE
            ========================================================================== */
-        // Um segundo de jogo por segundo real; speed = 0 para o relógio (fim de jogo)
-        setInterval(() => {
-            if (gameState.speed > 0) updateGameTick();
-        }, GAME_CONFIG.UPDATE_INTERVAL_MS);
+        // 8 segundos de jogo por segundo real; updateGameTick decide se o relógio anda (pausa, fim, crise...)
+        const relogioId = setInterval(updateGameTick, GAME_CONFIG.UPDATE_INTERVAL_MS);
 
         function updateGameTick() {
             // Pausado, com crise, tutorial ou login aberto: o relógio para
-            if (jogoPausado || gameState.activeCrisis || tutorialAberto || loginAberto || perfilAberto) return;
+            if (gameEnded || jogoPausado || gameState.activeCrisis || tutorialAberto || loginAberto || perfilAberto) return;
             gameState.timeSeconds++;
 
             normalizeOrders();
@@ -1101,7 +1100,7 @@
             if (gameState.timeSeconds >= GAME_CONFIG.DAY_DURATION_SEC) endTurn();
             updateClockAndUI();
             updateUI();
-            if (gameState.speed > 0 && gameState.timeSeconds % 40 === 0) saveGame(); // a cada ~5 s reais
+            if (!gameEnded && gameState.timeSeconds % 40 === 0) saveGame(); // a cada ~5 s reais
         }
 
         /* ==========================================================================
@@ -1174,8 +1173,7 @@
                 weakenNextWave: !!data.weakenNextWave,
                 counterBattery: data.counterBattery || null,
                 nextWaveBoost: data.nextWaveBoost || 0,
-                general: data.general || newGeneral(),
-                speed: 1
+                general: data.general || newGeneral()
             });
             document.getElementById('feed-log').innerHTML = data.feed;
             document.getElementById('diary-entries').innerHTML = data.diary;
@@ -1198,7 +1196,7 @@
             document.getElementById('ico-pause').className = `fa-solid ${jogoPausado ? 'fa-play' : 'fa-pause'} text-mil-amberMuted`;
             document.getElementById('btn-pause').classList.toggle('btn-active-order', jogoPausado);
             document.getElementById('map-paused').classList.toggle('hidden', !jogoPausado);
-            if (jogoPausado && gameState.speed > 0) saveGame();
+            if (jogoPausado && !gameEnded) saveGame();
         }
 
         // Vira o dia (chamado sozinho no fim da madrugada)
@@ -1210,7 +1208,7 @@
             updateClockAndUI();
             updateUI();
             checkWinLoss();
-            if (gameState.speed > 0) { saveGame(); enviarNuvem(true); }
+            if (!gameEnded) { saveGame(); enviarNuvem(true); }
         }
 
         // Próximo dia com comboio de suprimentos
@@ -1514,8 +1512,8 @@
         const PATROL_MARK_BOOST = 1;       // soldado extra na próxima onda
 
         // Drone só guia a artilharia e os tiros se o sinal dele não estiver bloqueado
-        const droneObservando = () => !gameState.tacticalOrders.SIGNAL_JAM && gameState.enemies.some(e => e.type === 'drone');
-        const temVisao = () => gameState.tacticalOrders.FULL_VIGILANCE || gameState.squad.some(s => s.hp > 0 && s.duty === 'WATCH');
+        const droneObservando = (estado = gameState) => !estado.tacticalOrders.SIGNAL_JAM && estado.enemies.some(e => e.type === 'drone');
+        const temVisao = (estado = gameState) => estado.tacticalOrders.FULL_VIGILANCE || estado.squad.some(s => s.hp > 0 && s.duty === 'WATCH');
         const BARRAGE_SHOTS = 3;
         const BARRAGE_DAMAGE = 13;
 
@@ -1538,11 +1536,11 @@
             NOITE: 0.85, NEVOA: 0.8, CHUVA: 0.9, DRONE_ALVO: 0.8, ALCANCE: 300 // alcance máximo do fuzil (300 m)
         };
         const statsDe = (s) => (s.stats = s.stats || { tiros: 0, acertos: 0, abates: 0 });
-        const ehNoite = () => gameState.timeSeconds >= 120;
+        const ehNoite = (estado = gameState) => estado.timeSeconds >= 120;
 
         // Precisão de um soldado contra um alvo, já com todos os modificadores
-        function chanceDeAcerto(s, arma, enemy) {
-            const o = gameState.tacticalOrders;
+        function chanceDeAcerto(s, arma, enemy, estado = gameState) {
+            const o = estado.tacticalOrders;
             let p = arma.precisao;
             p *= 0.6 + 0.4 * Math.max(0, s.hp) / 100;
             p *= 0.7 + 0.3 * Math.max(0, s.moral) / 100;
@@ -1550,10 +1548,10 @@
             if (o.SUPPRESSION) p *= TIRO.SUPRESSAO.prec;
             if (o.CONSERVE) p *= TIRO.ECONOMIA.prec;
             if (o.SHELTER) p *= TIRO.ABRIGO.prec;
-            if (!temVisao()) p *= BLIND_FIRE;
-            if (ehNoite() && !o.FULL_VIGILANCE) p *= TIRO.NOITE;
-            if (gameState.weather === 'Névoa Espessa') p *= TIRO.NEVOA;
-            if (gameState.weather === 'Chuva Forte') p *= TIRO.CHUVA;
+            if (!temVisao(estado)) p *= BLIND_FIRE;
+            if (ehNoite(estado) && !o.FULL_VIGILANCE) p *= TIRO.NOITE;
+            if (estado.weather === 'Névoa Espessa') p *= TIRO.NEVOA;
+            if (estado.weather === 'Chuva Forte') p *= TIRO.CHUVA;
             if (enemy) {
                 if (enemy.type === 'drone') p *= TIRO.DRONE_ALVO;
                 const d = Math.max(0, Math.min(TIRO.ALCANCE, enemy.distance));
@@ -1561,8 +1559,8 @@
             }
             return Math.min(0.95, p);
         }
-        function cadenciaDe(s, arma) {
-            const o = gameState.tacticalOrders;
+        function cadenciaDe(s, arma, estado = gameState) {
+            const o = estado.tacticalOrders;
             let c = arma.cadencia;
             if (s.duty !== 'WATCH') c *= TIRO.FORA_DA_VIGILIA;
             if (o.SUPPRESSION) c *= TIRO.SUPRESSAO.cad;
@@ -1571,8 +1569,8 @@
             return c;
         }
 
-        function dispararEsquadrao(alive) {
-            const inimigos = gameState.enemies.filter(e => e.distance <= TIRO.ALCANCE);
+        function dispararEsquadrao(alive, estado = gameState) {
+            const inimigos = estado.enemies.filter(e => e.distance <= TIRO.ALCANCE);
             if (!inimigos.length) return; // ninguém ao alcance: o esquadrão segura o fogo
             const maisProximo = inimigos.reduce((a, e) => (e.distance < a.distance ? e : a), inimigos[0]);
             const escolherAlvo = () => {
@@ -1583,21 +1581,21 @@
             };
             let disparou = false;
             alive.forEach(s => {
-                const temBala = gameState.resources.ammoRifle >= 1;
+                const temBala = estado.resources.ammoRifle >= 1;
                 const arma = temBala ? (ARMAS[s.class] || ARMAS['Fuzileiro Regular']) : PISTOLA;
-                s.cadAcc = (s.cadAcc || 0) + cadenciaDe(s, arma);
+                s.cadAcc = (s.cadAcc || 0) + cadenciaDe(s, arma, estado);
                 const st = statsDe(s);
                 while (s.cadAcc >= 1) {
                     s.cadAcc -= 1;
                     const alvo = escolherAlvo();
                     if (!alvo) { s.cadAcc = 0; break; }
                     if (arma !== PISTOLA) {
-                        if (gameState.resources.ammoRifle < 1) break;
-                        gameState.resources.ammoRifle -= 1;
+                        if (estado.resources.ammoRifle < 1) break;
+                        estado.resources.ammoRifle -= 1;
                     }
-                    st.tiros++; gameState.combate.tiros++; disparou = true;
-                    if (Math.random() < chanceDeAcerto(s, arma, alvo)) {
-                        st.acertos++; gameState.combate.acertos++;
+                    st.tiros++; estado.combate.tiros++; disparou = true;
+                    if (Math.random() < chanceDeAcerto(s, arma, alvo, estado)) {
+                        st.acertos++; estado.combate.acertos++;
                         alvo.hp -= arma.dano;
                         if (alvo.hp <= 0 && !alvo.abatidoPor) alvo.abatidoPor = s.id;
                     }
@@ -1900,130 +1898,149 @@
             logFeed('💥 Bombardeio inimigo concluído.', 'text-red-400');
         }
 
-        function processEnemiesAndCombat() {
+        /* ===== Combate: um passo de 1 segundo de jogo =====
+           As funções abaixo recebem o estado da partida (`estado`, que é o gameState)
+           em vez de mexer no global direto; assim dá para testar cada parte isolada. */
+        function processEnemiesAndCombat(estado = gameState) {
             processCounterBattery();
             processBarrage();
 
+            const emCombate = estado.enemies.length > 0; // o status vale para o início do segundo
+            if (emCombate) {
+                const alive = estado.squad.filter(s => s.hp > 0);
+                const observando = droneObservando(estado);
+                // Tiro de verdade: cada soldado dispara balas; cada bala tem chance de acertar
+                dispararEsquadrao(alive, estado);
+                // De trás para a frente: inimigos podem sair da lista no meio do laço
+                for (let i = estado.enemies.length - 1; i >= 0; i--) {
+                    if (processarInimigo(estado, estado.enemies[i], alive, observando)) estado.enemies.splice(i, 1);
+                }
+            }
+            atualizarStatusDeCombate(estado, emCombate);
+        }
+
+        // Um inimigo neste segundo: anda, age, atira e pode morrer ou chegar à trincheira.
+        // Devolve true se ele deve sair do setor.
+        function processarInimigo(estado, enemy, alive, observando) {
+            moverInimigo(estado, enemy);
+            if (acaoEspecialDoInimigo(estado, enemy)) return true;
+            inimigoAtira(estado, enemy, alive, observando);
+            if (enemy.hp <= 0) { abaterInimigo(estado, enemy); return true; }
+            if (enemy.distance <= 0) { resolverChegadaNaTrincheira(estado, enemy, alive); return true; }
+            return false;
+        }
+
+        // Movimento: Fogo Supressão com munição pesada segura o avanço (70% mais lento)
+        function moverInimigo(estado, enemy) {
+            let speed = ENEMY_TYPES[enemy.type].speed;
+            if (estado.tacticalOrders.SUPPRESSION && estado.resources.ammoHeavy > 3) {
+                speed *= 0.3;
+                estado.resources.ammoHeavy = Math.max(0, estado.resources.ammoHeavy - 0.4 * PRESSURE.AMMO_SPEND);
+                playGunshotSound();
+            }
+            enemy.distance -= speed;
+        }
+
+        // Drone derrubado pelo bloqueio de sinal, ou patrulha que marca a posição e recua.
+        // Devolve true se o inimigo saiu do setor.
+        function acaoEspecialDoInimigo(estado, enemy) {
+            if (enemy.type === 'drone' && estado.tacticalOrders.SIGNAL_JAM && Math.random() < JAM_DRONE_CRASH) {
+                const pd = enemyFrac(enemy);
+                addEffect('kill', pd.fx, pd.fy);
+                estado.prestige += ganho(10);
+                logFeed('📡 Bloqueio de sinal: drone inimigo perdeu o controle e caiu.', 'text-mil-greenMuted font-bold');
+                return true;
+            }
+            if (enemy.type === 'patrulha' && enemy.distance < 140) {
+                enemy.spotTicks = (enemy.spotTicks || 0) + 1;
+                if (enemy.spotTicks >= PATROL_MARK_TICKS) {
+                    estado.nextWaveBoost = Math.min(4, (estado.nextWaveBoost || 0) + PATROL_MARK_BOOST);
+                    logFeed('👣 A patrulha marcou a posição de vocês e recuou! A próxima onda virá maior.', 'text-red-500 font-bold');
+                    if (estado.general) lembrar('abatePatrulha', 0, 0.3);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // Inimigo vivo no alcance (140 m) atira num soldado sorteado
+        function inimigoAtira(estado, enemy, alive, observando) {
+            const tipo = ENEMY_TYPES[enemy.type];
+            if (!(enemy.hp > 0 && enemy.distance < 140 && alive.length > 0 && Math.random() < tipo.attackChance)) return;
+            let dmg = tipo.dmg(enemy) * diff().enemyDmgMult * PRESSURE.ENEMY_DAMAGE * (observando ? DRONE_SPOT_FIRE : 1);
+            if (estado.tacticalOrders.SHELTER) dmg *= shelterMult();
+            const target = alive[Math.floor(Math.random() * alive.length)];
+            if (target.hp <= 0) return;
+            target.hp = Math.max(0, target.hp - dmg);
+            target.moral = Math.max(0, target.moral - 1.2);
+            const ph = squadFrac(target);
+            addEffect('hit', ph.fx, ph.fy);
+            if (target.hp <= 0) logFeed(`❌ BAIXA EM COMBATE: ${target.rank} ${target.name} foi morto!`, 'text-red-500 font-bold');
+        }
+
+        // Inimigo abatido: crédito para quem atirou, prestígio e memória do general
+        function abaterInimigo(estado, enemy) {
+            const tipo = ENEMY_TYPES[enemy.type];
+            const pk = enemyFrac(enemy);
+            addEffect('kill', pk.fx, pk.fy);
+            const atirador = enemy.abatidoPor ? estado.squad.find(m => m.id === enemy.abatidoPor) : null;
+            if (atirador) { statsDe(atirador).abates++; estado.combate.abates++; }
+            logFeed(`✅ ${tipo.label} NEUTRALIZADO NO SETOR${atirador ? ` por ${atirador.rank} ${atirador.name}` : ''}!`, 'text-mil-greenMuted font-bold');
+            if (enemy.type === 'patrulha' && estado.general) lembrar('abatePatrulha', 1, 0.3);
+            estado.prestige += ganho(enemy.type === 'drone' ? 20 : 30);
+        }
+
+        // Chegou à trincheira: drone só sobrevoa; patrulha e infantaria invadem
+        function resolverChegadaNaTrincheira(estado, enemy, alive) {
+            if (enemy.type === 'drone') {
+                logFeed('🛸 Drone escapou após sobrevoar a trincheira.', 'text-mil-amberMuted');
+                return;
+            }
+            resolverInvasao(estado, enemy, alive);
+        }
+
+        // Invasão: estraga a trincheira e fere 2 soldados. Com a trincheira já rompida,
+        // a infantaria mata todos que estão na linha.
+        function resolverInvasao(estado, enemy, alive) {
+            const infantaria = enemy.type === 'infantaria';
+            const massacre = trincheiraRompida() && infantaria; // avaliado antes do dano desta invasão
+            const dano = massacre ? 0
+                : (infantaria ? GAME_CONFIG.INVASION_DAMAGE : GAME_CONFIG.INVASION_DAMAGE / 2) * diff().enemyDmgMult * PRESSURE.ENEMY_DAMAGE * trenchInvasionMult();
+            trenchDamage(infantaria ? TRENCH.DAMAGE_INVASION : TRENCH.DAMAGE_INVASION / 2, 'a invasão');
+            addEffect('blast', 0.5, (canvas.height - 35) / canvas.height);
+            if (trincheiraRompida() && infantaria) {
+                logFeed('☠️ A INFANTARIA ENTROU PELA TRINCHEIRA ROMPIDA! MASSACRE NA LINHA!', 'text-red-500 font-bold');
+            } else {
+                logFeed(`🚨 ${infantaria ? 'INVASÃO DE TRINCHEIRA!' : 'PATRULHA NA TRINCHEIRA!'} COMBATE A CURTA DISTÂNCIA!`, 'text-red-500 font-bold');
+            }
+            const naLinha = alive.filter(s => s.hp > 0);
+            const atingidos = massacre ? naLinha : naLinha.sort(() => Math.random() - 0.5).slice(0, INVASION_TARGETS);
+            atingidos.forEach(s => {
+                if (s.hp <= 0) return;
+                s.hp = massacre ? 0 : Math.max(0, s.hp - dano); // massacre: morte certa
+                if (s.hp <= 0) logFeed(`❌ BAIXA NA TRINCHEIRA: ${s.rank} ${s.name} foi morto!`, 'text-red-500 font-bold');
+            });
+        }
+
+        // Status no topo do mapa e faixa de aviso (artilharia prevista ou contato mais próximo)
+        function atualizarStatusDeCombate(estado, emCombate) {
             const statusEl = document.getElementById('lbl-tactical-status');
             const banner = document.getElementById('map-alert-banner');
             const bannerText = document.getElementById('map-alert-text');
-
-            if (gameState.enemies.length > 0) {
+            if (emCombate) {
                 statusEl.textContent = '⚠️ ENGAJAMENTO DE COMBATE';
                 statusEl.className = 'text-red-400 font-bold animate-pulse';
-
-                const alive = gameState.squad.filter(s => s.hp > 0);
-                const observando = droneObservando();
-                // Tiro de verdade: cada soldado dispara balas; cada bala tem chance de acertar
-                dispararEsquadrao(alive);
-
-                for (let i = gameState.enemies.length - 1; i >= 0; i--) {
-                    const enemy = gameState.enemies[i];
-                    const tipo = ENEMY_TYPES[enemy.type];
-                    let speed = tipo.speed;
-
-                    if (gameState.tacticalOrders.SUPPRESSION && gameState.resources.ammoHeavy > 3) {
-                        speed *= 0.3;
-                        gameState.resources.ammoHeavy = Math.max(0, gameState.resources.ammoHeavy - 0.4 * PRESSURE.AMMO_SPEND);
-                        playGunshotSound();
-                    }
-
-                    enemy.distance -= speed;
-
-                    // Bloqueio de sinal: drones perdem o controle e caem
-                    if (enemy.type === 'drone' && gameState.tacticalOrders.SIGNAL_JAM && Math.random() < JAM_DRONE_CRASH) {
-                        const pd = enemyFrac(enemy);
-                        addEffect('kill', pd.fx, pd.fy);
-                        gameState.prestige += ganho(10);
-                        logFeed('📡 Bloqueio de sinal: drone inimigo perdeu o controle e caiu.', 'text-mil-greenMuted font-bold');
-                        gameState.enemies.splice(i, 1);
-                        continue;
-                    }
-
-                    // Patrulha no alcance por tempo demais marca a posição e recua
-                    if (enemy.type === 'patrulha' && enemy.distance < 140) {
-                        enemy.spotTicks = (enemy.spotTicks || 0) + 1;
-                        if (enemy.spotTicks >= PATROL_MARK_TICKS) {
-                            gameState.nextWaveBoost = Math.min(4, (gameState.nextWaveBoost || 0) + PATROL_MARK_BOOST);
-                            logFeed('👣 A patrulha marcou a posição de vocês e recuou! A próxima onda virá maior.', 'text-red-500 font-bold');
-                            if (gameState.general) lembrar('abatePatrulha', 0, 0.3);
-                            gameState.enemies.splice(i, 1);
-                            continue;
-                        }
-                    }
-
-                    // Inimigo ataca em alcance de tiro
-                    if (enemy.hp > 0 && enemy.distance < 140 && alive.length > 0 && Math.random() < tipo.attackChance) {
-                        let dmg = tipo.dmg(enemy) * diff().enemyDmgMult * PRESSURE.ENEMY_DAMAGE * (observando ? DRONE_SPOT_FIRE : 1);
-                        if (gameState.tacticalOrders.SHELTER) dmg *= shelterMult();
-
-                        const target = alive[Math.floor(Math.random() * alive.length)];
-                        if (target.hp > 0) {
-                            target.hp = Math.max(0, target.hp - dmg);
-                            target.moral = Math.max(0, target.moral - 1.2);
-                            const ph = squadFrac(target);
-                            addEffect('hit', ph.fx, ph.fy);
-
-                            if (target.hp <= 0) {
-                                logFeed(`❌ BAIXA EM COMBATE: ${target.rank} ${target.name} foi morto!`, 'text-red-500 font-bold');
-                            }
-                        }
-                    }
-
-                    if (enemy.hp <= 0) {
-                        const pk = enemyFrac(enemy);
-                        addEffect('kill', pk.fx, pk.fy);
-                        const atirador = enemy.abatidoPor ? gameState.squad.find(m => m.id === enemy.abatidoPor) : null;
-                        if (atirador) { statsDe(atirador).abates++; gameState.combate.abates++; }
-                        logFeed(`✅ ${tipo.label} NEUTRALIZADO NO SETOR${atirador ? ` por ${atirador.rank} ${atirador.name}` : ''}!`, 'text-mil-greenMuted font-bold');
-                        if (enemy.type === 'patrulha' && gameState.general) lembrar('abatePatrulha', 1, 0.3);
-                        gameState.prestige += ganho(enemy.type === 'drone' ? 20 : 30);
-                        gameState.enemies.splice(i, 1);
-                    } else if (enemy.distance <= 0) {
-                        // Chegou à trincheira: infantaria invade, patrulha fere, drone só sobrevoa
-                        if (enemy.type === 'drone') {
-                            logFeed('🛸 Drone escapou após sobrevoar a trincheira.', 'text-mil-amberMuted');
-                        } else {
-                            const massacre = trincheiraRompida() && enemy.type === 'infantaria';
-                            // Trincheira rompida: a infantaria entra e mata quem estiver na linha
-                            const dano = massacre ? Infinity
-                                : (enemy.type === 'infantaria' ? GAME_CONFIG.INVASION_DAMAGE : GAME_CONFIG.INVASION_DAMAGE / 2) * diff().enemyDmgMult * PRESSURE.ENEMY_DAMAGE * trenchInvasionMult();
-                            trenchDamage(enemy.type === 'infantaria' ? TRENCH.DAMAGE_INVASION : TRENCH.DAMAGE_INVASION / 2, 'a invasão');
-                            addEffect('blast', 0.5, (canvas.height - 35) / canvas.height);
-                            if (trincheiraRompida() && enemy.type === 'infantaria') {
-                                logFeed('☠️ A INFANTARIA ENTROU PELA TRINCHEIRA ROMPIDA! MASSACRE NA LINHA!', 'text-red-500 font-bold');
-                            } else {
-                                logFeed(`🚨 ${enemy.type === 'infantaria' ? 'INVASÃO DE TRINCHEIRA!' : 'PATRULHA NA TRINCHEIRA!'} COMBATE A CURTA DISTÂNCIA!`, 'text-red-500 font-bold');
-                            }
-                            // Cada invasor luta com 2 soldados; com a trincheira rompida, com todos
-                            const vivosAgoraNaLinha = alive.filter(s => s.hp > 0);
-                            const atingidos = massacre
-                                ? vivosAgoraNaLinha
-                                : vivosAgoraNaLinha.sort(() => Math.random() - 0.5).slice(0, INVASION_TARGETS);
-                            atingidos.forEach(s => {
-                                if (s.hp <= 0) return;
-                                s.hp = Math.max(0, s.hp - dano);
-                                if (s.hp <= 0) {
-                                    logFeed(`❌ BAIXA NA TRINCHEIRA: ${s.rank} ${s.name} foi morto!`, 'text-red-500 font-bold');
-                                }
-                            });
-                        }
-                        gameState.enemies.splice(i, 1);
-                    }
-                }
             } else {
                 statusEl.textContent = 'SETORES LIMPOS';
                 statusEl.className = 'text-mil-greenMuted font-bold';
             }
-
-            // Aviso no mapa: contato mais próximo ou artilharia prevista
-            if (gameState.barrage) {
+            if (estado.barrage) {
                 banner.classList.remove('hidden');
-                bannerText.textContent = `ARTILHARIA INIMIGA EM ${seg(gameState.barrage.ticks)}s${droneObservando() ? ' · GUIADA POR DRONE' : ''}${gameState.counterBattery ? ` · CONTRA-BATERIA EM ${seg(gameState.counterBattery.ticks)}s` : ''}`;
+                bannerText.textContent = `ARTILHARIA INIMIGA EM ${seg(estado.barrage.ticks)}s${droneObservando(estado) ? ' · GUIADA POR DRONE' : ''}${estado.counterBattery ? ` · CONTRA-BATERIA EM ${seg(estado.counterBattery.ticks)}s` : ''}`;
                 statusEl.textContent = '💥 BOMBARDEIO PREVISTO';
                 statusEl.className = 'text-red-400 font-bold animate-pulse';
-            } else if (gameState.enemies.length > 0) {
-                const nearest = Math.max(0, Math.round(Math.min(...gameState.enemies.map(e => e.distance))));
+            } else if (estado.enemies.length > 0) {
+                const nearest = Math.max(0, Math.round(Math.min(...estado.enemies.map(e => e.distance))));
                 banner.classList.remove('hidden');
                 bannerText.textContent = `CONTATO INIMIGO A ${nearest}M`;
             } else {
@@ -2244,7 +2261,7 @@
             });
             document.getElementById('modal-crisis').classList.remove('hidden');
             playTacticalBeep(500, 0.15);
-            if (gameState.speed > 0) saveGame();
+            if (!gameEnded) saveGame();
         }
 
         function resolveCrisis(i) {
@@ -2573,7 +2590,7 @@
            WIN / LOSS CHECK
            ========================================================================== */
         function endGame(icon, title, titleClass, body) {
-            gameState.speed = 0;
+            gameEnded = true;
             stopAllAudio();
             clearSave();
             document.getElementById('end-icon').innerHTML = icon;
@@ -2583,7 +2600,6 @@
             document.getElementById('modal-end').classList.remove('hidden');
         }
 
-        let gameEnded = false;
         function checkWinLoss() {
             if (gameEnded) return;
             const alive = gameState.squad.filter(s => s.hp > 0).length;
@@ -2951,7 +2967,7 @@
             // Crise que estava aberta volta a aparecer
             if (gameState.activeCrisis) openCrisis(gameState.activeCrisis.id, gameState.activeCrisis.ctx);
         }
-        window.addEventListener('pagehide', () => { if (gameState.speed > 0 && !skipPageHideSave) saveGame(); });
+        window.addEventListener('pagehide', () => { if (!gameEnded && !skipPageHideSave) saveGame(); });
         // Saiu do app ou trocou de aba: pausa sozinho
         document.addEventListener('visibilitychange', () => { if (document.hidden && !gameEnded) alternarPausa(true); });
 

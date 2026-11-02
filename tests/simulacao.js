@@ -48,7 +48,7 @@ async function run() {
   results.checks = await page.evaluate(([init, TUTORIAL_RESULT]) => {
     const c = {};
     Object.assign(c, TUTORIAL_RESULT);
-    gameState.speed = 0; // sem controle de velocidade na interface; o teste pausa direto
+    clearInterval(relogioId); // o teste avança o relógio na mão
     // Fixa o sorteio em tempo bom (Nublado, 90% de eficiência) para o teste ser determinístico
     const sorteioReal = Math.random; Math.random = () => 0.1;
     gameState.day = 1; gameState.timeSeconds = 0; // a página já rodou alguns segundos antes do teste
@@ -270,7 +270,7 @@ async function run() {
     c.comboioPerdeMetadeSemDescarregar = recebidoNormal > 0 && recebidoVigilia === Math.floor(recebidoNormal * 0.5);
 
     gameState.squad.forEach(s => s.hp = 0); updateGameTick();
-    c.fimDeJogo = !document.getElementById('modal-end').classList.contains('hidden') && gameState.speed === 0;
+    c.fimDeJogo = !document.getElementById('modal-end').classList.contains('hidden') && gameEnded === true;
 
     // Vencer sobe o nível salvo; perder não muda
     gameEnded = false; localStorage.setItem('frontline-ponto-alpha-nivel', '1'); gameState.level = 1;
@@ -288,7 +288,7 @@ async function run() {
     const out = { runs: 0, vitorias: 0, extintos: 0, mediaDias: 0, racoesZeraram: 0, aguaZerou: 0, mortesCombate: 0, mortesInvasao: 0, mortesFomeSede: 0, hpNegativo: 0 };
     const N = 60; let soma = 0;
     for (let run = 0; run < N; run++) {
-      Object.assign(gameState, { day: 1, timeSeconds: 0, speed: 0, prestige: 150, weather: 'Nublado', supplyLineEff: 85, enemies: [], activeCrisis: null,
+      Object.assign(gameState, { day: 1, timeSeconds: 0, prestige: 150, weather: 'Nublado', supplyLineEff: 85, enemies: [], activeCrisis: null,
         tacticalOrders: { SUPPRESSION: false, SHELTER: false, CONSERVE: false, FULL_VIGILANCE: false },
         crisisCooldown: 240, convoyAmbush: false, weakenNextWave: false, barrage: null, trench: 100, counterBattery: null, nextWaveBoost: 0, general: newGeneral(),
         resources: { rations: 36, water: 48, ammoRifle: 550, ammoHeavy: 200, medkits: 3 }, squad: init.map(s => ({ ...s })) });
