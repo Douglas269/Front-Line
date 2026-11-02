@@ -123,6 +123,14 @@ async function run() {
     c.patrulhaMarcaPosicao = gameState.nextWaveBoost === 1 && gameState.enemies.length === 0;
     Math.random = sorteioOrig; prepCombate(); gameState.enemies = [];
 
+    // Ordens contraditórias não ficam ligadas juntas
+    Object.assign(gameState.tacticalOrders, { SUPPRESSION: false, SHELTER: false, CONSERVE: false, FULL_VIGILANCE: false, SIGNAL_JAM: false });
+    toggleTacticalOrder('SUPPRESSION'); toggleTacticalOrder('CONSERVE');
+    toggleTacticalOrder('SHELTER'); toggleTacticalOrder('FULL_VIGILANCE');
+    const oo = gameState.tacticalOrders;
+    c.ordensContraditoriasExclusivas = oo.CONSERVE && !oo.SUPPRESSION && oo.FULL_VIGILANCE && !oo.SHELTER;
+    Object.assign(gameState.tacticalOrders, { SUPPRESSION: false, SHELTER: false, CONSERVE: false, FULL_VIGILANCE: false, SIGNAL_JAM: false }); syncOrderButtons();
+
     // Bugs corrigidos na revisão
     gameState.tacticalOrders.SHELTER = true; updateUI();
     c.botaoOrdemReflete = document.getElementById('btn-ord-cover').classList.contains('btn-active-order');

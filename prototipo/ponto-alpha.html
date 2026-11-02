@@ -227,6 +227,7 @@
                         <span class="flex items-center gap-1.5"><i class="fa-solid fa-tower-broadcast text-mil-komonaBlue"></i> Bloqueio de Sinal</span>
                         <span class="text-xs text-mil-textMuted font-normal">cega e derruba drones · sem rádio</span>
                     </button>
+                    <p class="col-span-2 text-center text-xs text-mil-textMuted font-normal">Supressão e Economia se anulam · Abrigo e Vigília Total também</p>
                 </div>
             </div>
 
@@ -1012,6 +1013,7 @@
             }
             gameState.timeSeconds++;
 
+            normalizeOrders();
             processSquadNeeds();
             randomEventCheck();
             processPendingSupply();
@@ -1864,10 +1866,30 @@
             });
         }
 
+        // Ordens que se contradizem: ligar uma desliga a outra
+        const ORDER_CONFLICTS = {
+            SUPPRESSION: 'CONSERVE',       // gastar munição x poupar munição
+            CONSERVE: 'SUPPRESSION',
+            SHELTER: 'FULL_VIGILANCE',     // abaixar na trincheira x todos de olho no campo
+            FULL_VIGILANCE: 'SHELTER'
+        };
+
+        // Garante que pares contraditórios nunca fiquem ligados juntos (ex.: salvamento antigo)
+        function normalizeOrders() {
+            const o = gameState.tacticalOrders;
+            if (o.SUPPRESSION && o.CONSERVE) o.CONSERVE = false;
+            if (o.SHELTER && o.FULL_VIGILANCE) o.FULL_VIGILANCE = false;
+        }
+
         function toggleTacticalOrder(order) {
             gameState.tacticalOrders[order] = !gameState.tacticalOrders[order];
             const info = ORDER_INFO[order];
             const ligada = gameState.tacticalOrders[order];
+            const rival = ORDER_CONFLICTS[order];
+            if (ligada && rival && gameState.tacticalOrders[rival]) {
+                gameState.tacticalOrders[rival] = false;
+                logFeed(`Ordem DESATIVADA: ${ORDER_INFO[rival].nome} (não combina com ${info.nome}).`, 'text-mil-amberMuted');
+            }
             logFeed(`Ordem ${ligada ? 'ATIVADA' : 'DESATIVADA'}: ${info.nome}${ligada ? ' (' + info.desc + ')' : ''}`, 'text-mil-amberMuted');
             syncOrderButtons();
             playTacticalBeep(650, 0.03);
@@ -2156,6 +2178,7 @@
 
         // Restaura a partida salva, se houver, e salva ao sair da página
         if (loadGame()) {
+            normalizeOrders();
             logFeed('Partida restaurada do último salvamento.', 'text-mil-greenMuted');
             // Crise que estava aberta volta a aparecer
             if (gameState.activeCrisis) openCrisis(gameState.activeCrisis.id, gameState.activeCrisis.ctx);

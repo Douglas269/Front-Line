@@ -58,8 +58,9 @@ async function measure(page, level, policy) {
       }
       const o = gameState.tacticalOrders;
       o.SHELTER = !!gameState.barrage && gameState.barrage.ticks <= 2;
-      o.SUPPRESSION = gameState.enemies.length > 0 && gameState.resources.ammoHeavy > 10 && !o.SHELTER;
+      // Pares exclusivos: com pouca munição leve economiza; senão, supressão com inimigos à vista
       o.CONSERVE = gameState.resources.ammoRifle < 100;
+      o.SUPPRESSION = gameState.enemies.length > 0 && gameState.resources.ammoHeavy > 10 && !o.SHELTER && !o.CONSERVE;
       o.FULL_VIGILANCE = false;
       // Rádio livre para os apoios; contra-bateria se ainda dá tempo antes do impacto
       o.SIGNAL_JAM = false;
