@@ -34,6 +34,7 @@ Jogo de estratégia tático com foco em realismo de comando, combate blindado e 
 - Ordens táticas: Fogo Supressão (ataque +60%, inimigos 70% mais lentos, gasta munição), Abrigo Reforçado (dano recebido −75%, ataque −60%), Economizar Munição (gasto −65%, ataque −30%) e Vigília Total (mapa visível sem vigias, +0,4 de fadiga a cada 10 s para todos).
 - Carga Emergencial: chega 2d5 × 15 s depois do pedido (30 a 150 s); o prazo dobra com a linha de suprimento cortada. Só uma carga a caminho por vez.
 - Fome e sede sobem com o tempo para todos (+1,5 e +2 a cada 10 s, ou ~36 e ~48 por turno) e só caem na Cozinha. É preciso revezar os soldados na cozinha. A partir de 75%, fome ou sede tiram vida e moral.
+- Crises: raras (no máximo uma por turno; na prática ~1 a cada 5 ou 6 turnos), só fora de combate, e o relógio para enquanto a crise está aberta. Oito tipos: congelamento (neve), infecção (chuva ou névoa), desabamento (chuva forte), ração estragada, deserção (moral < 30), emboscada no comboio, interceptação de rádio (1d10: 10 enfraquece a próxima onda, 7–9 dá prestígio, 2–4 atrai patrulha, 1 atrai artilharia) e franco-atirador (duelo do Atirador de Elite). Cada uma tem uma opção que custa agora e outra que custa mais depois; frequência e gravidade sobem até 30% no nível 25. A crise aberta entra no salvamento.
 - Áudio: trilha de guerra no turno e trilha de combate quando há inimigos (`prototipo/assets/music/`, CC0). Vento ambiente gerado no navegador, em volume bem menor que a música. Tudo começa ao ligar o alto-falante no cabeçalho.
 - Turnos: o dia só muda pelo botão **Finalizar turno**. O relógio percorre os 4 períodos (manhã, tarde, noite, madrugada) e congela no fim, esperando a finalização.
 
@@ -45,7 +46,7 @@ Jogo de estratégia tático com foco em realismo de comando, combate blindado e 
 
 | Nível | Sem ação | Jogador atento (automático) |
 |---|---|---|
-| 1 a 12 | 0% (~4 dias) | ~9% |
+| 1 a 12 | 0% (~5 dias) | ~11% |
 | 25 | 0% | ~4% |
 
 Entre o 12 e o 25 a dificuldade sobe em linha reta, então a chance cai aos poucos entre esses valores. Diferenças de 0,5 ponto por nível são pequenas demais para medir partida a partida.

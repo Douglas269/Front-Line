@@ -64,10 +64,36 @@ async function run() {
     c.relatorioNovoDia = gameState.prestige - pRel === 2 * ganho(50);
     gameState.day--; gameState.lastIntelDay = 0;
     toggleTacticalOrder('SHELTER'); c.ordemAtiva = gameState.tacticalOrders.SHELTER === true;
-    triggerCrisisModal(CRISES_POOL[1]);
+    openCrisis('desabamento', {});
     c.modalCrise = !document.getElementById('modal-crisis').classList.contains('hidden');
     document.querySelector('#crisis-options button').click();
     c.modalCriseFecha = document.getElementById('modal-crisis').classList.contains('hidden');
+    // Crises: pausam o relógio, entram no salvamento e todas as opções funcionam
+    gameState.squad.forEach(s => { s.hp = 100; s.moral = 80; });
+    const tAntes = gameState.timeSeconds; openCrisis('franco_atirador', {}); updateGameTick();
+    c.crisePausaRelogio = gameState.timeSeconds === tAntes;
+    saveGame();
+    c.criseEntraNoSalvamento = JSON.parse(localStorage.getItem('frontline-ponto-alpha-v1')).activeCrisis.id === 'franco_atirador';
+    resolveCrisis(1); localStorage.removeItem('frontline-ponto-alpha-v1');
+    let errosCrise = [];
+    Object.keys(CRISES).forEach(id => {
+      CRISES[id].opcoes.forEach((op, i) => {
+        try {
+          Object.assign(gameState, { weather: 'Chuva Forte', prestige: 1000, trench: 80, barrage: null, convoyAmbush: false, enemies: [],
+            resources: { rations: 30, water: 40, ammoRifle: 500, ammoHeavy: 100, medkits: 3 } });
+          gameState.squad.forEach(s => { s.hp = 100; s.duty = 'WATCH'; s.moral = 80; s.deserted = false; });
+          gameState.squad[2].moral = 20;
+          const crise = CRISES[id];
+          openCrisis(id, crise.preparar ? crise.preparar() : {});
+          resolveCrisis(i);
+          if (gameState.activeCrisis) errosCrise.push(id + ' opção ' + (i + 1) + ' não fechou');
+        } catch (e) { errosCrise.push(id + ' opção ' + (i + 1) + ': ' + e.message); }
+      });
+    });
+    c.todasAsCrisesFuncionam = errosCrise.length === 0;
+    if (errosCrise.length) console.error(errosCrise.join(' | '));
+    gameState.squad.forEach(s => { s.hp = 100; s.deserted = false; }); gameState.enemies = []; gameState.barrage = null; gameState.convoyAmbush = false; gameState.weakenNextWave = false; gameState.crisisCooldown = 240;
+
     // Bugs corrigidos na revisão
     gameState.tacticalOrders.SHELTER = true; updateUI();
     c.botaoOrdemReflete = document.getElementById('btn-ord-cover').classList.contains('btn-active-order');
@@ -117,10 +143,12 @@ async function run() {
     for (let run = 0; run < N; run++) {
       Object.assign(gameState, { day: 1, timeSeconds: 0, speed: 0, prestige: 150, weather: 'Nublado', supplyLineEff: 85, enemies: [], activeCrisis: null,
         tacticalOrders: { SUPPRESSION: false, SHELTER: false, CONSERVE: false, FULL_VIGILANCE: false },
+        crisisCooldown: 240, convoyAmbush: false, weakenNextWave: false, barrage: null, trench: 100,
         resources: { rations: 36, water: 48, ammoRifle: 550, ammoHeavy: 200, medkits: 3 }, squad: init.map(s => ({ ...s })) });
       gameEnded = false; // a verificação de fim de jogo acima pode tê-lo deixado ligado
       let ticks = 0, minR = 1e9, minW = 1e9;
       while (gameState.day <= 30 && gameState.squad.some(s => s.hp > 0) && ticks < 30 * 240 + 10) {
+        if (gameState.activeCrisis) { resolveCrisis(CRISES[gameState.activeCrisis.id].opcoes.length - 1); continue; } // parado: ignora
         if (gameState.timeSeconds >= 240) { endTurn(); continue; } // jogador finaliza o turno
         const hpAntes = gameState.squad.map(s => s.hp);
         const invadindo = gameState.enemies.some(e => e.distance <= 0.85);

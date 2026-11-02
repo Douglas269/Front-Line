@@ -73,13 +73,20 @@ async function measure(page, level, policy) {
       gameEnded = false;
       Object.assign(gameState, {
         level, day: 1, timeSeconds: 0, speed: 0, prestige: 150, weather: 'Nublado', supplyLineEff: 85,
-        enemies: [], activeCrisis: null, barrage: null, pendingSupply: null, lastIntelDay: 0, effects: [], trench: 100,
+        enemies: [], activeCrisis: null, barrage: null, pendingSupply: null, lastIntelDay: 0, effects: [], trench: 100, crisisCooldown: 240, convoyAmbush: false, weakenNextWave: false,
         tacticalOrders: { SUPPRESSION: false, SHELTER: false, CONSERVE: false, FULL_VIGILANCE: false },
         resources: { rations: 36, water: 48, ammoRifle: 550, ammoHeavy: 200, medkits: 3 },
         squad: init.map(s => ({ ...s }))
       });
       let ticks = 0;
       while (gameState.day <= 30 && gameState.squad.some(s => s.hp > 0) && ticks < 30 * 240 + 10) {
+        if (gameState.activeCrisis) {
+          // Crise: parado ignora (última opção); atento escolhe a primeira que pode pagar
+          const ops = CRISES[gameState.activeCrisis.id].opcoes;
+          const i = policy === 'atento' ? ops.findIndex(o => !o.pode || o.pode(gameState)) : ops.length - 1;
+          resolveCrisis(i);
+          continue;
+        }
         if (gameState.timeSeconds >= 240) { endTurn(); continue; }
         if (policy === 'atento') atento();
         updateGameTick(); ticks++;

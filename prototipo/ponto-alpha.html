@@ -645,7 +645,10 @@
             level: 1, // nível de dificuldade (sobe a cada vitória)
             trench: 100, // conservação da trincheira em % (cai com artilharia e invasões)
             lastIntelDay: 0, // dia em que o último relatório foi enviado
-            activeCrisis: null
+            activeCrisis: null, // crise aberta: { id, ctx } ou null (o relógio para)
+            crisisCooldown: 240, // segundos até a próxima crise poder aparecer
+            convoyAmbush: false, // próximo comboio vai pela estrada vigiada
+            weakenNextWave: false // interceptação revelou a próxima onda
         };
 
         /* ==========================================================================
@@ -983,6 +986,8 @@
         }, GAME_CONFIG.UPDATE_INTERVAL_MS);
 
         function updateGameTick() {
+            // Com uma crise aberta, o relógio para até o jogador decidir
+            if (gameState.activeCrisis) return;
             // Ao fim dos 4 períodos o relógio do turno congela; só "Finalizar turno" avança o dia
             if (gameState.timeSeconds >= GAME_CONFIG.DAY_DURATION_SEC) {
                 updateClockAndUI();
@@ -1025,6 +1030,10 @@
                     pendingSupply: gameState.pendingSupply,
                     trench: gameState.trench,
                     barrage: gameState.barrage,
+                    activeCrisis: gameState.activeCrisis,
+                    crisisCooldown: gameState.crisisCooldown,
+                    convoyAmbush: gameState.convoyAmbush,
+                    weakenNextWave: gameState.weakenNextWave,
                     feed: document.getElementById('feed-log').innerHTML,
                     diary: document.getElementById('diary-entries').innerHTML
                 }));
@@ -1055,7 +1064,10 @@
                 pendingSupply: data.pendingSupply || null,
                 trench: typeof data.trench === 'number' ? data.trench : 100,
                 barrage: data.barrage || null,
-                activeCrisis: null,
+                activeCrisis: data.activeCrisis && CRISES[data.activeCrisis.id] ? data.activeCrisis : null,
+                crisisCooldown: typeof data.crisisCooldown === 'number' ? data.crisisCooldown : 240,
+                convoyAmbush: !!data.convoyAmbush,
+                weakenNextWave: !!data.weakenNextWave,
                 speed: 1
             });
             document.getElementById('feed-log').innerHTML = data.feed;
@@ -1107,7 +1119,21 @@
             const climaTexto = { 'Nublado': 'Céu fechado sobre Komona.', 'Névoa Espessa': 'A névoa cobre os campos de Komona.', 'Chuva Forte': 'Chuva forte alaga o fundo da trincheira.', 'Neve': 'A neve cai sobre as posições.' };
             addDiaryEntry(`Dia ${gameState.day}: ${climaTexto[gameState.weather] || ''} Restam ${vivosHoje} homens na linha. Trincheira em ${Math.round(gameState.trench)}%.`);
 
-            if (gameState.supplyLineEff > 30) {
+            // Emboscada (crise): o comboio pela estrada vigiada tem 50% de chance de se perder
+            let emboscado = false;
+            if (gameState.convoyAmbush) {
+                gameState.convoyAmbush = false;
+                emboscado = gameState.supplyLineEff > 30 && Math.random() < 0.5;
+                if (emboscado) {
+                    logFeed('💥 Comboio emboscado na estrada vigiada! A entrega de hoje se perdeu.', 'text-red-500 font-bold');
+                } else if (gameState.supplyLineEff > 30) {
+                    logFeed('🛣️ O comboio passou pela estrada vigiada sem ser atacado.', 'text-mil-greenMuted');
+                }
+            }
+
+            if (emboscado) {
+                // sem entrega hoje
+            } else if (gameState.supplyLineEff > 30) {
                 const sm = diff().supplyMult;
                 const delRations = Math.floor(10 * sm * (gameState.supplyLineEff / 100));
                 const delWater = Math.floor(15 * sm * (gameState.supplyLineEff / 100));
@@ -1251,10 +1277,10 @@
 
         function diff() {
             // Calibrado para quem joga bem: ~10% de vitória do nível 1 ao 12
-            // (dificuldade 5,96) e queda de ~0,5 ponto por nível até ~3% no 25 (6,05).
-            // Recalibrado depois da cozinha, da trincheira e do recebimento de suprimentos.
+            // (dificuldade 5,94) e queda de ~0,5 ponto por nível até ~3% no 25 (6,05).
+            // Recalibrado depois da cozinha, da trincheira, do recebimento e das crises.
             const lv = Math.max(1, Math.min(MAX_LEVEL, gameState.level));
-            const d = lv <= 12 ? 5.96 : 5.96 + (6.05 - 5.96) * (lv - 12) / 13;
+            const d = lv <= 12 ? 5.94 : 5.94 + (6.05 - 5.94) * (lv - 12) / 13;
             return {
                 eventMult: 1 + 0.30 * d,                  // frequência de eventos
                 enemyHpMult: 1 + 0.15 * d,                // vida dos inimigos
@@ -1262,7 +1288,10 @@
                 waveExtra: Math.floor(d / 2),             // soldados extras por onda
                 supplyMult: Math.max(0.5, 1 - 0.06 * d),  // entrega diária de suprimentos
                 rewardMult: Math.max(0.4, 1 - 0.07 * d),  // prestígio ganho (relatório e abates)
-                costMult: 1 + 0.12 * d                    // custo dos apoios da Central
+                costMult: 1 + 0.12 * d,                   // custo dos apoios da Central
+                // Crises: até 30% mais frequentes e mais duras no nível máximo
+                crisisMult: 1 + 0.3 * (lv - 1) / (MAX_LEVEL - 1),
+                crisisSeverity: 1 + 0.3 * (lv - 1) / (MAX_LEVEL - 1)
             };
         }
 
@@ -1296,6 +1325,12 @@
             gameState.enemies = gameState.enemies.filter(e => e.type !== 'infantaria');
             for (let i = 0; i < count; i++) spawnEnemy('infantaria', 270);
             logFeed(`🚨 ALERTA: Tropa inimiga avança sobre o setor!`, 'text-red-400 font-bold');
+            if (gameState.weakenNextWave) {
+                // Interceptação revelou a posição: a onda chega 30% mais fraca
+                gameState.weakenNextWave = false;
+                gameState.enemies.slice(-count).forEach(e => { e.hp *= 0.7; });
+                logFeed('📡 Graças à interceptação, esta onda chega enfraquecida.', 'text-mil-greenMuted');
+            }
             playTacticalBeep(400, 0.2);
         }
 
@@ -1499,82 +1534,232 @@
         }
 
         /* ==========================================================================
-           CRISES & DIARY
+           CRISES: decisões raras com custo real
+           No máximo uma por turno (intervalo mínimo de 240 s) e, em média, uma a cada
+           ~3 turnos no nível 1. Só aparecem fora de combate, e o relógio para enquanto
+           a crise está aberta. Cada uma tem uma opção que custa agora e outra que custa
+           mais depois. Gravidade e frequência sobem até 30% no nível máximo.
            ========================================================================== */
-        function firstAliveSoldier() {
-            return gameState.squad.find(s => s.hp > 0) || null;
+        const CRISIS_CHANCE = 0.0018;   // por segundo de jogo, fora de combate
+        const CRISIS_COOLDOWN = 240;    // segundos mínimos entre duas crises
+
+        const vivosAgora = () => gameState.squad.filter(s => s.hp > 0);
+        const sorteia = (lista) => lista[Math.floor(Math.random() * lista.length)];
+        const soldadoPorId = (id) => gameState.squad.find(s => s.id === id);
+        const gravidade = () => diff().crisisSeverity;
+        const atiradorDeElite = () => vivosAgora().find(m => m.class === 'Atirador de Elite');
+        const chanceDuelo = (m) => Math.round(Math.max(20, Math.min(90, 40 + m.moral * 0.3 + m.hp * 0.2 - m.fatigue * 0.2)));
+
+        function feridoNaCrise(m, dano, causa) {
+            m.hp = Math.max(0, m.hp - dano);
+            if (m.hp <= 0) logFeed(`❌ ${m.rank} ${m.name} morreu (${causa}).`, 'text-red-500 font-bold');
         }
 
-        const CRISES_POOL = [
-            {
-                title: 'CONGELAMENTO DE SUPRIMENTOS',
-                desc: 'A temperatura caiu durante a madrugada. A água nos reservatórios congelou e o frio desgasta o esquadrão.',
-                options: [
-                    { text: 'Gastar óleo de lanterna para aquecer (+10L Água, -10 Mun. Pesada)', action: (s) => {
-                        s.resources.water += 10;
-                        s.resources.ammoHeavy = Math.max(0, s.resources.ammoHeavy - 10);
-                        logFeed('Água descongelada.');
-                    }},
-                    { text: 'Exigir resistência das tropas (-15 Moral)', action: (s) => {
-                        s.squad.forEach(m => { if (m.hp > 0) m.moral = Math.max(0, m.moral - 15); });
-                    }}
+        const CRISES = {
+            congelamento: {
+                titulo: 'CONGELAMENTO',
+                pode: (s) => s.weather === 'Neve' && s.resources.water > 5,
+                texto: () => 'A neve congelou os reservatórios. Sem aquecer, boa parte da água vira gelo inútil.',
+                opcoes: [
+                    { texto: () => 'Queimar munição pesada para aquecer (−15 Mun. Pesada)', pode: (s) => s.resources.ammoHeavy >= 15,
+                      efeito: (s) => { s.resources.ammoHeavy -= 15; logFeed('🔥 Reservatórios aquecidos. A água foi salva.', 'text-mil-greenMuted'); } },
+                    { texto: () => `Deixar congelar (perde ${Math.round(40 * gravidade())}% da água e 10 de moral)`,
+                      efeito: (s) => {
+                          const perda = Math.round(s.resources.water * Math.min(0.8, 0.4 * gravidade()));
+                          s.resources.water -= perda;
+                          vivosAgora().forEach(m => { m.moral = Math.max(0, m.moral - 10); });
+                          logFeed(`🧊 ${perda} L de água congelaram.`, 'text-red-400');
+                      } }
                 ]
             },
-            {
-                title: 'INFECÇÃO DE TRINCHEIRA',
-                desc: 'A umidade constante nas botas causou inflamação grave em um soldado de vigília.',
-                options: [
-                    { text: 'Usar 1 Kit Médico emergencial', action: (s) => {
-                        const target = s.squad.find(m => m.hp > 0 && m.duty === 'WATCH') || firstAliveSoldier();
-                        if (s.resources.medkits > 0 && target) {
-                            s.resources.medkits--;
-                            target.hp = Math.min(100, target.hp + 30);
-                            logFeed(`Medicamento aplicado em ${target.rank} ${target.name}.`);
-                        } else if (!target) {
-                            logFeed('Nenhum soldado vivo para tratar.', 'text-red-400');
-                        } else {
-                            logFeed('Sem kits médicos disponíveis!', 'text-red-400');
-                        }
-                    }},
-                    { text: 'Encaminhar para abrigo (-1 soldado em vigília)', action: (s) => {
-                        const target = s.squad.find(m => m.hp > 0 && m.duty === 'WATCH');
-                        if (target) target.duty = 'REST';
-                    }}
+            infeccao: {
+                titulo: 'INFECÇÃO DE TRINCHEIRA',
+                pode: (s) => ['Chuva Forte', 'Névoa Espessa'].includes(s.weather) && vivosAgora().some(m => m.duty === 'WATCH'),
+                preparar: () => ({ alvo: sorteia(vivosAgora().filter(m => m.duty === 'WATCH')).id }),
+                texto: (ctx) => { const a = soldadoPorId(ctx.alvo); return `A umidade nas botas inflamou os pés de ${a.rank} ${a.name}. Sem tratamento, a infecção se espalha.`; },
+                opcoes: [
+                    { texto: () => 'Usar 1 kit médico', pode: (s) => s.resources.medkits > 0,
+                      efeito: (s, ctx) => { s.resources.medkits--; const a = soldadoPorId(ctx.alvo); logFeed(`💊 ${a.rank} ${a.name} tratado com kit médico.`, 'text-mil-greenMuted'); } },
+                    { texto: () => `Seguir sem tratar (o soldado perde ${Math.round(35 * gravidade())} de vida e 15 de moral)`,
+                      efeito: (s, ctx) => {
+                          const a = soldadoPorId(ctx.alvo);
+                          a.moral = Math.max(0, a.moral - 15);
+                          logFeed(`🦠 A infecção piorou: ${a.rank} ${a.name} enfraquecido.`, 'text-red-400');
+                          feridoNaCrise(a, 35 * gravidade(), 'infecção');
+                      } }
+                ]
+            },
+            desabamento: {
+                titulo: 'DESABAMENTO',
+                pode: (s) => s.weather === 'Chuva Forte' && s.trench > 20,
+                texto: () => 'A chuva encharcou a terra e uma parede da trincheira começou a ceder.',
+                opcoes: [
+                    { texto: () => 'Todos escoram a parede agora (+25 de fadiga em todos)',
+                      efeito: () => {
+                          vivosAgora().forEach(m => { m.fatigue = Math.min(100, m.fatigue + 25); });
+                          trenchDamage(5, 'o desabamento');
+                          logFeed('🧱 Parede escorada a tempo.', 'text-mil-greenMuted');
+                      } },
+                    { texto: () => `Deixar para depois (trincheira −${Math.round(25 * gravidade())}%)`,
+                      efeito: () => { trenchDamage(25 * gravidade(), 'o desabamento'); logFeed('🧱 Parte da trincheira desabou.', 'text-red-400'); } }
+                ]
+            },
+            racao_estragada: {
+                titulo: 'RAÇÃO ESTRAGADA',
+                pode: (s) => s.resources.rations >= 8,
+                texto: () => 'A umidade estragou parte da ração. Comer assim pode derrubar homens.',
+                opcoes: [
+                    { texto: () => 'Descartar a parte estragada (−30% das rações)',
+                      efeito: (s) => { const perda = Math.round(s.resources.rations * 0.3); s.resources.rations -= perda; logFeed(`🗑️ ${perda} rações descartadas.`, 'text-mil-amberMuted'); } },
+                    { texto: () => `Servir assim mesmo (2 soldados adoecem: −${Math.round(20 * gravidade())} de vida cada)`,
+                      efeito: () => {
+                          const doentes = vivosAgora().sort(() => Math.random() - 0.5).slice(0, 2);
+                          logFeed(`🤢 ${doentes.map(m => m.name).join(' e ')} passaram mal com a comida.`, 'text-red-400');
+                          doentes.forEach(m => feridoNaCrise(m, 20 * gravidade(), 'comida estragada'));
+                      } }
+                ]
+            },
+            desercao: {
+                titulo: 'AMEAÇA DE DESERÇÃO',
+                pode: () => vivosAgora().length > 1 && vivosAgora().some(m => m.moral < 30),
+                preparar: () => ({ alvo: vivosAgora().filter(m => m.moral < 30).sort((a, b) => a.moral - b.moral)[0].id }),
+                texto: (ctx) => { const a = soldadoPorId(ctx.alvo); return `${a.rank} ${a.name} está à beira de abandonar o posto. Os outros estão de olho na sua decisão.`; },
+                opcoes: [
+                    { texto: () => `Conceder licença pelo rádio (−${custo(60)} de prestígio; ele recupera 40 de moral)`, pode: (s) => s.prestige >= custo(60),
+                      efeito: (s, ctx) => {
+                          s.prestige -= custo(60);
+                          const a = soldadoPorId(ctx.alvo);
+                          a.moral = Math.min(100, a.moral + 40);
+                          a.duty = 'REST';
+                          logFeed(`📻 ${a.rank} ${a.name} ganhou licença e se acalmou.`, 'text-mil-greenMuted');
+                      } },
+                    { texto: () => 'Repreender na frente da tropa (todos perdem 10 de moral)',
+                      efeito: (s, ctx) => {
+                          vivosAgora().forEach(m => { m.moral = Math.max(0, m.moral - 10); });
+                          const a = soldadoPorId(ctx.alvo);
+                          a.moral = Math.min(100, a.moral + 15);
+                          logFeed(`📢 ${a.rank} ${a.name} foi repreendido. O clima pesou na trincheira.`, 'text-mil-amberMuted');
+                      } },
+                    { texto: () => 'Ignorar (50% de chance de ele desertar)',
+                      efeito: (s, ctx) => {
+                          const a = soldadoPorId(ctx.alvo);
+                          if (Math.random() < 0.5) {
+                              a.hp = 0;
+                              a.deserted = true;
+                              logFeed(`🏃 ${a.rank} ${a.name} desertou durante a noite.`, 'text-red-500 font-bold');
+                          } else {
+                              logFeed(`${a.rank} ${a.name} decidiu ficar, por enquanto.`, 'text-mil-amberMuted');
+                          }
+                      } }
+                ]
+            },
+            emboscada_comboio: {
+                titulo: 'EMBOSCADA NA ESTRADA',
+                pode: (s) => !s.convoyAmbush,
+                texto: () => 'Batedores avisam: o inimigo está vigiando a estrada do próximo comboio de suprimentos.',
+                opcoes: [
+                    { texto: () => `Pedir rota alternativa à Central (−${custo(40)} de prestígio)`, pode: (s) => s.prestige >= custo(40),
+                      efeito: (s) => { s.prestige -= custo(40); logFeed('🛣️ A Central desviou o comboio por outra rota.', 'text-mil-greenMuted'); } },
+                    { texto: () => 'Arriscar a rota normal (50% de chance de perder a próxima entrega)',
+                      efeito: (s) => { s.convoyAmbush = true; logFeed('⚠️ O próximo comboio vai pela estrada vigiada.', 'text-mil-amberMuted'); } }
+                ]
+            },
+            interceptacao: {
+                titulo: 'TRANSMISSÃO INIMIGA',
+                pode: () => true,
+                texto: () => 'O rádio captou uma transmissão inimiga. Interceptar pode render informação, mas também pode denunciar a posição de vocês.',
+                opcoes: [
+                    { texto: () => 'Tentar interceptar (rola 1d10)',
+                      efeito: (s) => {
+                          // Regra de guerra eletrônica: 10 crítico, 7-9 grave, 2-4 inimigo alerta, 1 triangulado
+                          const d10 = 1 + Math.floor(Math.random() * 10);
+                          if (d10 === 10) {
+                              s.weakenNextWave = true;
+                              logFeed('📡 1d10 = 10: posição inimiga descoberta! A próxima onda chega enfraquecida.', 'text-mil-greenMuted font-bold');
+                          } else if (d10 >= 7) {
+                              s.prestige += ganho(60);
+                              logFeed(`📡 1d10 = ${d10}: informação valiosa enviada ao Comando (+${ganho(60)} de prestígio).`, 'text-mil-greenMuted');
+                          } else if (d10 >= 5) {
+                              logFeed(`📡 1d10 = ${d10}: a transmissão era só ruído.`, 'text-mil-textGlow');
+                          } else if (d10 >= 2) {
+                              spawnEnemy('patrulha', 250);
+                              logFeed(`📡 1d10 = ${d10}: o inimigo percebeu a escuta e mandou uma patrulha.`, 'text-red-400 font-bold');
+                          } else {
+                              s.barrage = { ticks: Math.min(10, s.barrage ? s.barrage.ticks : 10) };
+                              logFeed('📡 1d10 = 1: o inimigo triangulou vocês! Artilharia em 10s.', 'text-red-500 font-bold');
+                          }
+                      } },
+                    { texto: () => 'Ficar em silêncio de rádio (sem relatório de patrulha hoje)',
+                      efeito: (s) => { s.lastIntelDay = s.day; logFeed('🔇 Silêncio de rádio até amanhã.', 'text-mil-amberMuted'); } }
+                ]
+            },
+            franco_atirador: {
+                titulo: 'FRANCO-ATIRADOR',
+                pode: (s) => s.day >= 3,
+                texto: () => 'Um franco-atirador inimigo prende a trincheira. Quem levanta a cabeça vira alvo.',
+                opcoes: [
+                    { texto: () => { const m = atiradorDeElite(); return m ? `Mandar ${m.rank} ${m.name} responder (duelo: ~${chanceDuelo(m)}% de vencer; se perder, −${Math.round(30 * gravidade())} de vida)` : 'Mandar o Atirador de Elite responder (indisponível: sem atirador vivo)'; },
+                      pode: () => !!atiradorDeElite(),
+                      efeito: () => {
+                          const m = atiradorDeElite();
+                          if (Math.random() * 100 < chanceDuelo(m)) {
+                              vivosAgora().forEach(x => { x.moral = Math.min(100, x.moral + 5); });
+                              logFeed(`🎯 ${m.rank} ${m.name} abateu o franco-atirador!`, 'text-mil-greenMuted font-bold');
+                          } else {
+                              logFeed(`🎯 ${m.rank} ${m.name} perdeu o duelo e foi ferido.`, 'text-red-400');
+                              feridoNaCrise(m, 30 * gravidade(), 'duelo com o franco-atirador');
+                          }
+                      } },
+                    { texto: () => 'Ficar abaixados até ele ir embora (todos perdem 15 de moral)',
+                      efeito: () => { vivosAgora().forEach(x => { x.moral = Math.max(0, x.moral - 15); }); logFeed('🪖 O esquadrão ficou abaixado. O atirador foi embora, e a moral também.', 'text-mil-amberMuted'); } }
                 ]
             }
-        ];
+        };
 
         function randomCrisisCheck() {
-            if (gameState.activeCrisis || gameState.enemies.length > 0) return;
-            if (Math.random() < 0.002) {
-                const crisis = CRISES_POOL[Math.floor(Math.random() * CRISES_POOL.length)];
-                triggerCrisisModal(crisis);
-            }
+            if (gameState.activeCrisis) return;
+            if (gameState.crisisCooldown > 0) { gameState.crisisCooldown--; return; }
+            if (gameState.enemies.length > 0 || gameState.barrage) return;
+            if (Math.random() >= CRISIS_CHANCE * diff().crisisMult) return;
+            const possiveis = Object.keys(CRISES).filter(id => CRISES[id].pode(gameState));
+            if (possiveis.length === 0) return;
+            const id = sorteia(possiveis);
+            openCrisis(id, CRISES[id].preparar ? CRISES[id].preparar() : {});
         }
 
-        function triggerCrisisModal(crisis) {
-            gameState.activeCrisis = crisis;
-            document.getElementById('crisis-title').textContent = crisis.title;
-            document.getElementById('crisis-description').textContent = crisis.desc;
-
-            const optsContainer = document.getElementById('crisis-options');
-            optsContainer.innerHTML = '';
-
-            crisis.options.forEach((opt, idx) => {
+        // Abre a janela da crise; o relógio fica parado até uma opção ser escolhida
+        function openCrisis(id, ctx) {
+            const crise = CRISES[id];
+            gameState.activeCrisis = { id, ctx };
+            document.getElementById('crisis-title').textContent = crise.titulo;
+            document.getElementById('crisis-description').textContent = crise.texto(ctx);
+            const box = document.getElementById('crisis-options');
+            box.innerHTML = '';
+            crise.opcoes.forEach((op, i) => {
+                const disponivel = !op.pode || op.pode(gameState);
                 const btn = document.createElement('button');
-                btn.className = 'w-full py-2 px-2 bg-mil-bg border border-mil-border hover:border-mil-textGlow rounded text-left text-xs text-mil-textGlow transition';
-                btn.textContent = `${idx + 1}. ${opt.text}`;
-                btn.onclick = () => {
-                    opt.action(gameState);
-                    document.getElementById('modal-crisis').classList.add('hidden');
-                    gameState.activeCrisis = null;
-                    updateUI();
-                };
-                optsContainer.appendChild(btn);
+                btn.className = `w-full py-2 px-2 bg-mil-bg border border-mil-border rounded text-left text-xs text-mil-textGlow transition ${disponivel ? 'hover:border-mil-textGlow' : 'opacity-40'}`;
+                btn.textContent = `${i + 1}. ${op.texto(ctx)}`;
+                btn.disabled = !disponivel;
+                btn.onclick = () => resolveCrisis(i);
+                box.appendChild(btn);
             });
-
             document.getElementById('modal-crisis').classList.remove('hidden');
             playTacticalBeep(500, 0.15);
+            if (gameState.speed > 0) saveGame();
+        }
+
+        function resolveCrisis(i) {
+            const aberta = gameState.activeCrisis;
+            if (!aberta) return;
+            const op = CRISES[aberta.id].opcoes[i];
+            if (!op || (op.pode && !op.pode(gameState))) return;
+            op.efeito(gameState, aberta.ctx);
+            gameState.activeCrisis = null;
+            gameState.crisisCooldown = CRISIS_COOLDOWN;
+            document.getElementById('modal-crisis').classList.add('hidden');
+            updateUI();
+            checkWinLoss();
         }
 
         /* ==========================================================================
@@ -1693,7 +1878,7 @@
 
             // Lista do esquadrão: só redesenha quando algo visível muda. Redesenhar a cada
             // segundo trocava os botões no meio do toque e o celular perdia o clique.
-            const assinatura = JSON.stringify(gameState.squad.map(s => [Math.round(s.hp), Math.round(s.fatigue), Math.round(s.hunger), Math.round(s.thirst), Math.round(s.moral), s.duty]));
+            const assinatura = JSON.stringify(gameState.squad.map(s => [Math.round(s.hp), Math.round(s.fatigue), Math.round(s.hunger), Math.round(s.thirst), Math.round(s.moral), s.duty, !!s.deserted]));
             if (assinatura === lastSquadSignature) return;
             lastSquadSignature = assinatura;
             const squadContainer = document.getElementById('squad-list');
@@ -1737,7 +1922,7 @@
                                 Cozinha
                             </button>
                         </div>
-                    ` : '<div class="text-xs text-red-500 font-bold italic">INATIVO (MORTO EM AÇÃO)</div>'}
+                    ` : `<div class="text-xs text-red-500 font-bold italic">${soldier.deserted ? 'DESERTOU' : 'INATIVO (MORTO EM AÇÃO)'}</div>`}
                 `;
                 squadContainer.appendChild(card);
             });
@@ -1869,6 +2054,8 @@
         // Restaura a partida salva, se houver, e salva ao sair da página
         if (loadGame()) {
             logFeed('Partida restaurada do último salvamento.', 'text-mil-greenMuted');
+            // Crise que estava aberta volta a aparecer
+            if (gameState.activeCrisis) openCrisis(gameState.activeCrisis.id, gameState.activeCrisis.ctx);
         }
         window.addEventListener('pagehide', () => { if (gameState.speed > 0 && !skipPageHideSave) saveGame(); });
 
