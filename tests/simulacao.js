@@ -78,13 +78,13 @@ async function run() {
     gameState.prestige = 1000; // garante prestígio para o pedido em qualquer nível
     const pBefore = gameState.prestige; const rBefore = gameState.resources.rations; requestSupport('SUPPLY');
     c.cargaCustaPrestigio = gameState.prestige - pBefore === -custo(120);
-    // A carga emergencial demora (30 s reais no nível 1, +5 s por nível) e não chega na hora
+    // A carga emergencial demora (150 s reais no nível 1, +10 s por nível) e não chega na hora
     c.cargaNaoChegaNaHora = !!gameState.pendingSupply && gameState.resources.rations === rBefore;
     const espera = gameState.pendingSupply ? gameState.pendingSupply.ticks : 0;
     c.cargaEsperaValida = espera === esperaCarga() * (gameState.supplyLineEff <= 30 ? 2 : 1);
-    { const nv = gameState.level; gameState.level = 1; c.carga30sNivel1 = seg(esperaCarga()) === 30;
-      gameState.level = 2; c.carga35sNivel2 = seg(esperaCarga()) === 35;
-      gameState.level = 25; c.carga150sNivel25 = seg(esperaCarga()) === 150; gameState.level = nv; }
+    { const nv = gameState.level; gameState.level = 1; c.carga150sNivel1 = seg(esperaCarga()) === 150;
+      gameState.level = 2; c.carga160sNivel2 = seg(esperaCarga()) === 160;
+      gameState.level = 25; c.carga390sNivel25 = seg(esperaCarga()) === 390; gameState.level = nv; }
     for (let i = 0; i < espera; i++) processPendingSupply();
     c.cargaChegaDepois = !gameState.pendingSupply && gameState.resources.rations >= rBefore + 20;
     // Relatório de patrulha: só um envio por dia

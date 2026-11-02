@@ -413,7 +413,7 @@
                                 <div>
                                     <div class="font-bold text-mil-amberMuted"><i class="fa-solid fa-parachute-box"></i> Carga Emergencial</div>
                                     <div class="text-xs text-mil-textMuted">+20 Ração, +30L Água, +250 Mun.</div>
-                                    <div id="txt-supply-eta" class="text-xs text-mil-textMuted">Chega em 30 s (+5 s por nível)</div>
+                                    <div id="txt-supply-eta" class="text-xs text-mil-textMuted">Chega em 150 s (+10 s por nível)</div>
                                 </div>
                                 <button id="btn-supply" onclick="requestSupport('SUPPLY')" class="px-2 py-1 btn-tactical rounded font-bold text-xs">
                                     <span id="lbl-supply-btn">120 PTS</span>
@@ -677,8 +677,8 @@
         const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
         // Converte segundos de jogo em segundos reais (para os textos e contagens)
         const seg = (ticks) => Math.max(0, Math.ceil(ticks / GAME_CONFIG.TICKS_PER_SECOND));
-        // Carga emergencial: 30 s reais no nível 1, +5 s por nível (nível 25: 150 s)
-        const esperaCarga = () => (30 + 5 * (Math.max(1, gameState.level || 1) - 1)) * GAME_CONFIG.TICKS_PER_SECOND;
+        // Carga emergencial: 150 s reais no nível 1, +10 s por nível (nível 25: 390 s)
+        const esperaCarga = () => (150 + 10 * (Math.max(1, gameState.level || 1) - 1)) * GAME_CONFIG.TICKS_PER_SECOND;
         let jogoPausado = false;
 
         let gameState = {
@@ -2438,7 +2438,7 @@
                 if (gameState.pendingSupply) return logFeed('Já existe uma carga emergencial a caminho.', 'text-mil-amberMuted');
                 if (gameState.prestige < custo(120)) return logFeed('Prestígio insuficiente!', 'text-red-400');
                 gameState.prestige -= custo(120);
-                // Tempo de resposta fixo pelo nível: 30 s reais no nível 1, +5 s a cada nível
+                // Tempo de resposta fixo pelo nível: 150 s reais no nível 1, +10 s a cada nível
                 const linhaCortada = gameState.supplyLineEff <= 30;
                 const espera = esperaCarga() * (linhaCortada ? 2 : 1);
                 gameState.pendingSupply = { ticks: espera };
