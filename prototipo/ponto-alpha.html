@@ -17,6 +17,8 @@
     <meta name="apple-mobile-web-app-title" content="FrontLine">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Supabase: login e salvamento na nuvem -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Monospace & Tactical Fonts -->
@@ -137,6 +139,9 @@
             </div>
             <!-- Audio Toggle & Time Speed Controls -->
             <div class="flex items-center gap-1.5">
+                <button id="btn-conta" onclick="botaoConta()" class="px-2 py-0.5 rounded btn-tactical text-xs" title="Conta">
+                    <i class="fa-solid fa-user"></i> <span id="lbl-conta">Entrar</span>
+                </button>
                 <button id="btn-audio" onclick="toggleAudio()" class="px-2 py-0.5 rounded btn-tactical text-xs" title="Sons Sintetizados de Campo">
                     <i id="ico-audio" class="fa-solid fa-volume-xmark text-red-400"></i>
                 </button>
@@ -458,6 +463,23 @@
                     <!-- Dynamic crisis choice buttons -->
                 </div>
             </div>
+        </div>
+
+        <!-- TELA DE LOGIN -->
+        <div id="tela-login" class="hidden absolute inset-0 bg-mil-bg z-[60] flex flex-col items-center justify-center p-6 overflow-y-auto">
+            <img src="icons/icon-192.png" alt="" class="w-20 h-20 rounded mb-3">
+            <h1 class="text-2xl font-bold text-mil-textGlow tracking-wider">FrontLine</h1>
+            <p class="text-xs text-mil-textMuted mb-5 font-normal">Defenda a trincheira por 30 dias.</p>
+            <form id="form-login" onsubmit="event.preventDefault(); entrarNaConta(false);" class="w-full max-w-xs space-y-3">
+                <input id="login-email" type="email" autocomplete="email" required placeholder="E-mail"
+                       class="w-full px-3 py-2 rounded bg-black border border-mil-border text-mil-textGlow text-base font-normal focus:outline-none focus:border-mil-greenMuted">
+                <input id="login-senha" type="password" autocomplete="current-password" required minlength="6" placeholder="Senha (mínimo 6 caracteres)"
+                       class="w-full px-3 py-2 rounded bg-black border border-mil-border text-mil-textGlow text-base font-normal focus:outline-none focus:border-mil-greenMuted">
+                <p id="login-msg" class="text-xs min-h-[1rem] font-normal"></p>
+                <button id="btn-entrar" type="submit" class="w-full py-2 btn-tactical rounded font-bold text-sm">Entrar</button>
+                <button id="btn-criar" type="button" onclick="entrarNaConta(true)" class="w-full py-2 btn-tactical rounded text-sm">Criar conta</button>
+                <button type="button" onclick="entrarComoConvidado()" class="w-full text-xs underline text-mil-textMuted pt-2">Jogar sem conta (salva só neste aparelho)</button>
+            </form>
         </div>
 
         <!-- TUTORIAL (primeira vez e pelo link "Como jogar") -->
@@ -1032,7 +1054,7 @@
 
         function updateGameTick() {
             // Com uma crise ou o tutorial aberto, o relógio para
-            if (gameState.activeCrisis || tutorialAberto) return;
+            if (gameState.activeCrisis || tutorialAberto || loginAberto) return;
             // Ao fim dos 4 períodos o relógio do turno congela; só "Finalizar turno" avança o dia
             if (gameState.timeSeconds >= GAME_CONFIG.DAY_DURATION_SEC) {
                 updateClockAndUI();
@@ -1063,6 +1085,7 @@
             try {
                 localStorage.setItem(SAVE_KEY, JSON.stringify({
                     v: 1,
+                    savedAt: Date.now(),
                     day: gameState.day,
                     timeSeconds: gameState.timeSeconds,
                     prestige: gameState.prestige,
@@ -1087,10 +1110,12 @@
                     diary: document.getElementById('diary-entries').innerHTML
                 }));
             } catch (e) { /* armazenamento indisponível: o jogo continua sem salvar */ }
+            enviarNuvem(false);
         }
 
         function clearSave() {
             try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
+            enviarNuvem(true);
         }
 
         function loadGame() {
@@ -1145,7 +1170,7 @@
             updateClockAndUI();
             updateUI();
             checkWinLoss();
-            if (gameState.speed > 0) saveGame();
+            if (gameState.speed > 0) { saveGame(); enviarNuvem(true); }
         }
 
         // Próximo dia com comboio de suprimentos
@@ -1389,6 +1414,7 @@
 
         function saveLevel(n) {
             try { localStorage.setItem(LEVEL_KEY, String(n)); } catch (e) {}
+            enviarNuvem(true);
         }
 
         /* Pressão do inimigo e ritmo de suprimentos, num lugar só para ajustar fácil.
@@ -2447,6 +2473,186 @@
         }
 
         /* ==========================================================================
+           CONTA E NUVEM (Supabase): login por e-mail e senha, ou convidado
+           O salvamento continua no aparelho e é espelhado na tabela "saves".
+           ========================================================================== */
+        const SUPABASE_URL = 'https://shoxvekaeuynlutkowqb.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_Tjf0FceJGTPHs81jG0R-fg_ZxF9urW5'; // chave pública (segura no navegador; a tabela tem RLS)
+        const MODE_KEY = 'frontline-modo'; // 'conta' ou 'convidado'
+        let sb = null;
+        let usuario = null;
+        let loginAberto = false;
+        let ultimoEnvio = 0;
+
+        function lerLocal(chave) { try { return localStorage.getItem(chave); } catch (e) { return null; } }
+        function gravarLocal(chave, valor) { try { localStorage.setItem(chave, valor); } catch (e) {} }
+
+        function abrirLogin() {
+            loginAberto = true;
+            document.getElementById('tela-login').classList.remove('hidden');
+            document.getElementById('login-msg').textContent = sb ? '' : 'Sem conexão com o servidor: dá para jogar sem conta.';
+        }
+
+        function fecharLogin() {
+            loginAberto = false;
+            document.getElementById('tela-login').classList.add('hidden');
+        }
+
+        function mostrarTutorialSePrimeiraVez() {
+            if (lerLocal(TUTORIAL_KEY) !== '1') abrirTutorial();
+        }
+
+        function atualizarConta() {
+            document.getElementById('lbl-conta').textContent = usuario ? 'Conta' : 'Entrar';
+        }
+
+        function botaoConta() {
+            if (usuario) sairDaConta();
+            else abrirLogin();
+        }
+
+        function traduzirErro(msg) {
+            const m = (msg || '').toLowerCase();
+            if (m.includes('invalid login')) return 'E-mail ou senha incorretos.';
+            if (m.includes('already registered') || m.includes('already been registered')) return 'Este e-mail já tem conta. Use "Entrar".';
+            if (m.includes('not confirmed')) return 'Confirme seu e-mail pelo link que enviamos antes de entrar.';
+            if (m.includes('password') && m.includes('6')) return 'A senha precisa ter pelo menos 6 caracteres.';
+            if (m.includes('rate') || m.includes('too many')) return 'Muitas tentativas seguidas. Espere um pouco e tente de novo.';
+            if (m.includes('invalid') && m.includes('email')) return 'E-mail inválido.';
+            return 'Não deu certo: ' + msg;
+        }
+
+        // Começo do jogo: sessão salva, convidado ou tela de login
+        async function iniciarConta() {
+            if (window.supabase && window.supabase.createClient) {
+                sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
+                try {
+                    const { data } = await sb.auth.getSession();
+                    if (data && data.session) {
+                        usuario = data.session.user;
+                        atualizarConta();
+                        await baixarNuvem();
+                        mostrarTutorialSePrimeiraVez();
+                        return;
+                    }
+                } catch (e) { /* sem rede: segue como convidado ou login */ }
+            }
+            atualizarConta();
+            if (lerLocal(MODE_KEY) === 'convidado') { mostrarTutorialSePrimeiraVez(); return; }
+            abrirLogin();
+        }
+
+        async function entrarNaConta(criar) {
+            const msg = document.getElementById('login-msg');
+            if (!sb) { msg.textContent = 'Sem conexão com o servidor agora. Use "Jogar sem conta".'; msg.className = 'text-xs text-red-400 font-normal'; return; }
+            const email = document.getElementById('login-email').value.trim();
+            const senha = document.getElementById('login-senha').value;
+            if (!email || senha.length < 6) {
+                msg.textContent = 'Preencha o e-mail e uma senha de pelo menos 6 caracteres.';
+                msg.className = 'text-xs text-red-400 font-normal';
+                return;
+            }
+            const botoes = [document.getElementById('btn-entrar'), document.getElementById('btn-criar')];
+            botoes.forEach(b => { b.disabled = true; b.classList.add('opacity-60'); });
+            msg.textContent = criar ? 'Criando conta...' : 'Entrando...';
+            msg.className = 'text-xs text-mil-textMuted font-normal';
+            try {
+                const r = criar
+                    ? await sb.auth.signUp({ email, password: senha, options: { emailRedirectTo: location.origin } })
+                    : await sb.auth.signInWithPassword({ email, password: senha });
+                if (r.error) {
+                    msg.textContent = traduzirErro(r.error.message);
+                    msg.className = 'text-xs text-red-400 font-normal';
+                } else if (criar && !r.data.session) {
+                    msg.textContent = 'Conta criada! Abra o link que enviamos para o seu e-mail e depois toque em "Entrar".';
+                    msg.className = 'text-xs text-mil-greenMuted font-normal';
+                } else {
+                    usuario = r.data.user;
+                    gravarLocal(MODE_KEY, 'conta');
+                    fecharLogin();
+                    atualizarConta();
+                    await baixarNuvem();
+                    logFeed(`☁️ Conectado como ${email}. O progresso é salvo na sua conta.`, 'text-mil-greenMuted');
+                    mostrarTutorialSePrimeiraVez();
+                }
+            } catch (e) {
+                msg.textContent = 'Sem conexão com o servidor. Tente de novo ou jogue sem conta.';
+                msg.className = 'text-xs text-red-400 font-normal';
+            }
+            botoes.forEach(b => { b.disabled = false; b.classList.remove('opacity-60'); });
+        }
+
+        function entrarComoConvidado() {
+            gravarLocal(MODE_KEY, 'convidado');
+            fecharLogin();
+            atualizarConta();
+            mostrarTutorialSePrimeiraVez();
+        }
+
+        async function sairDaConta() {
+            if (!confirm('Sair da conta? O progresso já está salvo nela e volta quando você entrar de novo.')) return;
+            skipPageHideSave = true;
+            await enviarNuvem(true);
+            try { await sb.auth.signOut(); } catch (e) {}
+            // Limpa o aparelho para o próximo jogador não herdar este progresso
+            [SAVE_KEY, LEVEL_KEY, TUTORIAL_KEY, MODE_KEY].forEach(k => { try { localStorage.removeItem(k); } catch (e) {} });
+            location.reload();
+        }
+
+        // Sobe o salvamento local para a nuvem (no máximo a cada 30 s, a não ser que seja forçado)
+        async function enviarNuvem(forcar) {
+            if (!sb || !usuario) return;
+            const agora = Date.now();
+            if (!forcar && agora - ultimoEnvio < 30000) return;
+            ultimoEnvio = agora;
+            let partida = null;
+            try { partida = JSON.parse(lerLocal(SAVE_KEY) || 'null'); } catch (e) {}
+            try {
+                const { error } = await sb.from('saves').upsert({
+                    user_id: usuario.id,
+                    nivel: loadLevel(),
+                    partida,
+                    tutorial_visto: lerLocal(TUTORIAL_KEY) === '1'
+                });
+                if (error) console.warn('Falha ao salvar na nuvem:', error.message);
+            } catch (e) { /* sem rede: tenta de novo no próximo salvamento */ }
+        }
+
+        // Baixa o salvamento da conta; fica com o mais recente entre aparelho e nuvem
+        async function baixarNuvem() {
+            if (!sb || !usuario) return;
+            let resposta;
+            try {
+                resposta = await sb.from('saves').select('nivel, partida, tutorial_visto, updated_at').eq('user_id', usuario.id).maybeSingle();
+            } catch (e) { resposta = { error: e }; }
+            if (resposta.error) {
+                logFeed('☁️ Não foi possível baixar o progresso da conta agora. Seguindo com o salvamento do aparelho.', 'text-mil-amberMuted');
+                return;
+            }
+            const nuvem = resposta.data;
+            if (nuvem) {
+                let local = null;
+                try { local = JSON.parse(lerLocal(SAVE_KEY) || 'null'); } catch (e) {}
+                const nuvemMaisNova = nuvem.partida && (!local || !local.savedAt || new Date(nuvem.updated_at).getTime() > local.savedAt);
+                if (nuvemMaisNova) gravarLocal(SAVE_KEY, JSON.stringify(nuvem.partida));
+                gravarLocal(LEVEL_KEY, String(Math.max(loadLevel(), nuvem.nivel || 1)));
+                if (nuvem.tutorial_visto) gravarLocal(TUTORIAL_KEY, '1');
+                // Aplica no jogo o que veio (nível e partida)
+                gameState.level = loadLevel();
+                document.getElementById('lbl-level').textContent = `NÍVEL ${gameState.level}`;
+                if (nuvemMaisNova && loadGame()) {
+                    normalizeOrders();
+                    if (gameState.activeCrisis) openCrisis(gameState.activeCrisis.id, gameState.activeCrisis.ctx);
+                    logFeed('☁️ Progresso da conta carregado.', 'text-mil-greenMuted');
+                }
+                updateClockAndUI();
+                updateUI();
+            }
+            // Garante que a nuvem fica com a versão final (inclusive progresso de convidado)
+            await enviarNuvem(true);
+        }
+
+        /* ==========================================================================
            TUTORIAL: passos curtos para quem joga pela primeira vez
            ========================================================================== */
         const TUTORIAL_KEY = 'frontline-tutorial-v1';
@@ -2492,6 +2698,7 @@
             tutorialAberto = false;
             document.getElementById('modal-tutorial').classList.add('hidden');
             try { localStorage.setItem(TUTORIAL_KEY, '1'); } catch (e) {}
+            enviarNuvem(true);
         }
 
         // Nível atual (fica salvo mesmo entre partidas)
@@ -2541,8 +2748,8 @@
         if (/iphone|ipad|ipod/i.test(navigator.userAgent) && !rodandoInstalado) {
             document.getElementById('hint-ios').classList.remove('hidden');
         }
-        // Primeira vez no jogo: mostra o tutorial
-        try { if (!localStorage.getItem(TUTORIAL_KEY)) abrirTutorial(); } catch (e) {}
+        // Começo: conta (login, convidado ou sessão salva) e, depois, o tutorial na primeira vez
+        iniciarConta();
         updateClockAndUI();
         updateUI();
     </script>

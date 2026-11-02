@@ -22,6 +22,12 @@ Jogo de estratégia tático com foco em realismo de comando, combate blindado e 
 - Arquivos: `prototipo/manifest.webmanifest`, `prototipo/sw.js` e `prototipo/icons/` (ícone vetorial `icon.svg` e PNGs de 16, 32, 180, 192 e 512 px gerados a partir dele). O `vercel.json` publica esses arquivos também na raiz do site.
 - O service worker busca sempre a versão mais nova na rede; a cópia salva só é usada sem conexão. Sem internet, o jogo abre, mas o visual depende do Tailwind e das fontes, que vêm de fora.
 
+### Conta e salvamento na nuvem (Supabase)
+- Projeto Supabase **FrontLine** (`shoxvekaeuynlutkowqb`, São Paulo). Tabela `public.saves`: um salvamento por jogador (`nivel`, `partida` em JSON, `tutorial_visto`, `updated_at`), com RLS — cada jogador só lê e altera o próprio salvamento.
+- Ao abrir o jogo: se há sessão, entra direto; senão aparece a tela de login (e-mail e senha), com **Criar conta** e **Jogar sem conta** (salva só no aparelho). O botão de conta no cabeçalho entra ou sai.
+- O jogo continua salvando no aparelho e espelha na nuvem a cada 30 s de jogo e na hora ao finalizar o turno, subir de nível, terminar a partida ou fechar o tutorial. Ao entrar, fica com o salvamento mais recente entre aparelho e nuvem; o progresso de convidado passa para a conta no primeiro login. Sem internet, segue como convidado.
+- O navegador usa só a chave pública (publishable) do Supabase; a proteção dos dados vem das políticas RLS.
+
 ### Tutorial
 - Na primeira vez que o jogo é aberto, aparece um guia de 7 passos (objetivo, funções, fome/sede/trincheira, mapa, ordens, rádio e general, como começar). O relógio fica parado enquanto ele está aberto. Dá para pular, voltar e rever pelo link **Como jogar**, ao lado de "Nova partida".
 

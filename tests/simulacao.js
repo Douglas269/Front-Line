@@ -23,7 +23,16 @@ async function run() {
   await page.goto(GAME, { waitUntil: 'load', timeout: 30000 });
   await page.waitForTimeout(1000);
 
-  // Tutorial: abre na primeira vez e pausa o relógio; depois é fechado para os testes
+  // Login: abre na primeira vez e pausa o relógio; o teste entra como convidado
+  const login = await page.evaluate(() => {
+    const abriu = loginAberto && !document.getElementById('tela-login').classList.contains('hidden');
+    const t0 = gameState.timeSeconds; updateGameTick(); const pausou = gameState.timeSeconds === t0;
+    entrarComoConvidado();
+    const fechou = !loginAberto && localStorage.getItem('frontline-modo') === 'convidado';
+    return { abriu, pausou, fechou };
+  });
+
+  // Tutorial: abre depois do login, na primeira vez, e pausa o relógio; depois é fechado
   const tutorial = await page.evaluate(() => {
     const abriu = tutorialAberto && !document.getElementById('modal-tutorial').classList.contains('hidden');
     const t0 = gameState.timeSeconds; updateGameTick(); const pausou = gameState.timeSeconds === t0;
@@ -225,7 +234,7 @@ async function run() {
     c.derrotaMantemNivel = localStorage.getItem('frontline-ponto-alpha-nivel') === '2';
     localStorage.setItem('frontline-ponto-alpha-nivel', '1'); gameState.level = 1;
     return c;
-  }, [INITIAL_SQUAD(), { tutorialAbrePrimeiraVez: tutorial.abriu, tutorialPausaRelogio: tutorial.pausou, tutorialAvanca: tutorial.avancou, tutorialFecha: tutorial.fechou }]);
+  }, [INITIAL_SQUAD(), { loginAbrePrimeiraVez: login.abriu, loginPausaRelogio: login.pausou, convidadoEntra: login.fechou, tutorialAbrePrimeiraVez: tutorial.abriu, tutorialPausaRelogio: tutorial.pausou, tutorialAvanca: tutorial.avancou, tutorialFecha: tutorial.fechou }]);
 
   // Simulações sem intervenção do jogador (renderização desligada para velocidade; lógica idêntica)
   results.sim = await page.evaluate((init) => {
