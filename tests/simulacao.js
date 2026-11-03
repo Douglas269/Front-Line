@@ -157,6 +157,11 @@ async function run() {
     gameState.enemies = [{ type: 'infantaria', distance: 100, hp: 100, maxHp: 100, offsetX: 0 }];
     processEnemiesAndCombat();
     c.abateCreditado = gameState.enemies.length === 0 && mendes.stats.abates === 1 && mendes.stats.acertos === 1;
+    // Embaralhar: chance igual para cada soldado ser o primeiro (Fisher-Yates)
+    { Math.random = sorteioOrig; const cont = [0, 0, 0, 0, 0, 0]; const base = [0, 1, 2, 3, 4, 5];
+      for (let k = 0; k < 60000; k++) cont[embaralhar(base)[0]]++;
+      c.embaralharUniforme = cont.every(n => Math.abs(n - 10000) < 500) && base.join() === '0,1,2,3,4,5';
+      Math.random = () => 0.99; }
     Math.random = () => 0.99;
     gameState.squad.forEach(s => { s.hp = 100; });
     // Sem munição: pistola, não gasta paiol

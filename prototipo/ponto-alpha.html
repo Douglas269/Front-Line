@@ -1898,6 +1898,17 @@
             logFeed('💥 Bombardeio inimigo concluído.', 'text-red-400');
         }
 
+        // Embaralha uma cópia da lista com chance igual para cada ordem (Fisher-Yates).
+        // Substitui o antigo sort(() => Math.random() - 0.5), que não era uniforme e dependia do navegador.
+        function embaralhar(lista) {
+            const a = lista.slice();
+            for (let i = a.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [a[i], a[j]] = [a[j], a[i]];
+            }
+            return a;
+        }
+
         /* ===== Combate: um passo de 1 segundo de jogo =====
            As funções abaixo recebem o estado da partida (`estado`, que é o gameState)
            em vez de mexer no global direto; assim dá para testar cada parte isolada. */
@@ -2014,7 +2025,7 @@
                 logFeed(`🚨 ${infantaria ? 'INVASÃO DE TRINCHEIRA!' : 'PATRULHA NA TRINCHEIRA!'} COMBATE A CURTA DISTÂNCIA!`, 'text-red-500 font-bold');
             }
             const naLinha = alive.filter(s => s.hp > 0);
-            const atingidos = massacre ? naLinha : naLinha.sort(() => Math.random() - 0.5).slice(0, INVASION_TARGETS);
+            const atingidos = massacre ? naLinha : embaralhar(naLinha).slice(0, INVASION_TARGETS);
             atingidos.forEach(s => {
                 if (s.hp <= 0) return;
                 s.hp = massacre ? 0 : Math.max(0, s.hp - dano); // massacre: morte certa
@@ -2128,7 +2139,7 @@
                       efeito: (s) => { const perda = Math.round(s.resources.rations * 0.3); s.resources.rations -= perda; logFeed(`🗑️ ${perda} rações descartadas.`, 'text-mil-amberMuted'); } },
                     { texto: () => `Servir assim mesmo (2 soldados adoecem: −${Math.round(20 * gravidade())} de vida cada)`,
                       efeito: () => {
-                          const doentes = vivosAgora().sort(() => Math.random() - 0.5).slice(0, 2);
+                          const doentes = embaralhar(vivosAgora()).slice(0, 2);
                           logFeed(`🤢 ${doentes.map(m => m.name).join(' e ')} passaram mal com a comida.`, 'text-red-400');
                           doentes.forEach(m => feridoNaCrise(m, 20 * gravidade(), 'comida estragada'));
                       } }
