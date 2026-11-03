@@ -233,7 +233,7 @@
                 <div id="mapa-corte" class="hidden relative w-full bg-black overflow-hidden select-none">
                     <canvas id="corteCanvas" class="w-full block" style="touch-action: pan-y"></canvas>
                     <div id="corte-banner" class="hidden absolute top-2 left-2 right-2 bg-mil-redDark/90 border border-mil-redAlert px-2 py-1 rounded text-[11px] text-red-200 font-bold z-20 animate-alert-pulse"></div>
-                    <div id="corte-cartao" class="hidden absolute z-30 w-60 bg-mil-panel/95 border border-mil-greenMuted rounded shadow-2xl p-2 text-xs" onclick="event.stopPropagation()"></div>
+                    <div id="corte-cartao" class="hidden absolute z-30 w-48 bg-mil-panel/95 border border-mil-greenMuted rounded shadow-2xl p-1.5 text-[10px] leading-tight" onclick="event.stopPropagation()"></div>
                     <div id="corte-dica" class="hidden absolute z-30 pointer-events-none bg-black/90 border border-mil-border rounded px-2 py-1 text-[11px] text-mil-textGlow whitespace-nowrap"></div>
                     <div id="corte-pausa" class="hidden absolute left-1/2 -translate-x-1/2 z-20 px-2 py-1 rounded bg-black/85 border border-mil-amberMuted text-xs text-mil-amberMuted font-bold whitespace-nowrap" style="top:44%">⏸ PAUSADO · decida com calma</div>
                 </div>
@@ -4459,7 +4459,7 @@
             const val = Math.max(0, Math.min(100, Math.round(v)));
             const ruim = ruimAlto ? val : 100 - val;
             const cor = ruim >= 75 ? '#c0392b' : ruim >= 50 ? '#d9a35a' : '#5a7356';
-            return `<div class="flex items-center gap-1"><span class="w-12 text-mil-textMuted">${rot}</span><div class="flex-1 h-1.5 bg-black/60 rounded"><div class="h-1.5 rounded" style="width:${val}%;background:${cor}"></div></div><span class="w-7 text-right font-bold" style="color:${cor}">${val}</span></div>`;
+            return `<div class="flex items-center gap-1"><span class="w-9 text-mil-textMuted">${rot}</span><div class="flex-1 h-1 bg-black/60 rounded"><div class="h-1 rounded" style="width:${val}%;background:${cor}"></div></div><span class="w-5 text-right font-bold" style="color:${cor}">${val}</span></div>`;
         }
         function renderCartao(posicionar) {
             const el = document.getElementById('corte-cartao');
@@ -4470,23 +4470,22 @@
             if (sig !== assinaturaCartao) {
                 assinaturaCartao = sig;
                 const p = PERFIS[s.id] || {};
-                const btn = (duty, rot) => `<button onclick="cartaoFuncao('${duty}')" class="py-1 rounded font-bold ${s.duty === duty ? 'bg-mil-olive text-white border border-mil-greenMuted' : 'bg-black/50 text-mil-textMuted border border-mil-border'}">${rot}</button>`;
+                const btn = (duty, rot) => `<button onclick="cartaoFuncao('${duty}')" class="py-0.5 rounded font-bold ${s.duty === duty ? 'bg-mil-olive text-white border border-mil-greenMuted' : 'bg-black/50 text-mil-textMuted border border-mil-border'}">${rot}</button>`;
                 const av = avisosDoSoldado(s);
                 el.innerHTML = `
                     <div class="flex justify-between items-start gap-2">
                         <div class="min-w-0">
-                            <div class="font-bold text-[#ffe08a] truncate">${s.rank} ${s.name}</div>
-                            <div class="text-mil-textMuted truncate">${s.class}${p.traco ? ' · <span class="text-mil-amberMuted">' + p.traco.nome + '</span>' : ''}</div>
-                            <div class="text-mil-textGlow">${(CORTE.comodos[comodo] || {}).nome || ''}${m ? ` · <span class="${m === 'heroismo' ? 'text-mil-greenMuted' : 'text-red-400'} font-bold">${ROTULO_MENTAL[m]}</span>` : ''}${soldadoMarcado(s) ? ' · <span class="text-red-400 font-bold">🎯 ALVO</span>' : ''}</div>
+                            <div class="font-bold text-[#ffe08a] truncate text-[11px]">${s.rank} ${s.name}${p.traco ? ' <span class="font-normal text-mil-amberMuted">· ' + p.traco.nome + '</span>' : ''}</div>
+                            <div class="text-mil-textGlow truncate">${((CORTE.comodos[comodo] || {}).nome || '').split(' (')[0].toLowerCase()}${m ? ` · <span class="${m === 'heroismo' ? 'text-mil-greenMuted' : 'text-red-400'} font-bold">${ROTULO_MENTAL[m]}</span>` : ''}${soldadoMarcado(s) ? ' · <span class="text-red-400 font-bold">🎯 ALVO</span>' : ''}</div>
                         </div>
                         <button onclick="fecharCartao()" class="px-1.5 text-mil-textMuted text-sm leading-none" aria-label="Fechar">✕</button>
                     </div>
-                    <div class="space-y-0.5 mt-1">
+                    <div class="space-y-px mt-0.5">
                         ${barraCartao('Vida', s.hp, false)}${barraCartao('Fadiga', s.fatigue, true)}${barraCartao('Fome', s.hunger, true)}${barraCartao('Sede', s.thirst, true)}${barraCartao('Moral', s.moral, false)}
                     </div>
-                    ${av.length ? `<div class="mt-1 text-[11px] ${av.some(a => a.critico) ? 'text-red-400' : 'text-mil-amberMuted'}">${av.map(a => a.icone + ' ' + a.nome).join(' · ')}</div>` : ''}
-                    <div class="grid grid-cols-4 gap-1 mt-1.5 text-[10px]">${btn('WATCH', 'Vigília')}${btn('REST', 'Descanso')}${btn('MAINTENANCE', 'Manut.')}${btn('RATIONING', 'Cozinha')}</div>
-                    <button onclick="fecharCartao(); abrirPerfil(${s.id})" class="w-full mt-1.5 py-1 btn-tactical rounded font-bold"><i class="fa-solid fa-id-card"></i> Ficha completa</button>`;
+                    ${av.length ? `<div class="mt-0.5 ${av.some(a => a.critico) ? 'text-red-400' : 'text-mil-amberMuted'}">${av.map(a => a.icone + ' ' + a.nome).join(' · ')}</div>` : ''}
+                    <div class="grid grid-cols-4 gap-0.5 mt-1 text-[9px]">${btn('WATCH', 'Vigília')}${btn('REST', 'Desc.')}${btn('MAINTENANCE', 'Manut.')}${btn('RATIONING', 'Coz.')}</div>
+                    <button onclick="fecharCartao(); abrirPerfil(${s.id})" class="w-full mt-1 py-0.5 btn-tactical rounded font-bold"><i class="fa-solid fa-id-card"></i> Ficha completa</button>`;
             }
             el.classList.remove('hidden');
             // Posiciona perto do soldado, sem sair da cena (acima se couber, senão abaixo)
@@ -5084,7 +5083,7 @@
            Ao abrir, ao voltar para o app e a cada minuto o jogo compara as duas. Se o site
            tiver uma versão diferente, o jogo trava numa tela que só sai atualizando.
            (tools/nova-versao.sh troca as duas juntas a cada atualização publicada.) */
-        const VERSAO_JOGO = '20261103.1929';
+        const VERSAO_JOGO = '20261103.2224';
         const ATUALIZOU_KEY = 'frontline-atualizou-para';
         async function verificarVersao() {
             if (!location.protocol.startsWith('http') || atualizacaoPendente) return;
