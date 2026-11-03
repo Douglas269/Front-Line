@@ -341,6 +341,14 @@ async function run() {
       moverParaComodo(sv[0].id, 'ninhos'); c.corteNinhoComArma = gameState.arsenal.posicoes[1].operador === sv[0].id && comodoDoSoldado(sv[0]) === 'ninhos';
       moverParaComodo(sv[0].id, 'posto'); c.cortePostoLargaArma = gameState.arsenal.posicoes[1].operador === null;
       renderCorte(); c.corteDesenhaSemErro = true;
+      { const s0 = sv[0], g0 = [s0.hunger, s0.thirst, s0.fatigue, s0.moral, s0.hp];
+        Object.assign(s0, { hunger: 80, thirst: 55, fatigue: 10, moral: 80, hp: 100 });
+        const av = avisosDoSoldado(s0);
+        c.corteAvisosNaCabeca = av.some(a => a.nome === 'fome' && a.critico) && av.some(a => a.nome === 'sede' && !a.critico) && av.length === 2;
+        abrirCartao(s0.id); c.corteCartaoAbre = cartaoAberto && !document.getElementById('corte-cartao').classList.contains('hidden') && document.getElementById('corte-cartao').innerHTML.includes(s0.name);
+        cartaoFuncao('REST'); c.corteCartaoTrocaFuncao = s0.duty === 'REST';
+        fecharCartao(); c.corteCartaoFecha = !cartaoAberto && document.getElementById('corte-cartao').classList.contains('hidden');
+        [s0.hunger, s0.thirst, s0.fatigue, s0.moral, s0.hp] = g0; }
       CONFIG.visual = 'classico'; aplicarVisual();
       c.corteVoltaAoClassico = !document.getElementById('mapa-classico').classList.contains('hidden') && document.getElementById('barra-abas').nextElementSibling === document.getElementById('conteudo-abas');
       CONFIG.visual = guardaV; aplicarVisual(); gameState.arsenal = novoArsenal();
