@@ -352,6 +352,54 @@ async function run() {
       inimigoAtira(gameState, { type: 'drone', distance: 100, hp: 50, maxHp: 50 }, vivos, false);
       c.droneAtingeDeposito = gameState.resources.rations < r1;
       Object.assign(s, guard); gameState.weather = w0; gameState.trench = 100; Math.random = sorteioX; }
+    // ===== Artilharia com alvos anunciados, traços e colapso mental =====
+    { const sorteioY = Math.random; const guardSquad = JSON.stringify(gameState.squad);
+      const sv = gameState.squad; sv.forEach(m => { m.hp = 100; m.moral = 80; m.duty = 'WATCH'; m.mental = null; m.deserted = false; });
+      gameState.enemies = []; gameState.barrage = null; gameState.arsenal = novoArsenal();
+      Object.assign(gameState.tacticalOrders, { SUPPRESSION: false, SHELTER: false, CONSERVE: false, FULL_VIGILANCE: false, SIGNAL_JAM: false });
+      // Alvos escolhidos no aviso e mostrados no card
+      Math.random = () => 0.9; gameState.general = gameState.general || newGeneral();
+      executarPasso('artilharia');
+      c.artilhariaAnunciaAlvos = !!gameState.barrage && gameState.barrage.alvos.length === BARRAGE_SHOTS && gameState.barrage.alvos.every(a => a.tipo === 'soldado');
+      const alvoId = gameState.barrage.alvos[0].id; const alvo = sv.find(m => m.id === alvoId);
+      c.cardMostraAlvo = soldadoMarcado(alvo);
+      // Mesmo alvo nos 3 projéteis: em Descanso leva 30%; de vigília leva 100%
+      gameState.barrage.alvos = [0, 1, 2].map(() => ({ tipo: 'soldado', id: alvoId })); gameState.barrage.ticks = 1;
+      alvo.duty = 'REST'; processBarrage(); const danoAbrigo = 100 - alvo.hp;
+      alvo.hp = 100; alvo.duty = 'WATCH';
+      gameState.barrage = { ticks: 1, alvos: [0, 1, 2].map(() => ({ tipo: 'soldado', id: alvoId })) }; processBarrage(); const danoAberto = 100 - alvo.hp;
+      c.descansoProtegeDoBombardeio = danoAbrigo > 0 && Math.abs(danoAbrigo - danoAberto * ABRIGO_SUBTERRANEO) < 0.01;
+      // Ninho atingido para de funcionar até reparar
+      const ars = gameState.arsenal; ars.posicoes[1].obra = 100; montarArma(1, 'metralhadora');
+      gameState.barrage = { ticks: 1, alvos: [{ tipo: 'ninho', i: 1 }] }; processBarrage();
+      c.ninhoAtingidoParaArma = ars.posicoes[1].obra < 100 && !operadorAtivo(ars.posicoes[1]);
+      construirPonto(1); c.ninhoPodeSerReparado = ars.posicoes[1].construindo;
+      // Traços
+      const silva = sv.find(m => m.name === 'Silva'), ferreira = sv.find(m => m.name === 'Ferreira');
+      silva.moral = 50; ferreira.moral = 50; perdaMoral(silva, 2); perdaMoral(ferreira, 2);
+      c.tracoVeteranoENovato = silva.moral === 49 && ferreira.moral === 46;
+      const oliveira = sv.find(m => m.name === 'Oliveira'); oliveira.duty = 'WATCH';
+      c.tracoIncansavel = Math.abs(ritmoNecessidades(oliveira).fadiga - NECESSIDADES.FADIGA.WATCH * 0.8) < 1e-9;
+      // Colapso: moral baixa + sorteio baixo = pânico; larga o posto e não obedece
+      sv.forEach(m => { m.moral = 80; m.mental = null; });
+      ferreira.moral = 10; ferreira.duty = 'WATCH'; Math.random = () => 0.01; processarMental();
+      c.panicoLargaPosto = mentalDe(ferreira) === 'panico' && ferreira.duty === 'REST';
+      setSoldierDuty(ferreira.id, 'WATCH'); c.panicoNaoObedece = ferreira.duty === 'REST';
+      Math.random = () => 0.99; for (let k = 0; k < 6; k++) processarMental();
+      c.panicoPassaEVolta = !mentalDe(ferreira) && ferreira.duty === 'WATCH';
+      // Apatia reduz o ritmo de tiro; fúria heroica aumenta a pontaria
+      const arma = ARMAS[ferreira.class];
+      const cad0 = cadenciaDe(ferreira, arma), pre0 = chanceDeAcerto(ferreira, arma, { type: 'infantaria', distance: 150 });
+      entrarEmCrise(ferreira, 'apatia'); c.apatiaAtiraMenos = Math.abs(cadenciaDe(ferreira, arma) - cad0 * 0.5) < 1e-9;
+      ferreira.mental = null; entrarEmCrise(ferreira, 'heroismo'); c.heroismoAcertaMais = chanceDeAcerto(ferreira, arma, { type: 'infantaria', distance: 150 }) > pre0;
+      // Veterano não entra em pânico
+      silva.moral = 5; silva.mental = null; Math.random = () => 0.12; processarMental();
+      c.veteranoNaoEntraEmPanico = mentalDe(silva) !== 'panico' && mentalDe(silva) !== 'apatia';
+      // Entra no salvamento
+      ferreira.mental = { tipo: 'apatia', ciclos: 3, dutyAntes: 'WATCH' }; saveGame();
+      c.mentalEntraNoSalvamento = JSON.parse(localStorage.getItem(SAVE_KEY)).squad.find(m => m.name === 'Ferreira').mental.tipo === 'apatia';
+      const g = JSON.parse(guardSquad); sv.forEach((m, i) => { Object.assign(m, g[i]); m.mental = null; });
+      gameState.barrage = null; gameState.arsenal = novoArsenal(); Math.random = sorteioY; }
     gameState.trench = 50; gameState.timeSeconds = 10;
     gameState.squad.find(s => s.class === 'Engenheiro').duty = 'MAINTENANCE';
     processSquadNeeds();
