@@ -517,7 +517,7 @@
         <div id="modal-creditos" class="hidden absolute inset-0 bg-black/90 z-50 flex items-center justify-center p-4" onclick="if (event.target === this) fecharCreditos()">
             <div class="bg-mil-panel border-2 border-mil-border rounded p-4 max-w-sm w-full space-y-2 shadow-2xl max-h-[90vh] overflow-y-auto text-xs leading-relaxed">
                 <div class="text-mil-amberMuted font-bold text-sm border-b border-mil-border pb-2">CRÉDITOS</div>
-                <p class="text-mil-textGlow"><b>FrontLine</b> — jogo de Douglas.</p>
+                <p class="text-mil-textGlow"><b>FrontLine</b> — jogo de Ruan e Douglas.</p>
                 <p><b class="text-mil-textGlow">Símbolos militares do mapa:</b> <span class="text-mil-textMuted">milsymbol, de Måns Beckman (spatialillusions.com) — licença MIT.</span></p>
                 <p><b class="text-mil-textGlow">Efeitos sonoros:</b> <span class="text-mil-textMuted">gerados com ZzFX, de Frank Force — licença MIT.</span></p>
                 <p><b class="text-mil-textGlow">Ícones:</b> <span class="text-mil-textMuted">game-icons.net, de Lorc, Delapouite e colaboradores — licença CC BY 3.0.</span></p>
@@ -3891,7 +3891,7 @@
            Ao abrir, ao voltar para o app e a cada minuto o jogo compara as duas. Se o site
            tiver uma versão diferente, o jogo trava numa tela que só sai atualizando.
            (tools/nova-versao.sh troca as duas juntas a cada atualização publicada.) */
-        const VERSAO_JOGO = '20261103.0259';
+        const VERSAO_JOGO = '20261103.0300';
         const ATUALIZOU_KEY = 'frontline-atualizou-para';
         async function verificarVersao() {
             if (!location.protocol.startsWith('http') || atualizacaoPendente) return;
