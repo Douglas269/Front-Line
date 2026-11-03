@@ -327,6 +327,16 @@ async function run() {
     gameState.squad.forEach(s => { s.hp = 100; s.duty = 'WATCH'; });
     gameState.trench = 100; gameState.barrage = { ticks: 1 }; processBarrage();
     c.artilhariaEstragaTrincheira = gameState.trench === 100 - 3 * TRENCH.DAMAGE_BARRAGE;
+    // Recursos livres: símbolos OTAN, sons ZzFX, ícones e medalhas
+    c.milsymbolCarregou = typeof ms !== 'undefined' && Object.values(SIDC_INIMIGO).concat(Object.values(SIDC_AMIGO), Object.values(SIDC_ARMA), [SIDC_DEPOSITO]).every(x => new ms.Symbol(x, { size: 15 }).isValid());
+    c.sonsZzfxGeram = typeof zzfxGerar === 'function' && Object.values(SONS).every(par => { const a = zzfxGerar(...par); let pico = 0; for (const v of a) pico = Math.max(pico, Math.abs(v)); return a.length > 1000 && pico > 0.01; });
+    c.iconesCarregaram = typeof icone === 'function' && Object.values(EQUIP).concat(Object.values(MUNICOES), Object.values(CARGAS)).every(e => icone(e.icone).startsWith('<svg')) && [...document.querySelectorAll('[data-icone]')].every(el => el.innerHTML.startsWith('<svg'));
+    { const m = gameState.squad[5]; const guardaM = { stats: m.stats, medalhas: m.medalhas, quaseMorreu: m.quaseMorreu, hp: m.hp };
+      m.hp = 100; m.medalhas = []; m.stats = { tiros: 50, acertos: 20, abates: 15 }; verificarMedalhas();
+      c.medalhaDeCombate = m.medalhas.includes('combate');
+      verificarMedalhas(); c.medalhaNaoRepete = m.medalhas.filter(x => x === 'combate').length === 1;
+      c.medalhaVitoriaPorNivel = medalhaDaVitoria(1) !== medalhaDaVitoria(25);
+      Object.assign(m, guardaM); }
     // Fome, sede e fadiga: ~2 dias de sede, ~3 de fome (nublado), ~2 dias de vigília até a fadiga crítica
     { const w0 = gameState.weather, sorteioX = Math.random; Math.random = () => 0.99; gameState.weather = 'Nublado'; gameState.enemies = [];
       Object.assign(gameState.tacticalOrders, { SUPPRESSION: false, SHELTER: false, CONSERVE: false, FULL_VIGILANCE: false, SIGNAL_JAM: false });

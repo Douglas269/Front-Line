@@ -19,6 +19,10 @@
     {
       "source": "/icons/:path*",
       "destination": "/prototipo/icons/:path*"
+    },
+    {
+      "source": "/vendor/:path*",
+      "destination": "/prototipo/vendor/:path*"
     }
   ],
   "headers": [

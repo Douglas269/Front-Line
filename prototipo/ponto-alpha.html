@@ -19,6 +19,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Supabase: login e salvamento na nuvem -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
+    <!-- Recursos livres guardados no próprio jogo (ver tela Créditos) -->
+    <script src="vendor/milsymbol.js"></script>
+    <script src="vendor/zzfx.js"></script>
+    <script src="vendor/game-icons.js"></script>
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Monospace & Tactical Fonts -->
@@ -250,6 +254,7 @@
                 </div>
                 <div class="flex gap-3">
                     <button onclick="abrirTutorial()" class="text-xs underline text-mil-textMuted hover:text-mil-textGlow whitespace-nowrap">Como jogar</button>
+                    <button onclick="abrirCreditos()" class="text-xs underline text-mil-textMuted hover:text-mil-textGlow whitespace-nowrap">Créditos</button>
                     <button onclick="novaPartida()" class="text-xs underline text-mil-textMuted hover:text-mil-textGlow whitespace-nowrap">Nova partida</button>
                 </div>
             </div>
@@ -327,7 +332,7 @@
                             <!-- Rations -->
                             <div class="bg-mil-bg border border-mil-border p-2 rounded">
                                 <div class="flex justify-between text-mil-textMuted">
-                                    <span><i class="fa-solid fa-utensils text-mil-amberMuted"></i> Ração</span>
+                                    <span><span class="text-mil-amberMuted" data-icone="opened-food-can"></span> Ração</span>
                                     <span id="val-rations" class="font-bold text-mil-textGlow">36 un</span>
                                 </div>
                                 <div class="text-xs text-mil-textMuted mt-1">Só quem está na Cozinha come</div>
@@ -335,7 +340,7 @@
                             <!-- Water -->
                             <div class="bg-mil-bg border border-mil-border p-2 rounded">
                                 <div class="flex justify-between text-mil-textMuted">
-                                    <span><i class="fa-solid fa-bottle-water text-mil-komonaBlue"></i> Água</span>
+                                    <span><span class="text-mil-komonaBlue" data-icone="water-flask"></span> Água</span>
                                     <span id="val-water" class="font-bold text-mil-textGlow">48 L</span>
                                 </div>
                                 <div class="text-xs text-mil-textMuted mt-1">Só quem está na Cozinha bebe</div>
@@ -343,7 +348,7 @@
                             <!-- Light Ammo -->
                             <div class="bg-mil-bg border border-mil-border p-2 rounded">
                                 <div class="flex justify-between text-mil-textMuted">
-                                    <span><i class="fa-solid fa-gun text-mil-greenMuted"></i> Mun. Leve</span>
+                                    <span><span class="text-mil-greenMuted" data-icone="bullets"></span> Mun. Leve</span>
                                     <span id="val-ammo-rifle" class="font-bold text-mil-textGlow">900 / 2000</span>
                                 </div>
                                 <div id="txt-balas-inimigo" class="text-xs text-mil-textMuted mt-1">Uso em Fuzis / Snipers</div>
@@ -351,7 +356,7 @@
                             <!-- Heavy Ammo -->
                             <div class="bg-mil-bg border border-mil-border p-2 rounded">
                                 <div class="flex justify-between text-mil-textMuted">
-                                    <span><i class="fa-solid fa-burst text-red-500"></i> Mun. Pesada</span>
+                                    <span><span class="text-red-500" data-icone="heavy-bullets"></span> Mun. Pesada</span>
                                     <span id="val-ammo-heavy" class="font-bold text-mil-textGlow">350 / 600</span>
                                 </div>
                                 <div class="text-xs text-mil-textMuted mt-1">Uso em Fogo Supressivo</div>
@@ -361,7 +366,7 @@
                         <!-- Medkits -->
                         <div class="bg-mil-bg border border-mil-border p-2 rounded flex justify-between items-center text-[13px]">
                             <div class="flex items-center gap-2">
-                                <i class="fa-solid fa-kit-medical text-red-500 text-base"></i>
+                                <span class="text-red-500 text-base" data-icone="first-aid-kit"></span>
                                 <div>
                                     <div class="font-bold text-mil-textGlow">Kits Médicos de Campo</div>
                                     <div class="text-xs text-mil-textMuted">Usados nas crises médicas</div>
@@ -394,7 +399,7 @@
                         <div class="space-y-2 text-xs">
                             <div class="bg-mil-bg border border-mil-border p-2 rounded flex justify-between items-center">
                                 <div>
-                                    <div class="font-bold text-red-400"><i class="fa-solid fa-bomb"></i> Fogo de Artilharia</div>
+                                    <div class="font-bold text-red-400"><span data-icone="artillery-shell"></span> Fogo de Artilharia</div>
                                     <div class="text-xs text-mil-textMuted">Dano pesado em todos os inimigos no setor (200 cada)</div>
                                 </div>
                                 <button onclick="requestSupport('ARTILLERY')" class="px-2 py-1 btn-tactical rounded font-bold text-xs">
@@ -404,7 +409,7 @@
 
                             <div class="bg-mil-bg border border-mil-border p-2 rounded flex justify-between items-center">
                                 <div>
-                                    <div class="font-bold text-blue-400"><i class="fa-solid fa-truck-medical"></i> Evacuação Médica</div>
+                                    <div class="font-bold text-blue-400"><span data-icone="medical-pack"></span> Evacuação Médica</div>
                                     <div class="text-xs text-mil-textMuted">Resgata e recupera feridos graves</div>
                                 </div>
                                 <button onclick="requestSupport('MEDEVAC')" class="px-2 py-1 btn-tactical rounded font-bold text-xs">
@@ -413,7 +418,7 @@
                             </div>
 
                             <div class="bg-mil-bg border border-mil-border p-2 rounded space-y-1">
-                                <div class="font-bold text-mil-amberMuted"><i class="fa-solid fa-parachute-box"></i> Carga Emergencial</div>
+                                <div class="font-bold text-mil-amberMuted"><span data-icone="parachute"></span> Carga Emergencial</div>
                                 <div id="txt-supply-eta" class="text-xs text-mil-textMuted">Chega em 150 s (+10 s por nível)</div>
                                 <div class="text-xs text-mil-textMuted">Peça cada coisa separada; cada item tem a sua entrega.</div>
                                 <div id="lista-cargas" class="space-y-1"></div>
@@ -421,7 +426,7 @@
 
                             <div class="bg-mil-bg border border-mil-border p-2 rounded flex justify-between items-center">
                                 <div>
-                                    <div class="font-bold text-red-300"><i class="fa-solid fa-crosshairs"></i> Contra-bateria</div>
+                                    <div class="font-bold text-red-300"><span data-icone="incoming-rocket"></span> Contra-bateria</div>
                                     <div class="text-xs text-mil-textMuted">Só durante aviso de artilharia inimiga. Chega em 1 a 5 s (2d5): se chegar antes do impacto, cancela o bombardeio.</div>
                                 </div>
                                 <button id="btn-counter" onclick="requestSupport('COUNTER')" class="px-2 py-1 btn-tactical rounded font-bold text-xs">
@@ -505,6 +510,21 @@
                 <p class="text-[13px] text-mil-textGlow leading-relaxed font-normal">Saiu uma atualização do jogo. Sua partida está salva e continua de onde parou depois de atualizar.</p>
                 <p id="lbl-versao-nova" class="text-xs text-mil-textMuted"></p>
                 <button id="btn-atualizar" onclick="atualizarAgora()" class="w-full py-2 btn-tactical rounded font-bold text-sm"><i class="fa-solid fa-rotate text-mil-amberMuted"></i> Atualizar agora</button>
+            </div>
+        </div>
+
+        <!-- CRÉDITOS: recursos livres usados no jogo -->
+        <div id="modal-creditos" class="hidden absolute inset-0 bg-black/90 z-50 flex items-center justify-center p-4" onclick="if (event.target === this) fecharCreditos()">
+            <div class="bg-mil-panel border-2 border-mil-border rounded p-4 max-w-sm w-full space-y-2 shadow-2xl max-h-[90vh] overflow-y-auto text-xs leading-relaxed">
+                <div class="text-mil-amberMuted font-bold text-sm border-b border-mil-border pb-2">CRÉDITOS</div>
+                <p class="text-mil-textGlow"><b>FrontLine</b> — jogo de Douglas.</p>
+                <p><b class="text-mil-textGlow">Símbolos militares do mapa:</b> <span class="text-mil-textMuted">milsymbol, de Måns Beckman (spatialillusions.com) — licença MIT.</span></p>
+                <p><b class="text-mil-textGlow">Efeitos sonoros:</b> <span class="text-mil-textMuted">gerados com ZzFX, de Frank Force — licença MIT.</span></p>
+                <p><b class="text-mil-textGlow">Ícones:</b> <span class="text-mil-textMuted">game-icons.net, de Lorc, Delapouite e colaboradores — licença CC BY 3.0.</span></p>
+                <p><b class="text-mil-textGlow">Medalhas:</b> <span class="text-mil-textMuted">Kenney (kenney.nl) — licença CC0 (domínio público).</span></p>
+                <p><b class="text-mil-textGlow">Músicas:</b> <span class="text-mil-textMuted">trilhas de guerra de domínio público (CC0); detalhes em assets/music/LICENSE.md.</span></p>
+                <p><b class="text-mil-textGlow">Interface:</b> <span class="text-mil-textMuted">Tailwind CSS (MIT), Font Awesome Free (ícones CC BY 4.0) e fontes Google (OFL).</span></p>
+                <div class="flex justify-end pt-1"><button onclick="fecharCreditos()" class="px-3 py-1.5 btn-tactical rounded font-bold">Fechar</button></div>
             </div>
         </div>
 
@@ -670,6 +690,7 @@
 
         function playGunshotSound() {
             if (isAudioMuted || !audioCtx) return;
+            if (typeof zzfxGerar === 'function' && typeof tocarSom === 'function') { tocarSom('tiro', 0.6); return; }
             try {
                 const bufferSize = audioCtx.sampleRate * 0.1;
                 const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
@@ -1024,6 +1045,10 @@
                     // NATO Rectangle Symbol (pisca em vermelho logo depois de ser ferido)
                     const flash = feridosRecentes.get(soldier.id) || 0;
                     if (flash > 0) feridosRecentes.set(soldier.id, flash - 1);
+                    if (desenharSimbolo(SIDC_AMIGO[soldier.class] || SIDC_AMIGO['Fuzileiro Regular'], sx, sy, 11)) {
+                        if (flash > 0 && flash % 4 < 2) { ctx.fillStyle = 'rgba(220,40,40,0.65)'; ctx.fillRect(sx - 10, sy - 7, 20, 14); }
+                        return;
+                    }
                     ctx.fillStyle = flash > 0 && flash % 4 < 2 ? '#a83232' : '#2c3e50';
                     ctx.strokeStyle = flash > 0 ? '#ff6b5b' : '#5a7356';
                     ctx.lineWidth = 1.2;
@@ -1040,8 +1065,10 @@
                     const pos = enemyFrac(enemy);
                     const ex = pos.fx * w, ey = pos.fy * h;
 
-                    // Símbolo por tipo: losango = infantaria, quadrado = patrulha, círculo = drone
-                    if (enemy.type === 'blindado') {
+                    // Símbolo militar OTAN (milsymbol); sem a biblioteca, cai nas formas simples abaixo
+                    if (desenharSimbolo(SIDC_INIMIGO[enemy.type], ex, ey, enemy.type === 'blindado' ? 20 : 15)) {
+                        // desenhado
+                    } else if (enemy.type === 'blindado') {
                         ctx.fillStyle = '#3a1f12';
                         ctx.strokeStyle = '#e07a4a';
                         ctx.lineWidth = 2;
@@ -1266,6 +1293,7 @@
         }
 
         function onNewDay() {
+            verificarMedalhas();
             const cb = gameState.combate || { tiros: 0, acertos: 0, abates: 0 };
             if (cb.tiros > 0) {
                 const resumo = `Dia ${gameState.day - 1} em combate: ${cb.tiros} tiros, ${cb.acertos} acertos (${Math.round(100 * cb.acertos / cb.tiros)}%), ${cb.abates} inimigos abatidos.`;
@@ -1453,6 +1481,7 @@
         function processSquadNeeds() {
             if (gameState.timeSeconds % 10 !== 0) return;
             processarMental();
+            gameState.squad.forEach(s => { if (s.hp > 0 && s.hp < 25) s.quaseMorreu = true; });
 
             // Desgaste natural da trincheira (mais rápido com chuva forte)
             trenchDamage(TRENCH.WEAR + (gameState.weather === 'Chuva Forte' ? TRENCH.WEAR_RAIN : 0), 'o desgaste');
@@ -1900,6 +1929,7 @@
                 const aviso = barrageWarning();
                 const alvos = escolherAlvosArtilharia();
                 gameState.barrage = { ticks: aviso, alvos };
+                tocarSom('alarme', 0.8);
                 logFeed(`💥 ARTILHARIA INIMIGA: impacto em ${seg(aviso)}s! Alvos: ${alvos.map(nomeDoAlvo).join(', ')}. Soldado marcado em Descanso fica no abrigo e leva só 30% do dano.`, 'text-red-500 font-bold');
                 playTacticalBeep(300, 0.3);
             }
@@ -1944,10 +1974,10 @@
 
         // Carga emergencial: cada item é pedido e entregue separado
         const CARGAS = {
-            rations:   { nome: 'Rações',         qtd: 20,  custo: 45, unidade: 'rações',    icone: 'fa-bowl-food' },
-            water:     { nome: 'Água',           qtd: 30,  custo: 45, unidade: 'L de água', icone: 'fa-droplet' },
-            ammoRifle: { nome: 'Munição leve',   qtd: 250, custo: 50, unidade: 'cartuchos', icone: 'fa-gun' },
-            ammoHeavy: { nome: 'Munição pesada', qtd: 60,  custo: 50, unidade: 'cartuchos pesados', icone: 'fa-burst' }
+            rations:   { nome: 'Rações',         qtd: 20,  custo: 45, unidade: 'rações',    icone: 'opened-food-can' },
+            water:     { nome: 'Água',           qtd: 30,  custo: 45, unidade: 'L de água', icone: 'water-flask' },
+            ammoRifle: { nome: 'Munição leve',   qtd: 250, custo: 50, unidade: 'cartuchos', icone: 'bullets' },
+            ammoHeavy: { nome: 'Munição pesada', qtd: 60,  custo: 50, unidade: 'cartuchos pesados', icone: 'heavy-bullets' }
         };
         const cargasACaminho = () => (gameState.cargas = gameState.cargas || {});
 
@@ -1973,7 +2003,7 @@
             if (!lista.children.length) {
                 lista.innerHTML = Object.keys(CARGAS).map(k => `
                     <div class="flex justify-between items-center gap-2">
-                        <span class="text-mil-textGlow"><i class="fa-solid ${CARGAS[k].icone} text-mil-greenMuted"></i> ${CARGAS[k].nome} <span class="text-mil-textMuted">+${CARGAS[k].qtd}</span></span>
+                        <span class="text-mil-textGlow"><span class="text-mil-greenMuted">${icone(CARGAS[k].icone)}</span> ${CARGAS[k].nome} <span class="text-mil-textMuted">+${CARGAS[k].qtd}</span></span>
                         <button id="btn-carga-${k}" onclick="requestSupport('SUPPLY', '${k}')" class="px-2 py-1 btn-tactical rounded font-bold text-xs whitespace-nowrap"></button>
                     </div>`).join('');
             }
@@ -2155,15 +2185,15 @@
              requisitar com prestígio (chega no próximo comboio).
            ========================================================================== */
         const EQUIP = {
-            metralhadora: { nome: 'Metralhadora .50', sigla: 'MG', icone: 'fa-gun', desc: 'Gasta munição pesada (~4 por segundo)' },
-            morteiro:     { nome: 'Morteiro 60 mm', sigla: 'MRT', icone: 'fa-bomb', desc: 'Fogo indireto de 60 a 300 m, atinge grupos' },
-            lancaAT:      { nome: 'Lança-rojão anticarro', sigla: 'AT', icone: 'fa-rocket', desc: 'Dispara só em blindados até 200 m' }
+            metralhadora: { nome: 'Metralhadora .50', sigla: 'MG', icone: 'machine-gun', desc: 'Gasta munição pesada (~4 por segundo)' },
+            morteiro:     { nome: 'Morteiro 60 mm', sigla: 'MRT', icone: 'mortar', desc: 'Fogo indireto de 60 a 300 m, atinge grupos' },
+            lancaAT:      { nome: 'Lança-rojão anticarro', sigla: 'AT', icone: 'rocket', desc: 'Dispara só em blindados até 200 m' }
         };
         const MUNICOES = {
-            granadaMorteiro: { nome: 'Granadas de morteiro', icone: 'fa-bomb' },
-            foguetesAT:      { nome: 'Foguetes anticarro', icone: 'fa-rocket' },
-            granadas:        { nome: 'Granadas de mão', icone: 'fa-burst' },
-            arame:           { nome: 'Rolos de arame farpado', icone: 'fa-xmarks-lines' }
+            granadaMorteiro: { nome: 'Granadas de morteiro', icone: 'artillery-shell' },
+            foguetesAT:      { nome: 'Foguetes anticarro', icone: 'rocket-flight' },
+            granadas:        { nome: 'Granadas de mão', icone: 'grenade' },
+            arame:           { nome: 'Rolos de arame farpado', icone: 'barbed-wire' }
         };
         const DEF = {
             OBRA_SOLDADO: 4, OBRA_ENGENHEIRO: 12,            // pontos de obra por ciclo de 10 s (100 = pronto)
@@ -2432,10 +2462,10 @@
                 if (p.arma && p.obra < 100) {
                     corpo = `<div class="text-red-400 font-bold">⚠️ Ninho danificado (${Math.floor(p.obra)}%): ${EQUIP[p.arma].nome} parada</div>` + (p.construindo
                         ? `<div class="text-mil-amberMuted">Em reparo · ${naManut ? `${naManut} na Manutenção trabalhando` : 'parado: ninguém na Manutenção'}</div><div class="h-1.5 bg-black/60 rounded mt-1"><div class="h-1.5 bg-mil-amberMuted rounded" style="width:${p.obra}%"></div></div>`
-                        : `<button onclick="construirPonto(${i})" class="mt-1 w-full py-1.5 btn-tactical rounded font-bold"><i class="fa-solid fa-hammer text-mil-amberMuted"></i> Reparar ninho</button>`);
+                        : `<button onclick="construirPonto(${i})" class="mt-1 w-full py-1.5 btn-tactical rounded font-bold"><span class="text-mil-amberMuted">${icone('wrench')}</span> Reparar ninho</button>`);
                 } else if (p.obra < 100 && !p.construindo) {
                     corpo = `<div class="text-mil-textMuted">Terreno livre na trincheira.</div>
-                        <button onclick="construirPonto(${i})" class="mt-1 w-full py-1.5 btn-tactical rounded font-bold"><i class="fa-solid fa-trowel-bricks text-mil-amberMuted"></i> Construir ninho</button>`;
+                        <button onclick="construirPonto(${i})" class="mt-1 w-full py-1.5 btn-tactical rounded font-bold"><span class="text-mil-amberMuted">${icone('trench-spade')}</span> Construir ninho</button>`;
                 } else if (p.obra < 100) {
                     corpo = `<div class="text-mil-amberMuted">Em obra: ${Math.floor(p.obra)}% · ${naManut ? `${naManut} na Manutenção trabalhando` : 'parada: ninguém na Manutenção'}</div>
                         <div class="h-1.5 bg-black/60 rounded mt-1"><div class="h-1.5 bg-mil-amberMuted rounded" style="width:${p.obra}%"></div></div>`;
@@ -2452,7 +2482,7 @@
                     else if (p.arma === 'morteiro' && ars.itens.granadaMorteiro < 1) { estado = 'Sem granadas de morteiro'; cor = 'text-red-400'; }
                     else if (p.arma === 'lancaAT' && ars.itens.foguetesAT < 1) { estado = 'Sem foguetes anticarro'; cor = 'text-red-400'; }
                     const opcoes = `<option value="">— sem operador —</option>` + vivos.map(s => `<option value="${s.id}" ${s.id === p.operador ? 'selected' : ''}>${s.rank} ${s.name} (${s.class})</option>`).join('');
-                    corpo = `<div class="flex justify-between items-center"><span class="text-mil-textGlow font-bold"><i class="fa-solid ${eq.icone} text-mil-amberMuted"></i> ${eq.nome}</span>
+                    corpo = `<div class="flex justify-between items-center"><span class="text-mil-textGlow font-bold"><span class="text-mil-amberMuted">${icone(eq.icone)}</span> ${eq.nome}</span>
                             <button onclick="desmontarArma(${i})" class="underline text-mil-textMuted">Desmontar</button></div>
                         <div class="text-mil-textMuted">${eq.desc}</div>
                         <div class="${cor} font-bold">${estado}</div>
@@ -2462,10 +2492,10 @@
                 return `<div class="bg-mil-bg border border-mil-border p-2 rounded space-y-0.5"><div class="text-mil-amberMuted font-bold uppercase">${p.nome}</div>${corpo}</div>`;
             }).join('');
 
-            const celula = (icone, nome, valor) => `<div class="bg-mil-bg border border-mil-border p-2 rounded flex justify-between items-center gap-1"><span class="text-mil-textMuted"><i class="fa-solid ${icone} text-mil-greenMuted"></i> ${nome}</span><span class="font-bold text-mil-textGlow">${valor}</span></div>`;
+            const celula = (ic, nome, valor) => `<div class="bg-mil-bg border border-mil-border p-2 rounded flex justify-between items-center gap-1"><span class="text-mil-textMuted"><span class="text-mil-greenMuted">${icone(ic)}</span> ${nome}</span><span class="font-bold text-mil-textGlow">${valor}</span></div>`;
             document.getElementById('def-inventario').innerHTML =
                 Object.keys(EQUIP).map(k => celula(EQUIP[k].icone, EQUIP[k].nome, ars.itens[k])).join('') +
-                celula('fa-burst', 'Munição pesada', Math.floor(gameState.resources.ammoHeavy)) +
+                celula('heavy-bullets', 'Munição pesada', Math.floor(gameState.resources.ammoHeavy)) +
                 Object.keys(MUNICOES).map(k => celula(MUNICOES[k].icone, MUNICOES[k].nome, ars.itens[k])).join('');
 
             document.getElementById('def-extras').innerHTML = `
@@ -2494,9 +2524,11 @@
             ctx.font = '11px "Courier Prime"';
             // Depósito de mantimentos
             const dx = w * DEPOSITO_X, dy = trenchY + 16;
-            ctx.fillStyle = 'rgba(40,30,15,0.95)'; ctx.strokeStyle = '#b08a4a'; ctx.lineWidth = 1.2;
-            ctx.fillRect(dx - 13, dy - 7, 26, 13); ctx.strokeRect(dx - 13, dy - 7, 26, 13);
-            ctx.fillStyle = '#d9b77a'; ctx.textAlign = 'center'; ctx.fillText('DEP', dx, dy + 4); ctx.textAlign = 'left';
+            if (!desenharSimbolo(SIDC_DEPOSITO, dx, dy, 11)) {
+                ctx.fillStyle = 'rgba(40,30,15,0.95)'; ctx.strokeStyle = '#b08a4a'; ctx.lineWidth = 1.2;
+                ctx.fillRect(dx - 13, dy - 7, 26, 13); ctx.strokeRect(dx - 13, dy - 7, 26, 13);
+                ctx.fillStyle = '#d9b77a'; ctx.textAlign = 'center'; ctx.fillText('DEP', dx, dy + 4); ctx.textAlign = 'left';
+            }
             if (ars.arame > 0) {
                 const ya = trenchY - ((DEF.ARAME.zona / 300) * (h - 60)) - 10;
                 ctx.strokeStyle = `rgba(170,170,160,${0.25 + 0.5 * ars.arame / 100})`;
@@ -2513,6 +2545,15 @@
                 ctx.strokeStyle = pronto ? (operadorAtivo(p) ? '#8fad88' : '#d9a35a') : 'rgba(217,163,90,0.6)';
                 ctx.fillStyle = 'rgba(20,28,20,0.9)';
                 if (!pronto) ctx.setLineDash([3, 3]);
+                // Ninho pronto com arma: símbolo militar da arma + sigla ao lado (borda mostra se está atirando)
+                if (pronto && p.arma && typeof ms !== 'undefined') {
+                    ctx.fillRect(x - 24, y - 10, 48, 20);
+                    ctx.strokeRect(x - 24, y - 10, 48, 20);
+                    desenharSimbolo(SIDC_ARMA[p.arma], x - 10, y, 13);
+                    ctx.fillStyle = '#cfe0c4';
+                    ctx.fillText(EQUIP[p.arma].sigla, x + 2, y + 4);
+                    return;
+                }
                 ctx.fillRect(x - 15, y - 8, 30, 15);
                 ctx.strokeRect(x - 15, y - 8, 30, 15);
                 ctx.setLineDash([]);
@@ -2996,6 +3037,7 @@
         let lastSquadSignature = '';
 
         function updateUI() {
+            preencherIcones();
             renderDefesas();
             document.getElementById('val-rations').textContent = `${Math.round(gameState.resources.rations)} un`;
             document.getElementById('val-water').textContent = `${Math.round(gameState.resources.water)} L`;
@@ -3060,7 +3102,7 @@
 
             // Lista do esquadrão: só redesenha quando algo visível muda. Redesenhar a cada
             // segundo trocava os botões no meio do toque e o celular perdia o clique.
-            const assinatura = JSON.stringify(gameState.squad.map(s => [Math.round(s.hp), Math.round(s.fatigue), Math.round(s.hunger), Math.round(s.thirst), Math.round(s.moral), s.duty, !!s.deserted, s.mental && s.mental.tipo, s.mental && s.mental.ciclos, soldadoMarcado(s)]));
+            const assinatura = JSON.stringify(gameState.squad.map(s => [Math.round(s.hp), Math.round(s.fatigue), Math.round(s.hunger), Math.round(s.thirst), Math.round(s.moral), s.duty, !!s.deserted, s.mental && s.mental.tipo, s.mental && s.mental.ciclos, soldadoMarcado(s), (s.medalhas || []).join()]));
             if (assinatura === lastSquadSignature) return;
             lastSquadSignature = assinatura;
             const squadContainer = document.getElementById('squad-list');
@@ -3076,7 +3118,7 @@
                         <div onclick="abrirPerfil(${soldier.id})" class="cursor-pointer flex items-center gap-2" title="Ver perfil">
                             <div class="w-8 h-9 shrink-0 rounded-sm overflow-hidden border border-mil-borderDark bg-black ${hp <= 0 ? 'grayscale' : ''}">${retrato(soldier.id)}</div>
                             <div>
-                            <span class="font-bold ${hp <= 0 ? 'line-through text-red-500' : 'text-mil-textGlow'}">${soldier.rank} ${soldier.name}</span> <i class="fa-solid fa-id-card text-[10px] text-mil-textMuted"></i>
+                            <span class="font-bold ${hp <= 0 ? 'line-through text-red-500' : 'text-mil-textGlow'}">${soldier.rank} ${soldier.name}</span> <i class="fa-solid fa-id-card text-[10px] text-mil-textMuted"></i>${(soldier.medalhas || []).map(id => ' ' + imgMedalha(id, 16)).join('')}
                             <span class="text-xs text-mil-textMuted block uppercase">${soldier.class} · <span class="normal-case text-mil-amberMuted">${(PERFIS[soldier.id] && PERFIS[soldier.id].traco) ? PERFIS[soldier.id].traco.nome : ''}</span></span>
                             ${hp > 0 && mentalDe(soldier) ? `<span class="text-xs font-bold ${mentalDe(soldier) === 'heroismo' ? 'text-mil-greenMuted' : 'text-red-400'}">${ROTULO_MENTAL[mentalDe(soldier)]} ${seg(soldier.mental.ciclos * 10)}s</span>` : ''}
                             ${hp > 0 && soldadoMarcado(soldier) ? `<span class="text-xs font-bold text-red-400 animate-pulse block">🎯 ALVO DA ARTILHARIA${soldier.duty === 'REST' ? ' · no abrigo' : ' · ponha em Descanso'}</span>` : ''}
@@ -3168,6 +3210,7 @@
                 logFeed(`😶 ${s.rank} ${s.name} ficou apático: atira e trabalha pela metade.`, 'text-mil-amberMuted font-bold');
             } else {
                 s.moral = Math.min(100, s.moral + MENTAL.HEROISMO_MORAL);
+                concederMedalha(s, 'bravura');
                 logFeed(`🔥 ${s.rank} ${s.name} entrou em fúria heroica: atira mais e acerta muito mais por alguns segundos!`, 'text-mil-greenMuted font-bold');
             }
             playTacticalBeep(tipo === 'heroismo' ? 1100 : 250, 0.2);
@@ -3197,7 +3240,7 @@
         function impacto(tipo) {
             if (tipo === 'artilharia') { tremer(7, 450); vibrar(90); somExplosao(1); }
             else if (tipo === 'deposito') { tremer(5, 350); vibrar([60, 40, 60]); somExplosao(0.8); }
-            else if (tipo === 'morte') { tremer(4, 300); vibrar([200, 80, 200]); addEffect('morte', 0.5, 0.5); }
+            else if (tipo === 'morte') { tremer(4, 300); vibrar([200, 80, 200]); addEffect('morte', 0.5, 0.5); tocarSom('queda', 0.8); }
             else if (tipo === 'blindado') { tremer(8, 600); vibrar([150, 60, 150]); somExplosao(1.2); }
             else if (tipo === 'morteiro') { tremer(2, 200); somMorteiro(); }
             else if (tipo === 'anticarro') { tremer(4, 300); somAnticarro(); }
@@ -3229,10 +3272,10 @@
                 o.connect(g); g.connect(audioCtx.destination); o.start(t0); o.stop(t0 + dur);
             } catch (e) {}
         }
-        function somExplosao(forca) { ruido(0.9 * forca, 900, 40, 0.35 * forca); tom('sine', 90, 30, 0.6 * forca, 0.4 * forca); }
-        function somMetralhadora() { for (let i = 0; i < 3; i++) ruido(0.05, 2500, 400, 0.12, i * 0.07); }
-        function somMorteiro() { tom('sine', 1400, 500, 0.5, 0.05); ruido(0.6, 700, 50, 0.25, 0.5); tom('sine', 70, 30, 0.4, 0.3, 0.5); }
-        function somAnticarro() { ruido(0.35, 4000, 600, 0.15); ruido(0.8, 1000, 40, 0.35, 0.3); tom('sine', 80, 25, 0.5, 0.4, 0.3); }
+        function somExplosao(forca) { tocarSom('explosao', forca); }
+        function somMetralhadora() { tocarSom('rajada', 0.8); }
+        function somMorteiro() { tocarSom('assobio', 0.7); tocarSom('explosao', 0.6, 0.45); }
+        function somAnticarro() { tocarSom('foguete', 0.8); tocarSom('explosao', 0.9, 0.3); }
         // Rastro de um tiro do soldado até o alvo (só alguns, para não poluir o mapa)
         function rastro(s, alvo, cor) {
             if (Math.random() > 0.25 || gameState.effects.filter(e => e.type === 'rastro').length > 10) return;
@@ -3254,6 +3297,99 @@
                 ctx.moveTo(x, y - 18); ctx.lineTo(x, y - 8); ctx.moveTo(x, y + 8); ctx.lineTo(x, y + 18); ctx.stroke();
             });
         }
+
+
+        /* ===== Símbolos militares OTAN no mapa (milsymbol, licença MIT) ===== */
+        const SIDC_INIMIGO = { infantaria: 'SHGPUCI----', patrulha: 'SHGPUCR----', drone: 'SHAPMFQ----', blindado: 'SHGPUCA----' };
+        const SIDC_AMIGO = { 'Fuzileiro Regular': 'SFGPUCI----', 'Metralhador': 'SFGPUCI----', 'Atirador de Elite': 'SFGPUCI----', 'Médico': 'SFGPUSM----', 'Engenheiro': 'SFGPUCE----' };
+        const SIDC_ARMA = { metralhadora: 'SFGPEWRH---', morteiro: 'SFGPEWOL---', lancaAT: 'SFGPEWTL---' };
+        const SIDC_DEPOSITO = 'SFGPUSS----';
+        const cacheSimbolos = {};
+        // Desenha o símbolo centrado em (x, y). Devolve false se a biblioteca não carregou.
+        function desenharSimbolo(sidc, x, y, tamanho) {
+            if (typeof ms === 'undefined' || !sidc) return false;
+            const chave = sidc + '|' + tamanho;
+            let c = cacheSimbolos[chave];
+            if (!c) {
+                try {
+                    const sim = new ms.Symbol(sidc, { size: tamanho, outlineWidth: 2, outlineColor: 'rgba(0,0,0,0.85)' });
+                    c = cacheSimbolos[chave] = { img: sim.asCanvas(), anc: sim.getAnchor(), esc: 1 };
+                } catch (e) { return false; }
+            }
+            ctx.drawImage(c.img, x - c.anc.x, y - c.anc.y, c.img.width * c.esc, c.img.height * c.esc);
+            return true;
+        }
+
+        /* ===== Sons com ZzFX (licença MIT): gerados uma vez e tocados pelo áudio do jogo ===== */
+        // Parâmetros: volume, aleatório, frequência, ataque, sustentação, liberação, forma, curva, deslize,
+        //             delta, salto, tempo do salto, repetição, ruído, modulação, bitcrush, atraso, volume sust., decaimento, tremolo
+        const SONS = {
+            tiro:        [.7, .05, 180, 0, .01, .12, 4, 2.5, -5, 0, 0, 0, 0, 1.5, 0, .4, 0, .5, .05],
+            rajada:      [.9, .05, 120, 0, .25, .08, 4, 2, -3, 0, 0, 0, .08, 1, 0, .3, 0, .7, .02, .6],
+            explosao:    [1.4, .1, 60, .01, .15, 1.1, 4, 1.6, 0, 0, 0, 0, 0, 1, 0, .6, 0, .45, .15],
+            assobio:     [.35, 0, 1400, .05, .35, .1, 0, 1, -25],
+            foguete:     [.6, .1, 500, .05, .25, .2, 4, 1, -8, 0, 0, 0, 0, 2.5, 0, 0, 0, .6],
+            alarme:      [.4, 0, 600, .02, .25, .1, 1, 1, 0, 0, 200, .12],
+            queda:       [.9, 0, 80, 0, .1, .5, 0, 1, -2, 0, 0, 0, 0, 0, 0, 0, 0, .3]
+        };
+        const cacheSons = {};
+        function tocarSom(nome, volume = 1, atraso = 0) {
+            if (isAudioMuted || !audioCtx || typeof zzfxGerar !== 'function' || !SONS[nome]) return;
+            try {
+                let lista = cacheSons[nome];
+                if (!lista) lista = cacheSons[nome] = [];
+                if (lista.length < 3) { // até 3 variações de cada som (o ZzFX sorteia um pouco a cada geração)
+                    const amostras = zzfxGerar(...SONS[nome]);
+                    const buf = audioCtx.createBuffer(1, amostras.length, 44100);
+                    buf.getChannelData(0).set(amostras);
+                    lista.push(buf);
+                }
+                const src = audioCtx.createBufferSource();
+                src.buffer = lista[Math.floor(Math.random() * lista.length)];
+                const g = audioCtx.createGain(); g.gain.value = volume;
+                src.connect(g); g.connect(audioCtx.destination);
+                src.start(audioCtx.currentTime + atraso);
+            } catch (e) {}
+        }
+
+        // Ícones do game-icons nos elementos marcados com data-icone
+        function preencherIcones() {
+            if (typeof icone !== 'function') return;
+            document.querySelectorAll('[data-icone]').forEach(el => { if (!el.innerHTML) el.innerHTML = icone(el.dataset.icone); });
+        }
+
+        /* ===== Medalhas (Kenney, CC0) ===== */
+        const MEDALHAS = {
+            combate:    { nome: 'Cruz de Combate',              img: 'shaded_medal6.png', desc: '15 inimigos abatidos' },
+            ferido:     { nome: 'Medalha de Ferido em Combate', img: 'shaded_medal3.png', desc: 'sobreviveu depois de ficar com menos de 25% de vida' },
+            trincheira: { nome: 'Medalha da Trincheira',        img: 'shaded_medal4.png', desc: 'chegou vivo ao dia 15' },
+            bravura:    { nome: 'Estrela de Bravura',           img: 'shaded_medal8.png', desc: 'entrou em fúria heroica' }
+        };
+        function medalhaDaVitoria(nivel) {
+            return nivel >= 25 ? 'shaded_medal1.png' : nivel >= 17 ? 'shaded_medal8.png' : nivel >= 9 ? 'shaded_medal7.png' : 'shaded_medal2.png';
+        }
+        function concederMedalha(s, id) {
+            if (!s || s.hp <= 0 || !MEDALHAS[id]) return;
+            s.medalhas = s.medalhas || [];
+            if (s.medalhas.includes(id)) return;
+            s.medalhas.push(id);
+            const m = MEDALHAS[id];
+            logFeed(`🎖️ ${s.rank} ${s.name} recebeu a ${m.nome} (${m.desc}).`, 'text-mil-amberMuted font-bold');
+            addDiaryEntry(`${s.rank} ${s.name} foi condecorado com a ${m.nome}: ${m.desc}.`);
+            playTacticalBeep(1200, 0.15);
+        }
+        function verificarMedalhas() {
+            gameState.squad.forEach(s => {
+                if (s.hp <= 0) return;
+                if (s.stats && s.stats.abates >= 15) concederMedalha(s, 'combate');
+                if (s.quaseMorreu) concederMedalha(s, 'ferido');
+                if (gameState.day >= 15) concederMedalha(s, 'trincheira');
+            });
+        }
+        const imgMedalha = (id, altura = 28) => `<img src="${musicBase}assets/medals/${MEDALHAS[id].img}" alt="${MEDALHAS[id].nome}" title="${MEDALHAS[id].nome}: ${MEDALHAS[id].desc}" style="height:${altura}px;display:inline-block;image-rendering:pixelated">`;
+
+        function abrirCreditos() { document.getElementById('modal-creditos').classList.remove('hidden'); perfilAberto = true; }
+        function fecharCreditos() { document.getElementById('modal-creditos').classList.add('hidden'); perfilAberto = false; }
 
         function setSoldierDuty(id, duty) {
             const soldier = gameState.squad.find(s => s.id === id);
@@ -3388,7 +3524,7 @@
                 const nivel = gameState.level;
                 const proximo = Math.min(MAX_LEVEL, nivel + 1);
                 saveLevel(proximo);
-                endGame('🎖️', 'VITÓRIA DA REPÚBLICA', 'text-mil-greenMuted',
+                endGame(`<img src="${musicBase}assets/medals/${medalhaDaVitoria(nivel)}" alt="Medalha" class="mx-auto" style="height:96px;image-rendering:pixelated">`, 'VITÓRIA DA REPÚBLICA', 'text-mil-greenMuted',
                     `Você manteve a trincheira Alpha por 30 dias no nível ${nivel}! ` +
                     (nivel < MAX_LEVEL ? `Próxima operação: nível ${proximo}, mais difícil.` : 'Você venceu o nível máximo.'));
             }
@@ -3682,6 +3818,7 @@
             const st = statsDe(s);
             document.getElementById('perfil-dados').innerHTML += `<br>Em combate: ${st.tiros} tiros · ${st.acertos} acertos${st.tiros ? ` (${Math.round(100 * st.acertos / st.tiros)}%)` : ''} · ${st.abates} abates`;
             document.getElementById('perfil-dados').innerHTML += `<br><span class="text-mil-amberMuted">Traço: ${p.traco.nome}</span> — ${p.traco.desc}`;
+            document.getElementById('perfil-dados').innerHTML += (s.medalhas || []).length ? `<div class="mt-1 flex gap-1 items-end">${s.medalhas.map(id => imgMedalha(id, 30)).join('')}</div>` : '';
             document.getElementById('perfil-historia').textContent = p.historia;
             document.getElementById('perfil-frase').textContent = p.frase;
             document.getElementById('modal-perfil').classList.remove('hidden');
