@@ -1269,20 +1269,23 @@
                 // sem entrega hoje
             } else if (gameState.supplyLineEff > 30) {
                 const sm = diff().supplyMult;
-                const delRations = Math.floor(10 * sm * comidaDoNivel() * (gameState.supplyLineEff / 100));
+                const delRations = Math.floor(20 * sm * comidaDoNivel() * (gameState.supplyLineEff / 100));
                 const delWater = Math.floor(15 * sm * comidaDoNivel() * (gameState.supplyLineEff / 100));
-                const delAmmo = Math.floor(120 * sm * (gameState.supplyLineEff / 100));
+                const delAmmo = Math.floor(700 * sm * (gameState.supplyLineEff / 100));
+                const delHeavy = Math.floor(80 * sm * (gameState.supplyLineEff / 100)); // munição pesada (~40 no nível 1)
 
                 // Sem ninguém fora da vigília para descarregar, metade da carga se perde
                 const recebida = supplyReceivers() > 0 ? 1 : 0.5;
-                const r1 = Math.floor(delRations * recebida), w1 = Math.floor(delWater * recebida), a1 = Math.floor(delAmmo * recebida);
+                const r1 = Math.floor(delRations * recebida), w1 = Math.floor(delWater * recebida), a1 = Math.floor(delAmmo * recebida), h1 = Math.floor(delHeavy * recebida);
                 gameState.resources.rations += r1;
                 gameState.resources.water += w1;
                 const a1Real = addAmmoRifle(a1);
+                const h1Real = addAmmoHeavy(h1);
+                const pesada = ` +${h1Real} Mun. Pesada${h1Real < h1 ? ' (paiol cheio)' : ''}`;
                 if (recebida < 1) {
-                    logFeed(`📦 Comboio chegou sem ninguém para descarregar (todos de vigília): metade da carga se perdeu. Recebido: +${r1} Rações, +${w1}L Água, +${a1Real} Mun.${a1Real < a1 ? ' (paiol cheio)' : ''}`, 'text-red-400 font-bold');
+                    logFeed(`📦 Comboio chegou sem ninguém para descarregar (todos de vigília): metade da carga se perdeu. Recebido: +${r1} Rações, +${w1}L Água, +${a1Real} Mun.${a1Real < a1 ? ' (paiol cheio)' : ''},${pesada}`, 'text-red-400 font-bold');
                 } else {
-                    logFeed(`Suprimentos entregues: +${r1} Rações, +${w1}L Água, +${a1Real} Mun.${a1Real < a1 ? ' (paiol cheio)' : ''}`, 'text-mil-greenMuted');
+                    logFeed(`Suprimentos entregues: +${r1} Rações, +${w1}L Água, +${a1Real} Mun.${a1Real < a1 ? ' (paiol cheio)' : ''},${pesada}`, 'text-mil-greenMuted');
                 }
                 addEffect('convoy', 0, 0);
             } else {
@@ -1483,6 +1486,11 @@
         };
 
         // Entrada de munição leve respeitando a capacidade do paiol; devolve o que coube
+        function addAmmoHeavy(qtd) {
+            const antes = gameState.resources.ammoHeavy;
+            gameState.resources.ammoHeavy = Math.min(PRESSURE.AMMO_CAP_HEAVY, antes + qtd);
+            return Math.max(0, Math.round(gameState.resources.ammoHeavy - antes));
+        }
         function addAmmoRifle(qtd) {
             const antes = gameState.resources.ammoRifle;
             gameState.resources.ammoRifle = Math.min(PRESSURE.AMMO_CAP_RIFLE, antes + qtd);

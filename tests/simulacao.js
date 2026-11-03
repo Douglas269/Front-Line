@@ -267,7 +267,10 @@ async function run() {
     const rAntes2 = gameState.resources.rations; endTurn(); const recebidoVigilia = gameState.resources.rations - rAntes2;
     gameState.squad[2].duty = 'REST';
     gameState.day = 5; // o próximo dia (6) tem comboio
+    gameState.resources.ammoHeavy = 100; gameState.resources.ammoRifle = 100;
     const rAntes3 = gameState.resources.rations; endTurn(); const recebidoNormal = gameState.resources.rations - rAntes3;
+    c.comboioTrazMunicaoPesada = gameState.resources.ammoHeavy > 100;
+    c.comboioTrazMaisMunicao = gameState.resources.ammoRifle - 100 >= 250;
     // Comboio a cada 2 dias: num dia ímpar não chega nada
     gameState.day = 6; const rAntes4 = gameState.resources.rations; endTurn();
     c.comboioACada2Dias = gameState.resources.rations === rAntes4 && proximoComboio() === 8;
