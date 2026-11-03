@@ -541,6 +541,7 @@
                 <p><b class="text-mil-textGlow">Símbolos militares do mapa:</b> <span class="text-mil-textMuted">milsymbol, de Måns Beckman (spatialillusions.com) — licença MIT.</span></p>
                 <p><b class="text-mil-textGlow">Efeitos sonoros:</b> <span class="text-mil-textMuted">gerados com ZzFX, de Frank Force — licença MIT.</span></p>
                 <p><b class="text-mil-textGlow">Ícones:</b> <span class="text-mil-textMuted">game-icons.net, de Lorc, Delapouite e colaboradores — licença CC BY 3.0.</span></p>
+                <p><b class="text-mil-textGlow">Explosões, fumaça, clarões e vapor:</b> <span class="text-mil-textMuted">"Smoke Particle Assets", de Kenney (kenney.nl) — licença CC0.</span></p>
                 <p><b class="text-mil-textGlow">Medalhas:</b> <span class="text-mil-textMuted">Kenney (kenney.nl) — licença CC0 (domínio público).</span></p>
                 <p><b class="text-mil-textGlow">Músicas:</b> <span class="text-mil-textMuted">trilhas de guerra de domínio público (CC0); detalhes em assets/music/LICENSE.md.</span></p>
                 <p><b class="text-mil-textGlow">Interface:</b> <span class="text-mil-textMuted">Tailwind CSS (MIT), Font Awesome Free (ícones CC BY 4.0) e fontes Google (OFL).</span></p>
@@ -3694,6 +3695,7 @@
         let soldadoSelecionado = 1;
         let arrasto = null;            // { id, x, y, moveu } enquanto arrasta um soldado
         let posicoesCena = {};         // id do soldado -> { x, y } (atualizado a cada quadro)
+        const animPos = {};            // posição animada de cada soldado (para caminhar entre cômodos)
         const cenaEfeitos = [];        // explosões, fogo, abates e flashes na cena
         const modoCorte = () => (typeof CONFIG !== 'undefined' && CONFIG.visual === 'corte');
 
@@ -3866,14 +3868,14 @@
             });
             if (!prontos.length) txtC(C.ninhos.x + C.ninhos.w / 2, C.ninhos.y + 40, 'sem armas', '#8a8a7a', 7, 400, 'center');
             const emObra = ars.posicoes.filter(p => p.obra > 0 && p.obra < 100);
-            emObra.slice(0, 1).forEach(p => txtC(C.ninhos.x + C.ninhos.w / 2, C.ninhos.y + 24, `obra ${Math.floor(p.obra)}%`, '#d9a35a', 6.5, 700, 'center'));
             // cozinha: fogareiro com vapor
             const cz = C.cozinha;
             cctx.fillStyle = '#3b3b33'; cctx.fillRect(cz.x + 46, cz.y + 58, 26, 14);
             cctx.fillStyle = '#555'; cctx.fillRect(cz.x + 50, cz.y + 49, 16, 9);
             cctx.fillStyle = ['#e0882b', '#f0a040', '#d06a20'][Math.floor(t / 120) % 3]; cctx.beginPath(); cctx.arc(cz.x + 59, cz.y + 76, 3, 0, Math.PI * 2); cctx.fill();
-            cctx.strokeStyle = 'rgba(220,220,210,0.45)'; cctx.lineWidth = 1.4;
-            for (let k = 0; k < 2; k++) {
+            if (atlasPronto) for (let k = 0; k < 2; k++) { const kk = ((t / 1400) + k * 0.5) % 1; quadroAnimado('vapor', kk, cz.x + 57 + Math.sin(t / 600 + k) * 3, cz.y + 44 - kk * 22, 14 + kk * 10, 0.5 * (1 - kk)); }
+            else cctx.strokeStyle = 'rgba(220,220,210,0.45)'; cctx.lineWidth = 1.4;
+            for (let k = 0; k < (atlasPronto ? 0 : 2); k++) {
                 const ox = cz.x + 54 + k * 6, sub = (t / 25 + k * 10) % 18;
                 cctx.beginPath(); cctx.moveTo(ox, cz.y + 47 - sub * 0.2); cctx.quadraticCurveTo(ox + 4, cz.y + 40 - sub * 0.5, ox, cz.y + 30 - sub * 0.6); cctx.stroke();
             }
@@ -3895,9 +3897,7 @@
                 cctx.fillStyle = '#6b4f33'; cctx.fillRect(x, y, 54, 5); cctx.fillRect(x, y + 28, 54, 5);
                 cctx.fillStyle = '#4e3924'; cctx.fillRect(x, y - 8, 4, 46); cctx.fillRect(x + 50, y - 8, 4, 46);
             }
-            const brilho = 0.75 + 0.25 * Math.sin(t / 300);
-            cctx.fillStyle = `rgba(255,204,102,${brilho})`; cctx.beginPath(); cctx.arc(ab.x + ab.w - 16, ab.y + 22, 4, 0, Math.PI * 2); cctx.fill();
-            txtC(ab.x + ab.w / 2, ab.y + ab.h - 7, 'leva 30% da artilharia', '#8fad88', 7, 400, 'center');
+            txtC(ab.x + ab.w - 6, ab.y + ab.h - 8, 'leva 30% da artilharia', '#8fad88', 6.5, 400, 'right');
             // oficina: bancada
             const of = C.oficina;
             cctx.fillStyle = '#6b4f33'; cctx.fillRect(of.x + 70, of.y + 60, 90, 7);
@@ -3905,6 +3905,33 @@
             cctx.fillStyle = '#777'; cctx.fillRect(of.x + 90, of.y + 50, 10, 10);
             const obra = arsenalDe().posicoes.find(p => p.construindo);
             txtC(of.x + of.w / 2 + 20, of.y + 30, obra ? `obra: ${obra.nome.toLowerCase()} ${Math.floor(obra.obra)}%` : `reparando trincheira ${Math.round(gameState.trench)}%`, '#d9a35a', 7, 700, 'center');
+            // lamparinas penduradas: luz quente no chão de cada cômodo (mais forte à noite)
+            const noite = periodoDoDia() >= 2;
+            ['posto', 'cozinha', 'abrigo', 'oficina', 'ninhos'].forEach((k, i) => {
+                const c = C[k], lx = c.x + c.w * (k === 'abrigo' ? 0.86 : 0.72), ly = c.y + 20;
+                const pisca = 0.9 + 0.1 * Math.sin(t / 170 + i * 2) + (Math.random() < 0.02 ? -0.25 : 0);
+                const g = cctx.createRadialGradient(lx, ly + 10, 2, lx, ly + 30, c.w * 0.75);
+                g.addColorStop(0, `rgba(255,190,100,${(noite ? 0.30 : 0.14) * pisca})`); g.addColorStop(1, 'rgba(255,190,100,0)');
+                cctx.fillStyle = g; cctx.fillRect(c.x, c.y, c.w, c.h);
+                cctx.strokeStyle = '#2a2018'; cctx.lineWidth = 0.7; cctx.beginPath(); cctx.moveTo(lx, c.y + 2); cctx.lineTo(lx, ly - 3); cctx.stroke();
+                cctx.fillStyle = '#3a3a30'; cctx.fillRect(lx - 2, ly - 3, 4, 2);
+                cctx.fillStyle = `rgba(255,214,130,${pisca})`; cctx.beginPath(); cctx.arc(lx, ly + 1, 2.2, 0, Math.PI * 2); cctx.fill();
+            });
+            // posto: periscópio e caixas de munição
+            cctx.strokeStyle = '#2a2a24'; cctx.lineWidth = 2; cctx.beginPath(); cctx.moveTo(C.posto.x + 128, C.posto.y + 68); cctx.lineTo(C.posto.x + 128, C.posto.y - 14); cctx.lineTo(C.posto.x + 133, C.posto.y - 14); cctx.stroke();
+            [[C.posto.x + 6, C.posto.y + 58], [C.posto.x + 6, C.posto.y + 49]].forEach(([x, y]) => { cctx.fillStyle = '#4e5a38'; cctx.fillRect(x, y, 12, 8); cctx.fillStyle = '#d9c27a'; cctx.fillRect(x + 4, y + 3, 4, 2); });
+            // cozinha: prateleira com latas
+            cctx.fillStyle = '#4e3924'; cctx.fillRect(cz.x + 6, cz.y + 26, 30, 2);
+            for (let k = 0; k < 4; k++) { cctx.fillStyle = ['#7a7a70', '#8a5a3a', '#7a7a70', '#5a6a4a'][k]; cctx.fillRect(cz.x + 8 + k * 7, cz.y + 20, 5, 6); }
+            // abrigo: fotos na parede e capacete pendurado
+            [[ab.x + 16, ab.y + 16], [ab.x + 82, ab.y + 18]].forEach(([x, y]) => { cctx.fillStyle = '#d8ccb0'; cctx.fillRect(x, y, 8, 10); cctx.fillStyle = '#6a5a48'; cctx.fillRect(x + 1.5, y + 1.5, 5, 6); });
+            cctx.fillStyle = '#3e4a33'; cctx.beginPath(); cctx.ellipse(ab.x + 150, ab.y + 24, 6, 4, 0, Math.PI, 0); cctx.fill(); cctx.fillRect(ab.x + 143, ab.y + 24, 14, 1.5);
+            // oficina: ferramentas na parede e tábuas encostadas
+            cctx.strokeStyle = '#6a6a60'; cctx.lineWidth = 1.5;
+            cctx.beginPath(); cctx.moveTo(of.x + 18, of.y + 18); cctx.lineTo(of.x + 18, of.y + 50); cctx.stroke(); cctx.fillStyle = '#6a6a60'; cctx.fillRect(of.x + 15, of.y + 48, 6, 8); // pá
+            cctx.fillStyle = '#8a8a80'; cctx.fillRect(of.x + 28, of.y + 22, 14, 4); cctx.fillStyle = '#5a4128'; cctx.fillRect(of.x + 40, of.y + 21, 5, 6); // serrote
+            cctx.fillStyle = '#7a5a38'; cctx.save(); cctx.translate(of.x + 52, of.y + 92); cctx.rotate(-0.18); cctx.fillRect(0, -44, 5, 44); cctx.fillRect(7, -40, 5, 40); cctx.restore();
+
             // escadas entre os andares
             [[140, 246, 282], [300, 246, 282]].forEach(([x, y1, y2]) => {
                 cctx.strokeStyle = '#6b4f33'; cctx.lineWidth = 2;
@@ -3914,10 +3941,207 @@
             });
         }
 
+
+        /* ===== Bonecos articulados e efeitos animados da cena =====
+           Partes do soldado: "WW2 soldier spritesheet" (OpenGameArt, CC0).
+           Explosão, fumaça, clarão e vapor: "Smoke Particle Assets" de Kenney (CC0).
+           Tudo junto em assets/cena/atlas.png; o mapa das peças fica em ATLAS_CENA. */
+        const ATLAS_CENA = {"explosao0":[0,0,64,59],"explosao1":[66,0,64,59],"explosao2":[132,0,64,54],"explosao3":[198,0,58,64],"explosao4":[258,0,62,64],"explosao5":[322,0,64,61],"explosao6":[388,0,63,64],"explosao7":[453,0,64,53],"explosao8":[519,0,64,63],"fumaca0":[0,66,64,59],"fumaca1":[66,66,61,64],"fumaca2":[129,66,58,64],"fumaca3":[189,66,60,64],"fumaca4":[251,66,64,62],"fumaca5":[317,66,64,63],"fumaca6":[383,66,64,60],"fumaca7":[449,66,63,64],"fumaca8":[514,66,64,60],"clarao0":[0,132,64,58],"clarao1":[66,132,61,64],"clarao2":[129,132,64,60],"clarao3":[195,132,60,64],"clarao4":[257,132,62,64],"clarao5":[321,132,63,64],"clarao6":[386,132,54,64],"clarao7":[442,132,64,61],"clarao8":[508,132,61,64],"vapor0":[0,198,64,58],"vapor1":[66,198,59,64],"vapor2":[127,198,64,61],"vapor3":[193,198,58,64],"vapor4":[253,198,58,64],"vapor5":[313,198,64,61],"vapor6":[379,198,63,64],"vapor7":[444,198,63,64],"vapor8":[509,198,64,63]};
+        const atlasImg = new Image();
+        let atlasPronto = false;
+        atlasImg.onload = () => { atlasPronto = true; };
+        atlasImg.src = musicBase + 'assets/cena/atlas.png';
+        const disparosCena = {};               // id do soldado -> instante do último tiro (recuo da arma)
+
+        // Quadro de uma sequência animada (explosão, fumaça, clarão, vapor): k de 0 a 1
+        function quadroAnimado(seq, k, px, py, tamanho, alfa = 1) {
+            const i = Math.min(8, Math.max(0, Math.floor(k * 9)));
+            const q = ATLAS_CENA[seq + i];
+            if (!q || !atlasPronto) return;
+            const [x, y, w, h] = q, f = tamanho / Math.max(w, h);
+            cctx.globalAlpha = alfa;
+            cctx.drawImage(atlasImg, x, y, w, h, px - w * f / 2, py - h * f / 2, w * f, h * f);
+            cctx.globalAlpha = 1;
+        }
+        /* ===== Soldados em silhueta (desenhados pelo jogo, sem imagens) =====
+           Vistos de lado, virados para o inimigo (direita). Cada pose posiciona pés e mãos;
+           joelhos e cotovelos são calculados (cinemática inversa), então os movimentos saem naturais.
+           Contorno iluminado pela lamparina; detalhes por função (braçadeira da médica, pá do engenheiro,
+           luneta da atiradora, metralhadora do metralhador). */
+        const OSSOS = { coxa: 10, canela: 10, braco: 7.5, antebraco: 7, tronco: 15 };
+        // Joelho/cotovelo entre a origem e o alvo (dobra para frente ou para trás)
+        function articular(ox, oy, tx, ty, l1, l2, dobra) {
+            let dx = tx - ox, dy = ty - oy, d = Math.hypot(dx, dy);
+            if (d > l1 + l2 - 0.01) { const f = (l1 + l2 - 0.01) / d; tx = ox + dx * f; ty = oy + dy * f; dx = tx - ox; dy = ty - oy; d = l1 + l2 - 0.01; }
+            const a = Math.atan2(dy, dx), cosA = Math.max(-1, Math.min(1, (l1 * l1 + d * d - l2 * l2) / (2 * l1 * d)));
+            const ang = a + dobra * Math.acos(cosA);
+            return { mx: ox + Math.cos(ang) * l1, my: oy + Math.sin(ang) * l1, tx, ty };
+        }
+        function segmento(c, pontos, larg) {
+            c.lineWidth = larg; c.beginPath(); c.moveTo(pontos[0], pontos[1]);
+            for (let i = 2; i < pontos.length; i += 2) c.lineTo(pontos[i], pontos[i + 1]);
+            c.stroke();
+        }
+
+        // Pose -> posições (em relação ao ponto entre os pés), conforme a função e o tempo
+        function montarPose(s, pose, t) {
+            const fase = t / 1000 + s.id * 0.37;
+            const resp = Math.sin(fase * 1.9) * 0.35;
+            const recuo = Math.max(0, 1 - (t - (disparosCena[s.id] || -1e9)) / 140);
+            const P = { quadril: [0, -19.5], inclina: 0.05, peTras: [-4, 0], peFrente: [4, 0], maoTras: null, maoFrente: null, cabeca: 0, arma: null, capacete: true, item: null };
+            if (pose === 'mira' || pose === 'ninho') {
+                const ninho = pose === 'ninho';
+                P.quadril = [0, ninho ? -17 : -19.5]; P.inclina = 0.22; P.peTras = [-6, 0]; P.peFrente = [5, 0];
+                const ang = -0.38 - recuo * 0.14 + Math.sin(fase * 0.9) * 0.02;
+                const ombro = { x: P.quadril[0] + Math.sin(P.inclina) * OSSOS.tronco + 1.5, y: P.quadril[1] - Math.cos(P.inclina) * OSSOS.tronco + 2 + resp };
+                const coronha = [ombro.x - 1 - recuo * 1.8, ombro.y + 0.5], dir = [Math.cos(ang), Math.sin(ang)];
+                const comp = ninho ? 22 : (s.class === 'Atirador de Elite' ? 28 : 25);
+                P.arma = { x: coronha[0], y: coronha[1], ang, comp, tipo: ninho ? 'mg' : (s.class === 'Atirador de Elite' ? 'luneta' : 'fuzil') };
+                P.maoFrente = [coronha[0] + dir[0] * comp * 0.52, coronha[1] + dir[1] * comp * 0.52 + 0.6];
+                P.maoTras = [coronha[0] + dir[0] * comp * 0.16, coronha[1] + dir[1] * comp * 0.16 + 1];
+                P.cabeca = -0.12;
+            } else if (pose === 'come') {
+                P.quadril = [-2, -10.5]; P.inclina = -0.02; P.peTras = [5, 0]; P.peFrente = [8, 0]; P.capacete = false;
+                const k = (Math.sin(fase * 2.4) + 1) / 2;                 // tigela -> boca
+                P.maoFrente = [4 + k * 1, -16 - k * 13]; P.maoTras = [5, -15.5];
+                P.item = 'tigela'; P.cabeca = 0.08 - k * 0.06;
+            } else if (pose === 'trabalho') {
+                P.quadril = [0, -19]; P.inclina = 0.32; P.peTras = [-5, 0]; P.peFrente = [4, 0];
+                const g = Math.sin(fase * 7);                              // marteladas
+                P.maoFrente = [11 + g * 1.5, -24 + g * 5]; P.maoTras = [12, -17];
+                P.item = 'martelo'; P.anguloMartelo = -0.9 + g * 0.8; P.cabeca = 0.2;
+            } else if (pose === 'panico') {
+                const tremor = Math.sin(t / 28) * 0.6;
+                P.quadril = [-3 + tremor, -4]; P.inclina = 0.45; P.peTras = [6, 0]; P.peFrente = [9, 0];
+                P.maoFrente = [3 + tremor, -24]; P.maoTras = [0 + tremor, -25];       // mãos na cabeça
+                P.cabeca = 0.35;
+            } else if (pose === 'arrastado' || pose === 'andando') {
+                const ph = t / 130 + s.id;
+                P.quadril = [0, -19.5 + Math.abs(Math.sin(ph)) * -0.8]; P.inclina = 0.08;
+                P.peFrente = [Math.sin(ph) * 5, -Math.max(0, Math.cos(ph)) * 2.2]; P.peTras = [-Math.sin(ph) * 5, -Math.max(0, -Math.cos(ph)) * 2.2];
+                P.balanco = Math.sin(ph); P.arma = { costas: true };
+            }
+            if (mentalDe(s) === 'apatia' && pose !== 'panico') { P.inclina += 0.18; P.cabeca += 0.35; }
+            P.resp = resp;
+            return P;
+        }
+
+        // Desenha a silhueta inteira com a cor dada (usada duas vezes: contorno de luz e corpo escuro)
+        function tracarSilhueta(c, s, P, cor, extra, t) {
+            c.strokeStyle = cor; c.fillStyle = cor; c.lineCap = 'round'; c.lineJoin = 'round';
+            const [hx, hy] = P.quadril;
+            const ombro = { x: hx + Math.sin(P.inclina) * OSSOS.tronco, y: hy - Math.cos(P.inclina) * OSSOS.tronco + (P.resp || 0) };
+            // pernas (de trás e da frente)
+            const pernaT = articular(hx - 0.8, hy, P.peTras[0], P.peTras[1] - 1, OSSOS.coxa, OSSOS.canela, -1);
+            const pernaF = articular(hx + 0.8, hy, P.peFrente[0], P.peFrente[1] - 1, OSSOS.coxa, OSSOS.canela, -1);
+            segmento(c, [hx - 0.8, hy, pernaT.mx, pernaT.my, pernaT.tx, pernaT.ty], 4.2 + extra);
+            segmento(c, [pernaT.tx - 0.5, pernaT.ty + 0.6, pernaT.tx + 3, pernaT.ty + 0.6], 2.4 + extra);         // bota
+            // braço de trás
+            const maoT = P.maoTras || [hx + Math.sin(P.inclina) * 6 - 2 + (P.balanco || 0) * -3, hy - 3];
+            const bracoT = articular(ombro.x - 0.5, ombro.y + 1.5, maoT[0], maoT[1], OSSOS.braco, OSSOS.antebraco, 1);
+            segmento(c, [ombro.x - 0.5, ombro.y + 1.5, bracoT.mx, bracoT.my, bracoT.tx, bracoT.ty], 3 + extra);
+            // mochila e equipamento nas costas
+            c.save(); c.translate((hx + ombro.x) / 2, (hy + ombro.y) / 2); c.rotate(P.inclina);
+            c.fillRect(-6.5 - extra / 2, -5 - extra / 2, 4 + extra, 8 + extra);
+            if (s.class === 'Engenheiro') { segmento(c, [-5, 3, -7, -13], 1.2 + extra); c.fillRect(-8.6 - extra / 2, -16 - extra / 2, 3.2 + extra, 4 + extra); } // pá
+            c.restore();
+            if (P.arma && P.arma.costas) segmento(c, [ombro.x - 4, ombro.y - 2, hx + 3, hy + 3], 1.6 + extra);                // fuzil a tiracolo
+            // tronco
+            segmento(c, [hx, hy, ombro.x, ombro.y], 7 + extra);
+            // cabeça e capacete
+            const pesc = { x: ombro.x + Math.sin(P.inclina + P.cabeca) * 2.2, y: ombro.y - Math.cos(P.inclina + P.cabeca) * 2.2 };
+            const cab = { x: pesc.x + Math.sin(P.inclina + P.cabeca) * 3.4 + 0.8, y: pesc.y - Math.cos(P.inclina + P.cabeca) * 3.4 };
+            segmento(c, [ombro.x, ombro.y, pesc.x, pesc.y], 3 + extra);
+            c.beginPath(); c.arc(cab.x, cab.y, 3.6 + extra / 2, 0, Math.PI * 2); c.fill();
+            c.beginPath(); c.moveTo(cab.x + 3.4, cab.y + 0.8); c.lineTo(cab.x + 4.6 + extra / 2, cab.y + 1.6); c.lineTo(cab.x + 3, cab.y + 2.2); c.fill(); // nariz
+            if (P.capacete) {
+                c.save(); c.translate(cab.x - 0.3, cab.y - 1); c.rotate(P.inclina + P.cabeca);
+                c.beginPath(); c.ellipse(0, 0, 5.4 + extra / 2, 3.6 + extra / 2, 0, Math.PI, 0); c.fill();
+                c.fillRect(-6.4 - extra / 2, -0.2, 12.8 + extra, 1.4 + extra / 2);                                       // aba
+                c.restore();
+            } else {
+                c.beginPath(); c.arc(cab.x - 0.6, cab.y - 1.4, 3.4 + extra / 2, Math.PI * 1.05, Math.PI * 1.95); c.fill();         // cabelo
+            }
+            // perna da frente (por cima do tronco)
+            segmento(c, [hx + 0.8, hy, pernaF.mx, pernaF.my, pernaF.tx, pernaF.ty], 4.4 + extra);
+            segmento(c, [pernaF.tx - 0.5, pernaF.ty + 0.6, pernaF.tx + 3.2, pernaF.ty + 0.6], 2.5 + extra);
+            // arma na mira
+            if (P.arma && !P.arma.costas) {
+                const a = P.arma, dx = Math.cos(a.ang), dy = Math.sin(a.ang), nx = -dy, ny = dx;
+                const ponta = [a.x + dx * a.comp, a.y + dy * a.comp];
+                segmento(c, [a.x - dx * 2 + nx * 1.2, a.y - dy * 2 + ny * 1.2, a.x + dx * 6, a.y + dy * 6], 3.2 + extra);      // coronha
+                segmento(c, [a.x, a.y, ponta[0], ponta[1]], (a.tipo === 'mg' ? 2.6 : 1.7) + extra);                         // cano
+                if (a.tipo === 'luneta') segmento(c, [a.x + dx * 7 - nx * 2, a.y + dy * 7 - ny * 2, a.x + dx * 14 - nx * 2, a.y + dy * 14 - ny * 2], 2 + extra);
+                if (a.tipo === 'mg') { segmento(c, [a.x + dx * 15, a.y + dy * 15, a.x + dx * 13, a.y + dy * 15 + 6], 1 + extra); segmento(c, [a.x + dx * 15, a.y + dy * 15, a.x + dx * 17, a.y + dy * 15 + 6], 1 + extra); }
+                P.ponta = ponta;
+            }
+            // braço da frente
+            const maoF = P.maoFrente || [hx + Math.sin(P.inclina) * 6 + 2 + (P.balanco || 0) * 3, hy - 2.5];
+            const bracoF = articular(ombro.x + 0.6, ombro.y + 1.5, maoF[0], maoF[1], OSSOS.braco, OSSOS.antebraco, 1);
+            segmento(c, [ombro.x + 0.6, ombro.y + 1.5, bracoF.mx, bracoF.my, bracoF.tx, bracoF.ty], 3.2 + extra);
+            P.ombro = ombro; P.cab = cab; P.bracoF = bracoF;
+            // objetos nas mãos
+            if (P.item === 'tigela') { c.beginPath(); c.ellipse(5.5, -14.8, 3.2 + extra / 2, 1.6 + extra / 2, 0, 0, Math.PI); c.fill(); }
+            if (P.item === 'martelo') {
+                const ang = P.anguloMartelo, ex = bracoF.tx + Math.cos(ang) * 6, ey = bracoF.ty + Math.sin(ang) * 6;
+                segmento(c, [bracoF.tx, bracoF.ty, ex, ey], 1.2 + extra);
+                c.save(); c.translate(ex, ey); c.rotate(ang); c.fillRect(-1.2 - extra / 2, -2.4 - extra / 2, 2.4 + extra, 4.8 + extra); c.restore();
+            }
+        }
+
+        function desenharSilhueta(s, x, y, pose, t) {
+            const m = mentalDe(s);
+            const flash = (feridosRecentes.get(s.id) || 0) > 0 && Math.floor(t / 80) % 2 === 0;
+            const per = periodoDoDia();
+            cctx.save();
+            cctx.translate(x, y);
+            if (pose === 'deitado') {
+                // deitado no beliche, coberto, peito subindo e descendo
+                const r = 1 + Math.sin(t / 650 + s.id) * 0.12;
+                cctx.fillStyle = per >= 2 ? '#c9893a' : '#8a6a44'; // contorno de luz
+                cctx.beginPath(); cctx.ellipse(-15.2, -5.4, 3.9, 3.7, 0, 0, Math.PI * 2); cctx.fill();
+                cctx.fillStyle = '#3d4a36'; cctx.beginPath(); cctx.moveTo(-12, -1); cctx.quadraticCurveTo(-4, -8.5 * r, 6, -6.5 * r); cctx.quadraticCurveTo(16, -5, 22, -2); cctx.lineTo(22, 0); cctx.lineTo(-12, 0); cctx.fill(); // cobertor
+                cctx.strokeStyle = '#56664c'; cctx.lineWidth = 0.8; cctx.beginPath(); cctx.moveTo(-10, -2); cctx.quadraticCurveTo(-3, -7.5 * r, 6, -5.6 * r); cctx.stroke();
+                cctx.fillStyle = flash ? '#6a1414' : '#151812'; cctx.beginPath(); cctx.arc(-15, -5, 3.5, 0, Math.PI * 2); cctx.fill();
+                cctx.fillStyle = '#d8d2c0'; cctx.fillRect(-21, -3.5, 7, 3.5); // travesseiro
+                cctx.restore();
+                return;
+            }
+            const P = montarPose(s, pose, t);
+            if (pose === 'come') { // caixote de munição usado de banco
+                cctx.fillStyle = '#5a4128'; cctx.fillRect(-7, -9.5, 9, 9.5); cctx.strokeStyle = '#3e2f1f'; cctx.lineWidth = 0.8; cctx.strokeRect(-7, -9.5, 9, 9.5);
+            }
+            // aura da fúria heroica
+            if (m === 'heroismo') {
+                const gl = cctx.createRadialGradient(2, -22, 3, 2, -22, 28);
+                gl.addColorStop(0, `rgba(255,190,70,${0.35 + 0.15 * Math.sin(t / 120)})`); gl.addColorStop(1, 'rgba(255,190,70,0)');
+                cctx.fillStyle = gl; cctx.fillRect(-30, -54, 64, 60);
+            }
+            // contorno de luz (lado da lamparina) e corpo escuro por cima
+            const luz = m === 'heroismo' ? '#ffcf6a' : m === 'apatia' ? '#7a7a70' : per >= 2 ? '#d9933e' : '#9a8a64';
+            cctx.save(); cctx.translate(-0.7, -0.6); tracarSilhueta(cctx, s, P, luz, 1.4, t); cctx.restore();
+            tracarSilhueta(cctx, s, P, flash ? '#6a1414' : '#161a14', 0, t);
+            // detalhes por função
+            if (s.class === 'Médico' && P.ombro) { // braçadeira branca com cruz vermelha
+                const bx = (P.ombro.x + P.bracoF.mx) / 2, by = (P.ombro.y + P.bracoF.my) / 2 + 1;
+                cctx.fillStyle = '#e8e2d0'; cctx.fillRect(bx - 1.8, by - 1.5, 3.6, 3); cctx.fillStyle = '#b4252a'; cctx.fillRect(bx - 0.4, by - 1.2, 0.8, 2.4); cctx.fillRect(bx - 1.2, by - 0.4, 2.4, 0.8);
+            }
+            if (pose === 'panico') { cctx.fillStyle = 'rgba(170,205,235,0.9)'; const g = (t / 8) % 12; cctx.beginPath(); cctx.arc(P.cab.x + 4, P.cab.y - 4 + g, 1, 0, Math.PI * 2); cctx.fill(); }
+            cctx.restore();
+            // clarão do disparo na boca da arma
+            const recuo = Math.max(0, 1 - (t - (disparosCena[s.id] || -1e9)) / 140);
+            if (P.ponta && recuo > 0.5) quadroAnimado('clarao', 1 - recuo, x + P.ponta[0], y + P.ponta[1], P.arma.tipo === 'mg' ? 15 : 11);
+            return P;
+        }
+
         function desenharSoldadoCena(s, x, y, pose, t, rotY = 0) {
             const flash = (feridosRecentes.get(s.id) || 0) > 0 && Math.floor(t / 80) % 2 === 0;
             const corpo = flash ? '#a83232' : (s.class === 'Médico' ? '#5f6b4c' : '#5d6b48');
             const pele = { 1: '#c99a74', 2: '#7a4f33', 3: '#e2b996', 4: '#a8714c', 5: '#d9a988', 6: '#b98159' }[s.id] || '#c99a74';
+            const POSE_SILHUETA = { mira: 'mira', ninho: 'ninho', come: 'come', trabalho: 'trabalho', deitado: 'deitado', encolhido: 'panico', panico: 'panico', 'em pé': 'arrastado' };
+            const usouBoneco = !!desenharSilhueta(s, x, y, POSE_SILHUETA[pose] || 'mira', t);
+            if (usouBoneco && pose === 'deitado' && mentalDe(s) !== 'panico') txtC(x - 12 + Math.sin(t / 500) * 2, y - 12 - (t / 60) % 10, 'z', '#b3c4ae', 8, 700);
+            if (!usouBoneco) {
             const balanco = Math.sin(t / 400 + s.id) * 0.8;
             if (pose === 'deitado') {
                 cctx.fillStyle = corpo; cctx.fillRect(x - 16, y - 6, 30, 7);
@@ -3937,6 +4161,7 @@
                 if (pose === 'trabalho') { cctx.strokeStyle = '#888'; const a = Math.sin(t / 150) * 0.6; cctx.beginPath(); cctx.moveTo(x + 4, yb - 16); cctx.lineTo(x + 4 + 12 * Math.cos(a), yb - 16 + 12 * Math.sin(a)); cctx.stroke(); }
                 if (pose === 'come') { cctx.fillStyle = '#9a9a8a'; cctx.fillRect(x + 4, yb - 16, 6, 4); }
                 if (pose === 'encolhido') { cctx.fillStyle = 'rgba(0,0,0,0.35)'; cctx.fillRect(x - 6, yb - 34, 12, 30); }
+            }
             }
             // nome e barrinha de vida
             const sel = s.id === soldadoSelecionado;
@@ -3976,11 +4201,13 @@
                 lista.forEach((s, k) => {
                     if (chave === 'abrigo') {
                         const leito = k % 3, andar = Math.floor(k / 3) % 2;
-                        pos[s.id] = { x: c.x + 36 + leito * 66, y: c.y + (andar ? 66 : 40), pose: mentalDe(s) === 'panico' ? 'deitado' : 'deitado', comodo: chave };
+                        pos[s.id] = mentalDe(s) === 'panico'
+                            ? { x: c.x + 30 + leito * 66, y: c.y + 76, pose: 'panico', comodo: chave } // encolhido no chão, tremendo
+                            : { x: c.x + 36 + leito * 66, y: c.y + (andar ? 66 : 40), pose: 'deitado', comodo: chave };
                     } else {
                         const passo = c.w / (lista.length + 1);
                         const baseY = { posto: c.y + 64, ninhos: c.y + 70, cozinha: c.y + 64, oficina: c.y + 80 }[chave];
-                        const pose = { posto: 'mira', ninhos: 'mira', cozinha: 'come', oficina: 'trabalho' }[chave];
+                        const pose = { posto: 'mira', ninhos: 'ninho', cozinha: 'come', oficina: 'trabalho' }[chave];
                         // Nomes de soldados muito próximos alternam a altura para não se sobrepor
                         pos[s.id] = { x: c.x + passo * (k + 1) - (chave === 'cozinha' ? 8 : 0), y: baseY, pose, comodo: chave, rotY: passo < 40 && k % 2 ? 9 : 0 };
                     }
@@ -3996,7 +4223,10 @@
                 if (ef.idade > ef.vida) { cenaEfeitos.splice(i, 1); continue; }
                 const k = ef.idade / ef.vida;
                 const p = ef.fixo || posAlvoCena(ef.alvo);
-                if (ef.tipo === 'explosao') {
+                if (ef.tipo === 'explosao' && atlasPronto) {
+                    quadroAnimado('explosao', Math.min(1, k * 1.6), p.x, p.y - 14, 46, 1);
+                    if (k > 0.35) quadroAnimado('fumaca', (k - 0.35) / 0.65, p.x + 4, p.y - 26 - 18 * k, 40, 0.8 * (1 - k));
+                } else if (ef.tipo === 'explosao') {
                     const r = 8 + 26 * k;
                     cctx.globalAlpha = 1 - k;
                     cctx.fillStyle = '#e0882b'; cctx.beginPath(); cctx.arc(p.x, p.y - 10, r * 0.7, 0, Math.PI * 2); cctx.fill();
@@ -4004,6 +4234,7 @@
                     cctx.fillStyle = 'rgba(80,80,70,0.7)'; cctx.beginPath(); cctx.arc(p.x + 6, p.y - 20 - 20 * k, r * 0.6, 0, Math.PI * 2); cctx.fill();
                     cctx.globalAlpha = 1;
                 } else if (ef.tipo === 'fogo') {
+                    if (atlasPronto) for (let f = 0; f < 2; f++) { const kk = ((ef.idade / 70) + f * 0.5) % 1; quadroAnimado('fumaca', kk, p.x - 8 + f * 16, p.y - 12 - kk * 34, 22 + kk * 18, 0.7 * (1 - k)); }
                     for (let f = 0; f < 4; f++) {
                         const fx = p.x - 20 + f * 12 + Math.sin(ef.idade / 5 + f) * 2, alt = 10 + 8 * Math.abs(Math.sin(ef.idade / 7 + f * 2));
                         cctx.globalAlpha = 0.85 * (1 - k);
@@ -4011,6 +4242,8 @@
                         cctx.beginPath(); cctx.moveTo(fx - 5, p.y + 6); cctx.quadraticCurveTo(fx, p.y + 6 - alt * 2, fx + 5, p.y + 6); cctx.fill();
                     }
                     cctx.globalAlpha = 1;
+                } else if (ef.tipo === 'abate' && atlasPronto) {
+                    quadroAnimado('vapor', k, p.x, p.y, 18 + 10 * k, 1 - k);
                 } else if (ef.tipo === 'abate') {
                     cctx.globalAlpha = 1 - k; cctx.fillStyle = '#b3c4ae';
                     cctx.beginPath(); cctx.arc(p.x, p.y, 4 + 10 * k, 0, Math.PI * 2); cctx.fill(); cctx.globalAlpha = 1;
@@ -4030,8 +4263,9 @@
                 if (Math.random() > (p.comodo === 'ninhos' ? 0.35 : 0.12)) return;
                 const e = alvos[Math.floor(Math.random() * alvos.length)];
                 const pe = posInimigoCena(e);
-                const ox = p.x + 22, oy = p.y - 26;
-                cctx.fillStyle = '#ffd27a'; cctx.beginPath(); cctx.arc(ox, oy, 2.5, 0, Math.PI * 2); cctx.fill();
+                disparosCena[id] = t;
+                const ox = p.x + 19, oy = p.y - 25;
+                if (!atlasPronto) { cctx.fillStyle = '#ffd27a'; cctx.beginPath(); cctx.arc(ox, oy, 2.5, 0, Math.PI * 2); cctx.fill(); }
                 if (CONFIG.rastros) { cctx.strokeStyle = p.comodo === 'ninhos' ? 'rgba(255,179,71,0.7)' : 'rgba(255,224,138,0.55)'; cctx.lineWidth = 1; cctx.beginPath(); cctx.moveTo(ox, oy); cctx.lineTo(pe.x, pe.y); cctx.stroke(); }
             });
         }
@@ -4089,12 +4323,20 @@
             posicoesCena = {};
             gameState.squad.forEach(s => {
                 const p = pos[s.id];
-                if (!p) return;
+                if (!p) { delete animPos[s.id]; return; }
                 let { x, y } = p;
-                if (arrasto && arrasto.moveu && arrasto.id === s.id) { x = arrasto.x; y = arrasto.y + 18; }
+                let pose = p.pose;
+                if (arrasto && arrasto.moveu && arrasto.id === s.id) { x = arrasto.x; y = arrasto.y + 18; pose = 'em pé'; animPos[s.id] = { x, y }; }
+                else {
+                    // Caminha até a nova posição em vez de aparecer lá de repente
+                    const a = animPos[s.id] || (animPos[s.id] = { x, y });
+                    a.x += (x - a.x) * 0.09; a.y += (y - a.y) * 0.09;
+                    if (Math.hypot(x - a.x, y - a.y) > 2.5) { pose = 'em pé'; x = a.x; y = a.y; } else { a.x = x; a.y = y; }
+                }
                 posicoesCena[s.id] = { x, y };
-                desenharSoldadoCena(s, x, y, arrasto && arrasto.moveu && arrasto.id === s.id ? 'em pé' : p.pose, t, p.rotY || 0);
+                desenharSoldadoCena(s, x, y, pose, t, pose === p.pose ? (p.rotY || 0) : 0);
             });
+            { const nn = CORTE.comodos.ninhos; cctx.fillStyle = '#7d7056'; cctx.fillRect(nn.x + 4, nn.y + 62, nn.w - 8, 12); cctx.strokeStyle = '#5d533f'; cctx.lineWidth = 1; for (let xx = nn.x + 4; xx < nn.x + nn.w - 8; xx += 14) cctx.strokeRect(xx, nn.y + 62, 14, 12); }
             desenharClimaCena(t);
             desenharEfeitosCena();
             desenharRodapeCena();
