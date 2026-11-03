@@ -51,7 +51,9 @@ Jogo de estratégia tático com foco em realismo de comando, combate blindado e 
 
 ### Balanceamento atual (resumo)
 - Rações e água: só quem está na função **Cozinha** come e bebe. A cada 10 s na cozinha, o soldado alivia até 10 de fome e 12 de sede, gastando 0,33 de ração e 0,3 L de água por ciclo completo (proporcional ao que realmente consome; saciado, não gasta). Com todos comendo o necessário, o esquadrão gasta ~7 rações e ~7 L por dia. A entrega diária cai nos níveis altos.
-- Fadiga: vigília +0,9 a cada 10 s; outras funções +0,5; descanso −3,5.
+- Fome, sede e fadiga (bloco `NECESSIDADES`, por ciclo de 10 s de jogo; 24 ciclos = 1 dia): sem comer, com tempo nublado, a sede chega ao crítico (75) em ~2 dias e a fome em ~3 dias. Chuva forte: fome ×1,15 e sede ×0,8; neve: fome ×1,35 e sede ×0,9. Fadiga: vigília +1,75 (crítica, 85, em ~2 dias sem descanso), manutenção +1,1, cozinha +0,6, descanso −3,5.
+- Escolhas que cobram do corpo: de vigília em combate +0,6 de fadiga e +0,5 de sede; Fogo Supressão em combate mais +0,5 e +0,4; Vigília Total +0,4 de fadiga para todos; obra de ponto defensivo +0,5 de fadiga e +0,3 de sede; operar arma pesada em combate +0,3 de fadiga. Abrigo Reforçado alivia −0,3 de fadiga.
+- Depósito de mantimentos: cada impacto de artilharia tem 20% de chance de cair no depósito (40% com drone guiando) e destrói 15 a 25% das rações e da água; cada ataque de drone tem 35% de chance de atingir o depósito e destrói 6 a 12%.
 - Moral: cai 0,5 a cada 10 s com fadiga ≥ 85; recupera 0,2 a cada 10 s com fadiga < 70 e fome/sede < 50.
 - Dano de invasão: 20 por soldado (`GAME_CONFIG.INVASION_DAMAGE`).
 - Eventos durante o dia (a partir do dia 2): infantaria (ondas), patrulha (rápida e fraca), drone (rápido, dano baixo, pode ser abatido) e artilharia (aviso de 8 s reais; depois 3 impactos de 13 de dano, reduzidos com Abrigo Reforçado).

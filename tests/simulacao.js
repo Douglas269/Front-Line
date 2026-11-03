@@ -327,6 +327,31 @@ async function run() {
     gameState.squad.forEach(s => { s.hp = 100; s.duty = 'WATCH'; });
     gameState.trench = 100; gameState.barrage = { ticks: 1 }; processBarrage();
     c.artilhariaEstragaTrincheira = gameState.trench === 100 - 3 * TRENCH.DAMAGE_BARRAGE;
+    // Fome, sede e fadiga: ~2 dias de sede, ~3 de fome (nublado), ~2 dias de vigília até a fadiga crítica
+    { const w0 = gameState.weather, sorteioX = Math.random; Math.random = () => 0.99; gameState.weather = 'Nublado'; gameState.enemies = [];
+      Object.assign(gameState.tacticalOrders, { SUPPRESSION: false, SHELTER: false, CONSERVE: false, FULL_VIGILANCE: false, SIGNAL_JAM: false });
+      const s = gameState.squad[0]; const guard = { ...s }; Object.assign(s, { hunger: 0, thirst: 0, fatigue: 0, duty: 'WATCH', hp: 100 });
+      const cicloAte = (campo, lim) => { const r = ritmoNecessidades(s)[campo]; return lim / r / 24; };
+      c.sedeCriticaEm2Dias = Math.abs(cicloAte('sede', 75) - 2) < 0.1;
+      c.fomeCriticaEm3Dias = Math.abs(cicloAte('fome', 75) - 3) < 0.15;
+      c.fadigaCriticaEm2DiasDeVigilia = Math.abs(cicloAte('fadiga', 85) - 2) < 0.1;
+      gameState.weather = 'Neve'; c.neveDaMaisFome = ritmoNecessidades(s).fome > NECESSIDADES.FOME;
+      gameState.weather = 'Chuva Forte'; c.chuvaDaMenosSede = ritmoNecessidades(s).sede < NECESSIDADES.SEDE;
+      gameState.weather = 'Nublado'; const base = ritmoNecessidades(s).fadiga;
+      gameState.enemies = [{ type: 'infantaria', distance: 200, hp: 100, maxHp: 100, offsetX: 0 }]; gameState.tacticalOrders.SUPPRESSION = true;
+      c.supressaoEmCombateCansaMais = ritmoNecessidades(s).fadiga > base + 1;
+      gameState.enemies = []; gameState.tacticalOrders.SUPPRESSION = false;
+      // Depósito: artilharia e drone destroem parte das rações e da água
+      gameState.resources.rations = 40; gameState.resources.water = 40;
+      atingirDeposito('Teste', [0.2, 0.2]);
+      c.depositoPerdeMantimentos = Math.abs(gameState.resources.rations - 32) < 0.01 && Math.abs(gameState.resources.water - 32) < 0.01;
+      Math.random = () => 0; const r0 = gameState.resources.rations; gameState.trench = 100;
+      gameState.barrage = { ticks: 1 }; processBarrage();
+      c.artilhariaAtingeDeposito = gameState.resources.rations < r0 && gameState.trench === 100 - 3 * TRENCH.DAMAGE_BARRAGE;
+      const r1 = gameState.resources.rations; const vivos = gameState.squad.filter(m => m.hp > 0);
+      inimigoAtira(gameState, { type: 'drone', distance: 100, hp: 50, maxHp: 50 }, vivos, false);
+      c.droneAtingeDeposito = gameState.resources.rations < r1;
+      Object.assign(s, guard); gameState.weather = w0; gameState.trench = 100; Math.random = sorteioX; }
     gameState.trench = 50; gameState.timeSeconds = 10;
     gameState.squad.find(s => s.class === 'Engenheiro').duty = 'MAINTENANCE';
     processSquadNeeds();

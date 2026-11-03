@@ -710,8 +710,6 @@
             KITCHEN_THIRST_RELIEF: 12,
             KITCHEN_RATION: 0.33,     // ração gasta por ciclo de 10 s comendo
             KITCHEN_WATER: 0.3,       // água gasta por ciclo de 10 s bebendo
-            HUNGER_RISE: 1.5,         // fome sobe a cada 10 s (≈ +36 por turno)
-            THIRST_RISE: 2,           // sede sobe a cada 10 s (≈ +48 por turno)
             // Dano sofrido por cada soldado quando um inimigo invade a trincheira
             INVASION_DAMAGE: 20
         };
@@ -1380,6 +1378,44 @@
 
         // Soldado na Cozinha come e bebe: alivia até o limite por ciclo e gasta o
         // estoque proporcional ao que realmente consumiu (não desperdiça se já está saciado).
+        /* ===== Fome, sede e fadiga =====
+           Valores por ciclo de 10 s de jogo (24 ciclos = 1 dia). Crítico: fome e sede em 75,
+           fadiga em 85. Com tempo nublado e sem comer: sede crítica em ~2 dias, fome em ~3;
+           de vigília sem descansar, fadiga crítica em ~2 dias. Algumas escolhas cobram do corpo. */
+        const NECESSIDADES = {
+            FOME: 1.05,           // ~3 dias até o crítico (nublado)
+            SEDE: 1.55,           // ~2 dias até o crítico (nublado)
+            CLIMA: {              // multiplicadores de fome e sede
+                'Nublado':       { fome: 1,    sede: 1 },
+                'Névoa Espessa': { fome: 1,    sede: 1 },
+                'Chuva Forte':   { fome: 1.15, sede: 0.8 },  // molhado e frio gasta energia; dá para beber da chuva
+                'Neve':          { fome: 1.35, sede: 0.9 }   // frio intenso queima energia
+            },
+            FADIGA: { WATCH: 1.75, MAINTENANCE: 1.1, RATIONING: 0.6, REST: -3.5 },
+            // Escolhas que cobram do corpo (somadas por ciclo):
+            COMBATE:     { fadiga: 0.6, sede: 0.5 },   // de vigília com inimigo no setor
+            SUPRESSAO:   { fadiga: 0.5, sede: 0.4 },   // Fogo Supressão em combate: atirando sem parar
+            VIGILIA_TOTAL: { fadiga: 0.4 },            // todo o esquadrão em alerta
+            OBRA:        { fadiga: 0.5, sede: 0.3 },   // construindo ponto defensivo
+            ARMA_PESADA: { fadiga: 0.3 },              // operando arma pesada em combate
+            ABRIGO:      { fadiga: -0.3 }              // Abrigo Reforçado: cabeça baixa, cansa menos
+        };
+        function ritmoNecessidades(s) {
+            const N = NECESSIDADES, o = gameState.tacticalOrders;
+            const clima = N.CLIMA[gameState.weather] || N.CLIMA['Nublado'];
+            let fome = N.FOME * clima.fome, sede = N.SEDE * clima.sede;
+            let fadiga = N.FADIGA[s.duty] !== undefined ? N.FADIGA[s.duty] : N.FADIGA.MAINTENANCE;
+            const emCombate = gameState.enemies.length > 0 && s.duty === 'WATCH';
+            const soma = (e) => { fadiga += e.fadiga || 0; sede += e.sede || 0; };
+            if (emCombate) soma(N.COMBATE);
+            if (emCombate && o.SUPPRESSION) soma(N.SUPRESSAO);
+            if (o.FULL_VIGILANCE) soma(N.VIGILIA_TOTAL);
+            if (o.SHELTER && s.duty !== 'REST') soma(N.ABRIGO);
+            if (s.duty === 'MAINTENANCE' && arsenalDe().posicoes.some(p => p.construindo)) soma(N.OBRA);
+            if (emCombate && ocupadoNaArma(s)) soma(N.ARMA_PESADA);
+            return { fome, sede, fadiga };
+        }
+
         function eatInKitchen(soldier) {
             const r = gameState.resources;
             const cfg = GAME_CONFIG;
@@ -1415,25 +1451,13 @@
             gameState.squad.forEach(soldier => {
                 if (soldier.hp <= 0) return;
 
-                // Fome e sede sobem com o tempo; só caem comendo e bebendo na Cozinha
-                soldier.hunger = Math.min(100, soldier.hunger + GAME_CONFIG.HUNGER_RISE);
-                soldier.thirst = Math.min(100, soldier.thirst + GAME_CONFIG.THIRST_RISE);
+                // Fome, sede e fadiga: ritmo pelo clima, pela função e pelas escolhas táticas
+                const r = ritmoNecessidades(soldier);
+                soldier.hunger = Math.min(100, soldier.hunger + r.fome);
+                soldier.thirst = Math.min(100, soldier.thirst + r.sede);
                 if (soldier.duty === 'RATIONING') eatInKitchen(soldier);
-
-                // Efeitos de função
-                if (soldier.duty === 'REST') {
-                    soldier.fatigue = Math.max(0, soldier.fatigue - 3.5);
-                    soldier.hp = Math.min(100, soldier.hp + 0.4);
-                } else if (soldier.duty === 'WATCH') {
-                    soldier.fatigue = Math.min(100, soldier.fatigue + 0.9);
-                } else {
-                    soldier.fatigue = Math.min(100, soldier.fatigue + 0.5);
-                }
-
-                // Vigília Total: todo o esquadrão fica em alerta e cansa mais
-                if (gameState.tacticalOrders.FULL_VIGILANCE) {
-                    soldier.fatigue = Math.min(100, soldier.fatigue + 0.4);
-                }
+                soldier.fatigue = Math.max(0, Math.min(100, soldier.fatigue + r.fadiga));
+                if (soldier.duty === 'REST') soldier.hp = Math.min(100, soldier.hp + 0.4);
 
                 if (soldier.duty === 'MAINTENANCE') {
                     soldier.moral = Math.min(100, soldier.moral + 0.4);
@@ -1982,6 +2006,24 @@
         }
 
         // Contagem regressiva e impactos da artilharia inimiga
+        // Depósito de mantimentos: artilharia e drones podem destruir parte das rações e da água
+        const DEPOSITO = {
+            ARTILHARIA_CHANCE: 0.2,          // por impacto de artilharia
+            DRONE_GUIANDO: 2,                // com drone observando, o dobro de chance
+            ARTILHARIA_PERDA: [0.15, 0.25],  // fração perdida (mínimo, máximo)
+            DRONE_CHANCE: 0.35,              // por ataque de drone
+            DRONE_PERDA: [0.06, 0.12]
+        };
+        function atingirDeposito(fonte, [min, max]) {
+            const r = gameState.resources;
+            const f = min + Math.random() * (max - min);
+            const perdaR = Math.round(r.rations * f * 10) / 10, perdaA = Math.round(r.water * f * 10) / 10;
+            r.rations = Math.max(0, r.rations - perdaR);
+            r.water = Math.max(0, r.water - perdaA);
+            addEffect('artillery', 0.5, (canvas.height - 18) / canvas.height);
+            logFeed(`🔥 ${fonte} atingiu o depósito de mantimentos! Perdidos ${perdaR.toFixed(1)} rações e ${perdaA.toFixed(1)} L de água.`, 'text-red-400 font-bold');
+        }
+
         function processBarrage() {
             if (!gameState.barrage) return;
             gameState.barrage.ticks--;
@@ -1996,6 +2038,12 @@
             if (observada) logFeed('🛸 O drone inimigo guiou o bombardeio: impactos mais precisos!', 'text-red-500 font-bold');
             const alive = gameState.squad.filter(s => s.hp > 0);
             for (let i = 0; i < BARRAGE_SHOTS && alive.length > 0; i++) {
+                // Parte dos impactos cai no depósito de mantimentos (mais com drone guiando)
+                if (Math.random() < DEPOSITO.ARTILHARIA_CHANCE * (observada ? DEPOSITO.DRONE_GUIANDO : 1)) {
+                    trenchDamage(TRENCH.DAMAGE_BARRAGE, 'o bombardeio');
+                    atingirDeposito('Um projétil de artilharia', DEPOSITO.ARTILHARIA_PERDA);
+                    continue;
+                }
                 const alvo = alive[Math.floor(Math.random() * alive.length)];
                 let dano = BARRAGE_DAMAGE * diff().enemyDmgMult * PRESSURE.ENEMY_DAMAGE * (observada ? DRONE_SPOT_ARTILLERY : 1);
                 if (gameState.tacticalOrders.SHELTER) dano *= shelterMult();
@@ -2463,6 +2511,11 @@
         function inimigoAtira(estado, enemy, alive, observando) {
             const tipo = ENEMY_TYPES[enemy.type];
             if (!(enemy.hp > 0 && enemy.distance < 140 && alive.length > 0 && Math.random() < tipo.attackChance)) return;
+            // Drone pode largar a carga no depósito de mantimentos em vez de num soldado
+            if (enemy.type === 'drone' && Math.random() < DEPOSITO.DRONE_CHANCE) {
+                atingirDeposito('Um drone inimigo', DEPOSITO.DRONE_PERDA);
+                return;
+            }
             let dmg = tipo.dmg(enemy) * diff().enemyDmgMult * PRESSURE.ENEMY_DAMAGE * (observando ? DRONE_SPOT_FIRE : 1);
             if (estado.tacticalOrders.SHELTER) dmg *= shelterMult();
             const target = alive[Math.floor(Math.random() * alive.length)];
@@ -3469,7 +3522,7 @@
            Ao abrir, ao voltar para o app e a cada minuto o jogo compara as duas. Se o site
            tiver uma versão diferente, o jogo trava numa tela que só sai atualizando.
            (tools/nova-versao.sh troca as duas juntas a cada atualização publicada.) */
-        const VERSAO_JOGO = '20261103.0148';
+        const VERSAO_JOGO = '20261103.0215';
         const ATUALIZOU_KEY = 'frontline-atualizou-para';
         async function verificarVersao() {
             if (!location.protocol.startsWith('http') || atualizacaoPendente) return;
