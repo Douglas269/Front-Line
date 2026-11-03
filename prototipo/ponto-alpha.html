@@ -4494,9 +4494,10 @@
                 const r = corteCanvas.getBoundingClientRect(), esc = r.width / CORTE.W;
                 const cx = pos.x * esc, cy = pos.y * esc;
                 const w = el.offsetWidth || 240, h = el.offsetHeight || 190;
-                // Abre do lado oposto ao soldado: deixa o lado dele (e os cômodos perto) livres para tocar
+                // Abre sempre no andar de baixo, do lado oposto ao soldado: o posto, os ninhos, a cozinha
+                // e o depósito ficam livres; o cômodo coberto (abrigo ou oficina) tem botão no próprio cartão
                 const left = cx < r.width / 2 ? r.width - w - 6 : 6;
-                const top = Math.max(4, Math.min(r.height - h - 4, cy - h / 2 - 20 * esc));
+                const top = Math.max(4, Math.min(r.height - h - 4, CORTE.comodos.abrigo.y * esc + 2));
                 el.style.left = left + 'px'; el.style.top = top + 'px';
             }
         }
@@ -5083,7 +5084,7 @@
            Ao abrir, ao voltar para o app e a cada minuto o jogo compara as duas. Se o site
            tiver uma versão diferente, o jogo trava numa tela que só sai atualizando.
            (tools/nova-versao.sh troca as duas juntas a cada atualização publicada.) */
-        const VERSAO_JOGO = '20261103.2224';
+        const VERSAO_JOGO = '20261103.2232';
         const ATUALIZOU_KEY = 'frontline-atualizou-para';
         async function verificarVersao() {
             if (!location.protocol.startsWith('http') || atualizacaoPendente) return;
