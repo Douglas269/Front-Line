@@ -402,6 +402,10 @@ async function run() {
 }
 
 run().then(r => {
+  // Versão: o número no jogo e o versao.json publicado precisam ser iguais (tools/nova-versao.sh)
+  { const fs = require('fs'); const html = fs.readFileSync(path.resolve(__dirname, '..', 'prototipo', 'ponto-alpha.html'), 'utf8');
+    const m = html.match(/const VERSAO_JOGO = '([^']+)';/); const j = JSON.parse(fs.readFileSync(path.resolve(__dirname, '..', 'prototipo', 'versao.json'), 'utf8'));
+    r.checks.versaoSincronizada = !!m && m[1] === j.versao; }
   console.log(JSON.stringify(r, null, 2));
   const falhas = Object.entries(r.checks).filter(([, v]) => v !== true).map(([k]) => k);
   if (falhas.length || r.errosJS.length) { console.log('\nFALHAS:', falhas, r.errosJS); process.exitCode = 1; }

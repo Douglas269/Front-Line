@@ -1,7 +1,7 @@
 // Service worker do Ponto Alpha.
 // Rede primeiro: o jogo sempre busca a versão mais nova e só usa a cópia salva
 // quando não há conexão. Assim o app instalado nunca fica preso numa versão antiga.
-const CACHE = 'ponto-alpha-v1';
+const CACHE = 'frontline-v2';
 const SHELL = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png', '/icons/icon.svg'];
 
 self.addEventListener('install', (e) => {
@@ -24,6 +24,8 @@ self.addEventListener('fetch', (e) => {
   if (url.origin !== self.location.origin) return;
   // Música: deixa o navegador tocar direto (pedidos parciais de áudio)
   if (url.pathname.endsWith('.mp3')) return;
+  // Versão publicada: sempre direto do site, nunca da cópia guardada
+  if (url.pathname.endsWith('versao.json')) return;
 
   e.respondWith(
     fetch(req)

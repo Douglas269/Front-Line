@@ -501,6 +501,17 @@
         </div>
 
         <!-- TUTORIAL (primeira vez e pelo link "Como jogar") -->
+        <!-- ATUALIZAÇÃO OBRIGATÓRIA: aparece quando o site tem uma versão mais nova -->
+        <div id="modal-atualizacao" class="hidden fixed inset-0 bg-black/95 z-[100] flex items-center justify-center p-4">
+            <div class="bg-mil-panel border-2 border-mil-amberMuted rounded p-4 max-w-sm w-full space-y-3 shadow-2xl text-center">
+                <div class="text-3xl">📦</div>
+                <div class="text-mil-amberMuted font-bold text-sm">NOVA VERSÃO DO FRONTLINE</div>
+                <p class="text-[13px] text-mil-textGlow leading-relaxed font-normal">Saiu uma atualização do jogo. Sua partida está salva e continua de onde parou depois de atualizar.</p>
+                <p id="lbl-versao-nova" class="text-xs text-mil-textMuted"></p>
+                <button id="btn-atualizar" onclick="atualizarAgora()" class="w-full py-2 btn-tactical rounded font-bold text-sm"><i class="fa-solid fa-rotate text-mil-amberMuted"></i> Atualizar agora</button>
+            </div>
+        </div>
+
         <div id="modal-tutorial" class="hidden absolute inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
             <div class="bg-mil-panel border-2 border-mil-greenMuted rounded p-4 max-w-sm w-full space-y-3 shadow-2xl">
                 <div class="flex justify-between items-center border-b border-mil-border pb-2">
@@ -716,6 +727,7 @@
         const esperaCarga = () => (150 + 10 * (Math.max(1, gameState.level || 1) - 1)) * GAME_CONFIG.TICKS_PER_SECOND;
         // Relógio: um só mecanismo. jogoPausado = pausa do jogador; gameEnded = partida acabou (para de vez).
         let jogoPausado = false;
+        let atualizacaoPendente = false; // versão nova no site: o jogo trava até atualizar
         let gameEnded = false;
 
         let gameState = {
@@ -1110,7 +1122,7 @@
 
         function updateGameTick() {
             // Pausado, com crise, tutorial ou login aberto: o relógio para
-            if (gameEnded || jogoPausado || gameState.activeCrisis || tutorialAberto || loginAberto || perfilAberto) return;
+            if (gameEnded || jogoPausado || atualizacaoPendente || gameState.activeCrisis || tutorialAberto || loginAberto || perfilAberto) return;
             gameState.timeSeconds++;
 
             normalizeOrders();
@@ -3413,6 +3425,50 @@
         /* ==========================================================================
            APP INSTALÁVEL: service worker e botão de instalar
            ========================================================================== */
+
+        /* ===== Atualização obrigatória =====
+           VERSAO_JOGO é a versão deste arquivo; o site publica a mais nova em versao.json.
+           Ao abrir, ao voltar para o app e a cada minuto o jogo compara as duas. Se o site
+           tiver uma versão diferente, o jogo trava numa tela que só sai atualizando.
+           (tools/nova-versao.sh troca as duas juntas a cada atualização publicada.) */
+        const VERSAO_JOGO = '20261103.0142';
+        const ATUALIZOU_KEY = 'frontline-atualizou-para';
+        async function verificarVersao() {
+            if (!location.protocol.startsWith('http') || atualizacaoPendente) return;
+            let nova;
+            try {
+                const r = await fetch('versao.json?t=' + Date.now(), { cache: 'no-store' });
+                if (!r.ok) return;
+                nova = (await r.json()).versao;
+            } catch (e) { return; } // sem internet: segue jogando a versão que tem
+            if (!nova || nova === VERSAO_JOGO) { try { sessionStorage.removeItem(ATUALIZOU_KEY); } catch (e) {} return; }
+            // Já recarregou para essa versão e o navegador ainda entregou a antiga: não trava de novo em loop
+            let jaTentou = null;
+            try { jaTentou = sessionStorage.getItem(ATUALIZOU_KEY); } catch (e) {}
+            if (jaTentou === nova) return;
+            atualizacaoPendente = true;
+            if (!gameEnded) saveGame();
+            document.getElementById('lbl-versao-nova').textContent = `Versão ${VERSAO_JOGO} → ${nova}`;
+            document.getElementById('modal-atualizacao').classList.remove('hidden');
+            window.__versaoNova = nova;
+        }
+        async function atualizarAgora() {
+            const btn = document.getElementById('btn-atualizar');
+            btn.disabled = true; btn.textContent = 'Atualizando...';
+            try { sessionStorage.setItem(ATUALIZOU_KEY, window.__versaoNova || ''); } catch (e) {}
+            if (!gameEnded) saveGame();
+            skipPageHideSave = true;
+            // Apaga as cópias guardadas pelo app instalado e pede a versão nova ao site
+            try { if (window.caches) { const ks = await caches.keys(); await Promise.all(ks.map(k => caches.delete(k))); } } catch (e) {}
+            try { const regs = await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(r => r.update())); } catch (e) {}
+            const url = new URL(location.href);
+            url.searchParams.set('v', window.__versaoNova || Date.now());
+            location.replace(url.toString());
+        }
+        verificarVersao();
+        setInterval(verificarVersao, 60000);
+        document.addEventListener('visibilitychange', () => { if (!document.hidden) verificarVersao(); });
+
         if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
             window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
         }
