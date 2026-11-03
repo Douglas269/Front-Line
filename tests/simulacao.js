@@ -67,7 +67,7 @@ async function run() {
     alternarPausa(false); updateGameTick();
     c.continuarRetomaORelogio = gameState.timeSeconds === tPausa + 1 && document.getElementById('map-paused').classList.contains('hidden');
     gameState.timeSeconds = 0;
-    c.cardsRenderizados = document.querySelectorAll('#squad-list > div').length === 6;
+    c.cardsRenderizados = modoCorte() ? (document.querySelectorAll('#squad-list > div').length === 1 && document.querySelectorAll('#corte-fichas button').length === 6) : document.querySelectorAll('#squad-list > div').length === 6;
 
     Object.assign(gameState, { day: 1, timeSeconds: 0, enemies: [], activeCrisis: null, resources: { rations: 36, water: 48, ammoRifle: 550, ammoHeavy: 200, medkits: 3 }, squad: init });
     updateUI();
@@ -327,6 +327,24 @@ async function run() {
     gameState.squad.forEach(s => { s.hp = 100; s.duty = 'WATCH'; });
     gameState.trench = 100; gameState.barrage = { ticks: 1 }; processBarrage();
     c.artilhariaEstragaTrincheira = gameState.trench === 100 - 3 * TRENCH.DAMAGE_BARRAGE;
+    // Visual em corte lateral: cômodos, mover soldados, ninhos e volta ao clássico
+    { const sv = gameState.squad, guardaV = CONFIG.visual, guardaS = JSON.stringify(sv.map(m => [m.duty, m.mental, m.hp]));
+      sv.forEach(m => { m.hp = 100; m.mental = null; m.deserted = false; });
+      CONFIG.visual = 'corte'; aplicarVisual();
+      c.corteAtiva = document.body.classList.contains('modo-corte') && !document.getElementById('mapa-corte').classList.contains('hidden');
+      sv[0].duty = 'WATCH'; sv[1].duty = 'REST'; sv[2].duty = 'RATIONING'; sv[3].duty = 'MAINTENANCE';
+      c.corteComodos = comodoDoSoldado(sv[0]) === 'posto' && comodoDoSoldado(sv[1]) === 'abrigo' && comodoDoSoldado(sv[2]) === 'cozinha' && comodoDoSoldado(sv[3]) === 'oficina';
+      moverParaComodo(sv[1].id, 'cozinha'); c.corteMoverTrocaFuncao = sv[1].duty === 'RATIONING';
+      c.corteDepositoNaoRecebe = moverParaComodo(sv[1].id, 'deposito') === false && sv[1].duty === 'RATIONING';
+      gameState.arsenal = novoArsenal(); c.corteNinhoSemArma = moverParaComodo(sv[0].id, 'ninhos') === false;
+      gameState.arsenal.posicoes[1].obra = 100; montarArma(1, 'metralhadora'); definirOperador(1, '');
+      moverParaComodo(sv[0].id, 'ninhos'); c.corteNinhoComArma = gameState.arsenal.posicoes[1].operador === sv[0].id && comodoDoSoldado(sv[0]) === 'ninhos';
+      moverParaComodo(sv[0].id, 'posto'); c.cortePostoLargaArma = gameState.arsenal.posicoes[1].operador === null;
+      renderCorte(); c.corteDesenhaSemErro = true;
+      CONFIG.visual = 'classico'; aplicarVisual();
+      c.corteVoltaAoClassico = !document.getElementById('mapa-classico').classList.contains('hidden') && document.getElementById('barra-abas').nextElementSibling === document.getElementById('conteudo-abas');
+      CONFIG.visual = guardaV; aplicarVisual(); gameState.arsenal = novoArsenal();
+      JSON.parse(guardaS).forEach((g, i) => { sv[i].duty = g[0]; sv[i].mental = g[1]; sv[i].hp = g[2]; }); }
     // Configurações: abre, para o relógio, aplica volumes e opções, guarda no aparelho
     { const guardaCfg = JSON.stringify(CONFIG);
       abrirConfig('som'); c.configAbre = configAberto && !document.getElementById('modal-config').classList.contains('hidden');

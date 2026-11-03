@@ -29,6 +29,13 @@ Jogo de estratégia tático com foco em realismo de comando, combate blindado e 
 - O jogo continua salvando no aparelho e espelha na nuvem a cada 30 s de jogo e na hora ao virar o dia, pausar, subir de nível, terminar a partida ou fechar o tutorial. Ao entrar, fica com o salvamento mais recente entre aparelho e nuvem; o progresso de convidado passa para a conta no primeiro login. Sem internet, segue como convidado.
 - O navegador usa só a chave pública (publishable) do Supabase; a proteção dos dados vem das políticas RLS.
 
+### Visual: trincheira em corte lateral (padrão)
+- No lugar do mapa tático, a trincheira aparece vista de lado, desenhada ao vivo: no alto, o céu (muda com manhã, tarde, noite e madrugada) e a terra de ninguém com os inimigos (símbolos OTAN e distância), a linha de alcance de 140 m, o arame e o clima (chuva, neve, névoa); embaixo, os cômodos: **posto de vigília**, **ninhos** (armas pesadas), **cozinha**, **depósito** (caixas e barris conforme o estoque), **abrigo** (descanso) e **oficina** (manutenção e obras).
+- Cada soldado aparece no cômodo da sua função, com nome e vida; quem opera arma pesada fica nos ninhos. **Arrastar** o soldado para outro cômodo troca a função (também dá para tocar no soldado e depois no cômodo). Arrastar para os ninhos o põe numa arma pesada sem operador; de volta ao posto, ele larga a arma. Soldado em pânico não obedece.
+- Animações: tiros e clarões saindo do posto e dos ninhos, vapor da cozinha, lamparina, soldados dormindo, explosões no cômodo atingido, fogo no depósito, mira vermelha nos alvos anunciados da artilharia, etiquetas de pânico/apatia/fúria heroica e flash vermelho de quem foi ferido.
+- Recursos sempre visíveis numa barra no topo e abas presas embaixo, como num app. A aba Esquadrão vira **Trincheira**, com botões dos soldados e a ficha completa do selecionado.
+- **Configurações → Jogo → Visual da trincheira** troca entre **Corte lateral** e **Clássico** (o mapa tático e a lista de antes) a qualquer momento.
+
 ### Configurações (engrenagem no cabeçalho)
 - **Conta:** perfil com inicial, nome de comandante (aparece no botão de conta do cabeçalho), e-mail, tipo de conta, nível e data de criação; carreira (partidas, vitórias, derrotas, abates, melhor dia, nível); trocar senha e sair da conta. Sem conta: botão para entrar ou criar conta. O botão de conta do cabeçalho, com conta, abre o perfil.
 - **Som:** liga/desliga geral e volumes separados de música, efeitos (tiros, explosões, alarmes) e som ambiente (vento), cada um com botão "Testar".
@@ -37,7 +44,7 @@ Jogo de estratégia tático com foco em realismo de comando, combate blindado e 
 - O relógio para com a tela aberta. As preferências ficam no aparelho (`frontline-config`) e, com conta, também nos metadados da conta no Supabase, junto com a carreira (`frontline-carreira`): ao entrar em outro aparelho, vêm junto.
 
 ### Tutorial
-- Na primeira vez que o jogo é aberto, aparece um guia de 8 passos (objetivo, funções, fome/sede/trincheira, mapa, ordens, rádio e general, defesas, como começar). O relógio fica parado enquanto ele está aberto. Dá para pular, voltar e rever pelo link **Como jogar**, ao lado de "Nova partida".
+- Na primeira vez que o jogo é aberto, aparece um guia de 9 passos (objetivo, funções, fome/sede/trincheira, mapa, ordens, rádio e general, trincheira por dentro, defesas, como começar). O relógio fica parado enquanto ele está aberto. Dá para pular, voltar e rever pelo link **Como jogar**, ao lado de "Nova partida".
 
 ### Perfis dos soldados
 - Toque no retrato ou no nome de um soldado (aba Esquadrão) para abrir a ficha: retrato em estilo de foto de ficha militar (desenhado em SVG no próprio código), nome completo, idade, cidade, tempo de serviço, uma pequena história e uma frase. A ficha mostra o estado atual (função, HP, moral) ou "Morto em ação"/"Desertor". O relógio para enquanto a ficha está aberta. Os perfis ficam em `PERFIS` e não mudam as regras.

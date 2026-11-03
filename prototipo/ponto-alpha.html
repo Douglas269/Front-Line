@@ -57,6 +57,12 @@
         }
     </script>
     <style>
+        /* Visual em corte lateral: abas presas embaixo, como num app */
+        body.modo-corte #barra-abas { border-top: 1px solid #27332b; border-bottom: none; background: #0a0d0b; flex-shrink: 0; z-index: 30; }
+        body.modo-corte #barra-abas button { padding-top: 10px; padding-bottom: 12px; }
+        .rec-corte { background: #0c0f0d; border: 1px solid #27332b; border-radius: 4px; padding: 2px 1px; color: #b3c4ae; line-height: 1.15; }
+        .rec-corte b { display: block; color: #8fad88; font-size: 12px; }
+        .rec-corte.baixo b { color: #ff6b5b; }
         body {
             background-color: #070908;
             color: #9eb89a;
@@ -170,6 +176,9 @@
             </div>
         </div>
 
+        <!-- RECURSOS SEMPRE VISÍVEIS (visual em corte lateral) -->
+        <div id="barra-recursos" class="hidden grid grid-cols-6 gap-1 px-2 py-1.5 bg-[#0f1411] border-b border-mil-border text-[10px] text-center z-20"></div>
+
         <!-- SCROLLABLE TACTICAL DISPLAY AREA -->
         <div class="flex-1 overflow-y-auto p-2 space-y-2 relative z-10">
 
@@ -185,7 +194,7 @@
                 </div>
 
                 <!-- CANVAS MAP DISPLAY -->
-                <div class="relative w-full h-56 bg-[#0c0f0d] overflow-hidden flex items-center justify-center">
+                <div id="mapa-classico" class="relative w-full h-56 bg-[#0c0f0d] overflow-hidden flex items-center justify-center">
                     <canvas id="topoCanvas" class="w-full h-full block"></canvas>
 
                     <!-- SELO DE PAUSA -->
@@ -218,6 +227,13 @@
                             <span id="map-alert-text">CONTATO INIMIGO A 200M</span>
                         </span>
                     </div>
+                </div>
+
+                <!-- TRINCHEIRA EM CORTE LATERAL (visual novo; o clássico fica nas Configurações) -->
+                <div id="mapa-corte" class="hidden relative w-full bg-black overflow-hidden select-none">
+                    <canvas id="corteCanvas" class="w-full block" style="touch-action: pan-y"></canvas>
+                    <div id="corte-banner" class="hidden absolute top-2 left-2 right-2 bg-mil-redDark/90 border border-mil-redAlert px-2 py-1 rounded text-[11px] text-red-200 font-bold z-20 animate-alert-pulse"></div>
+                    <div id="corte-pausa" class="hidden absolute left-1/2 -translate-x-1/2 z-20 px-2 py-1 rounded bg-black/85 border border-mil-amberMuted text-xs text-mil-amberMuted font-bold whitespace-nowrap" style="top:44%">⏸ PAUSADO · decida com calma</div>
                 </div>
 
                 <!-- QUICK ORDERS PANEL -->
@@ -271,7 +287,7 @@
             <div class="flex flex-col bg-mil-panel border-tactical rounded">
 
                 <!-- PANEL TABS -->
-                <div class="grid grid-cols-5 bg-black/60 border-b border-mil-border text-[11px] text-center font-bold">
+                <div id="barra-abas" class="grid grid-cols-5 bg-black/60 border-b border-mil-border text-[11px] text-center font-bold">
                     <button onclick="switchTab('squad')" id="tab-squad" class="py-2 border-b-2 border-mil-greenMuted text-mil-textGlow bg-mil-panel">
                         ESQUADRÃO
                     </button>
@@ -290,10 +306,11 @@
                 </div>
 
                 <!-- TAB CONTENTS -->
-                <div class="p-2 text-xs">
+                <div id="conteudo-abas" class="p-2 text-xs">
 
                     <!-- 1. SQUAD STATUS PANEL -->
                     <div id="panel-squad" class="space-y-2">
+                        <div id="corte-fichas" class="hidden space-y-2"></div>
                         <div class="text-xs text-mil-textMuted flex justify-between items-center mb-1 border-b border-mil-borderDark pb-1">
                             <span id="lbl-squad-count">RELAÇÃO DO ESQUADRÃO (6 EFETIVOS)</span>
                             <span class="text-mil-amberMuted">ALOCAÇÃO DE FUNÇÕES</span>
@@ -1037,6 +1054,12 @@
 
         function renderMap() {
             if (!ctx) return;
+            // Visual em corte lateral: desenha a trincheira em corte no lugar do mapa tático
+            if (typeof modoCorte === 'function' && modoCorte()) {
+                try { renderCorte(); } catch (e) { console.error(e); }
+                requestAnimationFrame(renderMap);
+                return;
+            }
             const w = canvas.width;
             const h = canvas.height;
 
@@ -2161,6 +2184,7 @@
             r.water = Math.max(0, r.water - perdaA);
             addEffect('artillery', DEPOSITO_X, (canvas.height - 19) / canvas.height);
             impacto('deposito');
+            cenaEfeito('explosao', { comodo: 'deposito' }); cenaEfeito('fogo', { comodo: 'deposito' });
             logFeed(`🔥 ${fonte} atingiu o depósito de mantimentos! Perdidos ${perdaR.toFixed(1)} rações e ${perdaA.toFixed(1)} L de água.`, 'text-red-400 font-bold');
         }
 
@@ -2185,6 +2209,7 @@
                 impacto('artilharia');
                 if (a.tipo === 'deposito') { atingirDeposito('Um projétil de artilharia', DEPOSITO.ARTILHARIA_PERDA); return; }
                 if (a.tipo === 'ninho') {
+                    cenaEfeito('explosao', { comodo: 'ninhos' });
                     const pn = arsenalDe().posicoes[a.i];
                     addEffect('artillery', pn.x, (canvas.height - 21) / canvas.height);
                     if (pn.obra > 0) {
@@ -2196,6 +2221,7 @@
                     return;
                 }
                 const alvo = gameState.squad.find(m => m.id === a.id);
+                cenaEfeito('explosao', alvo && alvo.hp > 0 ? { soldado: a.id } : { comodo: 'posto' });
                 if (!alvo || alvo.hp <= 0) return; // já caído: o projétil só revolve a trincheira
                 let dano = BARRAGE_DAMAGE * diff().enemyDmgMult * PRESSURE.ENEMY_DAMAGE * (observada ? DRONE_SPOT_ARTILLERY : 1);
                 if (gameState.tacticalOrders.SHELTER) dano *= shelterMult();
@@ -2405,6 +2431,7 @@
             addEffect('blast', 0.5, (canvas.height - 35) / canvas.height);
             logFeed('🚜 O BLINDADO PASSOU POR CIMA DA TRINCHEIRA!', 'text-red-500 font-bold');
             impacto('blindado');
+            cenaEfeito('explosao', { comodo: 'posto' }); cenaEfeito('explosao', { comodo: 'ninhos' });
             const dano = DEF.BLINDADO_DANO * diff().enemyDmgMult * PRESSURE.ENEMY_DAMAGE;
             embaralhar(alive.filter(s => s.hp > 0)).slice(0, DEF.BLINDADO_ALVOS).forEach(s => {
                 s.hp = Math.max(0, s.hp - dano);
@@ -2714,6 +2741,7 @@
             const tipo = ENEMY_TYPES[enemy.type];
             const pk = enemyFrac(enemy);
             addEffect('kill', pk.fx, pk.fy);
+            cenaEfeito('abate', { inimigo: enemy });
             const atirador = enemy.abatidoPor ? estado.squad.find(m => m.id === enemy.abatidoPor) : null;
             if (atirador) { statsDe(atirador).abates++; estado.combate.abates++; }
             if (enemy.hp <= 0) somarCarreira({ abates: 1 });
@@ -2742,6 +2770,7 @@
             trenchDamage(infantaria ? TRENCH.DAMAGE_INVASION : TRENCH.DAMAGE_INVASION / 2, 'a invasão');
             addEffect('blast', 0.5, (canvas.height - 35) / canvas.height);
             tremer(5, 350); vibrar(120);
+            cenaEfeito('explosao', { comodo: 'posto' });
             if (trincheiraRompida() && infantaria) {
                 logFeed('☠️ A INFANTARIA ENTROU PELA TRINCHEIRA ROMPIDA! MASSACRE NA LINHA!', 'text-red-500 font-bold');
             } else {
@@ -3076,6 +3105,7 @@
             });
 
             document.getElementById(`panel-${tabName}`).classList.remove('hidden');
+            if (modoCorte()) document.getElementById('conteudo-abas').scrollIntoView({ behavior: 'smooth', block: 'start' });
             document.getElementById(`tab-${tabName}`).className = 'py-2 border-b-2 border-mil-greenMuted text-mil-textGlow bg-mil-panel font-bold';
             playTacticalBeep(800, 0.03);
         }
@@ -3098,6 +3128,7 @@
 
         function updateUI() {
             preencherIcones();
+            renderBarraRecursos();
             renderDefesas();
             document.getElementById('val-rations').textContent = `${Math.round(gameState.resources.rations)} un`;
             document.getElementById('val-water').textContent = `${Math.round(gameState.resources.water)} L`;
@@ -3162,13 +3193,16 @@
 
             // Lista do esquadrão: só redesenha quando algo visível muda. Redesenhar a cada
             // segundo trocava os botões no meio do toque e o celular perdia o clique.
-            const assinatura = JSON.stringify(gameState.squad.map(s => [Math.round(s.hp), Math.round(s.fatigue), Math.round(s.hunger), Math.round(s.thirst), Math.round(s.moral), s.duty, !!s.deserted, s.mental && s.mental.tipo, s.mental && s.mental.ciclos, soldadoMarcado(s), (s.medalhas || []).join()]));
+            const assinatura = (modoCorte() ? 'C' + soldadoSelecionado : 'L') + JSON.stringify(gameState.squad.map(s => [Math.round(s.hp), Math.round(s.fatigue), Math.round(s.hunger), Math.round(s.thirst), Math.round(s.moral), s.duty, !!s.deserted, s.mental && s.mental.tipo, s.mental && s.mental.ciclos, soldadoMarcado(s), (s.medalhas || []).join()]));
             if (assinatura === lastSquadSignature) return;
             lastSquadSignature = assinatura;
             const squadContainer = document.getElementById('squad-list');
             squadContainer.innerHTML = '';
 
+            renderFichasCorte();
             gameState.squad.forEach(soldier => {
+                // No visual em corte só aparece a ficha do soldado selecionado na cena
+                if (modoCorte() && soldier.id !== soldadoSelecionado) return;
                 const hp = Math.max(0, Math.round(soldier.hp));
                 const card = document.createElement('div');
                 card.className = `p-2 rounded border flex flex-col gap-1 ${hp <= 0 ? 'bg-mil-redDark/30 border-red-900 opacity-60' : 'bg-mil-bg border-mil-border'}`;
@@ -3301,7 +3335,7 @@
         function impacto(tipo) {
             if (tipo === 'artilharia') { tremer(7, 450); vibrar(90); somExplosao(1); }
             else if (tipo === 'deposito') { tremer(5, 350); vibrar([60, 40, 60]); somExplosao(0.8); }
-            else if (tipo === 'morte') { tremer(4, 300); vibrar([200, 80, 200]); addEffect('morte', 0.5, 0.5); tocarSom('queda', 0.8); }
+            else if (tipo === 'morte') { tremer(4, 300); vibrar([200, 80, 200]); addEffect('morte', 0.5, 0.5); cenaEfeito('morte', {}); tocarSom('queda', 0.8); }
             else if (tipo === 'blindado') { tremer(8, 600); vibrar([150, 60, 150]); somExplosao(1.2); }
             else if (tipo === 'morteiro') { tremer(2, 200); somMorteiro(); }
             else if (tipo === 'anticarro') { tremer(4, 300); somAnticarro(); }
@@ -3368,7 +3402,7 @@
         const SIDC_DEPOSITO = 'SFGPUSS----';
         const cacheSimbolos = {};
         // Desenha o símbolo centrado em (x, y). Devolve false se a biblioteca não carregou.
-        function desenharSimbolo(sidc, x, y, tamanho) {
+        function desenharSimbolo(sidc, x, y, tamanho, c2d = ctx) {
             if (typeof ms === 'undefined' || !sidc) return false;
             const chave = sidc + '|' + tamanho;
             let c = cacheSimbolos[chave];
@@ -3378,7 +3412,7 @@
                     c = cacheSimbolos[chave] = { img: sim.asCanvas(), anc: sim.getAnchor(), esc: 1 };
                 } catch (e) { return false; }
             }
-            ctx.drawImage(c.img, x - c.anc.x, y - c.anc.y, c.img.width * c.esc, c.img.height * c.esc);
+            c2d.drawImage(c.img, x - c.anc.x, y - c.anc.y, c.img.width * c.esc, c.img.height * c.esc);
             return true;
         }
 
@@ -3458,7 +3492,7 @@
            As preferências ficam no aparelho e, com conta, também na conta (vão junto para outro aparelho). */
         const CONFIG_KEY = 'frontline-config';
         const CARREIRA_KEY = 'frontline-carreira';
-        const CONFIG_PADRAO = { volMusica: 45, volEfeitos: 80, volAmbiente: 50, tremor: true, vibracao: true, rastros: true, textoGrande: false, apelido: '' };
+        const CONFIG_PADRAO = { volMusica: 45, volEfeitos: 80, volAmbiente: 50, tremor: true, vibracao: true, rastros: true, textoGrande: false, apelido: '', visual: 'corte' };
         let CONFIG = Object.assign({}, CONFIG_PADRAO, (() => { try { return JSON.parse(localStorage.getItem(CONFIG_KEY)) || {}; } catch (e) { return {}; } })());
         let configAberto = false, abaConfigAtual = 'conta';
         const volumeEfeitos = () => Math.max(0, Math.min(1.5, (CONFIG.volEfeitos ?? 80) / 80));
@@ -3470,6 +3504,7 @@
             if (ambientNodes && ambientNodes.gain) ambientNodes.gain.gain.value = 0.10 * volumeAmbiente();
             document.documentElement.style.fontSize = CONFIG.textoGrande ? '112%' : '';
             atualizarConta();
+            if (typeof aplicarVisual === 'function') aplicarVisual();
         }
         let envioConfigTimer = null;
         function salvarConfig() {
@@ -3613,7 +3648,13 @@
                     <div><div class="text-mil-textGlow font-bold">${rot}</div><div class="text-mil-textMuted">${desc}</div></div>
                     <button onclick="alternarConfig('${k}')" class="px-3 py-1.5 btn-tactical rounded font-bold whitespace-nowrap ${CONFIG[k] ? 'btn-active-order' : ''}">${CONFIG[k] ? 'Ligado' : 'Desligado'}</button>
                 </div>`;
+            const opVisual = (v, rot) => `<button onclick="CONFIG.visual='${v}'; salvarConfig(); renderConfig();" class="flex-1 py-1.5 btn-tactical rounded font-bold ${CONFIG.visual === v ? 'btn-active-order' : ''}">${rot}</button>`;
             document.getElementById('cfg-jogo').innerHTML =
+                `<div class="bg-mil-bg border border-mil-border rounded p-2 space-y-1">
+                    <div class="text-mil-textGlow font-bold">Visual da trincheira</div>
+                    <div class="text-mil-textMuted">Corte lateral: soldados nos cômodos, arraste para trocar a função. Clássico: mapa tático e lista do esquadrão.</div>
+                    <div class="flex gap-2 pt-1">${opVisual('corte', 'Corte lateral')}${opVisual('classico', 'Clássico')}</div>
+                </div>` +
                 chave('tremor', 'Tremor da tela', 'O mapa treme com explosões e impactos') +
                 chave('vibracao', 'Vibração do celular', 'Vibra nos impactos fortes (só em aparelhos compatíveis)') +
                 chave('rastros', 'Rastros dos tiros', 'Linhas dos tiros do esquadrão no mapa') +
@@ -3627,6 +3668,544 @@
                 <div class="bg-mil-bg border border-mil-border rounded p-2"><div class="text-mil-textMuted">Salvamento</div><div class="text-mil-textGlow font-bold">${usuario ? 'Neste aparelho e na nuvem (conta)' : 'Só neste aparelho'}</div></div>
                 <button onclick="fecharConfig(); abrirCreditos();" class="w-full py-2 btn-tactical rounded font-bold">Créditos</button>
                 <button onclick="apagarProgresso()" class="w-full py-2 btn-tactical rounded font-bold text-red-400"><i class="fa-solid fa-trash"></i> Apagar progresso deste aparelho</button>`;
+        }
+
+
+        /* ==========================================================================
+           TRINCHEIRA EM CORTE LATERAL (visual novo)
+           A cena é desenhada ao vivo num canvas: céu e terra de ninguém com os inimigos,
+           e embaixo os cômodos da trincheira com cada soldado no cômodo da sua função.
+           Trocar a função: arrastar o soldado para outro cômodo, ou tocar no soldado e
+           depois no cômodo. O visual clássico continua nas Configurações → Jogo.
+           ========================================================================== */
+        const CORTE = {
+            W: 400, H: 452, SOLO: 132,
+            comodos: {
+                posto:    { x: 6,   y: 154, w: 146, h: 92, nome: 'POSTO DE VIGÍLIA',     duty: 'WATCH' },
+                ninhos:   { x: 156, y: 154, w: 76,  h: 92, nome: 'NINHOS',               duty: 'WATCH' },
+                cozinha:  { x: 236, y: 154, w: 78,  h: 92, nome: 'COZINHA',              duty: 'RATIONING' },
+                deposito: { x: 318, y: 154, w: 76,  h: 92, nome: 'DEPÓSITO',             duty: null },
+                abrigo:   { x: 6,   y: 282, w: 214, h: 96, nome: 'ABRIGO (DESCANSO)',    duty: 'REST' },
+                oficina:  { x: 224, y: 282, w: 170, h: 96, nome: 'OFICINA (MANUTENÇÃO)', duty: 'MAINTENANCE' }
+            }
+        };
+        const corteCanvas = document.getElementById('corteCanvas');
+        const cctx = corteCanvas.getContext('2d');
+        let soldadoSelecionado = 1;
+        let arrasto = null;            // { id, x, y, moveu } enquanto arrasta um soldado
+        let posicoesCena = {};         // id do soldado -> { x, y } (atualizado a cada quadro)
+        const cenaEfeitos = [];        // explosões, fogo, abates e flashes na cena
+        const modoCorte = () => (typeof CONFIG !== 'undefined' && CONFIG.visual === 'corte');
+
+        // Em qual cômodo o soldado está (pela função e por operar um ninho)
+        function comodoDoSoldado(s) {
+            if (!s || s.hp <= 0 || s.deserted) return null;
+            if (s.duty === 'WATCH') return arsenalDe().posicoes.some(p => p.obra >= 100 && p.arma && p.operador === s.id) ? 'ninhos' : 'posto';
+            return { REST: 'abrigo', RATIONING: 'cozinha', MAINTENANCE: 'oficina' }[s.duty] || 'posto';
+        }
+        // Mover o soldado para um cômodo = trocar a função (ninhos: vira operador de uma arma livre)
+        function moverParaComodo(id, comodo) {
+            const s = gameState.squad.find(m => m.id === id);
+            const cm = CORTE.comodos[comodo];
+            if (!s || s.hp <= 0 || !cm) return false;
+            if (!cm.duty) { logFeed('No depósito ninguém fica: é onde estão a ração, a água e a munição.', 'text-mil-textMuted'); return false; }
+            if (mentalDe(s) === 'panico') { setSoldierDuty(id, cm.duty); return false; } // avisa que não obedece
+            const ars = arsenalDe();
+            if (comodo === 'ninhos') {
+                const livre = ars.posicoes.findIndex(p => p.obra >= 100 && p.arma && (!p.operador || p.operador === id || !gameState.squad.some(m => m.id === p.operador && m.hp > 0)));
+                if (livre < 0) { logFeed('Nenhuma arma pesada esperando operador. Construa um ninho e monte uma arma na aba Defesas.', 'text-mil-amberMuted'); return false; }
+                ars.posicoes.forEach(p => { if (p.operador === id) p.operador = null; });
+                ars.posicoes[livre].operador = id;
+                lastDefSignature = '';
+            } else if (comodo === 'posto') {
+                ars.posicoes.forEach(p => { if (p.operador === id) p.operador = null; }); // larga a arma pesada e volta ao fuzil
+                lastDefSignature = '';
+            }
+            setSoldierDuty(id, cm.duty);
+            soldadoSelecionado = id;
+            lastSquadSignature = '';
+            updateUI();
+            return true;
+        }
+        function selecionarSoldado(id) {
+            soldadoSelecionado = id;
+            lastSquadSignature = '';
+            updateUI();
+            playTacticalBeep(900, 0.02);
+        }
+
+        // Efeitos na cena: o alvo é resolvido na hora do desenho (soldado, cômodo, inimigo)
+        function cenaEfeito(tipo, alvo) {
+            if (cenaEfeitos.length > 40) cenaEfeitos.shift();
+            const vida = { explosao: 50, fogo: 240, abate: 30, morte: 40, tiro: 5 }[tipo] || 40;
+            let fixo = null;
+            if (alvo && alvo.inimigo) fixo = posInimigoCena(alvo.inimigo); // o inimigo some da lista: guarda a posição agora
+            cenaEfeitos.push({ tipo, alvo, fixo, idade: 0, vida, sx: Math.random() });
+        }
+        function posInimigoCena(e) {
+            const d = Math.max(0, Math.min(300, e.distance));
+            return { x: 200 + ((e.offsetX || 0) / 200) * 165, y: CORTE.SOLO - 6 - (d / 300) * 108 };
+        }
+        function posAlvoCena(a) {
+            if (!a) return { x: 200, y: 200 };
+            if (a.soldado && posicoesCena[a.soldado]) return posicoesCena[a.soldado];
+            const c = CORTE.comodos[a.comodo || 'posto'];
+            return { x: c.x + c.w / 2, y: c.y + c.h * 0.6 };
+        }
+
+        // ---------- desenho ----------
+        function corteRedimensionar() {
+            const css = corteCanvas.parentElement.clientWidth || 380;
+            const dpr = Math.min(3, window.devicePixelRatio || 1);
+            const h = Math.round(css * CORTE.H / CORTE.W);
+            if (corteCanvas.width !== Math.round(css * dpr)) {
+                corteCanvas.width = Math.round(css * dpr);
+                corteCanvas.height = Math.round(h * dpr);
+                corteCanvas.style.height = h + 'px';
+            }
+            return corteCanvas.width / CORTE.W;
+        }
+        function txtC(x, y, t, cor, tam = 8.5, peso = 700, anc = 'left') {
+            cctx.font = `${peso} ${tam}px "Courier Prime", monospace`;
+            cctx.textAlign = anc; cctx.fillStyle = cor; cctx.fillText(t, x, y); cctx.textAlign = 'left';
+        }
+        function periodoDoDia() { return Math.min(3, Math.floor(gameState.timeSeconds / 60)); } // 0 manhã, 1 tarde, 2 noite, 3 madrugada
+
+        function desenharCeu(t) {
+            const per = periodoDoDia();
+            const cores = [['#3a4a46', '#6b7462'], ['#28322c', '#4a5546'], ['#06080b', '#121820'], ['#05070a', '#0d1216']][per];
+            const g = cctx.createLinearGradient(0, 0, 0, CORTE.SOLO);
+            g.addColorStop(0, cores[0]); g.addColorStop(1, cores[1]);
+            cctx.fillStyle = g; cctx.fillRect(0, 0, CORTE.W, CORTE.SOLO + 4);
+            if (per >= 2) { // estrelas e lua
+                cctx.fillStyle = 'rgba(220,230,240,0.5)';
+                for (let i = 0; i < 25; i++) cctx.fillRect((i * 73) % 400, (i * 37) % 70, 1, 1);
+                cctx.fillStyle = 'rgba(230,230,210,0.8)'; cctx.beginPath(); cctx.arc(330, 26, 8, 0, Math.PI * 2); cctx.fill();
+            } else { // nuvens passando
+                cctx.fillStyle = 'rgba(190,200,180,0.10)';
+                const dx = (t / 90) % 520;
+                [[60, 24, 60], [250, 40, 80], [430, 18, 50]].forEach(([x, y, r]) => { cctx.beginPath(); cctx.ellipse(((x + dx) % 520) - 60, y, r, r / 6, 0, 0, Math.PI * 2); cctx.fill(); });
+            }
+            // árvores destruídas no horizonte
+            cctx.fillStyle = '#141a15';
+            [[38, 96], [336, 92], [372, 102], [190, 104]].forEach(([x, y]) => {
+                cctx.fillRect(x, y, 4, CORTE.SOLO - y); cctx.fillRect(x - 6, y + 6, 8, 2); cctx.fillRect(x + 3, y + 12, 9, 2);
+            });
+            // terreno com crateras
+            cctx.fillStyle = '#2f2a1f';
+            cctx.beginPath(); cctx.moveTo(0, CORTE.SOLO - 4);
+            for (let x = 0; x <= 400; x += 40) cctx.quadraticCurveTo(x + 20, CORTE.SOLO - 10 + (x % 80 ? 4 : -2), x + 40, CORTE.SOLO - 4);
+            cctx.lineTo(400, CORTE.SOLO + 22); cctx.lineTo(0, CORTE.SOLO + 22); cctx.fill();
+            cctx.fillStyle = '#1b1712';
+            [[70, CORTE.SOLO - 2], [255, CORTE.SOLO - 3], [350, CORTE.SOLO - 1]].forEach(([x, y]) => { cctx.beginPath(); cctx.ellipse(x, y, 16, 4, 0, 0, Math.PI * 2); cctx.fill(); });
+            // linha de alcance (140 m) e arame (50 m)
+            const yAlc = CORTE.SOLO - 6 - (140 / 300) * 108;
+            cctx.setLineDash([4, 5]); cctx.strokeStyle = 'rgba(217,163,90,0.45)'; cctx.lineWidth = 1;
+            cctx.beginPath(); cctx.moveTo(4, yAlc); cctx.lineTo(396, yAlc); cctx.stroke(); cctx.setLineDash([]);
+            txtC(6, yAlc - 3, 'ALCANCE 140m', 'rgba(217,163,90,0.8)', 7, 700);
+            const ars = arsenalDe();
+            if (ars.arame > 0) {
+                const ya = CORTE.SOLO - 6 - (50 / 300) * 108;
+                cctx.strokeStyle = `rgba(170,170,160,${0.3 + 0.5 * ars.arame / 100})`; cctx.lineWidth = 0.8;
+                cctx.beginPath();
+                for (let x = 150; x < 396; x += 9) { cctx.moveTo(x, ya - 3); cctx.lineTo(x + 9, ya + 3); cctx.moveTo(x, ya + 3); cctx.lineTo(x + 9, ya - 3); }
+                cctx.stroke();
+                txtC(394, ya - 5, `ARAME ${Math.ceil(ars.arame)}%`, '#9a9a8e', 6.5, 400, 'right');
+            }
+        }
+
+        function desenharInimigosCena(t) {
+            if (!temVisao()) {
+                cctx.fillStyle = 'rgba(5,7,6,0.88)'; cctx.fillRect(0, 0, CORTE.W, CORTE.SOLO - 2);
+                txtC(200, 60, 'NENHUM SOLDADO EM VIGÍLIA', '#c0392b', 10, 700, 'center');
+                txtC(200, 76, 'o esquadrão atira às cegas', '#b3c4ae', 8, 400, 'center');
+                return;
+            }
+            gameState.enemies.forEach(e => {
+                const p = posInimigoCena(e);
+                const tam = e.type === 'blindado' ? 17 : 13;
+                if (!desenharSimbolo(SIDC_INIMIGO[e.type], p.x, p.y, tam, cctx)) {
+                    cctx.fillStyle = '#c86464'; cctx.fillRect(p.x - 5, p.y - 5, 10, 10);
+                }
+                txtC(p.x, p.y - tam + 2, `${Math.round(e.distance)}m`, '#e07a7a', 7, 700, 'center');
+            });
+        }
+
+        function desenharComodo(chave, ocupantes) {
+            const c = CORTE.comodos[chave];
+            const alvoDeArrasto = arrasto && arrasto.moveu && comodoEm(arrasto.x, arrasto.y) === chave && c.duty;
+            cctx.fillStyle = '#16120d'; cctx.fillRect(c.x, c.y, c.w, c.h);
+            // luz da lamparina
+            const per = periodoDoDia();
+            const lg = cctx.createRadialGradient(c.x + c.w / 2, c.y + 18, 4, c.x + c.w / 2, c.y + 30, c.w * 0.7);
+            lg.addColorStop(0, per >= 2 ? 'rgba(255,190,90,0.22)' : 'rgba(255,220,150,0.08)'); lg.addColorStop(1, 'rgba(0,0,0,0)');
+            cctx.fillStyle = lg; cctx.fillRect(c.x, c.y, c.w, c.h);
+            // vigas e moldura
+            cctx.fillStyle = '#4e3924';
+            for (let vx = c.x + 2; vx < c.x + c.w; vx += Math.max(40, c.w / 3)) cctx.fillRect(vx, c.y, 4, c.h);
+            cctx.fillStyle = '#6b4f33'; cctx.fillRect(c.x, c.y + c.h - 4, c.w, 4);
+            cctx.strokeStyle = alvoDeArrasto ? '#8fad88' : '#4e3924'; cctx.lineWidth = alvoDeArrasto ? 3 : 2.5;
+            cctx.strokeRect(c.x, c.y, c.w, c.h);
+            if (alvoDeArrasto) { cctx.fillStyle = 'rgba(143,173,136,0.12)'; cctx.fillRect(c.x, c.y, c.w, c.h); }
+            txtC(c.x + 5, c.y + 11, c.nome, '#d9a35a', 8);
+            if (c.duty) txtC(c.x + c.w - 5, c.y + 11, String(ocupantes), '#b3c4ae', 8, 400, 'right');
+        }
+
+        function desenharMoveis(t) {
+            const C = CORTE.comodos;
+            // posto: degrau de tiro
+            cctx.fillStyle = '#2a2018'; cctx.fillRect(C.posto.x + 4, C.posto.y + 68, C.posto.w - 8, 20);
+            // ninhos: sacos de areia e armas montadas
+            const ars = arsenalDe();
+            cctx.fillStyle = '#7d7056'; cctx.fillRect(C.ninhos.x + 6, C.ninhos.y + 58, C.ninhos.w - 12, 14);
+            const prontos = ars.posicoes.filter(p => p.obra >= 100 && p.arma);
+            prontos.forEach((p, k) => {
+                const x = C.ninhos.x + 14 + k * 24, y = C.ninhos.y + 52;
+                cctx.fillStyle = '#222'; cctx.fillRect(x - 2, y - 4, 20, 4);
+                txtC(x + 8, y - 8, EQUIP[p.arma].sigla, operadorAtivo(p) ? '#8fad88' : '#d9a35a', 6.5, 700, 'center');
+            });
+            if (!prontos.length) txtC(C.ninhos.x + C.ninhos.w / 2, C.ninhos.y + 40, 'sem armas', '#8a8a7a', 7, 400, 'center');
+            const emObra = ars.posicoes.filter(p => p.obra > 0 && p.obra < 100);
+            emObra.slice(0, 1).forEach(p => txtC(C.ninhos.x + C.ninhos.w / 2, C.ninhos.y + 24, `obra ${Math.floor(p.obra)}%`, '#d9a35a', 6.5, 700, 'center'));
+            // cozinha: fogareiro com vapor
+            const cz = C.cozinha;
+            cctx.fillStyle = '#3b3b33'; cctx.fillRect(cz.x + 46, cz.y + 58, 26, 14);
+            cctx.fillStyle = '#555'; cctx.fillRect(cz.x + 50, cz.y + 49, 16, 9);
+            cctx.fillStyle = ['#e0882b', '#f0a040', '#d06a20'][Math.floor(t / 120) % 3]; cctx.beginPath(); cctx.arc(cz.x + 59, cz.y + 76, 3, 0, Math.PI * 2); cctx.fill();
+            cctx.strokeStyle = 'rgba(220,220,210,0.45)'; cctx.lineWidth = 1.4;
+            for (let k = 0; k < 2; k++) {
+                const ox = cz.x + 54 + k * 6, sub = (t / 25 + k * 10) % 18;
+                cctx.beginPath(); cctx.moveTo(ox, cz.y + 47 - sub * 0.2); cctx.quadraticCurveTo(ox + 4, cz.y + 40 - sub * 0.5, ox, cz.y + 30 - sub * 0.6); cctx.stroke();
+            }
+            // depósito: caixas de ração e barris de água conforme o estoque
+            const dp = C.deposito, r = gameState.resources;
+            const caixas = Math.min(6, Math.ceil(r.rations / 8)), barris = Math.min(3, Math.ceil(r.water / 12));
+            for (let k = 0; k < caixas; k++) {
+                const x = dp.x + 6 + (k % 3) * 18, y = dp.y + 70 - Math.floor(k / 3) * 16;
+                cctx.fillStyle = '#6b5333'; cctx.fillRect(x, y, 16, 15); cctx.strokeStyle = '#3e2f1f'; cctx.lineWidth = 1; cctx.strokeRect(x, y, 16, 15);
+                cctx.beginPath(); cctx.moveTo(x, y); cctx.lineTo(x + 16, y + 15); cctx.moveTo(x + 16, y); cctx.lineTo(x, y + 15); cctx.stroke();
+            }
+            for (let k = 0; k < barris; k++) { cctx.fillStyle = '#3d5a6a'; cctx.fillRect(dp.x + 60, dp.y + 72 - k * 15, 11, 14); }
+            txtC(dp.x + dp.w / 2, dp.y + 25, `ração ${Math.floor(r.rations)}`, r.rations < 10 ? '#ff6b5b' : '#b3c4ae', 7, 700, 'center');
+            txtC(dp.x + dp.w / 2, dp.y + 34, `água ${Math.floor(r.water)} L`, r.water < 10 ? '#ff6b5b' : '#b3c4ae', 7, 700, 'center');
+            // abrigo: beliches e lamparina
+            const ab = C.abrigo;
+            for (let k = 0; k < 3; k++) {
+                const x = ab.x + 12 + k * 66, y = ab.y + 44;
+                cctx.fillStyle = '#6b4f33'; cctx.fillRect(x, y, 54, 5); cctx.fillRect(x, y + 28, 54, 5);
+                cctx.fillStyle = '#4e3924'; cctx.fillRect(x, y - 8, 4, 46); cctx.fillRect(x + 50, y - 8, 4, 46);
+            }
+            const brilho = 0.75 + 0.25 * Math.sin(t / 300);
+            cctx.fillStyle = `rgba(255,204,102,${brilho})`; cctx.beginPath(); cctx.arc(ab.x + ab.w - 16, ab.y + 22, 4, 0, Math.PI * 2); cctx.fill();
+            txtC(ab.x + ab.w / 2, ab.y + ab.h - 7, 'leva 30% da artilharia', '#8fad88', 7, 400, 'center');
+            // oficina: bancada
+            const of = C.oficina;
+            cctx.fillStyle = '#6b4f33'; cctx.fillRect(of.x + 70, of.y + 60, 90, 7);
+            cctx.fillStyle = '#4e3924'; cctx.fillRect(of.x + 74, of.y + 67, 4, 22); cctx.fillRect(of.x + 152, of.y + 67, 4, 22);
+            cctx.fillStyle = '#777'; cctx.fillRect(of.x + 90, of.y + 50, 10, 10);
+            const obra = arsenalDe().posicoes.find(p => p.construindo);
+            txtC(of.x + of.w / 2 + 20, of.y + 30, obra ? `obra: ${obra.nome.toLowerCase()} ${Math.floor(obra.obra)}%` : `reparando trincheira ${Math.round(gameState.trench)}%`, '#d9a35a', 7, 700, 'center');
+            // escadas entre os andares
+            [[140, 246, 282], [300, 246, 282]].forEach(([x, y1, y2]) => {
+                cctx.strokeStyle = '#6b4f33'; cctx.lineWidth = 2;
+                cctx.beginPath(); cctx.moveTo(x, y1); cctx.lineTo(x, y2); cctx.moveTo(x + 10, y1); cctx.lineTo(x + 10, y2);
+                for (let y = y1 + 6; y < y2; y += 8) { cctx.moveTo(x, y); cctx.lineTo(x + 10, y); }
+                cctx.stroke();
+            });
+        }
+
+        function desenharSoldadoCena(s, x, y, pose, t, rotY = 0) {
+            const flash = (feridosRecentes.get(s.id) || 0) > 0 && Math.floor(t / 80) % 2 === 0;
+            const corpo = flash ? '#a83232' : (s.class === 'Médico' ? '#5f6b4c' : '#5d6b48');
+            const pele = { 1: '#c99a74', 2: '#7a4f33', 3: '#e2b996', 4: '#a8714c', 5: '#d9a988', 6: '#b98159' }[s.id] || '#c99a74';
+            const balanco = Math.sin(t / 400 + s.id) * 0.8;
+            if (pose === 'deitado') {
+                cctx.fillStyle = corpo; cctx.fillRect(x - 16, y - 6, 30, 7);
+                cctx.fillStyle = pele; cctx.beginPath(); cctx.arc(x + 15, y - 4, 5, 0, Math.PI * 2); cctx.fill();
+                cctx.fillStyle = '#3e4a33'; cctx.beginPath(); cctx.arc(x + 15, y - 6, 5, Math.PI, 0); cctx.fill();
+                if (mentalDe(s) !== 'panico') txtC(x + 22 + Math.sin(t / 500) * 2, y - 12 - (t / 60) % 8, 'z', '#b3c4ae', 8, 700);
+            } else {
+                const yb = y + (pose === 'trabalho' ? Math.abs(Math.sin(t / 150)) * -1.5 : balanco * 0.4);
+                cctx.fillStyle = corpo; cctx.fillRect(x - 5, yb - 22, 10, 18);
+                cctx.fillStyle = '#3a3a2c'; cctx.fillRect(x - 4, y - 4, 3, 10); cctx.fillRect(x + 1, y - 4, 3, 10);
+                const dx = pose === 'mira' ? 3 : 0;
+                cctx.fillStyle = pele; cctx.beginPath(); cctx.arc(x + dx, yb - 27, 5, 0, Math.PI * 2); cctx.fill();
+                cctx.fillStyle = s.class === 'Médico' ? '#5b6447' : '#3e4a33'; cctx.beginPath(); cctx.arc(x + dx, yb - 29, 6, Math.PI, 0); cctx.fill();
+                if (s.class === 'Médico') { cctx.fillStyle = '#e8e3d6'; cctx.fillRect(x - 2 + dx, yb - 35, 4, 4); cctx.fillStyle = '#b4252a'; cctx.fillRect(x - 1 + dx, yb - 35, 2, 4); }
+                cctx.strokeStyle = '#222'; cctx.lineWidth = 2.5;
+                if (pose === 'mira') { cctx.beginPath(); cctx.moveTo(x + 2, yb - 18); cctx.lineTo(x + 22, yb - 26); cctx.stroke(); }
+                if (pose === 'trabalho') { cctx.strokeStyle = '#888'; const a = Math.sin(t / 150) * 0.6; cctx.beginPath(); cctx.moveTo(x + 4, yb - 16); cctx.lineTo(x + 4 + 12 * Math.cos(a), yb - 16 + 12 * Math.sin(a)); cctx.stroke(); }
+                if (pose === 'come') { cctx.fillStyle = '#9a9a8a'; cctx.fillRect(x + 4, yb - 16, 6, 4); }
+                if (pose === 'encolhido') { cctx.fillStyle = 'rgba(0,0,0,0.35)'; cctx.fillRect(x - 6, yb - 34, 12, 30); }
+            }
+            // nome e barrinha de vida
+            const sel = s.id === soldadoSelecionado;
+            txtC(x, y + 16 + rotY, s.name, sel ? '#ffe08a' : '#cfe0c4', 7.5, 700, 'center');
+            cctx.fillStyle = '#222b25'; cctx.fillRect(x - 10, y + 19 + rotY, 20, 2.5);
+            cctx.fillStyle = s.hp > 50 ? '#5a7356' : '#c0392b'; cctx.fillRect(x - 10, y + 19 + rotY, 20 * Math.max(0, s.hp) / 100, 2.5);
+            const deitado = pose === 'deitado';
+            if (sel) { cctx.strokeStyle = 'rgba(255,224,138,0.8)'; cctx.lineWidth = 1.2; cctx.setLineDash([3, 2]); if (deitado) cctx.strokeRect(x - 20, y - 14, 42, 38); else cctx.strokeRect(x - 13, y - 40, 26, 64 + rotY); cctx.setLineDash([]); }
+            // estado mental e medalhas
+            const m = mentalDe(s);
+            if (m) {
+                const rot = { panico: '😱 PÂNICO', apatia: '😶 APÁTICO', heroismo: '🔥 HEROICO' }[m];
+                const cor = m === 'heroismo' ? 'rgba(60,90,50,0.92)' : 'rgba(160,30,30,0.9)';
+                cctx.font = '700 7.5px "Courier Prime", monospace';
+                const wl = cctx.measureText(rot).width + 8;
+                const ty = deitado ? y - 26 : y - 52;
+                cctx.fillStyle = cor; cctx.fillRect(x - wl / 2, ty, wl, 11);
+                txtC(x, ty + 8, rot, '#ffeedd', 7.5, 700, 'center');
+            }
+            // alvo da artilharia
+            if (soldadoMarcado(s)) {
+                const pis = 0.5 + 0.45 * Math.sin(t / 110);
+                cctx.strokeStyle = `rgba(255,74,60,${pis})`; cctx.lineWidth = 2;
+                const cy = pose === 'deitado' ? y - 4 : y - 18;
+                cctx.beginPath(); cctx.arc(x, cy, 15, 0, Math.PI * 2); cctx.stroke();
+                cctx.beginPath(); cctx.moveTo(x - 21, cy); cctx.lineTo(x - 10, cy); cctx.moveTo(x + 10, cy); cctx.lineTo(x + 21, cy); cctx.moveTo(x, cy - 21); cctx.lineTo(x, cy - 10); cctx.moveTo(x, cy + 10); cctx.lineTo(x, cy + 21); cctx.stroke();
+            }
+        }
+
+        // Onde cada soldado fica dentro do seu cômodo
+        function layoutSoldados() {
+            const porComodo = {};
+            gameState.squad.forEach(s => { const c = comodoDoSoldado(s); if (c) (porComodo[c] = porComodo[c] || []).push(s); });
+            const pos = {};
+            Object.entries(porComodo).forEach(([chave, lista]) => {
+                const c = CORTE.comodos[chave];
+                lista.forEach((s, k) => {
+                    if (chave === 'abrigo') {
+                        const leito = k % 3, andar = Math.floor(k / 3) % 2;
+                        pos[s.id] = { x: c.x + 36 + leito * 66, y: c.y + (andar ? 66 : 40), pose: mentalDe(s) === 'panico' ? 'deitado' : 'deitado', comodo: chave };
+                    } else {
+                        const passo = c.w / (lista.length + 1);
+                        const baseY = { posto: c.y + 64, ninhos: c.y + 70, cozinha: c.y + 64, oficina: c.y + 80 }[chave];
+                        const pose = { posto: 'mira', ninhos: 'mira', cozinha: 'come', oficina: 'trabalho' }[chave];
+                        // Nomes de soldados muito próximos alternam a altura para não se sobrepor
+                        pos[s.id] = { x: c.x + passo * (k + 1) - (chave === 'cozinha' ? 8 : 0), y: baseY, pose, comodo: chave, rotY: passo < 40 && k % 2 ? 9 : 0 };
+                    }
+                });
+            });
+            return { pos, porComodo };
+        }
+
+        function desenharEfeitosCena() {
+            for (let i = cenaEfeitos.length - 1; i >= 0; i--) {
+                const ef = cenaEfeitos[i];
+                ef.idade++;
+                if (ef.idade > ef.vida) { cenaEfeitos.splice(i, 1); continue; }
+                const k = ef.idade / ef.vida;
+                const p = ef.fixo || posAlvoCena(ef.alvo);
+                if (ef.tipo === 'explosao') {
+                    const r = 8 + 26 * k;
+                    cctx.globalAlpha = 1 - k;
+                    cctx.fillStyle = '#e0882b'; cctx.beginPath(); cctx.arc(p.x, p.y - 10, r * 0.7, 0, Math.PI * 2); cctx.fill();
+                    cctx.fillStyle = '#ffd08a'; cctx.beginPath(); cctx.arc(p.x, p.y - 10, r * 0.35, 0, Math.PI * 2); cctx.fill();
+                    cctx.fillStyle = 'rgba(80,80,70,0.7)'; cctx.beginPath(); cctx.arc(p.x + 6, p.y - 20 - 20 * k, r * 0.6, 0, Math.PI * 2); cctx.fill();
+                    cctx.globalAlpha = 1;
+                } else if (ef.tipo === 'fogo') {
+                    for (let f = 0; f < 4; f++) {
+                        const fx = p.x - 20 + f * 12 + Math.sin(ef.idade / 5 + f) * 2, alt = 10 + 8 * Math.abs(Math.sin(ef.idade / 7 + f * 2));
+                        cctx.globalAlpha = 0.85 * (1 - k);
+                        cctx.fillStyle = f % 2 ? '#f0a040' : '#e05a20';
+                        cctx.beginPath(); cctx.moveTo(fx - 5, p.y + 6); cctx.quadraticCurveTo(fx, p.y + 6 - alt * 2, fx + 5, p.y + 6); cctx.fill();
+                    }
+                    cctx.globalAlpha = 1;
+                } else if (ef.tipo === 'abate') {
+                    cctx.globalAlpha = 1 - k; cctx.fillStyle = '#b3c4ae';
+                    cctx.beginPath(); cctx.arc(p.x, p.y, 4 + 10 * k, 0, Math.PI * 2); cctx.fill(); cctx.globalAlpha = 1;
+                } else if (ef.tipo === 'morte') {
+                    cctx.globalAlpha = 0.35 * (1 - k); cctx.fillStyle = '#8b0000'; cctx.fillRect(0, 0, CORTE.W, CORTE.H); cctx.globalAlpha = 1;
+                }
+            }
+        }
+
+        // Tiros saindo do posto e dos ninhos quando há inimigo no alcance
+        function desenharTirosCena(pos, t) {
+            if (!temVisao() || jogoPausado) return;
+            const alvos = gameState.enemies.filter(e => e.distance <= TIRO.ALCANCE && e.hp > 0);
+            if (!alvos.length) return;
+            Object.entries(pos).forEach(([id, p]) => {
+                if (p.comodo !== 'posto' && p.comodo !== 'ninhos') return;
+                if (Math.random() > (p.comodo === 'ninhos' ? 0.35 : 0.12)) return;
+                const e = alvos[Math.floor(Math.random() * alvos.length)];
+                const pe = posInimigoCena(e);
+                const ox = p.x + 22, oy = p.y - 26;
+                cctx.fillStyle = '#ffd27a'; cctx.beginPath(); cctx.arc(ox, oy, 2.5, 0, Math.PI * 2); cctx.fill();
+                if (CONFIG.rastros) { cctx.strokeStyle = p.comodo === 'ninhos' ? 'rgba(255,179,71,0.7)' : 'rgba(255,224,138,0.55)'; cctx.lineWidth = 1; cctx.beginPath(); cctx.moveTo(ox, oy); cctx.lineTo(pe.x, pe.y); cctx.stroke(); }
+            });
+        }
+
+        function desenharClimaCena(t) {
+            const w = gameState.weather;
+            if (w === 'Chuva Forte') {
+                cctx.strokeStyle = 'rgba(150,170,190,0.35)'; cctx.lineWidth = 1;
+                cctx.beginPath();
+                for (let i = 0; i < 70; i++) { const x = (i * 57 + t / 4) % 410 - 5, y = (i * 31 + t / 2.2) % CORTE.SOLO; cctx.moveTo(x, y); cctx.lineTo(x - 3, y + 9); }
+                cctx.stroke();
+            } else if (w === 'Neve') {
+                cctx.fillStyle = 'rgba(230,235,240,0.75)';
+                for (let i = 0; i < 60; i++) { const x = ((i * 67) + Math.sin(t / 700 + i) * 12) % 400, y = (i * 29 + t / 18) % CORTE.SOLO; cctx.fillRect(x, y, 2, 2); }
+            } else if (w === 'Névoa Espessa') {
+                cctx.fillStyle = 'rgba(170,180,170,0.22)'; cctx.fillRect(0, 0, CORTE.W, CORTE.SOLO);
+            }
+        }
+
+        function desenharRodapeCena() {
+            const y0 = 384;
+            cctx.fillStyle = '#0f1411'; cctx.fillRect(0, y0, CORTE.W, CORTE.H - y0);
+            const barra = (x, y, w, v, cor) => { cctx.fillStyle = '#222b25'; cctx.fillRect(x, y, w, 4); cctx.fillStyle = cor; cctx.fillRect(x, y, w * Math.max(0, Math.min(1, v)), 4); };
+            const tr = gameState.trench;
+            txtC(10, y0 + 16, `TRINCHEIRA ${Math.round(tr)}%${trincheiraRompida() ? ' · ROMPIDA' : ''}`, trincheiraRompida() ? '#ff5c5c' : '#8fad88', 8.5);
+            barra(10, y0 + 20, 120, tr / 100, tr > 50 ? '#5a7356' : tr > 20 ? '#d9a35a' : '#c0392b');
+            const cb = gameState.combate || { tiros: 0, abates: 0 };
+            const noite = periodoDoDia() >= 2;
+            txtC(150, y0 + 16, noite && !gameState.tacticalOrders.FULL_VIGILANCE ? 'NOITE · −15% DE MIRA' : `TIROS ${cb.tiros} · ABATES ${cb.abates}`, '#d9a35a', 8.5);
+            txtC(10, y0 + 40, 'Arraste um soldado para outro cômodo para trocar a função,', '#b3c4ae', 7.5, 400);
+            txtC(10, y0 + 52, 'ou toque nele e depois no cômodo. Toque para ver a ficha.', '#b3c4ae', 7.5, 400);
+        }
+
+        function renderCorte() {
+            if (!modoCorte()) return;
+            const esc = corteRedimensionar();
+            const t = performance.now();
+            cctx.setTransform(esc, 0, 0, esc, 0, 0);
+            cctx.clearRect(0, 0, CORTE.W, CORTE.H);
+            desenharCeu(t);
+            desenharInimigosCena(t);
+            // corte do solo
+            const g = cctx.createLinearGradient(0, CORTE.SOLO + 10, 0, CORTE.H);
+            g.addColorStop(0, '#3a2c1f'); g.addColorStop(1, '#1d1712');
+            cctx.fillStyle = g; cctx.fillRect(0, CORTE.SOLO + 14, CORTE.W, CORTE.H - CORTE.SOLO);
+            // sacos de areia do parapeito
+            for (let x = 0; x < 236; x += 16) {
+                cctx.fillStyle = '#7d7056'; cctx.fillRect(x, CORTE.SOLO + 4, 17, 9); cctx.fillRect(x + 8, CORTE.SOLO - 5, 17, 9);
+                cctx.strokeStyle = '#5d533f'; cctx.lineWidth = 1; cctx.strokeRect(x, CORTE.SOLO + 4, 17, 9);
+            }
+            const { pos, porComodo } = layoutSoldados();
+            Object.keys(CORTE.comodos).forEach(k => desenharComodo(k, (porComodo[k] || []).length));
+            desenharMoveis(t);
+            desenharTirosCena(pos, t);
+            posicoesCena = {};
+            gameState.squad.forEach(s => {
+                const p = pos[s.id];
+                if (!p) return;
+                let { x, y } = p;
+                if (arrasto && arrasto.moveu && arrasto.id === s.id) { x = arrasto.x; y = arrasto.y + 18; }
+                posicoesCena[s.id] = { x, y };
+                desenharSoldadoCena(s, x, y, arrasto && arrasto.moveu && arrasto.id === s.id ? 'em pé' : p.pose, t, p.rotY || 0);
+            });
+            desenharClimaCena(t);
+            desenharEfeitosCena();
+            desenharRodapeCena();
+            // faixa de aviso e selo de pausa espelhados do mapa clássico
+            const bClas = document.getElementById('map-alert-banner'), bCorte = document.getElementById('corte-banner');
+            const mostrar = !bClas.classList.contains('hidden');
+            bCorte.classList.toggle('hidden', !mostrar);
+            const txt = document.getElementById('map-alert-text').textContent;
+            if (mostrar && bCorte.textContent !== '⚠ ' + txt) bCorte.textContent = '⚠ ' + txt;
+            document.getElementById('corte-pausa').classList.toggle('hidden', !jogoPausado);
+        }
+
+        // ---------- toque e arrasto ----------
+        function pontoNaCena(clientX, clientY) {
+            const r = corteCanvas.getBoundingClientRect();
+            return { x: (clientX - r.left) * CORTE.W / r.width, y: (clientY - r.top) * CORTE.H / r.height };
+        }
+        function comodoEm(x, y) {
+            return Object.keys(CORTE.comodos).find(k => { const c = CORTE.comodos[k]; return x >= c.x && x <= c.x + c.w && y >= c.y && y <= c.y + c.h; }) || null;
+        }
+        function soldadoEm(x, y) {
+            let melhor = null, dist = 26;
+            Object.entries(posicoesCena).forEach(([id, p]) => {
+                const d = Math.hypot(p.x - x, (p.y - 12) - y);
+                if (d < dist) { dist = d; melhor = Number(id); }
+            });
+            return melhor;
+        }
+        function inicioToque(cx, cy) {
+            const p = pontoNaCena(cx, cy);
+            const id = soldadoEm(p.x, p.y);
+            if (id) { arrasto = { id, x: p.x, y: p.y, x0: p.x, y0: p.y, moveu: false }; return true; }
+            return false;
+        }
+        function moveToque(cx, cy) {
+            if (!arrasto) return;
+            const p = pontoNaCena(cx, cy);
+            arrasto.x = p.x; arrasto.y = p.y;
+            if (Math.hypot(p.x - arrasto.x0, p.y - arrasto.y0) > 8) arrasto.moveu = true;
+        }
+        function fimToque(cx, cy) {
+            const p = cx === undefined ? { x: arrasto ? arrasto.x : 0, y: arrasto ? arrasto.y : 0 } : pontoNaCena(cx, cy);
+            if (arrasto) {
+                const a = arrasto; arrasto = null;
+                if (a.moveu) {
+                    const destino = comodoEm(p.x, p.y);
+                    if (destino && destino !== comodoDoSoldado(gameState.squad.find(m => m.id === a.id))) moverParaComodo(a.id, destino);
+                } else {
+                    selecionarSoldado(a.id);
+                }
+                return;
+            }
+            // Toque num cômodo com um soldado selecionado: manda ele para lá
+            const destino = comodoEm(p.x, p.y);
+            const sel = gameState.squad.find(m => m.id === soldadoSelecionado && m.hp > 0);
+            if (destino && sel && destino !== comodoDoSoldado(sel)) moverParaComodo(sel.id, destino);
+        }
+        corteCanvas.addEventListener('mousedown', e => { inicioToque(e.clientX, e.clientY); });
+        window.addEventListener('mousemove', e => { if (arrasto) moveToque(e.clientX, e.clientY); });
+        window.addEventListener('mouseup', e => { if (arrasto || e.target === corteCanvas) fimToque(e.clientX, e.clientY); });
+        corteCanvas.addEventListener('touchstart', e => { const t0 = e.touches[0]; if (inicioToque(t0.clientX, t0.clientY)) e.preventDefault(); }, { passive: false });
+        corteCanvas.addEventListener('touchmove', e => { if (arrasto) { const t0 = e.touches[0]; moveToque(t0.clientX, t0.clientY); e.preventDefault(); } }, { passive: false });
+        corteCanvas.addEventListener('touchend', e => { const t0 = e.changedTouches[0]; fimToque(t0.clientX, t0.clientY); if (e.cancelable) e.preventDefault(); }, { passive: false });
+
+        // ---------- troca de visual ----------
+        function aplicarVisual() {
+            const corte = modoCorte();
+            document.body.classList.toggle('modo-corte', corte);
+            document.getElementById('mapa-classico').classList.toggle('hidden', corte);
+            document.getElementById('mapa-corte').classList.toggle('hidden', !corte);
+            document.getElementById('barra-recursos').classList.toggle('hidden', !corte);
+            document.getElementById('corte-fichas').classList.toggle('hidden', !corte);
+            const abas = document.getElementById('barra-abas');
+            const container = abas.closest('.max-w-md') || document.body;
+            const conteudo = document.getElementById('conteudo-abas');
+            if (corte && abas.parentElement !== container) container.appendChild(abas);            // abas presas embaixo
+            if (!corte && abas.nextElementSibling !== conteudo) conteudo.parentElement.insertBefore(abas, conteudo); // volta ao lugar
+            const tab = document.getElementById('tab-squad');
+            if (tab) tab.textContent = corte ? 'TRINCHEIRA' : 'ESQUADRÃO';
+            const viva = gameState.squad.find(m => m.id === soldadoSelecionado && m.hp > 0) || gameState.squad.find(m => m.hp > 0);
+            if (viva) soldadoSelecionado = viva.id;
+            lastSquadSignature = '';
+            if (!corte) resizeCanvas();
+            updateUI();
+        }
+
+        // Fichas do modo corte: botões para escolher o soldado (a ficha completa vem logo abaixo)
+        function renderFichasCorte() {
+            const el = document.getElementById('corte-fichas');
+            if (!modoCorte()) { el.innerHTML = ''; return; }
+            el.innerHTML = `<div class="text-mil-textMuted">Toque num soldado (aqui ou na cena) para ver a ficha. Arraste na cena para trocar de cômodo.</div>
+                <div class="grid grid-cols-3 gap-1">${gameState.squad.map(s => {
+                    const vivo = s.hp > 0 && !s.deserted;
+                    const sel = s.id === soldadoSelecionado;
+                    const m = mentalDe(s);
+                    return `<button onclick="selecionarSoldado(${s.id})" ${vivo ? '' : 'disabled'} class="py-1 px-1 rounded border text-left ${sel ? 'border-[#ffe08a] bg-mil-oliveDark' : 'border-mil-border bg-black/40'} ${vivo ? '' : 'opacity-40'}">
+                        <div class="font-bold ${sel ? 'text-[#ffe08a]' : 'text-mil-textGlow'} truncate">${s.name}${m ? ' ' + ROTULO_MENTAL[m].split(' ')[0] : ''}${soldadoMarcado(s) ? ' 🎯' : ''}</div>
+                        <div class="text-mil-textMuted truncate">${vivo ? (CORTE.comodos[comodoDoSoldado(s)] || {}).nome.split(' ')[0].toLowerCase() + ' · ' + Math.round(s.hp) + '%' : (s.deserted ? 'desertou' : 'morto')}</div>
+                    </button>`;
+                }).join('')}</div>`;
+        }
+
+        function renderBarraRecursos() {
+            const el = document.getElementById('barra-recursos');
+            if (!modoCorte()) return;
+            const r = gameState.resources;
+            const cel = (rot, v, baixo) => `<div class="rec-corte ${baixo ? 'baixo' : ''}">${rot}<b>${v}</b></div>`;
+            const html = cel('Ração', Math.floor(r.rations), r.rations < 10) + cel('Água', Math.floor(r.water) + 'L', r.water < 10) +
+                cel('Munição', Math.floor(r.ammoRifle), r.ammoRifle < 150) + cel('Pesada', Math.floor(r.ammoHeavy), r.ammoHeavy < 20) +
+                cel('Prestígio', Math.floor(gameState.prestige), false) + cel('Trinch.', Math.round(gameState.trench) + '%', gameState.trench <= 30);
+            if (el.innerHTML !== html) el.innerHTML = html;
         }
 
         function setSoldierDuty(id, duty) {
@@ -3963,6 +4542,7 @@
             { t: '🗺️ Lendo o mapa', x: 'O inimigo vem do norte (topo do mapa). Losango = infantaria, quadrado = patrulha, círculo = drone. A linha amarela é o alcance de tiro deles. O aviso vermelho em cima avisa contato ou artilharia chegando, com a contagem. A artilharia anuncia os alvos (mira vermelha no mapa): soldado marcado em Descanso fica no abrigo e leva só 30% do dano. Cada soldado tem um traço; com a moral muito baixa ele pode entrar em pânico, ficar apático ou virar herói.' },
             { t: '⚔️ Ordens táticas', x: 'Fogo Supressão: mais dano e freia o inimigo, gasta munição. Abrigo Reforçado: protege do dano (use na artilharia). Economizar: poupa munição. Vigília Total: vê tudo, cansa todos. Bloqueio de Sinal: derruba drones, mas corta o rádio. Algumas ordens se anulam.' },
             { t: '📻 Rádio e o general inimigo', x: 'Envie o relatório uma vez por dia para ganhar prestígio. Prestígio paga artilharia, evacuação, carga emergencial e contra-bateria. O general inimigo aprende o seu jeito de jogar e muda de tática: o painel dele no Rádio mostra o que ele já percebeu.' },
+            { t: '🪖 A trincheira por dentro', x: 'A cena mostra a trincheira em corte: posto de vigília, ninhos, cozinha, depósito, abrigo e oficina. Cada soldado está no cômodo da sua função. Arraste o soldado para outro cômodo (ou toque nele e depois no cômodo) para trocar a função. Prefere o mapa antigo? Configurações → Jogo → Visual clássico.' },
             { t: '🛡️ Defesas', x: 'Na aba Defesas, construa ninhos na trincheira (quem está na Manutenção trabalha na obra; o Engenheiro é mais rápido). Monte neles a metralhadora .50, o morteiro ou o anticarro e escolha um operador de vigília. A partir do dia 8 podem vir blindados: fuzil quase não fere, use o anticarro. Granadas e arame farpado também ajudam.' },
             { t: '✅ Para começar', x: 'Um bom começo: 2 soldados de vigília, 1 na cozinha, o Engenheiro na manutenção e o resto descansando. Reveze quando a fadiga, a fome ou a sede subirem. Você pode rever este guia em "Como jogar". Boa sorte, comandante.' }
         ];
