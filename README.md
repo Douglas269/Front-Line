@@ -29,10 +29,24 @@ Jogo de estratégia tático com foco em realismo de comando, combate blindado e 
 - O navegador usa só a chave pública (publishable) do Supabase; a proteção dos dados vem das políticas RLS.
 
 ### Tutorial
-- Na primeira vez que o jogo é aberto, aparece um guia de 7 passos (objetivo, funções, fome/sede/trincheira, mapa, ordens, rádio e general, como começar). O relógio fica parado enquanto ele está aberto. Dá para pular, voltar e rever pelo link **Como jogar**, ao lado de "Nova partida".
+- Na primeira vez que o jogo é aberto, aparece um guia de 8 passos (objetivo, funções, fome/sede/trincheira, mapa, ordens, rádio e general, defesas, como começar). O relógio fica parado enquanto ele está aberto. Dá para pular, voltar e rever pelo link **Como jogar**, ao lado de "Nova partida".
 
 ### Perfis dos soldados
 - Toque no retrato ou no nome de um soldado (aba Esquadrão) para abrir a ficha: retrato em estilo de foto de ficha militar (desenhado em SVG no próprio código), nome completo, idade, cidade, tempo de serviço, uma pequena história e uma frase. A ficha mostra o estado atual (função, HP, moral) ou "Morto em ação"/"Desertor". O relógio para enquanto a ficha está aberta. Os perfis ficam em `PERFIS` e não mudam as regras.
+
+### Defesas (aba Defesas)
+- **Pontos defensivos:** 3 na trincheira (flanco esquerdo, centro, flanco direito). Cada um começa como terreno livre e precisa de obra: quem está na Manutenção trabalha nela em vez de reparar a trincheira (soldado 4 pontos por ciclo, Engenheiro 12; 100 = pronto; o Engenheiro sozinho leva ~10 s reais). Uma obra por vez.
+- **Armas pesadas** (montadas num ponto pronto, com um operador escolhido; o operador precisa estar de Vigília e, enquanto opera, não usa o fuzil):
+  - Metralhadora .50: ~4 balas/s real, 25% de acerto, 60 de dano; gasta munição pesada. Prefere alvos sem blindagem.
+  - Morteiro 60 mm: um disparo a cada 5 s reais, de 60 a 300 m, no maior grupo; até 110 de dano em cada inimigo do grupo (70% de acerto base); gasta granadas de morteiro.
+  - Lança-rojão anticarro: só dispara em blindados até 200 m; 900 de dano (75% de acerto base); recarga 6 s reais; gasta foguetes.
+- **Granadas de mão:** lançadas sozinhas (se liberadas) por quem está de vigília em inimigos a menos de 25 m: até 3 inimigos, 140 de dano.
+- **Arame farpado:** estendido a 50 m com 1 rolo; infantaria e patrulha andam pela metade enquanto atravessam; desgasta com o uso, o blindado rasga rápido.
+- **Blindado inimigo** (plano "Ataque blindado" do general, a partir do dia 8, um por vez): lento, resistente, atira pouco. Fuzil faz 15% do dano, .50 35%, granada 30%, morteiro 50%, anticarro e artilharia de apoio 100%. Os fuzileiros só atiram nele quando não há outro alvo. Se chega à trincheira: −15% de conservação e fere 2 soldados. O general prefere o blindado quando o jogador não tem anticarro pronto.
+- **Inventário inicial:** 1 metralhadora .50, 1 morteiro, 1 lança-rojão, 12 granadas de morteiro, 3 foguetes, 10 granadas de mão, 2 rolos de arame.
+- **Disponibilidade:** cada comboio pode trazer extras do QG (granadas 60%, granadas de morteiro 40%, foguete 30%, arame 25%). Requisições pagas com prestígio chegam no próximo comboio: 6 granadas (40), 8 granadas de morteiro (60), 2 foguetes (80), 1 rolo de arame (40), metralhadora .50 (150), morteiro (150), lança-rojão (120), mais o custo da dificuldade. O Bloqueio de Sinal impede requisições.
+- No mapa: os ninhos aparecem logo abaixo da trincheira (sigla da arma; verde com operador ativo, laranja parado, tracejado em obra) e o arame como uma linha a 50 m.
+- Medição com o jogador automático (15 partidas por nível): sem usar as defesas, ~16 / 15 / 14 / 12 dias (níveis 1 / 6 / 12 / 25); usando as defesas, ~22 / 18 / 16 / 14 dias. Antes desta mecânica eram ~21 / 18 / 16 / 13.
 
 ### Balanceamento atual (resumo)
 - Rações e água: só quem está na função **Cozinha** come e bebe. A cada 10 s na cozinha, o soldado alivia até 10 de fome e 12 de sede, gastando 0,33 de ração e 0,3 L de água por ciclo completo (proporcional ao que realmente consome; saciado, não gasta). Com todos comendo o necessário, o esquadrão gasta ~7 rações e ~7 L por dia. A entrega diária cai nos níveis altos.

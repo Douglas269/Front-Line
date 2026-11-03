@@ -170,6 +170,72 @@ async function run() {
     { const t0 = gameState.combate.tiros; for (let k = 0; k < 8; k++) processEnemiesAndCombat();
       c.semMunicaoUsaPistola = gameState.resources.ammoRifle === 0 && gameState.combate.tiros > t0; }
     gameState.resources.ammoRifle = 500;
+    // ===== Defesas: obra, armas pesadas, granadas, arame, blindado e requisições =====
+    { const guardado = JSON.stringify({ squad: gameState.squad, timeSeconds: gameState.timeSeconds, trench: gameState.trench, prestige: gameState.prestige, day: gameState.day });
+      gameState.arsenal = novoArsenal(); const ars = gameState.arsenal;
+      prepCombate(); gameState.enemies = [];
+      const eng = gameState.squad.find(s => s.class === 'Engenheiro');
+      gameState.squad.forEach(s => { s.duty = 'WATCH'; s.hunger = 0; s.thirst = 0; s.fatigue = 0; });
+      eng.duty = 'MAINTENANCE';
+      construirPonto(1);
+      const trench0 = gameState.trench = 80;
+      for (let k = 0; k < 9; k++) { gameState.timeSeconds = (k + 1) * 10 % 240; processSquadNeeds(); }
+      c.defObraComEngenheiro = ars.posicoes[1].obra >= 100 && !ars.posicoes[1].construindo;
+      c.defObraNaoReparaTrincheira = gameState.trench < 100;
+      eng.duty = 'WATCH';
+      montarArma(1, 'metralhadora');
+      const santos = gameState.squad.find(s => s.class === 'Metralhador');
+      c.defMontaMGComMetralhador = ars.posicoes[1].arma === 'metralhadora' && ars.posicoes[1].operador === santos.id && ars.itens.metralhadora === 0;
+      // MG atira com munição pesada e o operador larga o fuzil
+      Math.random = () => 0.01; santos.cadAcc = 0; santos.stats = null;
+      gameState.resources.ammoHeavy = 100;
+      gameState.enemies = [{ type: 'infantaria', distance: 200, hp: 1e9, maxHp: 1e9, offsetX: 0 }];
+      for (let k = 0; k < 8; k++) processEnemiesAndCombat();
+      c.defMGGastaPesada = gameState.resources.ammoHeavy === 96;
+      c.defOperadorNaoUsaFuzil = santos.stats.tiros === 4;
+      // Operador fora da vigília: arma parada
+      santos.duty = 'REST'; const h0 = gameState.resources.ammoHeavy;
+      for (let k = 0; k < 8; k++) processEnemiesAndCombat();
+      c.defOperadorForaDaVigiliaParaArma = gameState.resources.ammoHeavy === h0;
+      santos.duty = 'WATCH';
+      // Blindado: fuzil quase não fere; anticarro derruba
+      desmontarArma(1); montarArma(1, 'lancaAT'); definirOperador(1, santos.id);
+      const blind = { type: 'blindado', distance: 150, hp: 1000, maxHp: 1000, offsetX: 0 };
+      c.defBlindagem = blindagem(blind, 'fuzil') === 0.15 && blindagem(blind, 'at') === 1 && blindagem({ type: 'infantaria' }, 'fuzil') === 1;
+      gameState.enemies = [blind]; const f0 = ars.itens.foguetesAT;
+      processEnemiesAndCombat();
+      c.defAnticarroAcertaBlindado = ars.itens.foguetesAT === f0 - 1 && (blind.hp <= 100 || !gameState.enemies.includes(blind));
+      gameState.enemies = [{ type: 'infantaria', distance: 150, hp: 1e9, maxHp: 1e9, offsetX: 0 }]; const f1 = ars.itens.foguetesAT;
+      ars.posicoes[1].recarga = 0; processEnemiesAndCombat();
+      c.defAnticarroIgnoraInfantaria = ars.itens.foguetesAT === f1;
+      // Morteiro atinge o grupo inteiro
+      desmontarArma(1); montarArma(1, 'morteiro'); definirOperador(1, santos.id);
+      gameState.enemies = [0, 1, 2].map(i => ({ type: 'infantaria', distance: 150 + i * 5, hp: 1000, maxHp: 1000, offsetX: i * 10 }));
+      const g0 = ars.itens.granadaMorteiro; processEnemiesAndCombat();
+      c.defMorteiroAtingeGrupo = ars.itens.granadaMorteiro === g0 - 1 && gameState.enemies.filter(e => e.hp <= 1000 - 100).length === 3;
+      // Granadas de mão a menos de 25 m
+      gameState.enemies = [{ type: 'infantaria', distance: 20, hp: 1000, maxHp: 1000, offsetX: 0 }]; ars.recargaGranada = 0;
+      const gr0 = ars.itens.granadas; processEnemiesAndCombat();
+      c.defGranadaAutomatica = ars.itens.granadas === gr0 - 1;
+      // Arame farpado segura a infantaria pela metade
+      estenderArame();
+      const e1 = { type: 'infantaria', distance: 40, hp: 1e9, maxHp: 1e9, offsetX: 0 }; gameState.enemies = [e1];
+      gameState.tacticalOrders.SUPPRESSION = false; moverInimigo(gameState, e1);
+      c.defArameSegura = Math.abs(e1.distance - (40 - ENEMY_TYPES.infantaria.speed * 0.5)) < 1e-9 && ars.arame < 100;
+      // Requisição chega no comboio
+      gameState.prestige = 1000; const ped0 = ars.itens.foguetesAT; requisitar('foguetesAT');
+      c.defRequisicaoCobra = gameState.prestige === 1000 - custo(80) && ars.pedidos.length === 1;
+      Math.random = () => 0.99; entregarArsenal(1);
+      c.defRequisicaoChegaNoComboio = ars.itens.foguetesAT === ped0 + 2 && ars.pedidos.length === 0;
+      // Salvamento leva o arsenal
+      saveGame(); const salvo = JSON.parse(localStorage.getItem(SAVE_KEY));
+      c.defEntraNoSalvamento = salvo.arsenal && salvo.arsenal.posicoes[1].arma === 'morteiro';
+      // General: blindado só a partir do dia 6
+      const d0 = gameState.day; gameState.enemies = []; gameState.barrage = null;
+      gameState.day = 7; const antes6 = planoViavel('blindado'); gameState.day = 9; const depois6 = planoViavel('blindado'); gameState.day = d0;
+      c.defBlindadoSoDepoisDoDia8 = !antes6 && depois6;
+      gameState.enemies = []; Math.random = () => 0.99; gameState.arsenal = novoArsenal();
+      const g = JSON.parse(guardado); gameState.squad.forEach((s, i) => Object.assign(s, g.squad[i])); Object.assign(gameState, { timeSeconds: g.timeSeconds, trench: g.trench, prestige: g.prestige, day: g.day }); prepCombate(); }
     // Paiol: munição leve não passa da capacidade
     gameState.resources.ammoRifle = PRESSURE.AMMO_CAP_RIFLE - 10;
     c.paiolLimita = addAmmoRifle(250) === 10 && gameState.resources.ammoRifle === PRESSURE.AMMO_CAP_RIFLE;
@@ -296,7 +362,7 @@ async function run() {
     const out = { runs: 0, vitorias: 0, extintos: 0, mediaDias: 0, racoesZeraram: 0, aguaZerou: 0, mortesCombate: 0, mortesInvasao: 0, mortesFomeSede: 0, hpNegativo: 0 };
     const N = 60; let soma = 0;
     for (let run = 0; run < N; run++) {
-      Object.assign(gameState, { day: 1, timeSeconds: 0, prestige: 150, weather: 'Nublado', supplyLineEff: 85, enemies: [], activeCrisis: null,
+      Object.assign(gameState, { day: 1, timeSeconds: 0, prestige: 150, weather: 'Nublado', supplyLineEff: 85, enemies: [], activeCrisis: null, arsenal: novoArsenal(),
         tacticalOrders: { SUPPRESSION: false, SHELTER: false, CONSERVE: false, FULL_VIGILANCE: false },
         crisisCooldown: 240, convoyAmbush: false, weakenNextWave: false, barrage: null, trench: 100, counterBattery: null, nextWaveBoost: 0, general: newGeneral(),
         resources: { rations: 36, water: 48, ammoRifle: 550, ammoHeavy: 200, medkits: 3 }, squad: init.map(s => ({ ...s })) });

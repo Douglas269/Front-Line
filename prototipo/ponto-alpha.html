@@ -263,18 +263,21 @@
             <div class="flex flex-col bg-mil-panel border-tactical rounded">
 
                 <!-- PANEL TABS -->
-                <div class="grid grid-cols-4 bg-black/60 border-b border-mil-border text-xs text-center font-bold">
+                <div class="grid grid-cols-5 bg-black/60 border-b border-mil-border text-[11px] text-center font-bold">
                     <button onclick="switchTab('squad')" id="tab-squad" class="py-2 border-b-2 border-mil-greenMuted text-mil-textGlow bg-mil-panel">
-                        1. ESQUADRÃO
+                        ESQUADRÃO
                     </button>
                     <button onclick="switchTab('logistics')" id="tab-logistics" class="py-2 border-b-2 border-transparent text-mil-textMuted hover:text-mil-textGlow">
-                        2. LOGÍSTICA
+                        LOGÍSTICA
                     </button>
                     <button onclick="switchTab('radio')" id="tab-radio" class="py-2 border-b-2 border-transparent text-mil-textMuted hover:text-mil-textGlow">
-                        3. RÁDIO
+                        RÁDIO
                     </button>
                     <button onclick="switchTab('diary')" id="tab-diary" class="py-2 border-b-2 border-transparent text-mil-textMuted hover:text-mil-textGlow">
-                        4. DIÁRIO
+                        DIÁRIO
+                    </button>
+                    <button onclick="switchTab('defense')" id="tab-defense" class="py-2 border-b-2 border-transparent text-mil-textMuted hover:text-mil-textGlow">
+                        DEFESAS
                     </button>
                 </div>
 
@@ -433,6 +436,18 @@
                     </div>
 
                     <!-- 4. DIARY & CRISIS PANEL -->
+                    <!-- 5. DEFESAS: pontos defensivos, armas pesadas e inventário -->
+                    <div id="panel-defense" class="hidden space-y-3">
+                        <div class="text-xs text-mil-textMuted">PONTOS DEFENSIVOS DA TRINCHEIRA</div>
+                        <div id="def-posicoes" class="space-y-2"></div>
+                        <div class="text-xs text-mil-textMuted">INVENTÁRIO DO PAIOL</div>
+                        <div id="def-inventario" class="grid grid-cols-2 gap-2"></div>
+                        <div id="def-extras" class="space-y-2"></div>
+                        <div class="text-xs text-mil-textMuted">REQUISIÇÕES AO QG <span class="normal-case">(chegam no próximo comboio)</span></div>
+                        <div id="def-requisicoes" class="grid grid-cols-2 gap-2"></div>
+                        <div id="def-pedidos" class="text-xs text-mil-textMuted"></div>
+                    </div>
+
                     <div id="panel-diary" class="hidden space-y-2">
                         <div class="text-xs text-mil-textMuted mb-1">DIÁRIO DE GUERRA DO SARGENTO</div>
                         <div id="diary-entries" class="space-y-2 text-xs text-mil-textGlow">
@@ -737,6 +752,7 @@
             barrage: null, // artilharia inimiga prevista: { ticks } ou null
             pendingSupply: null, // carga emergencial a caminho: { ticks } ou null
             combate: { tiros: 0, acertos: 0, abates: 0 }, // tiros do dia
+            arsenal: novoArsenal(), // pontos defensivos, armas pesadas e inventário
             level: 1, // nível de dificuldade (sobe a cada vitória)
             trench: 100, // conservação da trincheira em % (cai com artilharia e invasões)
             lastIntelDay: 0, // dia em que o último relatório foi enviado
@@ -979,6 +995,8 @@
                 ctx.closePath();
                 ctx.fill();
 
+                desenharDefesas(w, h, trenchY);
+
                 // 5. Draw Squad Markers (NATO Blue-Steel Rectangle Symbols)
                 gameState.squad.forEach((soldier, idx) => {
                     if (soldier.hp <= 0) return;
@@ -1003,7 +1021,14 @@
                     const ex = pos.fx * w, ey = pos.fy * h;
 
                     // Símbolo por tipo: losango = infantaria, quadrado = patrulha, círculo = drone
-                    if (enemy.type === 'drone') {
+                    if (enemy.type === 'blindado') {
+                        ctx.fillStyle = '#3a1f12';
+                        ctx.strokeStyle = '#e07a4a';
+                        ctx.lineWidth = 2;
+                        ctx.fillRect(ex - 11, ey - 7, 22, 14);
+                        ctx.strokeRect(ex - 11, ey - 7, 22, 14);
+                        ctx.beginPath(); ctx.moveTo(ex - 11, ey); ctx.lineTo(ex + 11, ey); ctx.stroke();
+                    } else if (enemy.type === 'drone') {
                         ctx.fillStyle = '#1f3a4d';
                         ctx.strokeStyle = '#6fb3c9';
                         ctx.lineWidth = 1.5;
@@ -1125,6 +1150,7 @@
                     lastIntelDay: gameState.lastIntelDay,
                     pendingSupply: gameState.pendingSupply,
                     combate: gameState.combate,
+                    arsenal: gameState.arsenal,
                     trench: gameState.trench,
                     barrage: gameState.barrage,
                     activeCrisis: gameState.activeCrisis,
@@ -1165,6 +1191,7 @@
                 lastIntelDay: data.lastIntelDay,
                 pendingSupply: data.pendingSupply || null,
                 combate: data.combate || { tiros: 0, acertos: 0, abates: 0 },
+                arsenal: data.arsenal || novoArsenal(),
                 trench: typeof data.trench === 'number' ? data.trench : 100,
                 barrage: data.barrage || null,
                 activeCrisis: data.activeCrisis && CRISES[data.activeCrisis.id] ? data.activeCrisis : null,
@@ -1288,6 +1315,7 @@
                     logFeed(`Suprimentos entregues: +${r1} Rações, +${w1}L Água, +${a1Real} Mun.${a1Real < a1 ? ' (paiol cheio)' : ''},${pesada}`, 'text-mil-greenMuted');
                 }
                 addEffect('convoy', 0, 0);
+                entregarArsenal(recebida);
             } else {
                 logFeed(`SUPRIMENTOS BLOQUEADOS: Linha de retaguarda inativa.`, 'text-red-400 font-bold');
             }
@@ -1400,8 +1428,11 @@
 
                 if (soldier.duty === 'MAINTENANCE') {
                     soldier.moral = Math.min(100, soldier.moral + 0.4);
-                    const reparo = soldier.class === 'Engenheiro' ? TRENCH.REPAIR_ENGINEER : TRENCH.REPAIR_SOLDIER;
-                    gameState.trench = Math.min(100, gameState.trench + reparo);
+                    // Com um ponto defensivo em obra, a Manutenção trabalha nele em vez de reparar
+                    if (!trabalharNaObra(soldier)) {
+                        const reparo = soldier.class === 'Engenheiro' ? TRENCH.REPAIR_ENGINEER : TRENCH.REPAIR_SOLDIER;
+                        gameState.trench = Math.min(100, gameState.trench + reparo);
+                    }
                 }
 
                 // Penalidades de fome, sede e estresse
@@ -1507,7 +1538,9 @@
             // mas não acompanha os bônus de vida (senão vida extra viraria dano em dobro)
             infantaria: { label: 'INFANTARIA', speed: 0.85, hpMult: 1.0, attackChance: 0.35, dmg: (e) => 1.6 * (e.hp / (e.maxHp || e.hp)) * (1 + 0.08 * gameState.day) },
             patrulha:   { label: 'PATRULHA',   speed: 1.15, hpMult: 0.6, attackChance: 0.30, dmg: (e) => 1.2 * (e.hp / (e.maxHp || e.hp)) * (1 + 0.08 * gameState.day) },
-            drone:      { label: 'DRONE',      speed: 1.5,  hpMult: 0.35, attackChance: 0.15, dmg: () => 2 }
+            drone:      { label: 'DRONE',      speed: 1.5,  hpMult: 0.35, attackChance: 0.15, dmg: () => 2 },
+            // Blindado: lento e resistente; fuzil quase não fere (só anticarro, morteiro e artilharia rendem)
+            blindado:   { label: 'BLINDADO',   speed: 0.55, hpMult: 3.0,  attackChance: 0.12, dmg: (e) => 2.2 * (e.hp / (e.maxHp || e.hp)) * (1 + 0.08 * gameState.day) }
         };
         const BARRAGE_WARNING_TICKS = 64;  // aviso antes da artilharia cair (8 s reais)
         const ARTILLERY_SUPPORT_DAMAGE = 200; // dano da artilharia de apoio em cada inimigo
@@ -1578,8 +1611,11 @@
         }
 
         function dispararEsquadrao(alive, estado = gameState) {
-            const inimigos = estado.enemies.filter(e => e.distance <= TIRO.ALCANCE);
-            if (!inimigos.length) return; // ninguém ao alcance: o esquadrão segura o fogo
+            const noAlcance = estado.enemies.filter(e => e.distance <= TIRO.ALCANCE);
+            if (!noAlcance.length) return; // ninguém ao alcance: o esquadrão segura o fogo
+            // Fuzil quase não fere blindado: só atiram nele se não houver outro alvo
+            const semBlindagem = noAlcance.filter(e => e.type !== 'blindado');
+            const inimigos = semBlindagem.length ? semBlindagem : noAlcance;
             const maisProximo = inimigos.reduce((a, e) => (e.distance < a.distance ? e : a), inimigos[0]);
             const escolherAlvo = () => {
                 const vivos = inimigos.filter(e => e.hp > 0);
@@ -1589,6 +1625,7 @@
             };
             let disparou = false;
             alive.forEach(s => {
+                if (ocupadoNaArma(s, estado)) return; // está operando uma arma pesada
                 const temBala = estado.resources.ammoRifle >= 1;
                 const arma = temBala ? (ARMAS[s.class] || ARMAS['Fuzileiro Regular']) : PISTOLA;
                 s.cadAcc = (s.cadAcc || 0) + cadenciaDe(s, arma, estado);
@@ -1604,7 +1641,7 @@
                     st.tiros++; estado.combate.tiros++; disparou = true;
                     if (Math.random() < chanceDeAcerto(s, arma, alvo, estado)) {
                         st.acertos++; estado.combate.acertos++;
-                        alvo.hp -= arma.dano;
+                        alvo.hp -= arma.dano * blindagem(alvo, 'fuzil');
                         if (alvo.hp <= 0 && !alvo.abatidoPor) alvo.abatidoPor = s.id;
                     }
                 }
@@ -1683,7 +1720,9 @@
             marcarOnda:   { nome: 'Marcar e atacar', custo: 6, passos: [{ a: 'patrulha', d: 0 }, { a: 'infantaria', d: 25 }],
                             pista: '📻 Rádio: batedores à frente de uma coluna de infantaria.' },
             bombAssalto:  { nome: 'Bombardeio e assalto', custo: 7, passos: [{ a: 'artilharia', d: 0 }, { a: 'infantariaPerto', d: 4 }],
-                            pista: '📻 Rádio: infantaria avançando atrás de uma barragem de artilharia!' }
+                            pista: '📻 Rádio: infantaria avançando atrás de uma barragem de artilharia!' },
+            blindado:     { nome: 'Ataque blindado', custo: 8, passos: [{ a: 'blindado', d: 0 }],
+                            pista: '📻 Rádio: ronco de motores e lagartas ao norte. Blindado a caminho!' }
         };
 
         function newGeneral() {
@@ -1726,6 +1765,7 @@
                 trincheiraFraca: gameState.trench < 60,
                 cansado: media('fatigue') > 60 || media('hunger') > 60 || media('thirst') > 60,
                 municaoBaixa: gameState.resources.ammoRifle < 150,
+                semAntiTanque: !temAntiTanque(),
                 vigias
             };
         }
@@ -1741,6 +1781,7 @@
                 case 'reconBomb':   return 0.9 + 0.6 * (1 - m.bloqueio) + 0.3 * (1 - m.abrigo) - 0.2 * m.contraBateria;
                 case 'marcarOnda':  return 0.9 + 0.7 * (1 - m.abatePatrulha) + 0.3 * b(sit.noite);
                 case 'bombAssalto': return 0.8 + 1.0 * m.abrigo + 0.3 * b(sit.trincheiraFraca) - 0.1 * m.contraBateria;
+                case 'blindado':    return 0.7 + 0.5 * b(sit.trincheiraFraca) + 0.6 * b(sit.semAntiTanque);
             }
             return 0;
         }
@@ -1753,6 +1794,7 @@
             if (plano.passos.some(p => p.a.startsWith('infantaria')) && gameState.enemies.some(e => e.type === 'infantaria')) return false;
             if (gameState.enemies.length >= 4) return false;
             if (id === 'drone' && gameState.day < 3) return false;
+            if (id === 'blindado' && (gameState.day < 8 || gameState.enemies.some(e => e.type === 'blindado'))) return false;
             return true;
         }
 
@@ -1792,6 +1834,10 @@
                 for (let i = 0; i < qtd; i++) spawnEnemy('patrulha', 250);
                 logFeed('👣 PATRULHA INIMIGA detectada ao norte, avançando sobre o setor.', 'text-red-400 font-bold');
                 playTacticalBeep(500, 0.1);
+            } else if (acao === 'blindado') {
+                spawnEnemy('blindado', 280);
+                logFeed('🚜 BLINDADO INIMIGO avançando! Fuzil quase não fere: use o anticarro, o morteiro ou a artilharia.', 'text-red-400 font-bold');
+                playTacticalBeep(300, 0.25);
             } else if (acao === 'drone') {
                 spawnEnemy('drone', 260);
                 logFeed('🛸 DRONE INIMIGO sobrevoando o setor! Bloqueio de Sinal cega o drone.', 'text-red-400 font-bold');
@@ -1920,6 +1966,374 @@
         /* ===== Combate: um passo de 1 segundo de jogo =====
            As funções abaixo recebem o estado da partida (`estado`, que é o gameState)
            em vez de mexer no global direto; assim dá para testar cada parte isolada. */
+
+        /* ==========================================================================
+           DEFESAS: pontos defensivos, armas pesadas e inventário
+           - 3 pontos na trincheira. Cada um precisa ser construído (quem está na
+             Manutenção trabalha na obra; o Engenheiro é 3× mais rápido).
+           - Num ponto pronto monta-se uma arma do paiol e escolhe-se um operador.
+             O operador precisa estar de Vigília; enquanto opera, não usa o fuzil.
+           - Metralhadora .50: gasta munição pesada. Morteiro: fogo indireto em grupos.
+             Anticarro: só contra blindados. Granadas: automáticas a menos de 25 m.
+             Arame farpado: segura o avanço a 50 m até se desgastar.
+           - O comboio traz extras conforme a disponibilidade do QG; dá para
+             requisitar com prestígio (chega no próximo comboio).
+           ========================================================================== */
+        const EQUIP = {
+            metralhadora: { nome: 'Metralhadora .50', sigla: 'MG', icone: 'fa-gun', desc: 'Gasta munição pesada (~4 por segundo)' },
+            morteiro:     { nome: 'Morteiro 60 mm', sigla: 'MRT', icone: 'fa-bomb', desc: 'Fogo indireto de 60 a 300 m, atinge grupos' },
+            lancaAT:      { nome: 'Lança-rojão anticarro', sigla: 'AT', icone: 'fa-rocket', desc: 'Dispara só em blindados até 200 m' }
+        };
+        const MUNICOES = {
+            granadaMorteiro: { nome: 'Granadas de morteiro', icone: 'fa-bomb' },
+            foguetesAT:      { nome: 'Foguetes anticarro', icone: 'fa-rocket' },
+            granadas:        { nome: 'Granadas de mão', icone: 'fa-burst' },
+            arame:           { nome: 'Rolos de arame farpado', icone: 'fa-xmarks-lines' }
+        };
+        const DEF = {
+            OBRA_SOLDADO: 4, OBRA_ENGENHEIRO: 12,            // pontos de obra por ciclo de 10 s (100 = pronto)
+            MG: { cadencia: 0.5, precisao: 0.25, dano: 60 }, // por segundo de jogo (4 balas por segundo real)
+            MORTEIRO: { recarga: 40, dano: 110, raio: 25, acerto: 0.7, minimo: 60 },
+            AT: { recarga: 48, dano: 900, acerto: 0.75, alcance: 200 },
+            GRANADA: { recarga: 16, dano: 140, raio: 25, alvos: 3 },
+            ARAME: { zona: 50, lentidao: 0.5, desgaste: 0.15, desgasteBlindado: 2 },
+            BLINDAGEM: { fuzil: 0.15, mg: 0.35, granada: 0.3, morteiro: 0.5, at: 1 },
+            BLINDADO_TRINCHEIRA: 15, BLINDADO_DANO: 35, BLINDADO_ALVOS: 2
+        };
+        const REQUISICOES = {
+            granadas:        { qtd: 6, custo: 40,  rotulo: '6 granadas de mão' },
+            granadaMorteiro: { qtd: 8, custo: 60,  rotulo: '8 granadas de morteiro' },
+            foguetesAT:      { qtd: 2, custo: 80,  rotulo: '2 foguetes anticarro' },
+            arame:           { qtd: 1, custo: 40,  rotulo: '1 rolo de arame' },
+            metralhadora:    { qtd: 1, custo: 150, rotulo: 'Metralhadora .50' },
+            morteiro:        { qtd: 1, custo: 150, rotulo: 'Morteiro 60 mm' },
+            lancaAT:         { qtd: 1, custo: 120, rotulo: 'Lança-rojão AT' }
+        };
+        // O comboio às vezes traz extras (disponibilidade do QG): [item, quantidade, chance]
+        const EXTRAS_DO_COMBOIO = [['granadas', 4, 0.6], ['granadaMorteiro', 6, 0.4], ['foguetesAT', 1, 0.3], ['arame', 1, 0.25]];
+
+        function novoArsenal() {
+            const ponto = (id, nome, x) => ({ id, nome, x, obra: 0, construindo: false, arma: null, operador: null, recarga: 0, acc: 0 });
+            return {
+                itens: { metralhadora: 1, morteiro: 1, lancaAT: 1, granadaMorteiro: 12, foguetesAT: 3, granadas: 10, arame: 2 },
+                posicoes: [ponto('esq', 'Flanco esquerdo', 0.22), ponto('centro', 'Centro', 0.5), ponto('dir', 'Flanco direito', 0.78)],
+                arame: 0, granadasLiberadas: true, recargaGranada: 0, pedidos: []
+            };
+        }
+        const arsenalDe = (estado = gameState) => (estado.arsenal = estado.arsenal || novoArsenal());
+        const blindagem = (alvo, arma) => (alvo.type === 'blindado' ? DEF.BLINDAGEM[arma] : 1);
+
+        // Operador em condição de usar a arma do ponto (vivo e de Vigília)
+        function operadorAtivo(p, estado = gameState) {
+            if (p.obra < 100 || !p.arma || !p.operador) return null;
+            const s = estado.squad.find(x => x.id === p.operador);
+            return s && s.hp > 0 && s.duty === 'WATCH' ? s : null;
+        }
+        // Soldado ocupado numa arma pesada neste segundo (não usa o fuzil)
+        function ocupadoNaArma(s, estado = gameState) {
+            const ars = arsenalDe(estado);
+            return ars.posicoes.some(p => {
+                if (operadorAtivo(p, estado) !== s) return false;
+                if (p.arma === 'metralhadora') return estado.resources.ammoHeavy >= 1;
+                if (p.arma === 'morteiro') return ars.itens.granadaMorteiro >= 1;
+                return ars.itens.foguetesAT >= 1 && estado.enemies.some(e => e.type === 'blindado' && e.distance <= DEF.AT.alcance);
+            });
+        }
+        function temAntiTanque(estado = gameState) {
+            const ars = arsenalDe(estado);
+            return ars.itens.foguetesAT > 0 && ars.posicoes.some(p => p.arma === 'lancaAT' && operadorAtivo(p, estado));
+        }
+
+        function creditar(alvo, s) { if (alvo.hp <= 0 && !alvo.abatidoPor) alvo.abatidoPor = s.id; }
+
+        function dispararDefesas(estado, alive) {
+            const ars = arsenalDe(estado);
+            const inimigos = () => estado.enemies.filter(e => e.hp > 0);
+            if (!inimigos().length) return;
+            const o = estado.tacticalOrders;
+            ars.posicoes.forEach(p => {
+                if (p.recarga > 0) p.recarga--;
+                const op = operadorAtivo(p, estado);
+                if (!op) return;
+                const st = statsDe(op);
+                if (p.arma === 'metralhadora') {
+                    const noAlcance = inimigos().filter(e => e.distance <= TIRO.ALCANCE);
+                    const semBlindagem = noAlcance.filter(e => e.type !== 'blindado');
+                    const alvos = semBlindagem.length ? semBlindagem : noAlcance; // .50 prefere alvos sem blindagem
+                    if (!alvos.length) return;
+                    p.acc = (p.acc || 0) + DEF.MG.cadencia * (o.SHELTER ? TIRO.ABRIGO.cad : 1);
+                    while (p.acc >= 1) {
+                        p.acc -= 1;
+                        const vivos = alvos.filter(e => e.hp > 0);
+                        if (!vivos.length || estado.resources.ammoHeavy < 1) { p.acc = 0; break; }
+                        const prox = vivos.reduce((a, e) => (e.distance < a.distance ? e : a), vivos[0]);
+                        const alvo = Math.random() < 0.5 ? prox : vivos[Math.floor(Math.random() * vivos.length)];
+                        estado.resources.ammoHeavy -= 1;
+                        st.tiros++; estado.combate.tiros++;
+                        if (Math.random() < chanceDeAcerto(op, DEF.MG, alvo, estado)) {
+                            st.acertos++; estado.combate.acertos++;
+                            alvo.hp -= DEF.MG.dano * blindagem(alvo, 'mg');
+                            creditar(alvo, op);
+                        }
+                    }
+                } else if (p.arma === 'morteiro') {
+                    if (p.recarga > 0 || ars.itens.granadaMorteiro < 1) return;
+                    const alvos = inimigos().filter(e => e.type !== 'drone' && e.distance >= DEF.MORTEIRO.minimo && e.distance <= TIRO.ALCANCE);
+                    if (!alvos.length) return;
+                    const perto = (a, e) => Math.abs(a.distance - e.distance) <= DEF.MORTEIRO.raio && Math.abs((a.offsetX || 0) - (e.offsetX || 0)) <= DEF.MORTEIRO.raio * 1.6;
+                    const grupo = (a) => alvos.filter(e => perto(a, e));
+                    const centro = alvos.reduce((m, a) => (grupo(a).length > grupo(m).length ? a : m), alvos[0]);
+                    ars.itens.granadaMorteiro--;
+                    p.recarga = DEF.MORTEIRO.recarga;
+                    const acerto = chanceDeAcerto(op, { precisao: DEF.MORTEIRO.acerto }, centro, estado);
+                    let atingidos = 0;
+                    grupo(centro).forEach(e => {
+                        if (Math.random() < acerto) { e.hp -= DEF.MORTEIRO.dano * blindagem(e, 'morteiro'); atingidos++; creditar(e, op); }
+                    });
+                    const pc = enemyFrac(centro); addEffect('artillery', pc.fx, pc.fy);
+                    playGunshotSound();
+                    if (atingidos >= 2) logFeed(`💥 Morteiro atingiu ${atingidos} inimigos de uma vez!`, 'text-mil-greenMuted');
+                } else if (p.arma === 'lancaAT') {
+                    if (p.recarga > 0 || ars.itens.foguetesAT < 1) return;
+                    const alvo = inimigos().find(e => e.type === 'blindado' && e.distance <= DEF.AT.alcance);
+                    if (!alvo) return;
+                    ars.itens.foguetesAT--;
+                    p.recarga = DEF.AT.recarga;
+                    const pa = enemyFrac(alvo); addEffect('artillery', pa.fx, pa.fy);
+                    if (Math.random() < chanceDeAcerto(op, { precisao: DEF.AT.acerto }, alvo, estado)) {
+                        alvo.hp -= DEF.AT.dano * blindagem(alvo, 'at');
+                        creditar(alvo, op);
+                        logFeed(`🚀 ${op.rank} ${op.name} acertou o blindado com o anticarro!`, 'text-mil-greenMuted font-bold');
+                    } else {
+                        logFeed(`🚀 Foguete anticarro errou o blindado. Restam ${ars.itens.foguetesAT}.`, 'text-mil-amberMuted');
+                    }
+                }
+            });
+
+            // Granadas de mão: quem está de vigília lança nos inimigos a menos de 25 m
+            if (ars.recargaGranada > 0) { ars.recargaGranada--; return; }
+            if (!ars.granadasLiberadas || ars.itens.granadas < 1) return;
+            const perto = inimigos().filter(e => e.type !== 'drone' && e.distance <= DEF.GRANADA.raio).sort((a, b) => a.distance - b.distance);
+            const lancador = alive.find(s => s.hp > 0 && s.duty === 'WATCH' && !ocupadoNaArma(s, estado));
+            if (!perto.length || !lancador) return;
+            ars.itens.granadas--;
+            ars.recargaGranada = DEF.GRANADA.recarga;
+            perto.slice(0, DEF.GRANADA.alvos).forEach(e => { e.hp -= DEF.GRANADA.dano * blindagem(e, 'granada'); creditar(e, lancador); });
+            const pg = enemyFrac(perto[0]); addEffect('blast', pg.fx, pg.fy);
+        }
+
+        // Arame farpado a 50 m: segura o avanço e se desgasta (blindado rasga rápido)
+        function efeitoDoArame(estado, enemy) {
+            const ars = arsenalDe(estado);
+            if (ars.arame <= 0 || enemy.type === 'drone' || enemy.distance > DEF.ARAME.zona || enemy.distance <= 0) return 1;
+            ars.arame = Math.max(0, ars.arame - (enemy.type === 'blindado' ? DEF.ARAME.desgasteBlindado : DEF.ARAME.desgaste));
+            if (ars.arame <= 0) logFeed('🪢 O arame farpado foi destruído.', 'text-mil-amberMuted');
+            return enemy.type === 'blindado' ? 1 : DEF.ARAME.lentidao;
+        }
+
+        // Blindado chega à trincheira: esmaga parte da obra e fere quem estiver no caminho
+        function blindadoNaTrincheira(estado, enemy, alive) {
+            trenchDamage(DEF.BLINDADO_TRINCHEIRA, 'o blindado');
+            addEffect('blast', 0.5, (canvas.height - 35) / canvas.height);
+            logFeed('🚜 O BLINDADO PASSOU POR CIMA DA TRINCHEIRA!', 'text-red-500 font-bold');
+            const dano = DEF.BLINDADO_DANO * diff().enemyDmgMult * PRESSURE.ENEMY_DAMAGE;
+            embaralhar(alive.filter(s => s.hp > 0)).slice(0, DEF.BLINDADO_ALVOS).forEach(s => {
+                s.hp = Math.max(0, s.hp - dano);
+                if (s.hp <= 0) logFeed(`❌ BAIXA NA TRINCHEIRA: ${s.rank} ${s.name} foi morto pelo blindado!`, 'text-red-500 font-bold');
+            });
+        }
+
+        // Obra: soldado na Manutenção trabalha no ponto em construção. Devolve true se trabalhou.
+        function trabalharNaObra(soldier) {
+            const ars = arsenalDe();
+            const p = ars.posicoes.find(x => x.construindo && x.obra < 100);
+            if (!p) return false;
+            p.obra = Math.min(100, p.obra + (soldier.class === 'Engenheiro' ? DEF.OBRA_ENGENHEIRO : DEF.OBRA_SOLDADO));
+            if (p.obra >= 100) {
+                p.construindo = false;
+                logFeed(`🏗️ Ponto defensivo pronto: ${p.nome}. Monte uma arma na aba Defesas.`, 'text-mil-greenMuted font-bold');
+                lastDefSignature = '';
+            }
+            return true;
+        }
+
+        function entregarArsenal(recebida) {
+            const ars = arsenalDe();
+            const chegou = [];
+            ars.pedidos.forEach(id => { const r = REQUISICOES[id]; ars.itens[id] += r.qtd; chegou.push(r.rotulo); });
+            ars.pedidos = [];
+            EXTRAS_DO_COMBOIO.forEach(([id, qtd, chance]) => {
+                if (Math.random() < chance) {
+                    const q = Math.floor(qtd * recebida);
+                    if (q > 0) { ars.itens[id] += q; chegou.push(`${q} ${MUNICOES[id].nome.toLowerCase()}`); }
+                }
+            });
+            if (chegou.length) logFeed(`🧰 Paiol reforçado pelo comboio: ${chegou.join(', ')}.`, 'text-mil-greenMuted');
+        }
+
+        // ----- Ações da aba Defesas -----
+        function construirPonto(i) {
+            const ars = arsenalDe();
+            const p = ars.posicoes[i];
+            if (!p || p.obra >= 100 || p.construindo) return;
+            if (ars.posicoes.some(x => x.construindo)) return logFeed('Já há um ponto defensivo em obra. Termine aquele primeiro.', 'text-mil-amberMuted');
+            p.construindo = true;
+            const naManut = gameState.squad.some(s => s.hp > 0 && s.duty === 'MAINTENANCE');
+            logFeed(`🏗️ Obra iniciada: ${p.nome}. ${naManut ? 'A Manutenção vai trabalhar nela.' : 'Coloque alguém na Manutenção para a obra andar.'}`, 'text-mil-amberMuted');
+            updateUI(); playTacticalBeep(700, 0.03);
+        }
+        function montarArma(i, arma) {
+            const ars = arsenalDe();
+            const p = ars.posicoes[i];
+            if (!p || p.obra < 100 || p.arma || ars.itens[arma] < 1) return;
+            ars.itens[arma]--;
+            p.arma = arma; p.recarga = 0; p.acc = 0;
+            // Sugere o operador natural: o Metralhador na .50, senão ninguém (o jogador escolhe)
+            const ocupados = ars.posicoes.map(x => x.operador);
+            const sugerido = arma === 'metralhadora' ? gameState.squad.find(s => s.hp > 0 && s.class === 'Metralhador' && !ocupados.includes(s.id)) : null;
+            p.operador = sugerido ? sugerido.id : null;
+            logFeed(`🔧 ${EQUIP[arma].nome} montada: ${p.nome}.`, 'text-mil-greenMuted');
+            updateUI(); playTacticalBeep(750, 0.03);
+        }
+        function desmontarArma(i) {
+            const ars = arsenalDe();
+            const p = ars.posicoes[i];
+            if (!p || !p.arma) return;
+            ars.itens[p.arma]++;
+            p.arma = null; p.operador = null;
+            updateUI(); playTacticalBeep(650, 0.03);
+        }
+        function definirOperador(i, id) {
+            const ars = arsenalDe();
+            const p = ars.posicoes[i];
+            if (!p || !p.arma) return;
+            const n = Number(id) || null;
+            if (n) ars.posicoes.forEach(x => { if (x !== p && x.operador === n) x.operador = null; });
+            p.operador = n;
+            updateUI(); playTacticalBeep(750, 0.02);
+        }
+        function alternarGranadas() {
+            const ars = arsenalDe();
+            ars.granadasLiberadas = !ars.granadasLiberadas;
+            updateUI(); playTacticalBeep(750, 0.02);
+        }
+        function estenderArame() {
+            const ars = arsenalDe();
+            if (ars.itens.arame < 1) return;
+            ars.itens.arame--;
+            ars.arame = 100;
+            logFeed('🪢 Arame farpado estendido a 50 m da trincheira.', 'text-mil-greenMuted');
+            updateUI(); playTacticalBeep(700, 0.03);
+        }
+        function requisitar(id) {
+            const r = REQUISICOES[id];
+            if (!r) return;
+            if (gameState.tacticalOrders.SIGNAL_JAM) return logFeed('Rádio ocupado pelo Bloqueio de Sinal: sem requisições.', 'text-mil-amberMuted');
+            if (gameState.prestige < custo(r.custo)) return logFeed('Prestígio insuficiente!', 'text-red-400');
+            gameState.prestige -= custo(r.custo);
+            arsenalDe().pedidos.push(id);
+            logFeed(`📦 Requisição aceita pelo QG: ${r.rotulo}. Chega no comboio do dia ${proximoComboio()}.`, 'text-mil-amberMuted');
+            updateUI(); playTacticalBeep(800, 0.03);
+        }
+
+        // ----- Aba Defesas (só redesenha quando algo visível muda, para não perder o toque) -----
+        let lastDefSignature = '';
+        function renderDefesas() {
+            const ars = arsenalDe();
+            const vivos = gameState.squad.filter(s => s.hp > 0);
+            const assinatura = JSON.stringify([ars.itens, ars.posicoes.map(p => [Math.floor(p.obra), p.construindo, p.arma, p.operador]), Math.ceil(ars.arame), ars.granadasLiberadas, ars.pedidos,
+                vivos.map(s => [s.id, s.duty]), Math.floor(gameState.prestige / 10), Math.floor(gameState.resources.ammoHeavy), gameState.tacticalOrders.SIGNAL_JAM, gameState.day]);
+            if (assinatura === lastDefSignature) return;
+            lastDefSignature = assinatura;
+            const naManut = vivos.filter(s => s.duty === 'MAINTENANCE').length;
+
+            document.getElementById('def-posicoes').innerHTML = ars.posicoes.map((p, i) => {
+                let corpo = '';
+                if (p.obra < 100 && !p.construindo) {
+                    corpo = `<div class="text-mil-textMuted">Terreno livre na trincheira.</div>
+                        <button onclick="construirPonto(${i})" class="mt-1 w-full py-1.5 btn-tactical rounded font-bold"><i class="fa-solid fa-trowel-bricks text-mil-amberMuted"></i> Construir ninho</button>`;
+                } else if (p.obra < 100) {
+                    corpo = `<div class="text-mil-amberMuted">Em obra: ${Math.floor(p.obra)}% · ${naManut ? `${naManut} na Manutenção trabalhando` : 'parada: ninguém na Manutenção'}</div>
+                        <div class="h-1.5 bg-black/60 rounded mt-1"><div class="h-1.5 bg-mil-amberMuted rounded" style="width:${p.obra}%"></div></div>`;
+                } else if (!p.arma) {
+                    const botoes = Object.keys(EQUIP).map(k => `<button onclick="montarArma(${i}, '${k}')" ${ars.itens[k] < 1 ? 'disabled' : ''} class="py-1.5 btn-tactical rounded font-bold ${ars.itens[k] < 1 ? 'opacity-40' : ''}">${EQUIP[k].sigla} (${ars.itens[k]})</button>`).join('');
+                    corpo = `<div class="text-mil-greenMuted">Ninho pronto. Monte uma arma do paiol:</div><div class="grid grid-cols-3 gap-1 mt-1">${botoes}</div>`;
+                } else {
+                    const eq = EQUIP[p.arma];
+                    const op = gameState.squad.find(s => s.id === p.operador);
+                    let estado = 'Pronta para atirar', cor = 'text-mil-greenMuted';
+                    if (!op || op.hp <= 0) { estado = 'Sem operador: arma parada'; cor = 'text-red-400'; }
+                    else if (op.duty !== 'WATCH') { estado = 'Operador fora da Vigília: arma parada'; cor = 'text-red-400'; }
+                    else if (p.arma === 'metralhadora' && gameState.resources.ammoHeavy < 1) { estado = 'Sem munição pesada'; cor = 'text-red-400'; }
+                    else if (p.arma === 'morteiro' && ars.itens.granadaMorteiro < 1) { estado = 'Sem granadas de morteiro'; cor = 'text-red-400'; }
+                    else if (p.arma === 'lancaAT' && ars.itens.foguetesAT < 1) { estado = 'Sem foguetes anticarro'; cor = 'text-red-400'; }
+                    const opcoes = `<option value="">— sem operador —</option>` + vivos.map(s => `<option value="${s.id}" ${s.id === p.operador ? 'selected' : ''}>${s.rank} ${s.name} (${s.class})</option>`).join('');
+                    corpo = `<div class="flex justify-between items-center"><span class="text-mil-textGlow font-bold"><i class="fa-solid ${eq.icone} text-mil-amberMuted"></i> ${eq.nome}</span>
+                            <button onclick="desmontarArma(${i})" class="underline text-mil-textMuted">Desmontar</button></div>
+                        <div class="text-mil-textMuted">${eq.desc}</div>
+                        <div class="${cor} font-bold">${estado}</div>
+                        <label class="flex items-center gap-2 mt-1"><span class="text-mil-textMuted">Operador:</span>
+                            <select onchange="definirOperador(${i}, this.value)" class="flex-1 bg-black/60 border border-mil-border rounded px-1 py-1 text-mil-textGlow">${opcoes}</select></label>`;
+                }
+                return `<div class="bg-mil-bg border border-mil-border p-2 rounded space-y-0.5"><div class="text-mil-amberMuted font-bold uppercase">${p.nome}</div>${corpo}</div>`;
+            }).join('');
+
+            const celula = (icone, nome, valor) => `<div class="bg-mil-bg border border-mil-border p-2 rounded flex justify-between items-center gap-1"><span class="text-mil-textMuted"><i class="fa-solid ${icone} text-mil-greenMuted"></i> ${nome}</span><span class="font-bold text-mil-textGlow">${valor}</span></div>`;
+            document.getElementById('def-inventario').innerHTML =
+                Object.keys(EQUIP).map(k => celula(EQUIP[k].icone, EQUIP[k].nome, ars.itens[k])).join('') +
+                celula('fa-burst', 'Munição pesada', Math.floor(gameState.resources.ammoHeavy)) +
+                Object.keys(MUNICOES).map(k => celula(MUNICOES[k].icone, MUNICOES[k].nome, ars.itens[k])).join('');
+
+            document.getElementById('def-extras').innerHTML = `
+                <div class="bg-mil-bg border border-mil-border p-2 rounded flex justify-between items-center gap-2">
+                    <div><div class="text-mil-textGlow font-bold">Granadas de mão</div><div class="text-mil-textMuted">Lançadas sozinhas em inimigos a menos de 25 m</div></div>
+                    <button onclick="alternarGranadas()" class="px-3 py-1.5 btn-tactical rounded font-bold ${ars.granadasLiberadas ? 'btn-active-order' : ''}">${ars.granadasLiberadas ? 'Liberadas' : 'Guardadas'}</button>
+                </div>
+                <div class="bg-mil-bg border border-mil-border p-2 rounded flex justify-between items-center gap-2">
+                    <div><div class="text-mil-textGlow font-bold">Arame farpado a 50 m: ${ars.arame > 0 ? Math.ceil(ars.arame) + '%' : 'nenhum'}</div><div class="text-mil-textMuted">Segura a infantaria pela metade; blindado rasga rápido</div></div>
+                    <button onclick="estenderArame()" ${ars.itens.arame < 1 ? 'disabled' : ''} class="px-3 py-1.5 btn-tactical rounded font-bold ${ars.itens.arame < 1 ? 'opacity-40' : ''}">Estender (1 rolo)</button>
+                </div>`;
+
+            const jam = gameState.tacticalOrders.SIGNAL_JAM;
+            document.getElementById('def-requisicoes').innerHTML = Object.keys(REQUISICOES).map(k => {
+                const r = REQUISICOES[k], c = custo(r.custo), pode = !jam && gameState.prestige >= c;
+                return `<button onclick="requisitar('${k}')" ${pode ? '' : 'disabled'} class="p-2 btn-tactical rounded text-left ${pode ? '' : 'opacity-50'}"><div class="font-bold text-mil-textGlow">${r.rotulo}</div><div class="text-mil-amberMuted">${c} PTS</div></button>`;
+            }).join('');
+            document.getElementById('def-pedidos').textContent = ars.pedidos.length
+                ? `A caminho no comboio do dia ${proximoComboio()}: ${ars.pedidos.map(id => REQUISICOES[id].rotulo).join(', ')}.`
+                : (jam ? 'Rádio ocupado pelo Bloqueio de Sinal.' : 'Nenhuma requisição pendente.');
+        }
+
+        // Mapa: ninhos sobre a trincheira e a linha de arame
+        function desenharDefesas(w, h, trenchY) {
+            const ars = arsenalDe();
+            ctx.font = '11px "Courier Prime"';
+            if (ars.arame > 0) {
+                const ya = trenchY - ((DEF.ARAME.zona / 300) * (h - 60)) - 10;
+                ctx.strokeStyle = `rgba(170,170,160,${0.25 + 0.5 * ars.arame / 100})`;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                for (let x = 8; x < w - 8; x += 8) { ctx.moveTo(x, ya - 3); ctx.lineTo(x + 8, ya + 3); ctx.moveTo(x, ya + 3); ctx.lineTo(x + 8, ya - 3); }
+                ctx.stroke();
+            }
+            ars.posicoes.forEach(p => {
+                if (p.obra <= 0 && !p.construindo) return;
+                const x = w * p.x, y = trenchY + 14; // logo abaixo da linha da trincheira
+                const pronto = p.obra >= 100;
+                ctx.lineWidth = 1.5;
+                ctx.strokeStyle = pronto ? (operadorAtivo(p) ? '#8fad88' : '#d9a35a') : 'rgba(217,163,90,0.6)';
+                ctx.fillStyle = 'rgba(20,28,20,0.9)';
+                if (!pronto) ctx.setLineDash([3, 3]);
+                ctx.fillRect(x - 15, y - 8, 30, 15);
+                ctx.strokeRect(x - 15, y - 8, 30, 15);
+                ctx.setLineDash([]);
+                ctx.fillStyle = pronto ? '#cfe0c4' : '#d9a35a';
+                ctx.textAlign = 'center';
+                ctx.fillText(pronto ? (p.arma ? EQUIP[p.arma].sigla : '—') : `${Math.floor(p.obra)}%`, x, y + 4);
+                ctx.textAlign = 'left';
+            });
+        }
+
         function processEnemiesAndCombat(estado = gameState) {
             processCounterBattery();
             processBarrage();
@@ -1930,6 +2344,8 @@
                 const observando = droneObservando(estado);
                 // Tiro de verdade: cada soldado dispara balas; cada bala tem chance de acertar
                 dispararEsquadrao(alive, estado);
+                // Armas pesadas montadas nos pontos defensivos, granadas de mão
+                dispararDefesas(estado, alive);
                 // De trás para a frente: inimigos podem sair da lista no meio do laço
                 for (let i = estado.enemies.length - 1; i >= 0; i--) {
                     if (processarInimigo(estado, estado.enemies[i], alive, observando)) estado.enemies.splice(i, 1);
@@ -1957,6 +2373,7 @@
                 estado.resources.ammoHeavy = Math.max(0, estado.resources.ammoHeavy - 0.4 * PRESSURE.AMMO_SPEND);
                 playGunshotSound();
             }
+            speed *= efeitoDoArame(estado, enemy);
             enemy.distance -= speed;
         }
 
@@ -2006,7 +2423,7 @@
             if (atirador) { statsDe(atirador).abates++; estado.combate.abates++; }
             logFeed(`✅ ${tipo.label} NEUTRALIZADO NO SETOR${atirador ? ` por ${atirador.rank} ${atirador.name}` : ''}!`, 'text-mil-greenMuted font-bold');
             if (enemy.type === 'patrulha' && estado.general) lembrar('abatePatrulha', 1, 0.3);
-            estado.prestige += ganho(enemy.type === 'drone' ? 20 : 30);
+            estado.prestige += ganho(enemy.type === 'drone' ? 20 : enemy.type === 'blindado' ? 80 : 30);
         }
 
         // Chegou à trincheira: drone só sobrevoa; patrulha e infantaria invadem
@@ -2015,6 +2432,7 @@
                 logFeed('🛸 Drone escapou após sobrevoar a trincheira.', 'text-mil-amberMuted');
                 return;
             }
+            if (enemy.type === 'blindado') { blindadoNaTrincheira(estado, enemy, alive); return; }
             resolverInvasao(estado, enemy, alive);
         }
 
@@ -2353,7 +2771,7 @@
         }
 
         function switchTab(tabName) {
-            ['squad', 'logistics', 'radio', 'diary'].forEach(t => {
+            ['squad', 'logistics', 'radio', 'diary', 'defense'].forEach(t => {
                 document.getElementById(`panel-${t}`).classList.add('hidden');
                 document.getElementById(`tab-${t}`).className = 'py-2 border-b-2 border-transparent text-mil-textMuted hover:text-mil-textGlow';
             });
@@ -2380,6 +2798,7 @@
         let lastSquadSignature = '';
 
         function updateUI() {
+            renderDefesas();
             document.getElementById('val-rations').textContent = `${Math.round(gameState.resources.rations)} un`;
             document.getElementById('val-water').textContent = `${Math.round(gameState.resources.water)} L`;
             document.getElementById('val-ammo-rifle').textContent = `${Math.round(gameState.resources.ammoRifle)} / ${PRESSURE.AMMO_CAP_RIFLE}`;
@@ -2832,6 +3251,7 @@
             { t: '🗺️ Lendo o mapa', x: 'O inimigo vem do norte (topo do mapa). Losango = infantaria, quadrado = patrulha, círculo = drone. A linha amarela é o alcance de tiro deles. O aviso vermelho em cima avisa contato ou artilharia chegando, com a contagem.' },
             { t: '⚔️ Ordens táticas', x: 'Fogo Supressão: mais dano e freia o inimigo, gasta munição. Abrigo Reforçado: protege do dano (use na artilharia). Economizar: poupa munição. Vigília Total: vê tudo, cansa todos. Bloqueio de Sinal: derruba drones, mas corta o rádio. Algumas ordens se anulam.' },
             { t: '📻 Rádio e o general inimigo', x: 'Envie o relatório uma vez por dia para ganhar prestígio. Prestígio paga artilharia, evacuação, carga emergencial e contra-bateria. O general inimigo aprende o seu jeito de jogar e muda de tática: o painel dele no Rádio mostra o que ele já percebeu.' },
+            { t: '🛡️ Defesas', x: 'Na aba Defesas, construa ninhos na trincheira (quem está na Manutenção trabalha na obra; o Engenheiro é mais rápido). Monte neles a metralhadora .50, o morteiro ou o anticarro e escolha um operador de vigília. A partir do dia 8 podem vir blindados: fuzil quase não fere, use o anticarro. Granadas e arame farpado também ajudam.' },
             { t: '✅ Para começar', x: 'Um bom começo: 2 soldados de vigília, 1 na cozinha, o Engenheiro na manutenção e o resto descansando. Reveze quando a fadiga, a fome ou a sede subirem. Você pode rever este guia em "Como jogar". Boa sorte, comandante.' }
         ];
 
