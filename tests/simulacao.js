@@ -76,17 +76,24 @@ async function run() {
     switchTab('logistics'); c.abaLogistica = !document.getElementById('panel-logistics').classList.contains('hidden');
     switchTab('radio');
     gameState.prestige = 1000; // garante prestígio para o pedido em qualquer nível
-    const pBefore = gameState.prestige; const rBefore = gameState.resources.rations; requestSupport('SUPPLY');
-    c.cargaCustaPrestigio = gameState.prestige - pBefore === -custo(120);
+    const pBefore = gameState.prestige; const rBefore = gameState.resources.rations; requestSupport('SUPPLY', 'rations');
+    c.cargaCustaPrestigio = gameState.prestige - pBefore === -custo(45);
     // A carga emergencial demora (150 s reais no nível 1, +10 s por nível) e não chega na hora
-    c.cargaNaoChegaNaHora = !!gameState.pendingSupply && gameState.resources.rations === rBefore;
-    const espera = gameState.pendingSupply ? gameState.pendingSupply.ticks : 0;
+    c.cargaNaoChegaNaHora = !!gameState.cargas.rations && gameState.resources.rations === rBefore;
+    const espera = gameState.cargas.rations || 0;
+    // Itens separados: água e munição podem ir junto; o mesmo item não pode ser pedido duas vezes
+    { const p1 = gameState.prestige; requestSupport('SUPPLY', 'rations');
+      c.cargaMesmoItemNaoRepete = gameState.prestige === p1;
+      requestSupport('SUPPLY', 'water'); requestSupport('SUPPLY', 'ammoHeavy');
+      c.cargaItensSeparados = !!gameState.cargas.water && !!gameState.cargas.ammoHeavy && !gameState.cargas.ammoRifle && gameState.prestige === p1 - custo(45) - custo(50); }
+    const aguaAntes = gameState.resources.water, pesadaAntes = gameState.resources.ammoHeavy, leveAntes = gameState.resources.ammoRifle;
     c.cargaEsperaValida = espera === esperaCarga() * (gameState.supplyLineEff <= 30 ? 2 : 1);
     { const nv = gameState.level; gameState.level = 1; c.carga150sNivel1 = seg(esperaCarga()) === 150;
       gameState.level = 2; c.carga160sNivel2 = seg(esperaCarga()) === 160;
       gameState.level = 25; c.carga390sNivel25 = seg(esperaCarga()) === 390; gameState.level = nv; }
     for (let i = 0; i < espera; i++) processPendingSupply();
-    c.cargaChegaDepois = !gameState.pendingSupply && gameState.resources.rations >= rBefore + 20;
+    c.cargaChegaDepois = !gameState.cargas.rations && gameState.resources.rations >= rBefore + 20;
+    c.cargaCadaItemChega = gameState.resources.water >= aguaAntes + 30 && gameState.resources.ammoHeavy > pesadaAntes && gameState.resources.ammoRifle === leveAntes;
     // Relatório de patrulha: só um envio por dia
     const pRel = gameState.prestige;
     sendIntelReport(); sendIntelReport();

@@ -412,15 +412,11 @@
                                 </button>
                             </div>
 
-                            <div class="bg-mil-bg border border-mil-border p-2 rounded flex justify-between items-center">
-                                <div>
-                                    <div class="font-bold text-mil-amberMuted"><i class="fa-solid fa-parachute-box"></i> Carga Emergencial</div>
-                                    <div class="text-xs text-mil-textMuted">+20 Ração, +30L Água, +250 Mun.</div>
-                                    <div id="txt-supply-eta" class="text-xs text-mil-textMuted">Chega em 150 s (+10 s por nível)</div>
-                                </div>
-                                <button id="btn-supply" onclick="requestSupport('SUPPLY')" class="px-2 py-1 btn-tactical rounded font-bold text-xs">
-                                    <span id="lbl-supply-btn">120 PTS</span>
-                                </button>
+                            <div class="bg-mil-bg border border-mil-border p-2 rounded space-y-1">
+                                <div class="font-bold text-mil-amberMuted"><i class="fa-solid fa-parachute-box"></i> Carga Emergencial</div>
+                                <div id="txt-supply-eta" class="text-xs text-mil-textMuted">Chega em 150 s (+10 s por nível)</div>
+                                <div class="text-xs text-mil-textMuted">Peça cada coisa separada; cada item tem a sua entrega.</div>
+                                <div id="lista-cargas" class="space-y-1"></div>
                             </div>
 
                             <div class="bg-mil-bg border border-mil-border p-2 rounded flex justify-between items-center">
@@ -762,7 +758,7 @@
             rainParticles: [],
             effects: [], // explosões, impactos e comboio no mapa
             barrage: null, // artilharia inimiga prevista: { ticks } ou null
-            pendingSupply: null, // carga emergencial a caminho: { ticks } ou null
+            cargas: {}, // carga emergencial a caminho, por item: { rations: ticks, water: ticks, ... }
             combate: { tiros: 0, acertos: 0, abates: 0 }, // tiros do dia
             arsenal: novoArsenal(), // pontos defensivos, armas pesadas e inventário
             level: 1, // nível de dificuldade (sobe a cada vitória)
@@ -1160,7 +1156,7 @@
                     squad: gameState.squad,
                     enemies: gameState.enemies,
                     lastIntelDay: gameState.lastIntelDay,
-                    pendingSupply: gameState.pendingSupply,
+                    cargas: gameState.cargas,
                     combate: gameState.combate,
                     arsenal: gameState.arsenal,
                     trench: gameState.trench,
@@ -1201,7 +1197,8 @@
                 squad: data.squad,
                 enemies: data.enemies,
                 lastIntelDay: data.lastIntelDay,
-                pendingSupply: data.pendingSupply || null,
+                // Salvamento antigo tinha uma carga única: vira ração, água e munição a caminho
+                cargas: data.cargas || (data.pendingSupply ? { rations: data.pendingSupply.ticks, water: data.pendingSupply.ticks, ammoRifle: data.pendingSupply.ticks } : {}),
                 combate: data.combate || { tiros: 0, acertos: 0, abates: 0 },
                 arsenal: data.arsenal || novoArsenal(),
                 trench: typeof data.trench === 'number' ? data.trench : 100,
@@ -1899,22 +1896,73 @@
             return l.slice(0, 3);
         }
 
-        // Carga emergencial a caminho: entrega quando a contagem chega a zero
-        function processPendingSupply() {
-            if (!gameState.pendingSupply) return;
-            gameState.pendingSupply.ticks--;
-            if (gameState.pendingSupply.ticks > 0) return;
-            gameState.pendingSupply = null;
-            const recebida = supplyReceivers() > 0 ? 1 : 0.5;
-            gameState.resources.rations += Math.floor(20 * recebida);
-            gameState.resources.water += Math.floor(30 * recebida);
-            addAmmoRifle(Math.floor(250 * recebida));
-            addEffect('convoy', 0, 0);
-            if (recebida < 1) {
-                logFeed('📦 CARGA EMERGENCIAL chegou sem ninguém para descarregar: metade se perdeu.', 'text-red-400 font-bold');
-            } else {
-                logFeed('📦 CARGA EMERGENCIAL ENTREGUE NO PERÍMETRO.', 'text-mil-amberMuted font-bold');
+        // Carga emergencial: cada item é pedido e entregue separado
+        const CARGAS = {
+            rations:   { nome: 'Rações',         qtd: 20,  custo: 45, unidade: 'rações',    icone: 'fa-bowl-food' },
+            water:     { nome: 'Água',           qtd: 30,  custo: 45, unidade: 'L de água', icone: 'fa-droplet' },
+            ammoRifle: { nome: 'Munição leve',   qtd: 250, custo: 50, unidade: 'cartuchos', icone: 'fa-gun' },
+            ammoHeavy: { nome: 'Munição pesada', qtd: 60,  custo: 50, unidade: 'cartuchos pesados', icone: 'fa-burst' }
+        };
+        const cargasACaminho = () => (gameState.cargas = gameState.cargas || {});
+
+        function pedirCarga(item) {
+            const c = CARGAS[item];
+            if (!c) return false;
+            const cargas = cargasACaminho();
+            if (cargas[item]) { logFeed(`Já há ${c.nome.toLowerCase()} a caminho.`, 'text-mil-amberMuted'); return false; }
+            if (gameState.prestige < custo(c.custo)) { logFeed('Prestígio insuficiente!', 'text-red-400'); return false; }
+            gameState.prestige -= custo(c.custo);
+            // Tempo de resposta fixo pelo nível: 150 s reais no nível 1, +10 s a cada nível
+            const linhaCortada = gameState.supplyLineEff <= 30;
+            const espera = esperaCarga() * (linhaCortada ? 2 : 1);
+            cargas[item] = espera;
+            logFeed(`📦 Carga de ${c.nome.toLowerCase()} solicitada à Central. Chegada em ${seg(espera)}s${linhaCortada ? ' (linha cortada: atraso dobrado)' : ''}.`, 'text-mil-amberMuted font-bold');
+            return true;
+        }
+
+        // Lista de pedidos na aba Rádio. Os botões são criados uma vez e só têm o texto
+        // atualizado: recriar a cada segundo fazia o celular perder o toque.
+        function renderCargas() {
+            const lista = document.getElementById('lista-cargas');
+            if (!lista.children.length) {
+                lista.innerHTML = Object.keys(CARGAS).map(k => `
+                    <div class="flex justify-between items-center gap-2">
+                        <span class="text-mil-textGlow"><i class="fa-solid ${CARGAS[k].icone} text-mil-greenMuted"></i> ${CARGAS[k].nome} <span class="text-mil-textMuted">+${CARGAS[k].qtd}</span></span>
+                        <button id="btn-carga-${k}" onclick="requestSupport('SUPPLY', '${k}')" class="px-2 py-1 btn-tactical rounded font-bold text-xs whitespace-nowrap"></button>
+                    </div>`).join('');
             }
+            const cargas = cargasACaminho();
+            Object.keys(CARGAS).forEach(k => {
+                const btn = document.getElementById('btn-carga-' + k);
+                const aCaminho = !!cargas[k];
+                const texto = aCaminho ? `A CAMINHO ${seg(cargas[k])}s` : `${custo(CARGAS[k].custo)} PTS`;
+                if (btn.textContent !== texto) btn.textContent = texto;
+                btn.disabled = aCaminho;
+                btn.classList.toggle('opacity-60', aCaminho);
+            });
+        }
+
+        // Entrega cada item quando a contagem dele chega a zero
+        function processPendingSupply() {
+            const cargas = cargasACaminho();
+            Object.keys(cargas).forEach(item => {
+                cargas[item]--;
+                if (cargas[item] > 0) return;
+                delete cargas[item];
+                const c = CARGAS[item];
+                const recebida = supplyReceivers() > 0 ? 1 : 0.5;
+                const qtd = Math.floor(c.qtd * recebida);
+                let real = qtd;
+                if (item === 'ammoRifle') real = addAmmoRifle(qtd);
+                else if (item === 'ammoHeavy') real = addAmmoHeavy(qtd);
+                else gameState.resources[item] += qtd;
+                addEffect('convoy', 0, 0);
+                if (recebida < 1) {
+                    logFeed(`📦 Carga de ${c.nome.toLowerCase()} chegou sem ninguém para descarregar: metade se perdeu (+${real} ${c.unidade}).`, 'text-red-400 font-bold');
+                } else {
+                    logFeed(`📦 CARGA EMERGENCIAL ENTREGUE: +${real} ${c.unidade}${real < qtd ? ' (paiol cheio)' : ''}.`, 'text-mil-amberMuted font-bold');
+                }
+            });
         }
 
         // Contra-bateria a caminho: se chegar antes do impacto, cancela o bombardeio
@@ -2838,12 +2886,8 @@
             recEl.className = `text-xs mt-1 ${livres > 0 ? 'text-mil-textMuted' : 'text-red-400 font-bold'}`;
 
             // Carga emergencial: mostra a contagem enquanto está a caminho
-            const supplyBtn = document.getElementById('btn-supply');
-            supplyBtn.disabled = !!gameState.pendingSupply;
             document.getElementById('txt-supply-eta').textContent = `Chega em ${seg(esperaCarga())} s (nível ${gameState.level || 1}; dobra com a linha cortada)`;
-            supplyBtn.classList.toggle('opacity-60', !!gameState.pendingSupply);
-            document.getElementById('lbl-supply-btn').textContent = gameState.pendingSupply
-                ? `A CAMINHO ${seg(gameState.pendingSupply.ticks)}s` : `${custo(120)} PTS`;
+            renderCargas();
             document.getElementById('lbl-cost-artillery').textContent = `${custo(100)} PTS`;
             document.getElementById('lbl-cost-medevac').textContent = `${custo(150)} PTS`;
             const counterBtn = document.getElementById('btn-counter');
@@ -2983,7 +3027,7 @@
             playTacticalBeep(900, 0.05);
         }
 
-        function requestSupport(type) {
+        function requestSupport(type, item) {
             if (radioOcupado()) return;
             if (type === 'COUNTER') {
                 if (!gameState.barrage) return logFeed('Nenhuma artilharia inimiga detectada para contra-bateria.', 'text-mil-amberMuted');
@@ -3022,14 +3066,8 @@
             }
 
             if (type === 'SUPPLY') {
-                if (gameState.pendingSupply) return logFeed('Já existe uma carga emergencial a caminho.', 'text-mil-amberMuted');
-                if (gameState.prestige < custo(120)) return logFeed('Prestígio insuficiente!', 'text-red-400');
-                gameState.prestige -= custo(120);
-                // Tempo de resposta fixo pelo nível: 150 s reais no nível 1, +10 s a cada nível
-                const linhaCortada = gameState.supplyLineEff <= 30;
-                const espera = esperaCarga() * (linhaCortada ? 2 : 1);
-                gameState.pendingSupply = { ticks: espera };
-                logFeed(`📦 Carga solicitada à Central. Chegada em ${seg(espera)}s${linhaCortada ? ' (linha cortada: atraso dobrado)' : ''}.`, 'text-mil-amberMuted font-bold');
+                // Um item por pedido (rations, water, ammoRifle, ammoHeavy)
+                pedirCarga(item);
             }
 
             updateUI();
@@ -3431,7 +3469,7 @@
            Ao abrir, ao voltar para o app e a cada minuto o jogo compara as duas. Se o site
            tiver uma versão diferente, o jogo trava numa tela que só sai atualizando.
            (tools/nova-versao.sh troca as duas juntas a cada atualização publicada.) */
-        const VERSAO_JOGO = '20261103.0142';
+        const VERSAO_JOGO = '20261103.0148';
         const ATUALIZOU_KEY = 'frontline-atualizou-para';
         async function verificarVersao() {
             if (!location.protocol.startsWith('http') || atualizacaoPendente) return;

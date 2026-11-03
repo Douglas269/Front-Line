@@ -71,7 +71,10 @@ async function measure(page, level, policy) {
       if (gameState.lastIntelDay !== gameState.day) sendIntelReport();
       const r = gameState.resources;
       if (gameState.enemies.some(e => e.type === 'infantaria' && e.distance < 150) && gameState.prestige >= 100) requestSupport('ARTILLERY');
-      if (!gameState.pendingSupply && gameState.prestige >= 120 && (r.rations < 12 || r.water < 15 || r.ammoRifle < 150)) requestSupport('SUPPLY');
+      const cg = gameState.cargas || {};
+      if (!cg.rations && r.rations < 12 && gameState.prestige >= custo(45) + 60) requestSupport('SUPPLY', 'rations');
+      if (!cg.water && r.water < 15 && gameState.prestige >= custo(45) + 60) requestSupport('SUPPLY', 'water');
+      if (!cg.ammoRifle && r.ammoRifle < 150 && gameState.prestige >= custo(50) + 60) requestSupport('SUPPLY', 'ammoRifle');
       if (vivos.some(s => s.hp < 30) && gameState.prestige >= 150 && gameState.supplyLineEff >= 30) requestSupport('MEDEVAC');
       // Bloqueio de sinal enquanto houver drone observando
       o.SIGNAL_JAM = droneObservando();
@@ -82,7 +85,7 @@ async function measure(page, level, policy) {
       gameEnded = false;
       Object.assign(gameState, {
         level, day: 1, timeSeconds: 0, prestige: 150, arsenal: novoArsenal(), weather: 'Nublado', supplyLineEff: 85,
-        enemies: [], activeCrisis: null, barrage: null, pendingSupply: null, lastIntelDay: 0, effects: [], trench: 100, crisisCooldown: 240, convoyAmbush: false, weakenNextWave: false, counterBattery: null, nextWaveBoost: 0, general: newGeneral(),
+        enemies: [], activeCrisis: null, barrage: null, cargas: {}, lastIntelDay: 0, effects: [], trench: 100, crisisCooldown: 240, convoyAmbush: false, weakenNextWave: false, counterBattery: null, nextWaveBoost: 0, general: newGeneral(),
         tacticalOrders: { SUPPRESSION: false, SHELTER: false, CONSERVE: false, FULL_VIGILANCE: false, SIGNAL_JAM: false },
         resources: { rations: 36, water: 48, ammoRifle: 900, ammoHeavy: 350, medkits: 3 },
         squad: init.map(s => ({ ...s }))
