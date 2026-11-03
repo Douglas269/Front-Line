@@ -327,6 +327,18 @@ async function run() {
     gameState.squad.forEach(s => { s.hp = 100; s.duty = 'WATCH'; });
     gameState.trench = 100; gameState.barrage = { ticks: 1 }; processBarrage();
     c.artilhariaEstragaTrincheira = gameState.trench === 100 - 3 * TRENCH.DAMAGE_BARRAGE;
+    // Configurações: abre, para o relógio, aplica volumes e opções, guarda no aparelho
+    { const guardaCfg = JSON.stringify(CONFIG);
+      abrirConfig('som'); c.configAbre = configAberto && !document.getElementById('modal-config').classList.contains('hidden');
+      const tc = gameState.timeSeconds; updateGameTick(); c.configPausaRelogio = gameState.timeSeconds === tc;
+      mudarVolume('volMusica', 30); c.configVolumeMusica = Math.abs(bgmWar.volume - 0.3) < 1e-9;
+      mudarVolume('volEfeitos', 40); c.configVolumeEfeitos = Math.abs(volumeEfeitos() - 0.5) < 1e-9;
+      CONFIG.tremor = false; const ate0 = tremorAte; tremer(5, 100000); c.configSemTremor = tremorAte === ate0;
+      CONFIG.rastros = false; const nr = gameState.effects.length; rastro(gameState.squad[0], { distance: 100, offsetX: 0 }); c.configSemRastros = gameState.effects.length === nr;
+      salvarConfig(); c.configSalvaNoAparelho = JSON.parse(localStorage.getItem(CONFIG_KEY)).volMusica === 30;
+      ['conta', 'som', 'jogo', 'dados'].forEach(a => abaConfig(a)); c.configAbasRenderizam = document.getElementById('cfg-dados').innerHTML.includes(VERSAO_JOGO);
+      fecharConfig(); c.configFecha = !configAberto;
+      CONFIG = JSON.parse(guardaCfg); salvarConfig(); }
     // Recursos livres: símbolos OTAN, sons ZzFX, ícones e medalhas
     c.milsymbolCarregou = typeof ms !== 'undefined' && Object.values(SIDC_INIMIGO).concat(Object.values(SIDC_AMIGO), Object.values(SIDC_ARMA), [SIDC_DEPOSITO]).every(x => new ms.Symbol(x, { size: 15 }).isValid());
     c.sonsZzfxGeram = typeof zzfxGerar === 'function' && Object.values(SONS).every(par => { const a = zzfxGerar(...par); let pico = 0; for (const v of a) pico = Math.max(pico, Math.abs(v)); return a.length > 1000 && pico > 0.01; });

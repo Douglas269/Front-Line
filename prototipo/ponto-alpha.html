@@ -146,6 +146,9 @@
                 <button id="btn-conta" onclick="botaoConta()" class="px-2 py-0.5 rounded btn-tactical text-xs" title="Conta">
                     <i class="fa-solid fa-user"></i> <span id="lbl-conta">Entrar</span>
                 </button>
+                <button id="btn-config" onclick="abrirConfig()" class="px-2 py-0.5 rounded btn-tactical text-xs" title="Configurações">
+                    <i class="fa-solid fa-gear"></i>
+                </button>
                 <button id="btn-audio" onclick="toggleAudio()" class="px-2 py-0.5 rounded btn-tactical text-xs" title="Sons Sintetizados de Campo">
                     <i id="ico-audio" class="fa-solid fa-volume-xmark text-red-400"></i>
                 </button>
@@ -528,6 +531,61 @@
             </div>
         </div>
 
+        <!-- CONFIGURAÇÕES: conta, som, jogo e dados -->
+        <div id="modal-config" class="hidden absolute inset-0 bg-black/90 z-[55] flex items-start justify-center p-3 overflow-y-auto" onclick="if (event.target === this) fecharConfig()">
+            <div class="bg-mil-panel border-2 border-mil-border rounded w-full max-w-md shadow-2xl my-2 text-xs">
+                <div class="flex justify-between items-center border-b border-mil-border p-3">
+                    <span class="text-mil-amberMuted font-bold text-sm"><i class="fa-solid fa-gear"></i> CONFIGURAÇÕES</span>
+                    <button onclick="fecharConfig()" class="px-3 py-1 btn-tactical rounded font-bold">Fechar</button>
+                </div>
+                <div class="grid grid-cols-4 text-center font-bold border-b border-mil-border bg-black/40" id="cfg-abas">
+                    <button onclick="abaConfig('conta')" data-aba="conta" class="py-2">CONTA</button>
+                    <button onclick="abaConfig('som')" data-aba="som" class="py-2">SOM</button>
+                    <button onclick="abaConfig('jogo')" data-aba="jogo" class="py-2">JOGO</button>
+                    <button onclick="abaConfig('dados')" data-aba="dados" class="py-2">DADOS</button>
+                </div>
+
+                <!-- CONTA -->
+                <div id="cfg-conta" class="p-3 space-y-3">
+                    <div class="flex items-center gap-3">
+                        <div id="cfg-avatar" class="w-14 h-14 rounded-full bg-mil-oliveDark border-2 border-mil-greenMuted flex items-center justify-center text-2xl font-bold text-mil-textGlow">?</div>
+                        <div class="min-w-0">
+                            <div id="cfg-nome" class="text-mil-textGlow font-bold text-sm truncate">Comandante</div>
+                            <div id="cfg-email" class="text-mil-textMuted truncate"></div>
+                            <div id="cfg-tipo" class="text-mil-amberMuted font-bold"></div>
+                        </div>
+                    </div>
+                    <label class="block">
+                        <span class="text-mil-textMuted">Nome de comandante</span>
+                        <div class="flex gap-2 mt-1">
+                            <input id="cfg-apelido" maxlength="24" class="flex-1 bg-black/60 border border-mil-border rounded px-2 py-1.5 text-mil-textGlow" placeholder="Ex.: Águia 1">
+                            <button onclick="salvarApelido()" class="px-3 py-1.5 btn-tactical rounded font-bold">Salvar</button>
+                        </div>
+                    </label>
+                    <div class="text-mil-textMuted text-[11px] uppercase font-bold">Carreira</div>
+                    <div id="cfg-carreira" class="grid grid-cols-3 gap-2"></div>
+                    <div id="cfg-conta-acoes" class="space-y-2"></div>
+                    <div id="cfg-conta-msg" class="text-mil-amberMuted"></div>
+                </div>
+
+                <!-- SOM -->
+                <div id="cfg-som" class="p-3 space-y-4 hidden">
+                    <div class="flex justify-between items-center bg-mil-bg border border-mil-border rounded p-2">
+                        <span class="text-mil-textGlow font-bold">Som do jogo</span>
+                        <button id="cfg-som-geral" onclick="toggleAudio(); renderConfig();" class="px-3 py-1.5 btn-tactical rounded font-bold"></button>
+                    </div>
+                    <div id="cfg-volumes" class="space-y-4"></div>
+                    <p class="text-mil-textMuted">Dica: se a música atrapalha ouvir os tiros, abaixe a música e suba os efeitos.</p>
+                </div>
+
+                <!-- JOGO -->
+                <div id="cfg-jogo" class="p-3 space-y-2 hidden"></div>
+
+                <!-- DADOS -->
+                <div id="cfg-dados" class="p-3 space-y-2 hidden"></div>
+            </div>
+        </div>
+
         <div id="modal-tutorial" class="hidden absolute inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
             <div class="bg-mil-panel border-2 border-mil-greenMuted rounded p-4 max-w-sm w-full space-y-3 shadow-2xl">
                 <div class="flex justify-between items-center border-b border-mil-border pb-2">
@@ -600,7 +658,7 @@
         bgmWar.src = musicBase + 'assets/music/war_theme.mp3';
         bgmBattle.src = musicBase + 'assets/music/to_battle.mp3';
         bgmWar.volume = 0.45;
-        bgmBattle.volume = 0.45;
+        bgmBattle.volume = 0.45; // ajustado pelas Configurações (aplicarConfig)
         let ambientNodes = null;
 
         function startAmbient() {
@@ -621,7 +679,7 @@
             lp.type = 'lowpass';
             lp.frequency.value = 500;
             const gain = audioCtx.createGain();
-            gain.gain.value = 0.10;
+            gain.gain.value = 0.10 * volumeAmbiente();
             const lfo = audioCtx.createOscillator();
             lfo.frequency.value = 0.07;
             const lfoGain = audioCtx.createGain();
@@ -633,7 +691,7 @@
             gain.connect(audioCtx.destination);
             src.start();
             lfo.start();
-            ambientNodes = { src, lfo };
+            ambientNodes = { src, lfo, gain };
         }
 
         function stopAmbient() {
@@ -679,7 +737,7 @@
                 const gain = audioCtx.createGain();
                 osc.type = 'sine';
                 osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-                gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.05 * volumeEfeitos() + 0.0001, audioCtx.currentTime);
                 gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
                 osc.connect(gain);
                 gain.connect(audioCtx.destination);
@@ -706,7 +764,7 @@
                 filter.frequency.linearRampToValueAtTime(100, audioCtx.currentTime + 0.1);
 
                 const gain = audioCtx.createGain();
-                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.15 * volumeEfeitos() + 0.0001, audioCtx.currentTime);
                 gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
 
                 whiteNoise.connect(filter);
@@ -1157,7 +1215,7 @@
 
         function updateGameTick() {
             // Pausado, com crise, tutorial ou login aberto: o relógio para
-            if (gameEnded || jogoPausado || atualizacaoPendente || gameState.activeCrisis || tutorialAberto || loginAberto || perfilAberto) return;
+            if (gameEnded || jogoPausado || atualizacaoPendente || gameState.activeCrisis || tutorialAberto || loginAberto || perfilAberto || configAberto) return;
             gameState.timeSeconds++;
 
             normalizeOrders();
@@ -1294,6 +1352,7 @@
 
         function onNewDay() {
             verificarMedalhas();
+            somarCarreira({ melhorDia: gameState.day });
             const cb = gameState.combate || { tiros: 0, acertos: 0, abates: 0 };
             if (cb.tiros > 0) {
                 const resumo = `Dia ${gameState.day - 1} em combate: ${cb.tiros} tiros, ${cb.acertos} acertos (${Math.round(100 * cb.acertos / cb.tiros)}%), ${cb.abates} inimigos abatidos.`;
@@ -2657,6 +2716,7 @@
             addEffect('kill', pk.fx, pk.fy);
             const atirador = enemy.abatidoPor ? estado.squad.find(m => m.id === enemy.abatidoPor) : null;
             if (atirador) { statsDe(atirador).abates++; estado.combate.abates++; }
+            if (enemy.hp <= 0) somarCarreira({ abates: 1 });
             logFeed(`✅ ${tipo.label} NEUTRALIZADO NO SETOR${atirador ? ` por ${atirador.rank} ${atirador.name}` : ''}!`, 'text-mil-greenMuted font-bold');
             if (enemy.type === 'patrulha' && estado.general) lembrar('abatePatrulha', 1, 0.3);
             estado.prestige += ganho(enemy.type === 'drone' ? 20 : enemy.type === 'blindado' ? 80 : 30);
@@ -3222,6 +3282,7 @@
         function marcarFerido(s) { feridosRecentes.set(s.id, 14); }
         let tremorAte = 0, tremorForca = 0;
         function tremer(forca, ms) {
+            if (!CONFIG.tremor) return;
             tremorForca = Math.max(forca, performance.now() < tremorAte ? tremorForca : 0);
             tremorAte = Math.max(tremorAte, performance.now() + ms);
             const el = canvas && canvas.parentElement;
@@ -3236,7 +3297,7 @@
             };
             requestAnimationFrame(passo);
         }
-        function vibrar(padrao) { try { if (!document.hidden && navigator.vibrate) navigator.vibrate(padrao); } catch (e) {} }
+        function vibrar(padrao) { try { if (CONFIG.vibracao && !document.hidden && navigator.vibrate) navigator.vibrate(padrao); } catch (e) {} }
         function impacto(tipo) {
             if (tipo === 'artilharia') { tremer(7, 450); vibrar(90); somExplosao(1); }
             else if (tipo === 'deposito') { tremer(5, 350); vibrar([60, 40, 60]); somExplosao(0.8); }
@@ -3258,7 +3319,7 @@
                 const src = audioCtx.createBufferSource(); src.buffer = buf;
                 const f = audioCtx.createBiquadFilter(); f.type = 'lowpass';
                 f.frequency.setValueAtTime(freqIni, t0); f.frequency.exponentialRampToValueAtTime(Math.max(30, freqFim), t0 + dur);
-                const g = audioCtx.createGain(); g.gain.setValueAtTime(vol, t0); g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+                const g = audioCtx.createGain(); g.gain.setValueAtTime(vol * volumeEfeitos() + 0.0001, t0); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
                 src.connect(f); f.connect(g); g.connect(audioCtx.destination); src.start(t0);
             } catch (e) {}
         }
@@ -3268,7 +3329,7 @@
                 const t0 = audioCtx.currentTime + atraso;
                 const o = audioCtx.createOscillator(); o.type = tipo;
                 o.frequency.setValueAtTime(f0, t0); o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t0 + dur);
-                const g = audioCtx.createGain(); g.gain.setValueAtTime(vol, t0); g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+                const g = audioCtx.createGain(); g.gain.setValueAtTime(vol * volumeEfeitos() + 0.0001, t0); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
                 o.connect(g); g.connect(audioCtx.destination); o.start(t0); o.stop(t0 + dur);
             } catch (e) {}
         }
@@ -3278,6 +3339,7 @@
         function somAnticarro() { tocarSom('foguete', 0.8); tocarSom('explosao', 0.9, 0.3); }
         // Rastro de um tiro do soldado até o alvo (só alguns, para não poluir o mapa)
         function rastro(s, alvo, cor) {
+            if (!CONFIG.rastros) return;
             if (Math.random() > 0.25 || gameState.effects.filter(e => e.type === 'rastro').length > 10) return;
             const a = squadFrac(s), b = enemyFrac(alvo);
             gameState.effects.push({ type: 'rastro', fx: a.fx, fy: a.fy, tx: b.fx, ty: b.fy, cor, age: 0, life: 6 });
@@ -3346,7 +3408,7 @@
                 }
                 const src = audioCtx.createBufferSource();
                 src.buffer = lista[Math.floor(Math.random() * lista.length)];
-                const g = audioCtx.createGain(); g.gain.value = volume;
+                const g = audioCtx.createGain(); g.gain.value = volume * volumeEfeitos();
                 src.connect(g); g.connect(audioCtx.destination);
                 src.start(audioCtx.currentTime + atraso);
             } catch (e) {}
@@ -3390,6 +3452,182 @@
 
         function abrirCreditos() { document.getElementById('modal-creditos').classList.remove('hidden'); perfilAberto = true; }
         function fecharCreditos() { document.getElementById('modal-creditos').classList.add('hidden'); perfilAberto = false; }
+
+
+        /* ===== Configurações: conta, som, jogo e dados =====
+           As preferências ficam no aparelho e, com conta, também na conta (vão junto para outro aparelho). */
+        const CONFIG_KEY = 'frontline-config';
+        const CARREIRA_KEY = 'frontline-carreira';
+        const CONFIG_PADRAO = { volMusica: 45, volEfeitos: 80, volAmbiente: 50, tremor: true, vibracao: true, rastros: true, textoGrande: false, apelido: '' };
+        let CONFIG = Object.assign({}, CONFIG_PADRAO, (() => { try { return JSON.parse(localStorage.getItem(CONFIG_KEY)) || {}; } catch (e) { return {}; } })());
+        let configAberto = false, abaConfigAtual = 'conta';
+        const volumeEfeitos = () => Math.max(0, Math.min(1.5, (CONFIG.volEfeitos ?? 80) / 80));
+        const volumeAmbiente = () => Math.max(0, Math.min(2, (CONFIG.volAmbiente ?? 50) / 50));
+
+        function aplicarConfig() {
+            const vm = Math.max(0, Math.min(1, (CONFIG.volMusica ?? 45) / 100));
+            bgmWar.volume = vm; bgmBattle.volume = vm;
+            if (ambientNodes && ambientNodes.gain) ambientNodes.gain.gain.value = 0.10 * volumeAmbiente();
+            document.documentElement.style.fontSize = CONFIG.textoGrande ? '112%' : '';
+            atualizarConta();
+        }
+        let envioConfigTimer = null;
+        function salvarConfig() {
+            try { localStorage.setItem(CONFIG_KEY, JSON.stringify(CONFIG)); } catch (e) {}
+            aplicarConfig();
+            // Com conta: guarda também na conta (com um pequeno atraso para não mandar a cada movimento do controle)
+            if (sb && usuario) {
+                clearTimeout(envioConfigTimer);
+                envioConfigTimer = setTimeout(() => { sb.auth.updateUser({ data: { config: CONFIG, carreira: lerCarreira() } }).catch(() => {}); }, 1200);
+            }
+        }
+        function lerCarreira() {
+            try { return Object.assign({ partidas: 0, vitorias: 0, derrotas: 0, abates: 0, melhorDia: 0 }, JSON.parse(localStorage.getItem(CARREIRA_KEY)) || {}); }
+            catch (e) { return { partidas: 0, vitorias: 0, derrotas: 0, abates: 0, melhorDia: 0 }; }
+        }
+        function somarCarreira(d, enviar) {
+            const c = lerCarreira();
+            ['partidas', 'vitorias', 'derrotas', 'abates'].forEach(k => { if (d[k]) c[k] += d[k]; });
+            if (d.melhorDia) c.melhorDia = Math.max(c.melhorDia, d.melhorDia);
+            try { localStorage.setItem(CARREIRA_KEY, JSON.stringify(c)); } catch (e) {}
+            if (enviar && sb && usuario) sb.auth.updateUser({ data: { config: CONFIG, carreira: c } }).catch(() => {});
+        }
+        // Ao entrar na conta: traz o nome de comandante, as preferências e a carreira guardados nela
+        function carregarDaConta() {
+            const meta = (usuario && usuario.user_metadata) || {};
+            if (meta.config) CONFIG = Object.assign({}, CONFIG_PADRAO, CONFIG, meta.config);
+            if (meta.carreira) {
+                const loc = lerCarreira(), nu = meta.carreira;
+                const junta = {};
+                Object.keys(loc).forEach(k => { junta[k] = Math.max(loc[k] || 0, nu[k] || 0); });
+                try { localStorage.setItem(CARREIRA_KEY, JSON.stringify(junta)); } catch (e) {}
+            }
+            try { localStorage.setItem(CONFIG_KEY, JSON.stringify(CONFIG)); } catch (e) {}
+            aplicarConfig();
+        }
+
+        function abrirConfig(aba) {
+            configAberto = true;
+            if (aba) abaConfigAtual = aba;
+            document.getElementById('modal-config').classList.remove('hidden');
+            renderConfig();
+        }
+        function fecharConfig() {
+            configAberto = false;
+            document.getElementById('modal-config').classList.add('hidden');
+        }
+        function abaConfig(aba) { abaConfigAtual = aba; renderConfig(); playTacticalBeep(800, 0.02); }
+        function alternarConfig(chave) { CONFIG[chave] = !CONFIG[chave]; salvarConfig(); renderConfig(); playTacticalBeep(750, 0.02); }
+        function mudarVolume(chave, valor) {
+            CONFIG[chave] = Number(valor);
+            salvarConfig();
+            const rot = document.getElementById('val-' + chave);
+            if (rot) rot.textContent = valor + '%';
+        }
+        function testarSom(qual) {
+            if (isAudioMuted) { toggleAudio(); renderConfig(); }
+            if (qual === 'volMusica') { syncMusic(); }
+            else if (qual === 'volEfeitos') { tocarSom('tiro', 0.8); tocarSom('explosao', 0.8, 0.25); }
+            else if (qual === 'volAmbiente') { startAmbient(); aplicarConfig(); }
+        }
+        async function salvarApelido() {
+            const v = document.getElementById('cfg-apelido').value.trim().slice(0, 24);
+            CONFIG.apelido = v;
+            salvarConfig();
+            const msg = document.getElementById('cfg-conta-msg');
+            msg.textContent = usuario ? 'Nome salvo na sua conta.' : 'Nome salvo neste aparelho.';
+            if (sb && usuario) { try { await sb.auth.updateUser({ data: { config: CONFIG } }); } catch (e) { msg.textContent = 'Salvo no aparelho; a conta atualiza quando houver internet.'; } }
+            renderConfig();
+        }
+        async function trocarSenha() {
+            const a = document.getElementById('cfg-senha1').value, b = document.getElementById('cfg-senha2').value;
+            const msg = document.getElementById('cfg-conta-msg');
+            if (a.length < 6) { msg.textContent = 'A senha precisa ter pelo menos 6 caracteres.'; return; }
+            if (a !== b) { msg.textContent = 'As duas senhas não são iguais.'; return; }
+            try {
+                const r = await sb.auth.updateUser({ password: a });
+                msg.textContent = r.error ? traduzirErro(r.error.message) : 'Senha trocada.';
+            } catch (e) { msg.textContent = 'Sem conexão: tente de novo com internet.'; }
+        }
+        function apagarProgresso() {
+            if (!confirm('Apagar a partida em andamento e voltar ao nível 1 neste aparelho? Isso não pode ser desfeito.')) return;
+            skipPageHideSave = true;
+            [SAVE_KEY, LEVEL_KEY].forEach(k => { try { localStorage.removeItem(k); } catch (e) {} });
+            location.reload();
+        }
+        function restaurarPadroes() {
+            const apelido = CONFIG.apelido;
+            CONFIG = Object.assign({}, CONFIG_PADRAO, { apelido });
+            salvarConfig(); renderConfig();
+        }
+
+        function renderConfig() {
+            document.querySelectorAll('#cfg-abas button').forEach(b => {
+                const on = b.dataset.aba === abaConfigAtual;
+                b.className = 'py-2 ' + (on ? 'text-mil-textGlow bg-mil-panel border-b-2 border-mil-greenMuted' : 'text-mil-textMuted');
+            });
+            ['conta', 'som', 'jogo', 'dados'].forEach(a => document.getElementById('cfg-' + a).classList.toggle('hidden', a !== abaConfigAtual));
+
+            // Conta
+            const nome = CONFIG.apelido || (usuario ? (usuario.email || '').split('@')[0] : 'Comandante');
+            document.getElementById('cfg-avatar').textContent = (nome[0] || '?').toUpperCase();
+            document.getElementById('cfg-nome').textContent = nome;
+            document.getElementById('cfg-email').textContent = usuario ? usuario.email : 'Sem conta: progresso salvo só neste aparelho';
+            const desde = usuario && usuario.created_at ? new Date(usuario.created_at).toLocaleDateString('pt-BR') : null;
+            document.getElementById('cfg-tipo').textContent = usuario ? `Conta FrontLine · nível ${gameState.level}${desde ? ' · desde ' + desde : ''}` : `Convidado · nível ${gameState.level}`;
+            const ap = document.getElementById('cfg-apelido');
+            if (document.activeElement !== ap) ap.value = CONFIG.apelido || '';
+            const c = lerCarreira();
+            const caixa = (rot, v) => `<div class="bg-mil-bg border border-mil-border rounded p-2 text-center"><div class="text-mil-textMuted">${rot}</div><div class="text-mil-textGlow font-bold text-sm">${v}</div></div>`;
+            document.getElementById('cfg-carreira').innerHTML = caixa('Partidas', c.partidas) + caixa('Vitórias', c.vitorias) + caixa('Derrotas', c.derrotas) + caixa('Abates', c.abates) + caixa('Melhor dia', c.melhorDia) + caixa('Nível', gameState.level);
+            document.getElementById('cfg-conta-acoes').innerHTML = usuario ? `
+                <div class="bg-mil-bg border border-mil-border rounded p-2 space-y-1">
+                    <div class="text-mil-textGlow font-bold">Trocar senha</div>
+                    <input id="cfg-senha1" type="password" placeholder="Nova senha" class="w-full bg-black/60 border border-mil-border rounded px-2 py-1.5 text-mil-textGlow">
+                    <input id="cfg-senha2" type="password" placeholder="Repita a nova senha" class="w-full bg-black/60 border border-mil-border rounded px-2 py-1.5 text-mil-textGlow">
+                    <button onclick="trocarSenha()" class="w-full py-1.5 btn-tactical rounded font-bold">Trocar senha</button>
+                </div>
+                <button onclick="sairDaConta()" class="w-full py-2 btn-tactical rounded font-bold text-red-400"><i class="fa-solid fa-right-from-bracket"></i> Sair da conta</button>`
+                : `<button onclick="fecharConfig(); abrirLogin();" class="w-full py-2 btn-tactical rounded font-bold"><i class="fa-solid fa-user"></i> Entrar ou criar conta</button>
+                   <p class="text-mil-textMuted">Com conta, o progresso, o nome e as configurações vão junto para qualquer aparelho.</p>`;
+
+            // Som
+            document.getElementById('cfg-som-geral').textContent = isAudioMuted ? '🔇 Desligado · ligar' : '🔊 Ligado · desligar';
+            const vol = (chave, rot, desc) => `
+                <div>
+                    <div class="flex justify-between items-center"><span class="text-mil-textGlow font-bold">${rot}</span><span id="val-${chave}" class="text-mil-amberMuted font-bold">${CONFIG[chave]}%</span></div>
+                    <div class="text-mil-textMuted mb-1">${desc}</div>
+                    <div class="flex items-center gap-2">
+                        <input type="range" min="0" max="100" step="5" value="${CONFIG[chave]}" oninput="mudarVolume('${chave}', this.value)" class="flex-1 accent-[#5a7356]">
+                        <button onclick="testarSom('${chave}')" class="px-2 py-1 btn-tactical rounded font-bold">Testar</button>
+                    </div>
+                </div>`;
+            document.getElementById('cfg-volumes').innerHTML =
+                vol('volMusica', 'Música', 'Trilha de guerra e trilha de combate') +
+                vol('volEfeitos', 'Efeitos', 'Tiros, rajadas, explosões, alarmes e rádio') +
+                vol('volAmbiente', 'Som ambiente', 'Vento e ruído de fundo do campo de batalha');
+
+            // Jogo
+            const chave = (k, rot, desc) => `
+                <div class="flex justify-between items-center gap-2 bg-mil-bg border border-mil-border rounded p-2">
+                    <div><div class="text-mil-textGlow font-bold">${rot}</div><div class="text-mil-textMuted">${desc}</div></div>
+                    <button onclick="alternarConfig('${k}')" class="px-3 py-1.5 btn-tactical rounded font-bold whitespace-nowrap ${CONFIG[k] ? 'btn-active-order' : ''}">${CONFIG[k] ? 'Ligado' : 'Desligado'}</button>
+                </div>`;
+            document.getElementById('cfg-jogo').innerHTML =
+                chave('tremor', 'Tremor da tela', 'O mapa treme com explosões e impactos') +
+                chave('vibracao', 'Vibração do celular', 'Vibra nos impactos fortes (só em aparelhos compatíveis)') +
+                chave('rastros', 'Rastros dos tiros', 'Linhas dos tiros do esquadrão no mapa') +
+                chave('textoGrande', 'Texto maior', 'Aumenta as letras para ler melhor') +
+                `<button onclick="fecharConfig(); abrirTutorial();" class="w-full py-2 btn-tactical rounded font-bold"><i class="fa-solid fa-book-open"></i> Rever o tutorial</button>
+                 <button onclick="restaurarPadroes()" class="w-full py-2 btn-tactical rounded font-bold">Restaurar configurações padrão</button>`;
+
+            // Dados
+            document.getElementById('cfg-dados').innerHTML = `
+                <div class="bg-mil-bg border border-mil-border rounded p-2"><div class="text-mil-textMuted">Versão do jogo</div><div class="text-mil-textGlow font-bold">${VERSAO_JOGO}</div></div>
+                <div class="bg-mil-bg border border-mil-border rounded p-2"><div class="text-mil-textMuted">Salvamento</div><div class="text-mil-textGlow font-bold">${usuario ? 'Neste aparelho e na nuvem (conta)' : 'Só neste aparelho'}</div></div>
+                <button onclick="fecharConfig(); abrirCreditos();" class="w-full py-2 btn-tactical rounded font-bold">Créditos</button>
+                <button onclick="apagarProgresso()" class="w-full py-2 btn-tactical rounded font-bold text-red-400"><i class="fa-solid fa-trash"></i> Apagar progresso deste aparelho</button>`;
+        }
 
         function setSoldierDuty(id, duty) {
             const soldier = gameState.squad.find(s => s.id === id);
@@ -3499,6 +3737,8 @@
            ========================================================================== */
         function endGame(icon, title, titleClass, body) {
             gameEnded = true;
+            const venceu = gameState.day > GAME_CONFIG.TOTAL_DAYS;
+            somarCarreira({ partidas: 1, vitorias: venceu ? 1 : 0, derrotas: venceu ? 0 : 1, melhorDia: Math.min(gameState.day, GAME_CONFIG.TOTAL_DAYS) }, true);
             stopAllAudio();
             clearSave();
             document.getElementById('end-icon').innerHTML = icon;
@@ -3561,11 +3801,11 @@
         }
 
         function atualizarConta() {
-            document.getElementById('lbl-conta').textContent = usuario ? 'Conta' : 'Entrar';
+            document.getElementById('lbl-conta').textContent = usuario ? (CONFIG.apelido || 'Conta') : 'Entrar';
         }
 
         function botaoConta() {
-            if (usuario) sairDaConta();
+            if (usuario) abrirConfig('conta');
             else abrirLogin();
         }
 
@@ -3588,6 +3828,7 @@
                     const { data } = await sb.auth.getSession();
                     if (data && data.session) {
                         usuario = data.session.user;
+                        carregarDaConta();
                         atualizarConta();
                         await baixarNuvem();
                         mostrarTutorialSePrimeiraVez();
@@ -3626,6 +3867,7 @@
                     msg.className = 'text-xs text-mil-greenMuted font-normal';
                 } else {
                     usuario = r.data.user;
+                    carregarDaConta();
                     gravarLocal(MODE_KEY, 'conta');
                     fecharLogin();
                     atualizarConta();
@@ -3653,7 +3895,7 @@
             await enviarNuvem(true);
             try { await sb.auth.signOut(); } catch (e) {}
             // Limpa o aparelho para o próximo jogador não herdar este progresso
-            [SAVE_KEY, LEVEL_KEY, TUTORIAL_KEY, MODE_KEY].forEach(k => { try { localStorage.removeItem(k); } catch (e) {} });
+            [SAVE_KEY, LEVEL_KEY, TUTORIAL_KEY, MODE_KEY, CARREIRA_KEY].forEach(k => { try { localStorage.removeItem(k); } catch (e) {} });
             location.reload();
         }
 
@@ -3891,7 +4133,7 @@
            Ao abrir, ao voltar para o app e a cada minuto o jogo compara as duas. Se o site
            tiver uma versão diferente, o jogo trava numa tela que só sai atualizando.
            (tools/nova-versao.sh troca as duas juntas a cada atualização publicada.) */
-        const VERSAO_JOGO = '20261103.0300';
+        const VERSAO_JOGO = '20261103.1548';
         const ATUALIZOU_KEY = 'frontline-atualizou-para';
         async function verificarVersao() {
             if (!location.protocol.startsWith('http') || atualizacaoPendente) return;
@@ -3925,6 +4167,7 @@
             url.searchParams.set('v', window.__versaoNova || Date.now());
             location.replace(url.toString());
         }
+        aplicarConfig(); // volumes, texto maior e nome de comandante salvos
         verificarVersao();
         setInterval(verificarVersao, 60000);
         document.addEventListener('visibilitychange', () => { if (!document.hidden) verificarVersao(); });

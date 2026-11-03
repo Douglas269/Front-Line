@@ -29,6 +29,13 @@ Jogo de estratégia tático com foco em realismo de comando, combate blindado e 
 - O jogo continua salvando no aparelho e espelha na nuvem a cada 30 s de jogo e na hora ao virar o dia, pausar, subir de nível, terminar a partida ou fechar o tutorial. Ao entrar, fica com o salvamento mais recente entre aparelho e nuvem; o progresso de convidado passa para a conta no primeiro login. Sem internet, segue como convidado.
 - O navegador usa só a chave pública (publishable) do Supabase; a proteção dos dados vem das políticas RLS.
 
+### Configurações (engrenagem no cabeçalho)
+- **Conta:** perfil com inicial, nome de comandante (aparece no botão de conta do cabeçalho), e-mail, tipo de conta, nível e data de criação; carreira (partidas, vitórias, derrotas, abates, melhor dia, nível); trocar senha e sair da conta. Sem conta: botão para entrar ou criar conta. O botão de conta do cabeçalho, com conta, abre o perfil.
+- **Som:** liga/desliga geral e volumes separados de música, efeitos (tiros, explosões, alarmes) e som ambiente (vento), cada um com botão "Testar".
+- **Jogo:** tremor da tela, vibração do celular, rastros dos tiros e texto maior; rever o tutorial; restaurar padrões.
+- **Dados:** versão do jogo, onde o progresso está salvo, créditos e apagar o progresso do aparelho.
+- O relógio para com a tela aberta. As preferências ficam no aparelho (`frontline-config`) e, com conta, também nos metadados da conta no Supabase, junto com a carreira (`frontline-carreira`): ao entrar em outro aparelho, vêm junto.
+
 ### Tutorial
 - Na primeira vez que o jogo é aberto, aparece um guia de 8 passos (objetivo, funções, fome/sede/trincheira, mapa, ordens, rádio e general, defesas, como começar). O relógio fica parado enquanto ele está aberto. Dá para pular, voltar e rever pelo link **Como jogar**, ao lado de "Nova partida".
 
