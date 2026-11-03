@@ -3683,14 +3683,14 @@
            depois no cômodo. O visual clássico continua nas Configurações → Jogo.
            ========================================================================== */
         const CORTE = {
-            W: 400, H: 452, SOLO: 132,
+            W: 400, H: 474, SOLO: 118, ESC: 1.3, // ESC: tamanho dos soldados
             comodos: {
-                posto:    { x: 6,   y: 154, w: 146, h: 92, nome: 'POSTO DE VIGÍLIA',     duty: 'WATCH' },
-                ninhos:   { x: 156, y: 154, w: 76,  h: 92, nome: 'NINHOS',               duty: 'WATCH' },
-                cozinha:  { x: 236, y: 154, w: 78,  h: 92, nome: 'COZINHA',              duty: 'RATIONING' },
-                deposito: { x: 318, y: 154, w: 76,  h: 92, nome: 'DEPÓSITO',             duty: null },
-                abrigo:   { x: 6,   y: 282, w: 214, h: 96, nome: 'ABRIGO (DESCANSO)',    duty: 'REST' },
-                oficina:  { x: 224, y: 282, w: 170, h: 96, nome: 'OFICINA (MANUTENÇÃO)', duty: 'MAINTENANCE' }
+                posto:    { x: 6,   y: 138, w: 146, h: 120, nome: 'POSTO DE VIGÍLIA',     duty: 'WATCH' },
+                ninhos:   { x: 156, y: 138, w: 76,  h: 120, nome: 'NINHOS',               duty: 'WATCH' },
+                cozinha:  { x: 236, y: 138, w: 78,  h: 120, nome: 'COZINHA',              duty: 'RATIONING' },
+                deposito: { x: 318, y: 138, w: 76,  h: 120, nome: 'DEPÓSITO',             duty: null },
+                abrigo:   { x: 6,   y: 284, w: 214, h: 120, nome: 'ABRIGO (DESCANSO)',    duty: 'REST' },
+                oficina:  { x: 224, y: 284, w: 170, h: 120, nome: 'OFICINA (MANUTENÇÃO)', duty: 'MAINTENANCE' }
             }
         };
         const corteCanvas = document.getElementById('corteCanvas');
@@ -3749,7 +3749,7 @@
         }
         function posInimigoCena(e) {
             const d = Math.max(0, Math.min(300, e.distance));
-            return { x: 200 + ((e.offsetX || 0) / 200) * 165, y: CORTE.SOLO - 6 - (d / 300) * 108 };
+            return { x: 200 + ((e.offsetX || 0) / 200) * 165, y: CORTE.SOLO - 6 - (d / 300) * 100 };
         }
         function posAlvoCena(a) {
             if (!a) return { x: 200, y: 200 };
@@ -3804,13 +3804,13 @@
             cctx.fillStyle = '#1b1712';
             [[70, CORTE.SOLO - 2], [255, CORTE.SOLO - 3], [350, CORTE.SOLO - 1]].forEach(([x, y]) => { cctx.beginPath(); cctx.ellipse(x, y, 16, 4, 0, 0, Math.PI * 2); cctx.fill(); });
             // linha de alcance (140 m) e arame (50 m)
-            const yAlc = CORTE.SOLO - 6 - (140 / 300) * 108;
+            const yAlc = CORTE.SOLO - 6 - (140 / 300) * 100;
             cctx.setLineDash([4, 5]); cctx.strokeStyle = 'rgba(217,163,90,0.45)'; cctx.lineWidth = 1;
             cctx.beginPath(); cctx.moveTo(4, yAlc); cctx.lineTo(396, yAlc); cctx.stroke(); cctx.setLineDash([]);
             txtC(6, yAlc - 3, 'ALCANCE 140m', 'rgba(217,163,90,0.8)', 7, 700);
             const ars = arsenalDe();
             if (ars.arame > 0) {
-                const ya = CORTE.SOLO - 6 - (50 / 300) * 108;
+                const ya = CORTE.SOLO - 6 - (50 / 300) * 100;
                 cctx.strokeStyle = `rgba(170,170,160,${0.3 + 0.5 * ars.arame / 100})`; cctx.lineWidth = 0.8;
                 cctx.beginPath();
                 for (let x = 150; x < 396; x += 9) { cctx.moveTo(x, ya - 3); cctx.lineTo(x + 9, ya + 3); cctx.moveTo(x, ya + 3); cctx.lineTo(x + 9, ya - 3); }
@@ -3859,53 +3859,53 @@
         function desenharMoveis(t) {
             const C = CORTE.comodos;
             // posto: degrau de tiro
-            cctx.fillStyle = '#2a2018'; cctx.fillRect(C.posto.x + 4, C.posto.y + 68, C.posto.w - 8, 20);
+            cctx.fillStyle = '#2a2018'; cctx.fillRect(C.posto.x + 4, C.posto.y + 96, C.posto.w - 8, 20);
             // ninhos: sacos de areia e armas montadas
             const ars = arsenalDe();
-            cctx.fillStyle = '#7d7056'; cctx.fillRect(C.ninhos.x + 6, C.ninhos.y + 58, C.ninhos.w - 12, 14);
+            cctx.fillStyle = '#7d7056'; cctx.fillRect(C.ninhos.x + 6, C.ninhos.y + 86, C.ninhos.w - 12, 14);
             const prontos = ars.posicoes.filter(p => p.obra >= 100 && p.arma);
             prontos.forEach((p, k) => {
-                const x = C.ninhos.x + 14 + k * 24, y = C.ninhos.y + 52;
+                const x = C.ninhos.x + 14 + k * 24, y = C.ninhos.y + 80;
                 cctx.fillStyle = '#222'; cctx.fillRect(x - 2, y - 4, 20, 4);
                 txtC(x + 8, y - 8, EQUIP[p.arma].sigla, operadorAtivo(p) ? '#8fad88' : '#d9a35a', 6.5, 700, 'center');
             });
-            if (!prontos.length) txtC(C.ninhos.x + C.ninhos.w / 2, C.ninhos.y + 40, 'sem armas', '#8a8a7a', 7, 400, 'center');
+            if (!prontos.length) txtC(C.ninhos.x + C.ninhos.w / 2, C.ninhos.y + 68, 'sem armas', '#8a8a7a', 7, 400, 'center');
             const emObra = ars.posicoes.filter(p => p.obra > 0 && p.obra < 100);
             // cozinha: fogareiro com vapor
             const cz = C.cozinha;
-            cctx.fillStyle = '#3b3b33'; cctx.fillRect(cz.x + 46, cz.y + 58, 26, 14);
-            cctx.fillStyle = '#555'; cctx.fillRect(cz.x + 50, cz.y + 49, 16, 9);
-            cctx.fillStyle = ['#e0882b', '#f0a040', '#d06a20'][Math.floor(t / 120) % 3]; cctx.beginPath(); cctx.arc(cz.x + 59, cz.y + 76, 3, 0, Math.PI * 2); cctx.fill();
-            if (atlasPronto) for (let k = 0; k < 2; k++) { const kk = ((t / 1400) + k * 0.5) % 1; quadroAnimado('vapor', kk, cz.x + 57 + Math.sin(t / 600 + k) * 3, cz.y + 44 - kk * 22, 14 + kk * 10, 0.5 * (1 - kk)); }
+            cctx.fillStyle = '#3b3b33'; cctx.fillRect(cz.x + 46, cz.y + 86, 26, 14);
+            cctx.fillStyle = '#555'; cctx.fillRect(cz.x + 50, cz.y + 77, 16, 9);
+            cctx.fillStyle = ['#e0882b', '#f0a040', '#d06a20'][Math.floor(t / 120) % 3]; cctx.beginPath(); cctx.arc(cz.x + 59, cz.y + 104, 3, 0, Math.PI * 2); cctx.fill();
+            if (atlasPronto) for (let k = 0; k < 2; k++) { const kk = ((t / 1400) + k * 0.5) % 1; quadroAnimado('vapor', kk, cz.x + 57 + Math.sin(t / 600 + k) * 3, cz.y + 72 - kk * 22, 14 + kk * 10, 0.5 * (1 - kk)); }
             else cctx.strokeStyle = 'rgba(220,220,210,0.45)'; cctx.lineWidth = 1.4;
             for (let k = 0; k < (atlasPronto ? 0 : 2); k++) {
                 const ox = cz.x + 54 + k * 6, sub = (t / 25 + k * 10) % 18;
-                cctx.beginPath(); cctx.moveTo(ox, cz.y + 47 - sub * 0.2); cctx.quadraticCurveTo(ox + 4, cz.y + 40 - sub * 0.5, ox, cz.y + 30 - sub * 0.6); cctx.stroke();
+                cctx.beginPath(); cctx.moveTo(ox, cz.y + 75 - sub * 0.2); cctx.quadraticCurveTo(ox + 4, cz.y + 68 - sub * 0.5, ox, cz.y + 58 - sub * 0.6); cctx.stroke();
             }
             // depósito: caixas de ração e barris de água conforme o estoque
             const dp = C.deposito, r = gameState.resources;
             const caixas = Math.min(6, Math.ceil(r.rations / 8)), barris = Math.min(3, Math.ceil(r.water / 12));
             for (let k = 0; k < caixas; k++) {
-                const x = dp.x + 6 + (k % 3) * 18, y = dp.y + 70 - Math.floor(k / 3) * 16;
+                const x = dp.x + 6 + (k % 3) * 18, y = dp.y + 98 - Math.floor(k / 3) * 16;
                 cctx.fillStyle = '#6b5333'; cctx.fillRect(x, y, 16, 15); cctx.strokeStyle = '#3e2f1f'; cctx.lineWidth = 1; cctx.strokeRect(x, y, 16, 15);
                 cctx.beginPath(); cctx.moveTo(x, y); cctx.lineTo(x + 16, y + 15); cctx.moveTo(x + 16, y); cctx.lineTo(x, y + 15); cctx.stroke();
             }
-            for (let k = 0; k < barris; k++) { cctx.fillStyle = '#3d5a6a'; cctx.fillRect(dp.x + 60, dp.y + 72 - k * 15, 11, 14); }
+            for (let k = 0; k < barris; k++) { cctx.fillStyle = '#3d5a6a'; cctx.fillRect(dp.x + 60, dp.y + 100 - k * 15, 11, 14); }
             txtC(dp.x + dp.w / 2, dp.y + 25, `ração ${Math.floor(r.rations)}`, r.rations < 10 ? '#ff6b5b' : '#b3c4ae', 7, 700, 'center');
             txtC(dp.x + dp.w / 2, dp.y + 34, `água ${Math.floor(r.water)} L`, r.water < 10 ? '#ff6b5b' : '#b3c4ae', 7, 700, 'center');
             // abrigo: beliches e lamparina
             const ab = C.abrigo;
             for (let k = 0; k < 3; k++) {
-                const x = ab.x + 12 + k * 66, y = ab.y + 44;
+                const x = ab.x + 12 + k * 66, y = ab.y + 68;
                 cctx.fillStyle = '#6b4f33'; cctx.fillRect(x, y, 54, 5); cctx.fillRect(x, y + 28, 54, 5);
                 cctx.fillStyle = '#4e3924'; cctx.fillRect(x, y - 8, 4, 46); cctx.fillRect(x + 50, y - 8, 4, 46);
             }
             txtC(ab.x + ab.w - 6, ab.y + ab.h - 8, 'leva 30% da artilharia', '#8fad88', 6.5, 400, 'right');
             // oficina: bancada
             const of = C.oficina;
-            cctx.fillStyle = '#6b4f33'; cctx.fillRect(of.x + 70, of.y + 60, 90, 7);
-            cctx.fillStyle = '#4e3924'; cctx.fillRect(of.x + 74, of.y + 67, 4, 22); cctx.fillRect(of.x + 152, of.y + 67, 4, 22);
-            cctx.fillStyle = '#777'; cctx.fillRect(of.x + 90, of.y + 50, 10, 10);
+            cctx.fillStyle = '#6b4f33'; cctx.fillRect(of.x + 70, of.y + 84, 90, 7);
+            cctx.fillStyle = '#4e3924'; cctx.fillRect(of.x + 74, of.y + 91, 4, 22); cctx.fillRect(of.x + 152, of.y + 91, 4, 22);
+            cctx.fillStyle = '#777'; cctx.fillRect(of.x + 90, of.y + 74, 10, 10);
             const obra = arsenalDe().posicoes.find(p => p.construindo);
             txtC(of.x + of.w / 2 + 20, of.y + 30, obra ? `obra: ${obra.nome.toLowerCase()} ${Math.floor(obra.obra)}%` : `reparando trincheira ${Math.round(gameState.trench)}%`, '#d9a35a', 7, 700, 'center');
             // lamparinas penduradas: luz quente no chão de cada cômodo (mais forte à noite)
@@ -3921,8 +3921,8 @@
                 cctx.fillStyle = `rgba(255,214,130,${pisca})`; cctx.beginPath(); cctx.arc(lx, ly + 1, 2.2, 0, Math.PI * 2); cctx.fill();
             });
             // posto: periscópio e caixas de munição
-            cctx.strokeStyle = '#2a2a24'; cctx.lineWidth = 2; cctx.beginPath(); cctx.moveTo(C.posto.x + 128, C.posto.y + 68); cctx.lineTo(C.posto.x + 128, C.posto.y - 14); cctx.lineTo(C.posto.x + 133, C.posto.y - 14); cctx.stroke();
-            [[C.posto.x + 6, C.posto.y + 58], [C.posto.x + 6, C.posto.y + 49]].forEach(([x, y]) => { cctx.fillStyle = '#4e5a38'; cctx.fillRect(x, y, 12, 8); cctx.fillStyle = '#d9c27a'; cctx.fillRect(x + 4, y + 3, 4, 2); });
+            cctx.strokeStyle = '#2a2a24'; cctx.lineWidth = 2; cctx.beginPath(); cctx.moveTo(C.posto.x + 128, C.posto.y + 96); cctx.lineTo(C.posto.x + 128, C.posto.y - 14); cctx.lineTo(C.posto.x + 133, C.posto.y - 14); cctx.stroke();
+            [[C.posto.x + 6, C.posto.y + 86], [C.posto.x + 6, C.posto.y + 77]].forEach(([x, y]) => { cctx.fillStyle = '#4e5a38'; cctx.fillRect(x, y, 12, 8); cctx.fillStyle = '#d9c27a'; cctx.fillRect(x + 4, y + 3, 4, 2); });
             // cozinha: prateleira com latas
             cctx.fillStyle = '#4e3924'; cctx.fillRect(cz.x + 6, cz.y + 26, 30, 2);
             for (let k = 0; k < 4; k++) { cctx.fillStyle = ['#7a7a70', '#8a5a3a', '#7a7a70', '#5a6a4a'][k]; cctx.fillRect(cz.x + 8 + k * 7, cz.y + 20, 5, 6); }
@@ -3933,10 +3933,10 @@
             cctx.strokeStyle = '#6a6a60'; cctx.lineWidth = 1.5;
             cctx.beginPath(); cctx.moveTo(of.x + 18, of.y + 18); cctx.lineTo(of.x + 18, of.y + 50); cctx.stroke(); cctx.fillStyle = '#6a6a60'; cctx.fillRect(of.x + 15, of.y + 48, 6, 8); // pá
             cctx.fillStyle = '#8a8a80'; cctx.fillRect(of.x + 28, of.y + 22, 14, 4); cctx.fillStyle = '#5a4128'; cctx.fillRect(of.x + 40, of.y + 21, 5, 6); // serrote
-            cctx.fillStyle = '#7a5a38'; cctx.save(); cctx.translate(of.x + 52, of.y + 92); cctx.rotate(-0.18); cctx.fillRect(0, -44, 5, 44); cctx.fillRect(7, -40, 5, 40); cctx.restore();
+            cctx.fillStyle = '#7a5a38'; cctx.save(); cctx.translate(of.x + 52, of.y + 116); cctx.rotate(-0.18); cctx.fillRect(0, -44, 5, 44); cctx.fillRect(7, -40, 5, 40); cctx.restore();
 
             // escadas entre os andares
-            [[140, 246, 282], [300, 246, 282]].forEach(([x, y1, y2]) => {
+            [[140, 258, 284], [300, 258, 284]].forEach(([x, y1, y2]) => {
                 cctx.strokeStyle = '#6b4f33'; cctx.lineWidth = 2;
                 cctx.beginPath(); cctx.moveTo(x, y1); cctx.lineTo(x, y2); cctx.moveTo(x + 10, y1); cctx.lineTo(x + 10, y2);
                 for (let y = y1 + 6; y < y2; y += 8) { cctx.moveTo(x, y); cctx.lineTo(x + 10, y); }
@@ -4098,6 +4098,7 @@
             const per = periodoDoDia();
             cctx.save();
             cctx.translate(x, y);
+            cctx.scale(CORTE.ESC, CORTE.ESC);
             if (pose === 'deitado') {
                 // deitado no beliche, coberto, peito subindo e descendo
                 const r = 1 + Math.sin(t / 650 + s.id) * 0.12;
@@ -4133,7 +4134,7 @@
             cctx.restore();
             // clarão do disparo na boca da arma
             const recuo = Math.max(0, 1 - (t - (disparosCena[s.id] || -1e9)) / 140);
-            if (P.ponta && recuo > 0.5) quadroAnimado('clarao', 1 - recuo, x + P.ponta[0], y + P.ponta[1], P.arma.tipo === 'mg' ? 15 : 11);
+            if (P.ponta && recuo > 0.5) quadroAnimado('clarao', 1 - recuo, x + P.ponta[0] * CORTE.ESC, y + P.ponta[1] * CORTE.ESC, (P.arma.tipo === 'mg' ? 15 : 11) * CORTE.ESC);
             return P;
         }
 
@@ -4143,7 +4144,7 @@
             const pele = { 1: '#c99a74', 2: '#7a4f33', 3: '#e2b996', 4: '#a8714c', 5: '#d9a988', 6: '#b98159' }[s.id] || '#c99a74';
             const POSE_SILHUETA = { mira: 'mira', ninho: 'ninho', come: 'come', trabalho: 'trabalho', deitado: 'deitado', encolhido: 'panico', panico: 'panico', 'em pé': 'arrastado' };
             const usouBoneco = !!desenharSilhueta(s, x, y, POSE_SILHUETA[pose] || 'mira', t);
-            if (usouBoneco && pose === 'deitado' && mentalDe(s) !== 'panico') txtC(x - 12 + Math.sin(t / 500) * 2, y - 12 - (t / 60) % 10, 'z', '#b3c4ae', 8, 700);
+            if (usouBoneco && pose === 'deitado' && mentalDe(s) !== 'panico') txtC(x - 16 + Math.sin(t / 500) * 2, y - 16 - (t / 60) % 10, 'z', '#b3c4ae', 9, 700);
             if (!usouBoneco) {
             const balanco = Math.sin(t / 400 + s.id) * 0.8;
             if (pose === 'deitado') {
@@ -4172,15 +4173,15 @@
             cctx.fillStyle = '#222b25'; cctx.fillRect(x - 10, y + 19 + rotY, 20, 2.5);
             cctx.fillStyle = s.hp > 50 ? '#5a7356' : '#c0392b'; cctx.fillRect(x - 10, y + 19 + rotY, 20 * Math.max(0, s.hp) / 100, 2.5);
             const deitado = pose === 'deitado';
-            if (sel) { cctx.strokeStyle = 'rgba(255,224,138,0.8)'; cctx.lineWidth = 1.2; cctx.setLineDash([3, 2]); if (deitado) cctx.strokeRect(x - 20, y - 14, 42, 38); else cctx.strokeRect(x - 13, y - 40, 26, 64 + rotY); cctx.setLineDash([]); }
+            if (sel) { cctx.strokeStyle = 'rgba(255,224,138,0.8)'; cctx.lineWidth = 1.2; cctx.setLineDash([3, 2]); if (deitado) cctx.strokeRect(x - 26, y - 16, 54, 40); else cctx.strokeRect(x - 16, y - 40 * CORTE.ESC, 32, 40 * CORTE.ESC + 24 + rotY); cctx.setLineDash([]); }
             // avisos em cima da cabeça: só aparece o que está ruim (amarelo = atenção, vermelho = crítico)
             const avisos = avisosDoSoldado(s);
             if (avisos.length) {
                 const deit = pose === 'deitado';
                 avisos.forEach((a, i) => {
                     // deitado: em fila acima; em pé: em coluna ao lado da cabeça (não cobre o nome do cômodo)
-                    const ax = deit ? x - 14 + i * 11 : x - 12;
-                    const topo = deit ? y - 20 : y - 44 + i * 10.5;
+                    const ax = deit ? x - 18 + i * 11 : x - 16;
+                    const topo = deit ? y - 24 : y - 44 * CORTE.ESC + i * 10.5;
                     const pul = a.critico ? 1 + 0.12 * Math.sin(t / 150) : 1;
                     cctx.fillStyle = a.critico ? 'rgba(170,30,30,0.92)' : 'rgba(170,130,30,0.9)';
                     cctx.beginPath(); cctx.arc(ax, topo, 5.2 * pul, 0, Math.PI * 2); cctx.fill();
@@ -4194,7 +4195,7 @@
                 const cor = m === 'heroismo' ? 'rgba(60,90,50,0.92)' : 'rgba(160,30,30,0.9)';
                 cctx.font = '700 7.5px "Courier Prime", monospace';
                 const wl = cctx.measureText(rot).width + 8;
-                const ty = deitado ? y - 26 : y - 52;
+                const ty = deitado ? y - 30 : y - 52 * CORTE.ESC;
                 cctx.fillStyle = cor; cctx.fillRect(x - wl / 2, ty, wl, 11);
                 txtC(x, ty + 8, rot, '#ffeedd', 7.5, 700, 'center');
             }
@@ -4202,7 +4203,7 @@
             if (soldadoMarcado(s)) {
                 const pis = 0.5 + 0.45 * Math.sin(t / 110);
                 cctx.strokeStyle = `rgba(255,74,60,${pis})`; cctx.lineWidth = 2;
-                const cy = pose === 'deitado' ? y - 4 : y - 18;
+                const cy = pose === 'deitado' ? y - 5 : y - 18 * CORTE.ESC;
                 cctx.beginPath(); cctx.arc(x, cy, 15, 0, Math.PI * 2); cctx.stroke();
                 cctx.beginPath(); cctx.moveTo(x - 21, cy); cctx.lineTo(x - 10, cy); cctx.moveTo(x + 10, cy); cctx.lineTo(x + 21, cy); cctx.moveTo(x, cy - 21); cctx.lineTo(x, cy - 10); cctx.moveTo(x, cy + 10); cctx.lineTo(x, cy + 21); cctx.stroke();
             }
@@ -4219,11 +4220,11 @@
                     if (chave === 'abrigo') {
                         const leito = k % 3, andar = Math.floor(k / 3) % 2;
                         pos[s.id] = mentalDe(s) === 'panico'
-                            ? { x: c.x + 30 + leito * 66, y: c.y + 76, pose: 'panico', comodo: chave } // encolhido no chão, tremendo
-                            : { x: c.x + 36 + leito * 66, y: c.y + (andar ? 66 : 40), pose: 'deitado', comodo: chave };
+                            ? { x: c.x + 30 + leito * 66, y: c.y + 106, pose: 'panico', comodo: chave } // encolhido no chão, tremendo
+                            : { x: c.x + 36 + leito * 66, y: c.y + (andar ? 90 : 64), pose: 'deitado', comodo: chave };
                     } else {
                         const passo = c.w / (lista.length + 1);
-                        const baseY = { posto: c.y + 64, ninhos: c.y + 70, cozinha: c.y + 64, oficina: c.y + 80 }[chave];
+                        const baseY = { posto: c.y + 92, ninhos: c.y + 102, cozinha: c.y + 100, oficina: c.y + 100 }[chave];
                         const pose = { posto: 'mira', ninhos: 'ninho', cozinha: 'come', oficina: 'trabalho' }[chave];
                         // Nomes de soldados muito próximos alternam a altura para não se sobrepor
                         pos[s.id] = { x: c.x + passo * (k + 1) - (chave === 'cozinha' ? 8 : 0), y: baseY, pose, comodo: chave, rotY: passo < 40 && k % 2 ? 9 : 0 };
@@ -4281,7 +4282,7 @@
                 const e = alvos[Math.floor(Math.random() * alvos.length)];
                 const pe = posInimigoCena(e);
                 disparosCena[id] = t;
-                const ox = p.x + 19, oy = p.y - 25;
+                const ox = p.x + 19 * CORTE.ESC, oy = p.y - 25 * CORTE.ESC;
                 if (!atlasPronto) { cctx.fillStyle = '#ffd27a'; cctx.beginPath(); cctx.arc(ox, oy, 2.5, 0, Math.PI * 2); cctx.fill(); }
                 if (CONFIG.rastros) { cctx.strokeStyle = p.comodo === 'ninhos' ? 'rgba(255,179,71,0.7)' : 'rgba(255,224,138,0.55)'; cctx.lineWidth = 1; cctx.beginPath(); cctx.moveTo(ox, oy); cctx.lineTo(pe.x, pe.y); cctx.stroke(); }
             });
@@ -4303,7 +4304,7 @@
         }
 
         function desenharRodapeCena() {
-            const y0 = 384;
+            const y0 = 410;
             cctx.fillStyle = '#0f1411'; cctx.fillRect(0, y0, CORTE.W, CORTE.H - y0);
             const barra = (x, y, w, v, cor) => { cctx.fillStyle = '#222b25'; cctx.fillRect(x, y, w, 4); cctx.fillStyle = cor; cctx.fillRect(x, y, w * Math.max(0, Math.min(1, v)), 4); };
             const tr = gameState.trench;
@@ -4343,7 +4344,7 @@
                 if (!p) { delete animPos[s.id]; return; }
                 let { x, y } = p;
                 let pose = p.pose;
-                if (arrasto && arrasto.moveu && arrasto.id === s.id) { x = arrasto.x; y = arrasto.y + 18; pose = 'em pé'; animPos[s.id] = { x, y }; }
+                if (arrasto && arrasto.moveu && arrasto.id === s.id) { x = arrasto.x; y = arrasto.y + 18 * CORTE.ESC; pose = 'em pé'; animPos[s.id] = { x, y }; }
                 else {
                     // Caminha até a nova posição em vez de aparecer lá de repente
                     const a = animPos[s.id] || (animPos[s.id] = { x, y });
@@ -4353,7 +4354,7 @@
                 posicoesCena[s.id] = { x, y };
                 desenharSoldadoCena(s, x, y, pose, t, pose === p.pose ? (p.rotY || 0) : 0);
             });
-            { const nn = CORTE.comodos.ninhos; cctx.fillStyle = '#7d7056'; cctx.fillRect(nn.x + 4, nn.y + 62, nn.w - 8, 12); cctx.strokeStyle = '#5d533f'; cctx.lineWidth = 1; for (let xx = nn.x + 4; xx < nn.x + nn.w - 8; xx += 14) cctx.strokeRect(xx, nn.y + 62, 14, 12); }
+            { const nn = CORTE.comodos.ninhos; cctx.fillStyle = '#7d7056'; cctx.fillRect(nn.x + 4, nn.y + 94, nn.w - 8, 12); cctx.strokeStyle = '#5d533f'; cctx.lineWidth = 1; for (let xx = nn.x + 4; xx < nn.x + nn.w - 8; xx += 14) cctx.strokeRect(xx, nn.y + 94, 14, 12); }
             desenharClimaCena(t);
             desenharEfeitosCena();
             desenharRodapeCena();
@@ -4376,9 +4377,9 @@
             return Object.keys(CORTE.comodos).find(k => { const c = CORTE.comodos[k]; return x >= c.x && x <= c.x + c.w && y >= c.y && y <= c.y + c.h; }) || null;
         }
         function soldadoEm(x, y) {
-            let melhor = null, dist = 26;
+            let melhor = null, dist = 26 * CORTE.ESC;
             Object.entries(posicoesCena).forEach(([id, p]) => {
-                const d = Math.hypot(p.x - x, (p.y - 12) - y);
+                const d = Math.hypot(p.x - x, (p.y - 12 * CORTE.ESC) - y);
                 if (d < dist) { dist = d; melhor = Number(id); }
             });
             return melhor;
@@ -4494,9 +4495,9 @@
                 const r = corteCanvas.getBoundingClientRect(), esc = r.width / CORTE.W;
                 const cx = pos.x * esc, cy = pos.y * esc;
                 const w = el.offsetWidth || 240, h = el.offsetHeight || 190;
-                let left = Math.max(4, Math.min(r.width - w - 4, cx - w / 2));
-                let top = cy - 52 * esc - h - 4;
-                if (top < 4) top = Math.min(r.height - h - 4, cy + 26 * esc);
+                // Abre do lado oposto ao soldado: deixa o lado dele (e os cômodos perto) livres para tocar
+                const left = cx < r.width / 2 ? r.width - w - 6 : 6;
+                const top = Math.max(4, Math.min(r.height - h - 4, cy - h / 2 - 20 * esc));
                 el.style.left = left + 'px'; el.style.top = top + 'px';
             }
         }
