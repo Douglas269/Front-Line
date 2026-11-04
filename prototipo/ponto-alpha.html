@@ -4180,7 +4180,8 @@
             const deitado = pose === 'deitado';
             if (sel) { cctx.strokeStyle = 'rgba(255,224,138,0.8)'; cctx.lineWidth = 1.2; cctx.setLineDash([3, 2]); if (deitado) cctx.strokeRect(x - 26, y - 16, 54, 40); else cctx.strokeRect(x - 16, y - 40 * CORTE.ESC, 32, 40 * CORTE.ESC + 24 + rotY); cctx.setLineDash([]); }
             // avisos em cima da cabeça: só aparece o que está ruim (amarelo = atenção, vermelho = crítico)
-            const avisos = avisosDoSoldado(s);
+            // Na cabeça só vida, fome, sede e cansaço; a moral fica no cartão e no resumo (o vermelho confundia com vida baixa)
+            const avisos = avisosDoSoldado(s).filter(a => a.nome !== 'moral baixa');
             if (avisos.length) {
                 const deit = pose === 'deitado';
                 avisos.forEach((a, i) => {
@@ -5128,7 +5129,7 @@
            Ao abrir, ao voltar para o app e a cada minuto o jogo compara as duas. Se o site
            tiver uma versão diferente, o jogo trava numa tela que só sai atualizando.
            (tools/nova-versao.sh troca as duas juntas a cada atualização publicada.) */
-        const VERSAO_JOGO = '20261104.0200';
+        const VERSAO_JOGO = '20261104.0905';
         const ATUALIZOU_KEY = 'frontline-atualizou-para';
         async function verificarVersao() {
             if (!location.protocol.startsWith('http') || atualizacaoPendente) return;

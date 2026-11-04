@@ -354,6 +354,7 @@ async function run() {
         Object.assign(s0, { hunger: 80, thirst: 55, fatigue: 10, moral: 80, hp: 100 });
         const av = avisosDoSoldado(s0);
         c.corteAvisosNaCabeca = av.some(a => a.nome === 'fome' && a.critico) && av.some(a => a.nome === 'sede' && !a.critico) && av.length === 2;
+        { const m0 = s0.moral; s0.moral = 10; c.corteMoralForaDaCabeca = !avisosDoSoldado(s0).filter(a => a.nome !== 'moral baixa').some(a => a.nome === 'moral baixa') && avisosDoSoldado(s0).some(a => a.nome === 'moral baixa'); s0.moral = m0; }
         abrirCartao(s0.id); c.corteCartaoAbre = cartaoAberto && !document.getElementById('corte-cartao').classList.contains('hidden') && document.getElementById('corte-cartao').innerHTML.includes(s0.name);
         cartaoFuncao('REST'); c.corteCartaoTrocaFuncao = s0.duty === 'REST';
         fecharCartao(); c.corteCartaoFecha = !cartaoAberto && document.getElementById('corte-cartao').classList.contains('hidden');
