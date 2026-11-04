@@ -341,6 +341,15 @@ async function run() {
       moverParaComodo(sv[0].id, 'ninhos'); c.corteNinhoComArma = gameState.arsenal.posicoes[1].operador === sv[0].id && comodoDoSoldado(sv[0]) === 'ninhos';
       moverParaComodo(sv[0].id, 'posto'); c.cortePostoLargaArma = gameState.arsenal.posicoes[1].operador === null;
       renderCorte(); c.corteDesenhaSemErro = true;
+      // Contra-bateria rápida: aparece no aviso, pede, e some sem artilharia
+      { const pr = gameState.prestige, jam = gameState.tacticalOrders.SIGNAL_JAM;
+        gameState.prestige = 500; gameState.counterBattery = null; gameState.tacticalOrders.SIGNAL_JAM = true;
+        gameState.barrage = { ticks: 60, alvos: [{ tipo: 'deposito' }] }; renderBotaoContraBateria();
+        c.contraBateriaRapidaAparece = !document.getElementById('btn-cb-corte').classList.contains('hidden');
+        contraBateriaRapida(); c.contraBateriaRapidaPede = !!gameState.counterBattery && !gameState.tacticalOrders.SIGNAL_JAM && gameState.prestige === 500 - custo(50);
+        gameState.barrage = null; gameState.counterBattery = null; renderBotaoContraBateria();
+        c.contraBateriaRapidaSome = document.getElementById('btn-cb-corte').classList.contains('hidden');
+        gameState.prestige = pr; gameState.tacticalOrders.SIGNAL_JAM = jam; }
       { const s0 = sv[0], g0 = [s0.hunger, s0.thirst, s0.fatigue, s0.moral, s0.hp];
         Object.assign(s0, { hunger: 80, thirst: 55, fatigue: 10, moral: 80, hp: 100 });
         const av = avisosDoSoldado(s0);

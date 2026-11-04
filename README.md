@@ -105,6 +105,7 @@ Jogo de estratégia tático com foco em realismo de comando, combate blindado e 
 - Ameaças e defesas:
   - Drone observador: enquanto houver drone no setor (e o sinal dele não estiver bloqueado), a artilharia inimiga causa +50% de dano, os tiros inimigos +20% e a artilharia fica mais provável.
   - Bloqueio de Sinal (ordem tática): drones param de guiar o inimigo e cada um tem ~40% de chance por segundo real de cair; o rádio fica ocupado (sem relatório e sem apoios da Central).
+  - **Contra-bateria rápida:** durante o aviso de artilharia, um botão vermelho aparece logo abaixo do aviso, em cima da cena (nos dois visuais), com o custo; depois do pedido mostra a contagem e avisa se pode chegar tarde. Se o Bloqueio de Sinal estiver ligado, o botão desliga o bloqueio e já pede. Sem prestígio, mostra quanto falta.
   - Contra-bateria (rádio): só durante aviso de artilharia; chega em 1 a 5 s reais (2d5) e, se chegar antes do impacto, cancela o bombardeio.
   - Patrulha batedora: 10 s reais dentro do alcance sem ser abatida marca a posição e recua; a próxima onda vem com 1 soldado a mais.
   - Sem ninguém de vigília (e sem Vigília Total), o esquadrão atira às cegas: metade do dano.

@@ -220,6 +220,9 @@
                         <p class="text-mil-textMuted text-xs mt-1 max-w-xs">Perímetro sem observação: o esquadrão atira às cegas (metade do dano). Coloque alguém de vigília.</p>
                     </div>
 
+                    <!-- CONTRA-BATERIA RÁPIDA: aparece só durante o aviso de artilharia -->
+                    <button id="btn-cb-classico" onclick="contraBateriaRapida()" class="hidden absolute left-1/2 -translate-x-1/2 z-30 px-3 py-1.5 rounded border-2 font-bold text-xs whitespace-nowrap shadow-2xl" style="top:66px"></button>
+
                     <!-- COMBAT ALERT BANNER -->
                     <div id="map-alert-banner" class="hidden absolute top-2 left-2 right-16 bg-mil-redDark/90 border border-mil-redAlert px-2 py-1 rounded text-xs text-red-200 flex items-center justify-between z-20 shadow-2xl animate-alert-pulse">
                         <span class="flex items-center gap-1.5 font-bold">
@@ -233,6 +236,7 @@
                 <div id="mapa-corte" class="hidden relative w-full bg-black overflow-hidden select-none">
                     <canvas id="corteCanvas" class="w-full block" style="touch-action: pan-y"></canvas>
                     <div id="corte-banner" class="hidden absolute top-2 left-2 right-2 bg-mil-redDark/90 border border-mil-redAlert px-2 py-1 rounded text-[11px] text-red-200 font-bold z-20 animate-alert-pulse"></div>
+                    <button id="btn-cb-corte" onclick="contraBateriaRapida()" class="hidden absolute left-1/2 -translate-x-1/2 z-30 px-3 py-1.5 rounded border-2 font-bold text-xs whitespace-nowrap shadow-2xl" style="top:38px"></button>
                     <div id="corte-cartao" class="hidden absolute z-30 w-48 bg-mil-panel/95 border border-mil-greenMuted rounded shadow-2xl p-1.5 text-[10px] leading-tight" onclick="event.stopPropagation()"></div>
                     <div id="corte-dica" class="hidden absolute z-30 pointer-events-none bg-black/90 border border-mil-border rounded px-2 py-1 text-[11px] text-mil-textGlow whitespace-nowrap"></div>
                     <div id="corte-pausa" class="hidden absolute left-1/2 -translate-x-1/2 z-20 px-2 py-1 rounded bg-black/85 border border-mil-amberMuted text-xs text-mil-amberMuted font-bold whitespace-nowrap" style="top:44%">⏸ PAUSADO · decida com calma</div>
@@ -3132,6 +3136,7 @@
         function updateUI() {
             preencherIcones();
             renderBarraRecursos();
+            if (typeof renderBotaoContraBateria === 'function') renderBotaoContraBateria();
             if (typeof renderCartao === 'function' && cartaoAberto) renderCartao();
             renderDefesas();
             document.getElementById('val-rations').textContent = `${Math.round(gameState.resources.rations)} un`;
@@ -4529,6 +4534,45 @@
         // Toque fora do cartão e da cena fecha o cartão
         document.addEventListener('click', e => { if (cartaoAberto && !e.target.closest('#corte-cartao') && e.target !== corteCanvas) fecharCartao(); });
 
+
+        // ---------- Contra-bateria rápida: botão grande embaixo do aviso de artilharia ----------
+        function contraBateriaRapida() {
+            if (gameState.tacticalOrders.SIGNAL_JAM) {
+                // O rádio está ocupado: desliga o bloqueio e já pede, num toque só
+                toggleTacticalOrder('SIGNAL_JAM');
+                logFeed('📡 Bloqueio de Sinal desligado para pedir a contra-bateria.', 'text-mil-amberMuted');
+            }
+            requestSupport('COUNTER');
+            renderBotaoContraBateria();
+        }
+        function renderBotaoContraBateria() {
+            const b = gameState.barrage;
+            ['btn-cb-corte', 'btn-cb-classico'].forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                if (!b || gameEnded) { el.classList.add('hidden'); return; }
+                el.classList.remove('hidden');
+                const c = custo(50);
+                let txt, cls, pode = false;
+                if (gameState.counterBattery) {
+                    const aTempo = gameState.counterBattery.ticks < b.ticks;
+                    txt = `💥 CONTRA-BATERIA A CAMINHO · ${seg(gameState.counterBattery.ticks)}s${aTempo ? '' : ' (pode chegar tarde)'}`;
+                    cls = 'bg-black/85 border-mil-amberMuted text-mil-amberMuted';
+                } else if (gameState.prestige < c) {
+                    txt = `💥 CONTRA-BATERIA · faltam ${c - Math.floor(gameState.prestige)} pts`;
+                    cls = 'bg-black/85 border-mil-border text-mil-textMuted opacity-80';
+                } else {
+                    txt = `💥 PEDIR CONTRA-BATERIA · ${c} PTS${gameState.tacticalOrders.SIGNAL_JAM ? ' (desliga o bloqueio)' : ''}`;
+                    cls = 'bg-red-800 border-red-300 text-white animate-pulse';
+                    pode = true;
+                }
+                if (el.textContent !== txt) el.textContent = txt;
+                const classe = 'absolute left-1/2 -translate-x-1/2 z-30 px-3 py-1.5 rounded border-2 font-bold text-xs whitespace-nowrap shadow-2xl ' + cls;
+                if (el.className !== classe) el.className = classe;
+                el.disabled = !pode;
+            });
+        }
+
         // ---------- troca de visual ----------
         function aplicarVisual() {
             const corte = modoCorte();
@@ -5084,7 +5128,7 @@
            Ao abrir, ao voltar para o app e a cada minuto o jogo compara as duas. Se o site
            tiver uma versão diferente, o jogo trava numa tela que só sai atualizando.
            (tools/nova-versao.sh troca as duas juntas a cada atualização publicada.) */
-        const VERSAO_JOGO = '20261103.2232';
+        const VERSAO_JOGO = '20261104.0200';
         const ATUALIZOU_KEY = 'frontline-atualizou-para';
         async function verificarVersao() {
             if (!location.protocol.startsWith('http') || atualizacaoPendente) return;
