@@ -88,9 +88,9 @@ async function run() {
       c.cargaItensSeparados = !!gameState.cargas.water && !!gameState.cargas.ammoHeavy && !gameState.cargas.ammoRifle && gameState.prestige === p1 - custo(45) - custo(50); }
     const aguaAntes = gameState.resources.water, pesadaAntes = gameState.resources.ammoHeavy, leveAntes = gameState.resources.ammoRifle;
     c.cargaEsperaValida = espera === esperaCarga() * (gameState.supplyLineEff <= 30 ? 2 : 1);
-    { const nv = gameState.level; gameState.level = 1; c.carga150sNivel1 = seg(esperaCarga()) === 150;
-      gameState.level = 2; c.carga160sNivel2 = seg(esperaCarga()) === 160;
-      gameState.level = 25; c.carga390sNivel25 = seg(esperaCarga()) === 390; gameState.level = nv; }
+    { const nv = gameState.level; gameState.level = 1; c.carga150sNivel1 = esperaCarga() === 150 * 8;
+      gameState.level = 2; c.carga160sNivel2 = esperaCarga() === 160 * 8;
+      gameState.level = 25; c.carga390sNivel25 = esperaCarga() === 390 * 8; gameState.level = nv; }
     for (let i = 0; i < espera; i++) processPendingSupply();
     c.cargaChegaDepois = !gameState.cargas.rations && gameState.resources.rations >= rBefore + 20;
     c.cargaCadaItemChega = gameState.resources.water >= aguaAntes + 30 && gameState.resources.ammoHeavy > pesadaAntes && gameState.resources.ammoRifle === leveAntes;
@@ -239,7 +239,7 @@ async function run() {
       c.defEntraNoSalvamento = salvo.arsenal && salvo.arsenal.posicoes[1].arma === 'morteiro';
       // General: blindado só a partir do dia 6
       const d0 = gameState.day; gameState.enemies = []; gameState.barrage = null;
-      gameState.day = 7; const antes6 = planoViavel('blindado'); gameState.day = 9; const depois6 = planoViavel('blindado'); gameState.day = d0;
+      gameState.day = 9; const antes6 = planoViavel('blindado'); gameState.day = 11; const depois6 = planoViavel('blindado'); gameState.day = d0;
       c.defBlindadoSoDepoisDoDia8 = !antes6 && depois6;
       gameState.enemies = []; Math.random = () => 0.99; gameState.arsenal = novoArsenal();
       const g = JSON.parse(guardado); gameState.squad.forEach((s, i) => Object.assign(s, g.squad[i])); Object.assign(gameState, { timeSeconds: g.timeSeconds, trench: g.trench, prestige: g.prestige, day: g.day }); prepCombate(); }
