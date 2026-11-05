@@ -1628,20 +1628,28 @@
         const MAX_LEVEL = 25;
         const LEVEL_KEY = 'frontline-ponto-alpha-nivel';
 
+        // Dificuldade à escolha do jogador (Configurações → Jogo). Os níveis 1 a 25 continuam subindo em cima disso.
+        const MODOS_DIFICULDADE = {
+            recruta:  { nome: 'Recruta',  desc: 'Inimigos mais fracos e mais suprimentos: bom para aprender e passar de nível',  dano: 0.85,  vida: 0.92, eventos: 0.9,  suprimento: 1.15, premio: 1.15, custo: 0.85 },
+            soldado:  { nome: 'Soldado',  desc: 'O equilíbrio padrão do jogo',                                                   dano: 1,    vida: 1,    eventos: 1,    suprimento: 1,    premio: 1,    custo: 1 },
+            veterano: { nome: 'Veterano', desc: 'Inimigos mais duros e suprimentos mais curtos: para quem quer sofrer',          dano: 1.15, vida: 1.1,  eventos: 1.1,  suprimento: 0.9,  premio: 0.9,  custo: 1.1 }
+        };
         function diff() {
             // Calibrado para quem joga bem: ~10% de vitória do nível 1 ao 12
             // (dificuldade 5,94) e queda de ~0,5 ponto por nível até ~3% no 25 (6,05).
             // Recalibrado depois da cozinha, da trincheira, do recebimento e das crises.
             const lv = Math.max(1, Math.min(MAX_LEVEL, gameState.level));
             const d = lv <= 12 ? 5.94 : 5.94 + (6.05 - 5.94) * (lv - 12) / 13;
+            // Modo de dificuldade escolhido nas Configurações (Soldado = o equilíbrio padrão)
+            const m = MODOS_DIFICULDADE[(typeof CONFIG !== 'undefined' && CONFIG.dificuldade) || 'soldado'] || MODOS_DIFICULDADE.soldado;
             return {
-                eventMult: 1 + 0.30 * d,                  // frequência de eventos
-                enemyHpMult: 1 + 0.15 * d,                // vida dos inimigos
-                enemyDmgMult: 1 + 0.20 * d,               // dano de tiros, artilharia e invasão
+                eventMult: (1 + 0.30 * d) * m.eventos,                  // frequência de eventos
+                enemyHpMult: (1 + 0.15 * d) * m.vida,                   // vida dos inimigos
+                enemyDmgMult: (1 + 0.20 * d) * m.dano,                  // dano de tiros, artilharia e invasão
                 waveExtra: Math.floor(d / 2),             // soldados extras por onda
-                supplyMult: Math.max(0.5, 1 - 0.06 * d),  // entrega diária de suprimentos
-                rewardMult: Math.max(0.4, 1 - 0.07 * d),  // prestígio ganho (relatório e abates)
-                costMult: 1 + 0.12 * d,                   // custo dos apoios da Central
+                supplyMult: Math.max(0.5, 1 - 0.06 * d) * m.suprimento, // entrega diária de suprimentos
+                rewardMult: Math.max(0.4, 1 - 0.07 * d) * m.premio,     // prestígio ganho (relatório e abates)
+                costMult: (1 + 0.12 * d) * m.custo,                     // custo dos apoios da Central
                 // Crises: até 30% mais frequentes e mais duras no nível máximo
                 crisisMult: 1 + 0.3 * (lv - 1) / (MAX_LEVEL - 1),
                 crisisSeverity: 1 + 0.3 * (lv - 1) / (MAX_LEVEL - 1)
@@ -3505,7 +3513,7 @@
            As preferências ficam no aparelho e, com conta, também na conta (vão junto para outro aparelho). */
         const CONFIG_KEY = 'frontline-config';
         const CARREIRA_KEY = 'frontline-carreira';
-        const CONFIG_PADRAO = { volMusica: 45, volEfeitos: 80, volAmbiente: 50, tremor: true, vibracao: true, rastros: true, textoGrande: false, apelido: '', visual: 'corte', pausaArtilharia: false };
+        const CONFIG_PADRAO = { volMusica: 45, volEfeitos: 80, volAmbiente: 50, tremor: true, vibracao: true, rastros: true, textoGrande: false, apelido: '', visual: 'corte', pausaArtilharia: false, dificuldade: 'soldado' };
         let CONFIG = Object.assign({}, CONFIG_PADRAO, (() => { try { return JSON.parse(localStorage.getItem(CONFIG_KEY)) || {}; } catch (e) { return {}; } })());
         let configAberto = false, abaConfigAtual = 'conta';
         const volumeEfeitos = () => Math.max(0, Math.min(1.5, (CONFIG.volEfeitos ?? 80) / 80));
@@ -3662,8 +3670,14 @@
                     <button onclick="alternarConfig('${k}')" class="px-3 py-1.5 btn-tactical rounded font-bold whitespace-nowrap ${CONFIG[k] ? 'btn-active-order' : ''}">${CONFIG[k] ? 'Ligado' : 'Desligado'}</button>
                 </div>`;
             const opVisual = (v, rot) => `<button onclick="CONFIG.visual='${v}'; salvarConfig(); renderConfig();" class="flex-1 py-1.5 btn-tactical rounded font-bold ${CONFIG.visual === v ? 'btn-active-order' : ''}">${rot}</button>`;
+            const opDif = (v) => `<button onclick="CONFIG.dificuldade='${v}'; salvarConfig(); renderConfig();" class="flex-1 py-1.5 btn-tactical rounded font-bold ${CONFIG.dificuldade === v ? 'btn-active-order' : ''}">${MODOS_DIFICULDADE[v].nome}</button>`;
             document.getElementById('cfg-jogo').innerHTML =
                 `<div class="bg-mil-bg border border-mil-border rounded p-2 space-y-1">
+                    <div class="text-mil-textGlow font-bold">Dificuldade</div>
+                    <div class="text-mil-textMuted">${(MODOS_DIFICULDADE[CONFIG.dificuldade] || MODOS_DIFICULDADE.soldado).desc}. Vale já para a partida em andamento; o nível (1 a 25) continua subindo a cada vitória.</div>
+                    <div class="flex gap-2 pt-1">${opDif('recruta')}${opDif('soldado')}${opDif('veterano')}</div>
+                </div>
+                <div class="bg-mil-bg border border-mil-border rounded p-2 space-y-1">
                     <div class="text-mil-textGlow font-bold">Visual da trincheira</div>
                     <div class="text-mil-textMuted">Corte lateral: soldados nos cômodos, arraste para trocar a função. Clássico: mapa tático e lista do esquadrão.</div>
                     <div class="flex gap-2 pt-1">${opVisual('corte', 'Corte lateral')}${opVisual('classico', 'Clássico')}</div>

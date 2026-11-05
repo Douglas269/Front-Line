@@ -363,6 +363,16 @@ async function run() {
       c.corteVoltaAoClassico = !document.getElementById('mapa-classico').classList.contains('hidden') && document.getElementById('barra-abas').nextElementSibling === document.getElementById('conteudo-abas');
       CONFIG.visual = guardaV; aplicarVisual(); gameState.arsenal = novoArsenal();
       JSON.parse(guardaS).forEach((g, i) => { sv[i].duty = g[0]; sv[i].mental = g[1]; sv[i].hp = g[2]; }); }
+    // Dificuldade: Recruta mais leve que Soldado, Veterano mais duro; Soldado é o padrão
+    { const guardaD = CONFIG.dificuldade;
+      CONFIG.dificuldade = 'soldado'; const dS = diff();
+      CONFIG.dificuldade = 'recruta'; const dR = diff();
+      CONFIG.dificuldade = 'veterano'; const dV = diff();
+      c.dificuldadeRecrutaMaisLeve = dR.enemyDmgMult < dS.enemyDmgMult && dR.supplyMult > dS.supplyMult && dR.eventMult < dS.eventMult;
+      c.dificuldadeVeteranoMaisDuro = dV.enemyDmgMult > dS.enemyDmgMult && dV.supplyMult < dS.supplyMult;
+      c.dificuldadePadraoSoldado = CONFIG_PADRAO.dificuldade === 'soldado';
+      CONFIG.dificuldade = 'inexistente'; c.dificuldadeInvalidaCaiNoSoldado = diff().enemyDmgMult === dS.enemyDmgMult;
+      CONFIG.dificuldade = guardaD; }
     // Configurações: abre, para o relógio, aplica volumes e opções, guarda no aparelho
     { const guardaCfg = JSON.stringify(CONFIG);
       abrirConfig('som'); c.configAbre = configAberto && !document.getElementById('modal-config').classList.contains('hidden');

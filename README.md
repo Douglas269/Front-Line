@@ -114,6 +114,10 @@ Jogo de estratégia tático com foco em realismo de comando, combate blindado e 
 - Tempo: cada dia dura **40 segundos reais** e vira sozinho no fim da madrugada (manhã, tarde, noite, madrugada; 240 s de jogo, 6 por segundo real). Era 30 s; passou para 40 s para dar mais tempo de pensar, sem mudar as regras (tudo é contado em segundos de jogo). Nas Configurações → Jogo dá para ligar a pausa automática no aviso de artilharia. O botão **Pausar** congela tudo para decidir com calma (mapa mostra "PAUSADO"); **Continuar** retoma. O jogo pausa sozinho ao sair do app e ao restaurar uma partida salva. Crises, tutorial e login também param o relógio.
 - Os valores "a cada 10 s" acima contam segundos de jogo (10 s de jogo ≈ 1,25 s real).
 
+### Modos de dificuldade (Configurações → Jogo → Dificuldade)
+- **Recruta** (dano inimigo ×0,85, vida ×0,92, eventos ×0,9, suprimentos ×1,15, prestígio ×1,15, apoios ×0,85), **Soldado** (o equilíbrio padrão) e **Veterano** (dano ×1,15, vida ×1,1, eventos ×1,1, suprimentos ×0,9, prestígio ×0,9, apoios ×1,1). Vale já na partida em andamento, e os 25 níveis continuam subindo a cada vitória por cima do modo escolhido. Bloco `MODOS_DIFICULDADE` no código.
+- Medição com o jogador automático usando as defesas (nível 6): Recruta vence ~90%; Soldado chega perto do dia 25 sem vencer; Veterano chega ao dia 19.
+
 ### Níveis de dificuldade
 - 25 níveis. Cada vitória sobe um nível; derrota mantém o nível. O nível fica salvo no navegador, mesmo com "Nova partida".
 - Cada nível define uma dificuldade que aumenta a frequência de eventos, a vida e o dano dos inimigos e o tamanho das ondas, e diminui a entrega diária de suprimentos e o prestígio ganho; os apoios da Central ficam mais caros.
