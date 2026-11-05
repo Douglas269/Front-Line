@@ -363,6 +363,21 @@ async function run() {
       c.corteVoltaAoClassico = !document.getElementById('mapa-classico').classList.contains('hidden') && document.getElementById('barra-abas').nextElementSibling === document.getElementById('conteudo-abas');
       CONFIG.visual = guardaV; aplicarVisual(); gameState.arsenal = novoArsenal();
       JSON.parse(guardaS).forEach((g, i) => { sv[i].duty = g[0]; sv[i].mental = g[1]; sv[i].hp = g[2]; }); }
+    // Cena: faixa de ameaça, avisos no rodapé, cache do fundo, faixa de novo dia e relatório final
+    { const en0 = gameState.enemies;
+      gameState.enemies = [{ type: 'infantaria', distance: 240, hp: 100, maxHp: 100, offsetX: 0 }, { type: 'infantaria', distance: 200, hp: 100, maxHp: 100, offsetX: 10 }, { type: 'drone', distance: 220, hp: 30, maxHp: 30, offsetX: 5 }];
+      const rs = resumoAmeaca();
+      c.faixaAmeacaComposicao = rs.includes('2 inf.') && rs.includes('1 drone') && /alcance em \d+s/.test(rs);
+      gameState.enemies = [{ type: 'infantaria', distance: 100, hp: 100, maxHp: 100, offsetX: 0 }]; c.faixaAmeacaNoAlcance = resumoAmeaca().includes('NO ALCANCE');
+      gameState.enemies = en0;
+      avisosCena.length = 0; const n0 = 0; logFeed('❌ BAIXA EM COMBATE: Teste foi morto!', 'text-red-500 font-bold'); logFeed('✅ INFANTARIA NEUTRALIZADA', 'text-mil-greenMuted font-bold');
+      c.avisosNaCenaSoGraves = avisosCena.length === n0 + 1 && avisosCena[avisosCena.length - 1].txt.includes('BAIXA');
+      avisosCena.length = 0;
+      renderCorte(true); const sigA = assinaturaFundo; renderCorte(true); c.fundoEmCacheNaoRepinta = assinaturaFundo === sigA && sigA !== '';
+      const rf = gameState.resources.rations; gameState.resources.rations = rf + 20; renderCorte(true); c.fundoRepintaQuandoMuda = assinaturaFundo !== sigA; gameState.resources.rations = rf; renderCorte(true);
+      cenaEfeito('dia', { dia: 9, sub: 'teste' }); renderCorte(true); c.faixaNovoDiaDesenha = true;
+      c.relatorioFinalMostraNumeros = relatorioFinal().includes('RELATÓRIO DA OPERAÇÃO') && relatorioFinal().includes('Inimigos abatidos');
+      cenaEfeitos.length = 0; }
     // Dificuldade: Recruta mais leve que Soldado, Veterano mais duro; Soldado é o padrão
     { const guardaD = CONFIG.dificuldade;
       CONFIG.dificuldade = 'soldado'; const dS = diff();

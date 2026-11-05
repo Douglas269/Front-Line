@@ -60,6 +60,8 @@
         /* Visual em corte lateral: abas presas embaixo, como num app */
         body.modo-corte #barra-abas { border-top: 1px solid #27332b; border-bottom: none; background: #0a0d0b; flex-shrink: 0; z-index: 30; }
         body.modo-corte #barra-abas button { padding-top: 10px; padding-bottom: 12px; }
+        @media (max-width: 400px) { #corte-banner { font-size: 9.5px; padding-left: 5px; padding-right: 5px; letter-spacing: -0.2px; } }
+        @media (max-width: 345px) { #corte-banner { font-size: 8.5px; } }
         .rec-corte { background: #0c0f0d; border: 1px solid #27332b; border-radius: 4px; padding: 2px 1px; color: #b3c4ae; line-height: 1.15; }
         .rec-corte b { display: block; color: #8fad88; font-size: 12px; }
         .rec-corte.baixo b { color: #ff6b5b; }
@@ -235,7 +237,7 @@
                 <!-- TRINCHEIRA EM CORTE LATERAL (visual novo; o clássico fica nas Configurações) -->
                 <div id="mapa-corte" class="hidden relative w-full bg-black overflow-hidden select-none">
                     <canvas id="corteCanvas" class="w-full block" style="touch-action: pan-y"></canvas>
-                    <div id="corte-banner" class="hidden absolute top-1.5 left-1.5 right-1.5 bg-mil-redDark/90 border border-mil-redAlert px-2 h-7 flex items-center rounded text-[11px] text-red-200 font-bold z-20 truncate whitespace-nowrap" style="transition:right .15s"></div>
+                    <div id="corte-banner" class="hidden absolute top-1.5 left-1.5 right-1.5 bg-mil-redDark/90 border border-mil-redAlert px-2 h-7 flex items-center rounded text-[11px] text-red-200 font-bold z-20 truncate whitespace-nowrap"></div>
                     <button id="btn-cb-corte" onclick="contraBateriaRapida()" class="hidden absolute left-1/2 -translate-x-1/2 z-30 px-3 py-1.5 rounded border-2 font-bold text-xs whitespace-nowrap shadow-2xl" style="top:38px"></button>
                     <div id="corte-cartao" class="hidden absolute z-30 w-48 bg-mil-panel/95 border border-mil-greenMuted rounded shadow-2xl p-1.5 text-[10px] leading-tight" onclick="event.stopPropagation()"></div>
                     <div id="corte-dica" class="hidden absolute z-30 pointer-events-none bg-black/90 border border-mil-border rounded px-2 py-1 text-[11px] text-mil-textGlow whitespace-nowrap"></div>
@@ -651,7 +653,8 @@
         <div id="modal-end" class="hidden absolute inset-0 bg-black/95 z-50 flex flex-col items-center justify-center p-6 text-center">
             <div id="end-icon" class="text-5xl mb-3"></div>
             <h1 id="end-title" class="text-xl font-bold tracking-wider mb-2"></h1>
-            <p id="end-body" class="text-xs text-mil-textMuted mb-6 max-w-xs leading-relaxed font-typewriter"></p>
+            <p id="end-body" class="text-xs text-mil-textMuted mb-3 max-w-xs leading-relaxed font-typewriter"></p>
+            <div id="end-relatorio" class="w-full max-w-xs mb-5 text-xs text-left"></div>
             <button onclick="location.reload()" class="px-6 py-2 btn-tactical text-mil-textGlow font-bold rounded">
                 REINICIAR OPERAÇÃO
             </button>
@@ -1382,6 +1385,7 @@
 
         function onNewDay() {
             verificarMedalhas();
+            try { cenaEfeito('dia', { dia: gameState.day, sub: gameState.day % PRESSURE.CONVOY_EVERY_DAYS === 0 ? 'chega o comboio de suprimentos' : 'sem comboio hoje' }); } catch (e) {}
             somarCarreira({ melhorDia: gameState.day });
             const cb = gameState.combate || { tiros: 0, acertos: 0, abates: 0 };
             if (cb.tiros > 0) {
@@ -3514,6 +3518,8 @@
         const CONFIG_KEY = 'frontline-config';
         const CARREIRA_KEY = 'frontline-carreira';
         const CONFIG_PADRAO = { volMusica: 45, volEfeitos: 80, volAmbiente: 50, tremor: true, vibracao: true, rastros: true, textoGrande: false, apelido: '', visual: 'corte', pausaArtilharia: false, dificuldade: 'soldado' };
+        // Quem pediu "reduzir movimento" no aparelho começa sem tremor da tela e sem vibração (dá para ligar nas Configurações)
+        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) { CONFIG_PADRAO.tremor = false; CONFIG_PADRAO.vibracao = false; }
         let CONFIG = Object.assign({}, CONFIG_PADRAO, (() => { try { return JSON.parse(localStorage.getItem(CONFIG_KEY)) || {}; } catch (e) { return {}; } })());
         let configAberto = false, abaConfigAtual = 'conta';
         const volumeEfeitos = () => Math.max(0, Math.min(1.5, (CONFIG.volEfeitos ?? 80) / 80));
@@ -3767,7 +3773,7 @@
         // Efeitos na cena: o alvo é resolvido na hora do desenho (soldado, cômodo, inimigo)
         function cenaEfeito(tipo, alvo) {
             if (cenaEfeitos.length > 40) cenaEfeitos.shift();
-            const vida = { explosao: 50, fogo: 240, abate: 30, morte: 40, tiro: 5 }[tipo] || 40;
+            const vida = { explosao: 50, fogo: 240, abate: 30, morte: 40, tiro: 5, dia: 150 }[tipo] || 40;
             let fixo = null;
             if (alvo && alvo.inimigo) fixo = posInimigoCena(alvo.inimigo); // o inimigo some da lista: guarda a posição agora
             cenaEfeitos.push({ tipo, alvo, fixo, idade: 0, vida, sx: Math.random() });
@@ -3904,6 +3910,7 @@
                 return;
             }
             const maisPerto = gameState.enemies.slice().sort((a, b) => a.distance - b.distance).slice(0, 4);
+            const rotulosUsados = []; // posições já ocupadas por rótulos de distância (evita texto em cima de texto)
             // De trás para a frente: os mais distantes primeiro, os de perto ficam por cima
             gameState.enemies.slice().sort((a, b) => b.distance - a.distance).forEach(e => {
                 const p = posInimigoCena(e);
@@ -3934,19 +3941,25 @@
                     const agachado = e.type === 'patrulha';
                     const passo = Math.sin(fase * (agachado ? 1.4 : 1));
                     const alt = (agachado ? 11 : 15) * esc;
-                    cctx.fillStyle = '#2a0f10'; cctx.strokeStyle = '#2a0f10'; cctx.lineCap = 'round';
+                    const escuro = periodoDoDia() >= 2 || gameState.weather === 'Névoa Espessa';
+                    const corpo = escuro ? '#6a2424' : '#2a0f10';       // de noite o corpo clareia para não sumir no céu escuro
+                    cctx.fillStyle = corpo; cctx.strokeStyle = corpo; cctx.lineCap = 'round';
                     cctx.lineWidth = 2.6 * esc;
                     cctx.beginPath(); cctx.moveTo(-1.5 * esc, -alt * 0.45); cctx.lineTo(-1.5 * esc - passo * 3 * esc, 0); cctx.moveTo(1.5 * esc, -alt * 0.45); cctx.lineTo(1.5 * esc + passo * 3 * esc, 0); cctx.stroke();
                     cctx.lineWidth = 3.4 * esc; cctx.beginPath(); cctx.moveTo(0, -alt * 0.42); cctx.lineTo(1.5 * esc, -alt * 0.88); cctx.stroke();   // tronco inclinado
                     cctx.beginPath(); cctx.arc(2.4 * esc, -alt * 0.98, 2.1 * esc, 0, Math.PI * 2); cctx.fill();                                       // cabeça
                     cctx.beginPath(); cctx.ellipse(2.3 * esc, -alt * 1.03, 2.6 * esc, 1.7 * esc, 0, Math.PI, 0); cctx.fill();                          // capacete
                     cctx.lineWidth = 1.2 * esc; cctx.beginPath(); cctx.moveTo(2 * esc, -alt * 0.72); cctx.lineTo(7.5 * esc, -alt * 0.62); cctx.stroke(); // fuzil
-                    cctx.strokeStyle = 'rgba(224,100,90,0.6)'; cctx.lineWidth = 0.6; cctx.beginPath(); cctx.arc(2.4 * esc, -alt * 0.98, 2.4 * esc, 0, Math.PI * 2); cctx.stroke(); // contorno vermelho
+                    cctx.strokeStyle = escuro ? 'rgba(255,130,110,0.95)' : 'rgba(224,100,90,0.6)'; cctx.lineWidth = escuro ? 0.9 : 0.6; cctx.beginPath(); cctx.arc(2.4 * esc, -alt * 0.98, 2.4 * esc, 0, Math.PI * 2); cctx.stroke(); // contorno vermelho
+                    if (escuro) { cctx.fillStyle = 'rgba(255,110,90,0.16)'; cctx.beginPath(); cctx.ellipse(0, -alt * 0.5, 6 * esc, alt * 0.62, 0, 0, Math.PI * 2); cctx.fill(); } // brilho para destacar a silhueta
                     if (!agachado && perto > 0.3) { cctx.fillStyle = 'rgba(120,100,70,0.18)'; cctx.beginPath(); cctx.ellipse(-3 * esc, -1, 4 * esc, 1.4 * esc, 0, 0, Math.PI * 2); cctx.fill(); } // poeira
                 }
                 cctx.restore();
                 if (vida < 0.98 && e.type !== 'drone') { cctx.fillStyle = 'rgba(0,0,0,0.6)'; cctx.fillRect(p.x - 7, p.y - 22 * esc - 4, 14, 2.2); cctx.fillStyle = vida > 0.5 ? '#c86464' : '#ff8a5c'; cctx.fillRect(p.x - 7, p.y - 22 * esc - 4, 14 * vida, 2.2); }
-                if (maisPerto.includes(e) || e.type === 'blindado') txtC(p.x, p.y - (e.type === 'drone' ? 32 : 24 * esc) - 6, `${Math.round(e.distance)}m`, '#f08c80', 7, 700, 'center', 8.5);
+                if (maisPerto.includes(e) || e.type === 'blindado') {
+                    const ry = p.y - (e.type === 'drone' ? 32 : 24 * esc) - 6;
+                    if (!rotulosUsados.some(r => Math.abs(r.x - p.x) < 26 && Math.abs(r.y - ry) < 9)) { rotulosUsados.push({ x: p.x, y: ry }); txtC(p.x, ry, `${Math.round(e.distance)}m`, '#f08c80', 7, 700, 'center', 8.5); }
+                }
             });
         }
 
@@ -4394,6 +4407,15 @@
                 } else if (ef.tipo === 'abate') {
                     cctx.globalAlpha = 1 - k; cctx.fillStyle = '#b3c4ae';
                     cctx.beginPath(); cctx.arc(p.x, p.y, 4 + 10 * k, 0, Math.PI * 2); cctx.fill(); cctx.globalAlpha = 1;
+                } else if (ef.tipo === 'dia') {
+                    // faixa grande que aparece e some devagar
+                    const a = k < 0.15 ? k / 0.15 : k > 0.7 ? (1 - k) / 0.3 : 1;
+                    cctx.globalAlpha = 0.9 * a;
+                    cctx.fillStyle = 'rgba(0,0,0,0.5)'; cctx.fillRect(0, 62 - 14, CORTE.W, 58);
+                    cctx.globalAlpha = a;
+                    txtC(200, 62 + 18, `DIA ${ef.alvo.dia}`, '#d9a35a', 26, 700, 'center', 28);
+                    txtC(200, 62 + 33, ef.alvo.sub, '#b3c4ae', 9, 500, 'center', 10);
+                    cctx.globalAlpha = 1;
                 } else if (ef.tipo === 'morte') {
                     cctx.globalAlpha = 0.35 * (1 - k); cctx.fillStyle = '#8b0000'; cctx.fillRect(0, 0, CORTE.W, CORTE.H); cctx.globalAlpha = 1;
                 }
@@ -4481,6 +4503,13 @@
             }
             Object.keys(CORTE.comodos).forEach(desenharComodoBase);
             desenharMoveisFundo();
+            // Acabamento de luz: tom da hora do dia e vinheta nos cantos
+            const per = periodoDoDia();
+            if (per >= 2) { cctx.fillStyle = 'rgba(8,18,40,0.22)'; cctx.fillRect(0, 0, CORTE.W, CORTE.H); }
+            else if (per === 1) { cctx.fillStyle = 'rgba(255,170,80,0.05)'; cctx.fillRect(0, 0, CORTE.W, CORTE.H); }
+            const vg = cctx.createRadialGradient(CORTE.W / 2, CORTE.H * 0.5, CORTE.W * 0.35, CORTE.W / 2, CORTE.H * 0.5, CORTE.W * 0.95);
+            vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.38)');
+            cctx.fillStyle = vg; cctx.fillRect(0, 0, CORTE.W, CORTE.H);
         }
 
         function renderCorte(forcar) {
@@ -4542,7 +4571,7 @@
             if (bar) txt = `💥 ARTILHARIA EM ${seg(bar.ticks)}s · ${(bar.alvos || []).length || 3} ALVOS${droneObservando() ? ' · GUIADA POR DRONE' : ''}`;
             else if (haInimigo) txt = resumoAmeaca();
             if (bCorte.textContent !== txt) bCorte.textContent = txt;
-            bCorte.style.right = bar ? '8.4rem' : '0.375rem';
+
             document.getElementById('corte-pausa').classList.toggle('hidden', !jogoPausado);
             if (cartaoAberto && Math.floor(t / 100) !== Math.floor((t - 17) / 100)) renderCartao();
         }
@@ -4927,7 +4956,27 @@
             document.getElementById('end-title').textContent = title;
             document.getElementById('end-title').className = `text-xl font-bold tracking-wider mb-2 ${titleClass}`;
             document.getElementById('end-body').textContent = body;
+            try { document.getElementById('end-relatorio').innerHTML = relatorioFinal(); } catch (e) { document.getElementById('end-relatorio').innerHTML = ''; }
             document.getElementById('modal-end').classList.remove('hidden');
+        }
+        // Relatório da operação: números do que aconteceu e o destaque do esquadrão
+        function relatorioFinal() {
+            const sv = gameState.squad;
+            const tot = sv.reduce((a, m) => { const st = m.stats || { tiros: 0, acertos: 0, abates: 0 }; a.tiros += st.tiros; a.acertos += st.acertos; a.abates += st.abates; return a; }, { tiros: 0, acertos: 0, abates: 0 });
+            const vivos = sv.filter(m => m.hp > 0).length;
+            const destaque = sv.slice().sort((a, b) => ((b.stats && b.stats.abates) || 0) - ((a.stats && a.stats.abates) || 0))[0];
+            const medalhas = sv.reduce((a, m) => a + (m.medalhas || []).length, 0);
+            const linha = (rot, v) => `<div class="flex justify-between border-b border-mil-borderDark py-0.5"><span class="text-mil-textMuted">${rot}</span><span class="text-mil-textGlow font-bold">${v}</span></div>`;
+            return `<div class="bg-mil-panel border border-mil-border rounded p-2">
+                <div class="text-mil-amberMuted font-bold mb-1">RELATÓRIO DA OPERAÇÃO</div>
+                ${linha('Dias de resistência', Math.min(gameState.day, GAME_CONFIG.TOTAL_DAYS) + ' de ' + GAME_CONFIG.TOTAL_DAYS)}
+                ${linha('Soldados vivos', vivos + ' de ' + sv.length)}
+                ${linha('Inimigos abatidos', tot.abates)}
+                ${linha('Tiros / acertos', tot.tiros + ' / ' + tot.acertos + (tot.tiros ? ' (' + Math.round(100 * tot.acertos / tot.tiros) + '%)' : ''))}
+                ${linha('Condecorações', medalhas)}
+                ${destaque && destaque.stats && destaque.stats.abates ? linha('Destaque', destaque.rank + ' ' + destaque.name + ' · ' + destaque.stats.abates + ' abates') : ''}
+                ${linha('Dificuldade', (MODOS_DIFICULDADE[CONFIG.dificuldade] || MODOS_DIFICULDADE.soldado).nome + ' · nível ' + gameState.level)}
+            </div>`;
         }
 
         function checkWinLoss() {
@@ -5146,6 +5195,7 @@
             { t: '⚔️ Ordens táticas', x: 'Fogo Supressão: mais dano e freia o inimigo, gasta munição. Abrigo Reforçado: protege do dano (use na artilharia). Economizar: poupa munição. Vigília Total: vê tudo, cansa todos. Bloqueio de Sinal: derruba drones, mas corta o rádio. Algumas ordens se anulam.' },
             { t: '📻 Rádio e o general inimigo', x: 'Envie o relatório uma vez por dia para ganhar prestígio. Prestígio paga artilharia, evacuação, carga emergencial e contra-bateria. O general inimigo aprende o seu jeito de jogar e muda de tática: o painel dele no Rádio mostra o que ele já percebeu.' },
             { t: '🪖 A trincheira por dentro', x: 'A cena mostra a trincheira em corte: posto de vigília, ninhos, cozinha, depósito, abrigo e oficina. Cada soldado está no cômodo da sua função. Arraste o soldado para outro cômodo (ou toque nele e depois no cômodo) para trocar a função. Prefere o mapa antigo? Configurações → Jogo → Visual clássico.' },
+            { t: '👀 Lendo a cena de relance', x: 'A faixa vermelha no topo diz quem está chegando e em quantos segundos entra no alcance. Os ícones acima da cabeça mostram quem está ferido, com fome, sede ou cansaço (amarelo = atenção, vermelho = crítico). Avisos importantes, como pânico e baixas, aparecem no rodapé da cena. Para mais tempo de pensar, use Pausar, ou ligue a pausa automática na artilharia em Configurações. Se estiver difícil, escolha Recruta em Configurações → Jogo → Dificuldade.' },
             { t: '🛡️ Defesas', x: 'Na aba Defesas, construa ninhos na trincheira (quem está na Manutenção trabalha na obra; o Engenheiro é mais rápido). Monte neles a metralhadora .50, o morteiro ou o anticarro e escolha um operador de vigília. A partir do dia 8 podem vir blindados: fuzil quase não fere, use o anticarro. Granadas e arame farpado também ajudam.' },
             { t: '✅ Para começar', x: 'Um bom começo: 2 soldados de vigília, 1 na cozinha, o Engenheiro na manutenção e o resto descansando. Reveze quando a fadiga, a fome ou a sede subirem. Você pode rever este guia em "Como jogar". Boa sorte, comandante.' }
         ];
