@@ -26,7 +26,7 @@
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Monospace & Tactical Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Special+Elite&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Special+Elite&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
     <script>
         tailwind.config = {
             theme: {
@@ -235,7 +235,7 @@
                 <!-- TRINCHEIRA EM CORTE LATERAL (visual novo; o clássico fica nas Configurações) -->
                 <div id="mapa-corte" class="hidden relative w-full bg-black overflow-hidden select-none">
                     <canvas id="corteCanvas" class="w-full block" style="touch-action: pan-y"></canvas>
-                    <div id="corte-banner" class="hidden absolute top-2 left-2 right-2 bg-mil-redDark/90 border border-mil-redAlert px-2 py-1 rounded text-[11px] text-red-200 font-bold z-20 animate-alert-pulse"></div>
+                    <div id="corte-banner" class="hidden absolute top-1.5 left-1.5 right-1.5 bg-mil-redDark/90 border border-mil-redAlert px-2 h-7 flex items-center rounded text-[11px] text-red-200 font-bold z-20 truncate whitespace-nowrap" style="transition:right .15s"></div>
                     <button id="btn-cb-corte" onclick="contraBateriaRapida()" class="hidden absolute left-1/2 -translate-x-1/2 z-30 px-3 py-1.5 rounded border-2 font-bold text-xs whitespace-nowrap shadow-2xl" style="top:38px"></button>
                     <div id="corte-cartao" class="hidden absolute z-30 w-48 bg-mil-panel/95 border border-mil-greenMuted rounded shadow-2xl p-1.5 text-[10px] leading-tight" onclick="event.stopPropagation()"></div>
                     <div id="corte-dica" class="hidden absolute z-30 pointer-events-none bg-black/90 border border-mil-border rounded px-2 py-1 text-[11px] text-mil-textGlow whitespace-nowrap"></div>
@@ -3704,7 +3704,8 @@
             }
         };
         const corteCanvas = document.getElementById('corteCanvas');
-        const cctx = corteCanvas.getContext('2d');
+        let cctx = corteCanvas.getContext('2d'); // 'let': durante o desenho do fundo em cache aponta para a camada de fundo
+        CORTE.escCss = 1;                         // pixels de tela por unidade da cena (atualizado a cada quadro)
         let soldadoSelecionado = 1;
         let arrasto = null;            // { id, x, y, moveu } enquanto arrasta um soldado
         let posicoesCena = {};         // id do soldado -> { x, y } (atualizado a cada quadro)
@@ -3759,7 +3760,7 @@
         }
         function posInimigoCena(e) {
             const d = Math.max(0, Math.min(300, e.distance));
-            return { x: 200 + ((e.offsetX || 0) / 200) * 165, y: CORTE.SOLO - 6 - (d / 300) * 100 };
+            return { x: 200 + ((e.offsetX || 0) / 200) * 165, y: CORTE.SOLO - 6 - (d / 300) * 86 };
         }
         function posAlvoCena(a) {
             if (!a) return { x: 200, y: 200 };
@@ -3769,24 +3770,49 @@
         }
 
         // ---------- desenho ----------
+        // ---------- Quadro: tamanho, qualidade adaptativa e camada de fundo em cache ----------
+        // O que não muda (céu, terra, paredes, móveis) é pintado uma vez numa imagem guardada e só
+        // repintado quando algo que ela mostra muda; por quadro só se desenha o que se mexe.
+        const FONTE_CENA = '"Barlow Condensed", "Arial Narrow", "Roboto Condensed", "Courier Prime", sans-serif';
+        let corteQualidade = Math.min(2, window.devicePixelRatio || 1); // pixels por pixel de tela; cai sozinho se o aparelho engasgar
+        let corteLentos = 0, ultimoQuadroCorte = 0;
+        const camadaFundo = document.createElement('canvas');
+        const ctxFundo = camadaFundo.getContext('2d');
+        let assinaturaFundo = '';
         function corteRedimensionar() {
             const css = corteCanvas.parentElement.clientWidth || 380;
-            const dpr = Math.min(3, window.devicePixelRatio || 1);
             const h = Math.round(css * CORTE.H / CORTE.W);
-            if (corteCanvas.width !== Math.round(css * dpr)) {
-                corteCanvas.width = Math.round(css * dpr);
-                corteCanvas.height = Math.round(h * dpr);
+            const larg = Math.round(css * corteQualidade);
+            if (corteCanvas.width !== larg) {
+                corteCanvas.width = larg;
+                corteCanvas.height = Math.round(h * corteQualidade);
                 corteCanvas.style.height = h + 'px';
+                camadaFundo.width = corteCanvas.width; camadaFundo.height = corteCanvas.height;
+                assinaturaFundo = '';
             }
+            CORTE.escCss = css / CORTE.W;
             return corteCanvas.width / CORTE.W;
         }
-        function txtC(x, y, t, cor, tam = 8.5, peso = 700, anc = 'left') {
-            cctx.font = `${peso} ${tam}px "Courier Prime", monospace`;
+        // Texto da cena: fonte condensada e nunca menor que minPx na tela (letra pequena demais não se lê no celular)
+        function txtC(x, y, t, cor, tam = 8.5, peso = 700, anc = 'left', minPx = 9.5) {
+            const tt = Math.max(tam, minPx / CORTE.escCss);
+            cctx.font = `${peso >= 600 ? 700 : 500} ${tt}px ${FONTE_CENA}`;
             cctx.textAlign = anc; cctx.fillStyle = cor; cctx.fillText(t, x, y); cctx.textAlign = 'left';
+        }
+        if (document.fonts && document.fonts.load) {
+            // Quando a fonte condensada chegar, o fundo em cache é repintado com ela
+            ['500', '700'].forEach(w => document.fonts.load(`${w} 12px "Barlow Condensed"`).then(() => { assinaturaFundo = ''; }).catch(() => {}));
         }
         function periodoDoDia() { return Math.min(3, Math.floor(gameState.timeSeconds / 60)); } // 0 manhã, 1 tarde, 2 noite, 3 madrugada
 
-        function desenharCeu(t) {
+        // O que o fundo em cache mostra: se isso mudar, ele é repintado
+        function assinaturaDoFundo() {
+            const ars = arsenalDe(), r = gameState.resources, obra = ars.posicoes.find(p => p.construindo);
+            return [periodoDoDia(), corteCanvas.width, Math.ceil(ars.arame), Math.floor(r.rations), Math.floor(r.water), Math.round(gameState.trench),
+                ars.posicoes.map(p => [Math.floor(p.obra / 4), p.arma, !!operadorAtivo(p)].join(':')).join('|'), obra ? obra.nome + Math.floor(obra.obra) : ''].join(',');
+        }
+
+        function desenharCeuFundo() {
             const per = periodoDoDia();
             const cores = [['#3a4a46', '#6b7462'], ['#28322c', '#4a5546'], ['#06080b', '#121820'], ['#05070a', '#0d1216']][per];
             const g = cctx.createLinearGradient(0, 0, 0, CORTE.SOLO);
@@ -3796,10 +3822,6 @@
                 cctx.fillStyle = 'rgba(220,230,240,0.5)';
                 for (let i = 0; i < 25; i++) cctx.fillRect((i * 73) % 400, (i * 37) % 70, 1, 1);
                 cctx.fillStyle = 'rgba(230,230,210,0.8)'; cctx.beginPath(); cctx.arc(330, 26, 8, 0, Math.PI * 2); cctx.fill();
-            } else { // nuvens passando
-                cctx.fillStyle = 'rgba(190,200,180,0.10)';
-                const dx = (t / 90) % 520;
-                [[60, 24, 60], [250, 40, 80], [430, 18, 50]].forEach(([x, y, r]) => { cctx.beginPath(); cctx.ellipse(((x + dx) % 520) - 60, y, r, r / 6, 0, 0, Math.PI * 2); cctx.fill(); });
             }
             // árvores destruídas no horizonte
             cctx.fillStyle = '#141a15';
@@ -3814,84 +3836,85 @@
             cctx.fillStyle = '#1b1712';
             [[70, CORTE.SOLO - 2], [255, CORTE.SOLO - 3], [350, CORTE.SOLO - 1]].forEach(([x, y]) => { cctx.beginPath(); cctx.ellipse(x, y, 16, 4, 0, 0, Math.PI * 2); cctx.fill(); });
             // linha de alcance (140 m) e arame (50 m)
-            const yAlc = CORTE.SOLO - 6 - (140 / 300) * 100;
+            const yAlc = CORTE.SOLO - 6 - (140 / 300) * 86;
             cctx.setLineDash([4, 5]); cctx.strokeStyle = 'rgba(217,163,90,0.45)'; cctx.lineWidth = 1;
             cctx.beginPath(); cctx.moveTo(4, yAlc); cctx.lineTo(396, yAlc); cctx.stroke(); cctx.setLineDash([]);
-            txtC(6, yAlc - 3, 'ALCANCE 140m', 'rgba(217,163,90,0.8)', 7, 700);
+            txtC(6, yAlc - 3, 'ALCANCE 140m', 'rgba(217,163,90,0.85)', 7, 700, 'left', 8.5);
             const ars = arsenalDe();
             if (ars.arame > 0) {
-                const ya = CORTE.SOLO - 6 - (50 / 300) * 100;
+                const ya = CORTE.SOLO - 6 - (50 / 300) * 86;
                 cctx.strokeStyle = `rgba(170,170,160,${0.3 + 0.5 * ars.arame / 100})`; cctx.lineWidth = 0.8;
                 cctx.beginPath();
                 for (let x = 150; x < 396; x += 9) { cctx.moveTo(x, ya - 3); cctx.lineTo(x + 9, ya + 3); cctx.moveTo(x, ya + 3); cctx.lineTo(x + 9, ya - 3); }
                 cctx.stroke();
-                txtC(394, ya - 5, `ARAME ${Math.ceil(ars.arame)}%`, '#9a9a8e', 6.5, 400, 'right');
+                txtC(394, ya - 5, `ARAME ${Math.ceil(ars.arame)}%`, '#9a9a8e', 6.5, 400, 'right', 8.5);
             }
+        }
+        // Nuvens que passam (só de dia): a única parte do céu que se mexe
+        function desenharNuvens(t) {
+            if (periodoDoDia() >= 2) return;
+            cctx.fillStyle = 'rgba(190,200,180,0.10)';
+            const dx = (t / 90) % 520;
+            [[60, 24, 60], [250, 40, 80], [430, 18, 50]].forEach(([x, y, r]) => { cctx.beginPath(); cctx.ellipse(((x + dx) % 520) - 60, y, r, r / 6, 0, 0, Math.PI * 2); cctx.fill(); });
         }
 
         function desenharInimigosCena(t) {
             if (!temVisao()) {
                 cctx.fillStyle = 'rgba(5,7,6,0.88)'; cctx.fillRect(0, 0, CORTE.W, CORTE.SOLO - 2);
-                txtC(200, 60, 'NENHUM SOLDADO EM VIGÍLIA', '#c0392b', 10, 700, 'center');
-                txtC(200, 76, 'o esquadrão atira às cegas', '#b3c4ae', 8, 400, 'center');
+                txtC(200, 60, 'NENHUM SOLDADO EM VIGÍLIA', '#c0392b', 10, 700, 'center', 11);
+                txtC(200, 78, 'o esquadrão atira às cegas', '#b3c4ae', 8, 500, 'center', 9.5);
                 return;
             }
+            const maisPerto = gameState.enemies.slice().sort((a, b) => a.distance - b.distance).slice(0, 4);
             gameState.enemies.forEach(e => {
                 const p = posInimigoCena(e);
                 const tam = e.type === 'blindado' ? 17 : 13;
                 if (!desenharSimbolo(SIDC_INIMIGO[e.type], p.x, p.y, tam, cctx)) {
                     cctx.fillStyle = '#c86464'; cctx.fillRect(p.x - 5, p.y - 5, 10, 10);
                 }
-                txtC(p.x, p.y - tam + 2, `${Math.round(e.distance)}m`, '#e07a7a', 7, 700, 'center');
+                if (maisPerto.includes(e) || e.type === 'blindado') txtC(p.x, p.y - tam + 2, `${Math.round(e.distance)}m`, '#e07a7a', 7, 700, 'center', 8.5);
             });
         }
 
-        function desenharComodo(chave, ocupantes) {
+        // Cômodo: parte fixa (vai para o fundo em cache)
+        function desenharComodoBase(chave) {
             const c = CORTE.comodos[chave];
-            const alvoDeArrasto = arrasto && arrasto.moveu && comodoEm(arrasto.x, arrasto.y) === chave && c.duty;
             cctx.fillStyle = '#16120d'; cctx.fillRect(c.x, c.y, c.w, c.h);
-            // luz da lamparina
-            const per = periodoDoDia();
             const lg = cctx.createRadialGradient(c.x + c.w / 2, c.y + 18, 4, c.x + c.w / 2, c.y + 30, c.w * 0.7);
-            lg.addColorStop(0, per >= 2 ? 'rgba(255,190,90,0.22)' : 'rgba(255,220,150,0.08)'); lg.addColorStop(1, 'rgba(0,0,0,0)');
+            lg.addColorStop(0, periodoDoDia() >= 2 ? 'rgba(255,190,90,0.22)' : 'rgba(255,220,150,0.08)'); lg.addColorStop(1, 'rgba(0,0,0,0)');
             cctx.fillStyle = lg; cctx.fillRect(c.x, c.y, c.w, c.h);
-            // vigas e moldura
             cctx.fillStyle = '#4e3924';
             for (let vx = c.x + 2; vx < c.x + c.w; vx += Math.max(40, c.w / 3)) cctx.fillRect(vx, c.y, 4, c.h);
             cctx.fillStyle = '#6b4f33'; cctx.fillRect(c.x, c.y + c.h - 4, c.w, 4);
-            cctx.strokeStyle = alvoDeArrasto ? '#8fad88' : '#4e3924'; cctx.lineWidth = alvoDeArrasto ? 3 : 2.5;
-            cctx.strokeRect(c.x, c.y, c.w, c.h);
-            if (alvoDeArrasto) { cctx.fillStyle = 'rgba(143,173,136,0.12)'; cctx.fillRect(c.x, c.y, c.w, c.h); }
-            txtC(c.x + 5, c.y + 11, c.nome, '#d9a35a', 8);
-            if (c.duty) txtC(c.x + c.w - 5, c.y + 11, String(ocupantes), '#b3c4ae', 8, 400, 'right');
+            cctx.strokeStyle = '#4e3924'; cctx.lineWidth = 2.5; cctx.strokeRect(c.x, c.y, c.w, c.h);
+            txtC(c.x + 5, c.y + 11, c.nome, '#d9a35a', 8, 700, 'left', 10);
+        }
+        // Cômodo: parte viva (destaque ao arrastar e contagem de soldados)
+        function desenharComodoViva(chave, ocupantes) {
+            const c = CORTE.comodos[chave];
+            if (arrasto && arrasto.moveu && c.duty && comodoEm(arrasto.x, arrasto.y) === chave) {
+                cctx.strokeStyle = '#8fad88'; cctx.lineWidth = 3; cctx.strokeRect(c.x, c.y, c.w, c.h);
+                cctx.fillStyle = 'rgba(143,173,136,0.14)'; cctx.fillRect(c.x, c.y, c.w, c.h);
+            }
+            if (c.duty) txtC(c.x + c.w - 5, c.y + 11, String(ocupantes), '#b3c4ae', 8, 500, 'right', 10);
         }
 
-        function desenharMoveis(t) {
+        // Móveis fixos (vão para o fundo em cache; dependem do estoque e das armas)
+        function desenharMoveisFundo() {
             const C = CORTE.comodos;
-            // posto: degrau de tiro
             cctx.fillStyle = '#2a2018'; cctx.fillRect(C.posto.x + 4, C.posto.y + 96, C.posto.w - 8, 20);
-            // ninhos: sacos de areia e armas montadas
             const ars = arsenalDe();
             cctx.fillStyle = '#7d7056'; cctx.fillRect(C.ninhos.x + 6, C.ninhos.y + 86, C.ninhos.w - 12, 14);
             const prontos = ars.posicoes.filter(p => p.obra >= 100 && p.arma);
             prontos.forEach((p, k) => {
                 const x = C.ninhos.x + 14 + k * 24, y = C.ninhos.y + 80;
                 cctx.fillStyle = '#222'; cctx.fillRect(x - 2, y - 4, 20, 4);
-                txtC(x + 8, y - 8, EQUIP[p.arma].sigla, operadorAtivo(p) ? '#8fad88' : '#d9a35a', 6.5, 700, 'center');
+                txtC(x + 8, y - 8, EQUIP[p.arma].sigla, operadorAtivo(p) ? '#8fad88' : '#d9a35a', 6.5, 700, 'center', 9);
             });
-            if (!prontos.length) txtC(C.ninhos.x + C.ninhos.w / 2, C.ninhos.y + 68, 'sem armas', '#8a8a7a', 7, 400, 'center');
-            const emObra = ars.posicoes.filter(p => p.obra > 0 && p.obra < 100);
-            // cozinha: fogareiro com vapor
+            if (!prontos.length) txtC(C.ninhos.x + C.ninhos.w / 2, C.ninhos.y + 68, 'sem armas', '#8a8a7a', 7, 500, 'center', 9);
             const cz = C.cozinha;
             cctx.fillStyle = '#3b3b33'; cctx.fillRect(cz.x + 46, cz.y + 86, 26, 14);
             cctx.fillStyle = '#555'; cctx.fillRect(cz.x + 50, cz.y + 77, 16, 9);
-            cctx.fillStyle = ['#e0882b', '#f0a040', '#d06a20'][Math.floor(t / 120) % 3]; cctx.beginPath(); cctx.arc(cz.x + 59, cz.y + 104, 3, 0, Math.PI * 2); cctx.fill();
-            if (atlasPronto) for (let k = 0; k < 2; k++) { const kk = ((t / 1400) + k * 0.5) % 1; quadroAnimado('vapor', kk, cz.x + 57 + Math.sin(t / 600 + k) * 3, cz.y + 72 - kk * 22, 14 + kk * 10, 0.5 * (1 - kk)); }
-            else cctx.strokeStyle = 'rgba(220,220,210,0.45)'; cctx.lineWidth = 1.4;
-            for (let k = 0; k < (atlasPronto ? 0 : 2); k++) {
-                const ox = cz.x + 54 + k * 6, sub = (t / 25 + k * 10) % 18;
-                cctx.beginPath(); cctx.moveTo(ox, cz.y + 75 - sub * 0.2); cctx.quadraticCurveTo(ox + 4, cz.y + 68 - sub * 0.5, ox, cz.y + 58 - sub * 0.6); cctx.stroke();
-            }
             // depósito: caixas de ração e barris de água conforme o estoque
             const dp = C.deposito, r = gameState.resources;
             const caixas = Math.min(6, Math.ceil(r.rations / 8)), barris = Math.min(3, Math.ceil(r.water / 12));
@@ -3901,51 +3924,37 @@
                 cctx.beginPath(); cctx.moveTo(x, y); cctx.lineTo(x + 16, y + 15); cctx.moveTo(x + 16, y); cctx.lineTo(x, y + 15); cctx.stroke();
             }
             for (let k = 0; k < barris; k++) { cctx.fillStyle = '#3d5a6a'; cctx.fillRect(dp.x + 60, dp.y + 100 - k * 15, 11, 14); }
-            txtC(dp.x + dp.w / 2, dp.y + 25, `ração ${Math.floor(r.rations)}`, r.rations < 10 ? '#ff6b5b' : '#b3c4ae', 7, 700, 'center');
-            txtC(dp.x + dp.w / 2, dp.y + 34, `água ${Math.floor(r.water)} L`, r.water < 10 ? '#ff6b5b' : '#b3c4ae', 7, 700, 'center');
-            // abrigo: beliches e lamparina
+            txtC(dp.x + dp.w / 2, dp.y + 26, `ração ${Math.floor(r.rations)}`, r.rations < 10 ? '#ff6b5b' : '#b3c4ae', 7, 700, 'center', 9.5);
+            txtC(dp.x + dp.w / 2, dp.y + 39, `água ${Math.floor(r.water)} L`, r.water < 10 ? '#ff6b5b' : '#b3c4ae', 7, 700, 'center', 9.5);
             const ab = C.abrigo;
             for (let k = 0; k < 3; k++) {
                 const x = ab.x + 12 + k * 66, y = ab.y + 68;
                 cctx.fillStyle = '#6b4f33'; cctx.fillRect(x, y, 54, 5); cctx.fillRect(x, y + 28, 54, 5);
                 cctx.fillStyle = '#4e3924'; cctx.fillRect(x, y - 8, 4, 46); cctx.fillRect(x + 50, y - 8, 4, 46);
             }
-            txtC(ab.x + ab.w - 6, ab.y + ab.h - 8, 'leva 30% da artilharia', '#8fad88', 6.5, 400, 'right');
-            // oficina: bancada
+            txtC(ab.x + ab.w - 6, ab.y + ab.h - 8, 'leva 30% da artilharia', '#8fad88', 6.5, 500, 'right', 9);
             const of = C.oficina;
             cctx.fillStyle = '#6b4f33'; cctx.fillRect(of.x + 70, of.y + 84, 90, 7);
             cctx.fillStyle = '#4e3924'; cctx.fillRect(of.x + 74, of.y + 91, 4, 22); cctx.fillRect(of.x + 152, of.y + 91, 4, 22);
             cctx.fillStyle = '#777'; cctx.fillRect(of.x + 90, of.y + 74, 10, 10);
-            const obra = arsenalDe().posicoes.find(p => p.construindo);
-            txtC(of.x + of.w / 2 + 20, of.y + 30, obra ? `obra: ${obra.nome.toLowerCase()} ${Math.floor(obra.obra)}%` : `reparando trincheira ${Math.round(gameState.trench)}%`, '#d9a35a', 7, 700, 'center');
-            // lamparinas penduradas: luz quente no chão de cada cômodo (mais forte à noite)
-            const noite = periodoDoDia() >= 2;
-            ['posto', 'cozinha', 'abrigo', 'oficina', 'ninhos'].forEach((k, i) => {
+            const obra = ars.posicoes.find(p => p.construindo);
+            txtC(of.x + 6, of.y + 25, obra ? `obra: ${obra.nome.toLowerCase()} ${Math.floor(obra.obra)}%` : `reparando trincheira ${Math.round(gameState.trench)}%`, '#d9a35a', 7, 700, 'left', 9.5);
+            // cordas das lamparinas (o brilho e a chama ficam na parte viva)
+            ['posto', 'cozinha', 'abrigo', 'oficina', 'ninhos'].forEach(k => {
                 const c = C[k], lx = c.x + c.w * (k === 'abrigo' ? 0.86 : 0.72), ly = c.y + 20;
-                const pisca = 0.9 + 0.1 * Math.sin(t / 170 + i * 2) + (Math.random() < 0.02 ? -0.25 : 0);
-                const g = cctx.createRadialGradient(lx, ly + 10, 2, lx, ly + 30, c.w * 0.75);
-                g.addColorStop(0, `rgba(255,190,100,${(noite ? 0.30 : 0.14) * pisca})`); g.addColorStop(1, 'rgba(255,190,100,0)');
-                cctx.fillStyle = g; cctx.fillRect(c.x, c.y, c.w, c.h);
                 cctx.strokeStyle = '#2a2018'; cctx.lineWidth = 0.7; cctx.beginPath(); cctx.moveTo(lx, c.y + 2); cctx.lineTo(lx, ly - 3); cctx.stroke();
                 cctx.fillStyle = '#3a3a30'; cctx.fillRect(lx - 2, ly - 3, 4, 2);
-                cctx.fillStyle = `rgba(255,214,130,${pisca})`; cctx.beginPath(); cctx.arc(lx, ly + 1, 2.2, 0, Math.PI * 2); cctx.fill();
             });
-            // posto: periscópio e caixas de munição
             cctx.strokeStyle = '#2a2a24'; cctx.lineWidth = 2; cctx.beginPath(); cctx.moveTo(C.posto.x + 128, C.posto.y + 96); cctx.lineTo(C.posto.x + 128, C.posto.y - 14); cctx.lineTo(C.posto.x + 133, C.posto.y - 14); cctx.stroke();
             [[C.posto.x + 6, C.posto.y + 86], [C.posto.x + 6, C.posto.y + 77]].forEach(([x, y]) => { cctx.fillStyle = '#4e5a38'; cctx.fillRect(x, y, 12, 8); cctx.fillStyle = '#d9c27a'; cctx.fillRect(x + 4, y + 3, 4, 2); });
-            // cozinha: prateleira com latas
             cctx.fillStyle = '#4e3924'; cctx.fillRect(cz.x + 6, cz.y + 26, 30, 2);
             for (let k = 0; k < 4; k++) { cctx.fillStyle = ['#7a7a70', '#8a5a3a', '#7a7a70', '#5a6a4a'][k]; cctx.fillRect(cz.x + 8 + k * 7, cz.y + 20, 5, 6); }
-            // abrigo: fotos na parede e capacete pendurado
             [[ab.x + 16, ab.y + 16], [ab.x + 82, ab.y + 18]].forEach(([x, y]) => { cctx.fillStyle = '#d8ccb0'; cctx.fillRect(x, y, 8, 10); cctx.fillStyle = '#6a5a48'; cctx.fillRect(x + 1.5, y + 1.5, 5, 6); });
             cctx.fillStyle = '#3e4a33'; cctx.beginPath(); cctx.ellipse(ab.x + 150, ab.y + 24, 6, 4, 0, Math.PI, 0); cctx.fill(); cctx.fillRect(ab.x + 143, ab.y + 24, 14, 1.5);
-            // oficina: ferramentas na parede e tábuas encostadas
             cctx.strokeStyle = '#6a6a60'; cctx.lineWidth = 1.5;
-            cctx.beginPath(); cctx.moveTo(of.x + 18, of.y + 18); cctx.lineTo(of.x + 18, of.y + 50); cctx.stroke(); cctx.fillStyle = '#6a6a60'; cctx.fillRect(of.x + 15, of.y + 48, 6, 8); // pá
-            cctx.fillStyle = '#8a8a80'; cctx.fillRect(of.x + 28, of.y + 22, 14, 4); cctx.fillStyle = '#5a4128'; cctx.fillRect(of.x + 40, of.y + 21, 5, 6); // serrote
+            cctx.beginPath(); cctx.moveTo(of.x + 18, of.y + 34); cctx.lineTo(of.x + 18, of.y + 66); cctx.stroke(); cctx.fillStyle = '#6a6a60'; cctx.fillRect(of.x + 15, of.y + 64, 6, 8);
+            cctx.fillStyle = '#8a8a80'; cctx.fillRect(of.x + 28, of.y + 38, 14, 4); cctx.fillStyle = '#5a4128'; cctx.fillRect(of.x + 40, of.y + 37, 5, 6);
             cctx.fillStyle = '#7a5a38'; cctx.save(); cctx.translate(of.x + 52, of.y + 116); cctx.rotate(-0.18); cctx.fillRect(0, -44, 5, 44); cctx.fillRect(7, -40, 5, 40); cctx.restore();
-
-            // escadas entre os andares
             [[140, 258, 284], [300, 258, 284]].forEach(([x, y1, y2]) => {
                 cctx.strokeStyle = '#6b4f33'; cctx.lineWidth = 2;
                 cctx.beginPath(); cctx.moveTo(x, y1); cctx.lineTo(x, y2); cctx.moveTo(x + 10, y1); cctx.lineTo(x + 10, y2);
@@ -3954,6 +3963,29 @@
             });
         }
 
+        // Brilho das lamparinas: pintado uma vez numa imagem pequena e só ampliado a cada quadro
+        const brilhoLamparina = (() => {
+            const c = document.createElement('canvas'); c.width = c.height = 96; const g = c.getContext('2d');
+            const gr = g.createRadialGradient(48, 48, 2, 48, 48, 48);
+            gr.addColorStop(0, 'rgba(255,200,110,1)'); gr.addColorStop(0.35, 'rgba(255,180,90,0.45)'); gr.addColorStop(1, 'rgba(255,170,80,0)');
+            g.fillStyle = gr; g.fillRect(0, 0, 96, 96); return c;
+        })();
+        // Móveis vivos: lamparinas que piscam, brasa do fogareiro e vapor da cozinha
+        function desenharMoveisViva(t) {
+            const C = CORTE.comodos, noite = periodoDoDia() >= 2, cz = C.cozinha;
+            cctx.fillStyle = ['#e0882b', '#f0a040', '#d06a20'][Math.floor(t / 120) % 3]; cctx.beginPath(); cctx.arc(cz.x + 59, cz.y + 104, 3, 0, Math.PI * 2); cctx.fill();
+            if (atlasPronto) for (let k = 0; k < 2; k++) { const kk = ((t / 1400) + k * 0.5) % 1; quadroAnimado('vapor', kk, cz.x + 57 + Math.sin(t / 600 + k) * 3, cz.y + 72 - kk * 22, 14 + kk * 10, 0.5 * (1 - kk)); }
+            ['posto', 'cozinha', 'abrigo', 'oficina', 'ninhos'].forEach((k, i) => {
+                const c = C[k], lx = c.x + c.w * (k === 'abrigo' ? 0.86 : 0.72), ly = c.y + 20;
+                const pisca = 0.9 + 0.1 * Math.sin(t / 170 + i * 2) + (Math.random() < 0.02 ? -0.25 : 0);
+                const raio = c.w * 0.75;
+                cctx.save(); cctx.beginPath(); cctx.rect(c.x, c.y, c.w, c.h); cctx.clip();
+                cctx.globalAlpha = (noite ? 0.34 : 0.16) * pisca;
+                cctx.drawImage(brilhoLamparina, lx - raio, ly + 10 - raio, raio * 2, raio * 2);
+                cctx.restore();
+                cctx.fillStyle = `rgba(255,214,130,${pisca})`; cctx.beginPath(); cctx.arc(lx, ly + 1, 2.2, 0, Math.PI * 2); cctx.fill();
+            });
+        }
 
         /* ===== Bonecos articulados e efeitos animados da cena =====
            Partes do soldado: "WW2 soldier spritesheet" (OpenGameArt, CC0).
@@ -4328,26 +4360,50 @@
             txtC(10, y0 + 52, 'ou toque nele e depois no cômodo. Toque para ver a ficha.', '#b3c4ae', 7.5, 400);
         }
 
-        function renderCorte() {
-            if (!modoCorte()) return;
-            const esc = corteRedimensionar();
-            const t = performance.now();
-            cctx.setTransform(esc, 0, 0, esc, 0, 0);
-            cctx.clearRect(0, 0, CORTE.W, CORTE.H);
-            desenharCeu(t);
-            desenharInimigosCena(t);
-            // corte do solo
+        // Fundo completo (vai para o cache)
+        function desenharFundoCompleto() {
+            desenharCeuFundo();
             const g = cctx.createLinearGradient(0, CORTE.SOLO + 10, 0, CORTE.H);
             g.addColorStop(0, '#3a2c1f'); g.addColorStop(1, '#1d1712');
             cctx.fillStyle = g; cctx.fillRect(0, CORTE.SOLO + 14, CORTE.W, CORTE.H - CORTE.SOLO);
-            // sacos de areia do parapeito
-            for (let x = 0; x < 236; x += 16) {
+            for (let x = 0; x < 236; x += 16) { // sacos de areia do parapeito
                 cctx.fillStyle = '#7d7056'; cctx.fillRect(x, CORTE.SOLO + 4, 17, 9); cctx.fillRect(x + 8, CORTE.SOLO - 5, 17, 9);
                 cctx.strokeStyle = '#5d533f'; cctx.lineWidth = 1; cctx.strokeRect(x, CORTE.SOLO + 4, 17, 9);
             }
+            Object.keys(CORTE.comodos).forEach(desenharComodoBase);
+            desenharMoveisFundo();
+        }
+
+        function renderCorte(forcar) {
+            if (!modoCorte()) return;
+            const t = performance.now();
+            // No máximo ~40 quadros por segundo (economiza bateria); no celular lento, reduz a resolução sozinho
+            if (!forcar && t - ultimoQuadroCorte < 22) return;
+            if (ultimoQuadroCorte && !forcar) {
+                const dt = t - ultimoQuadroCorte;
+                if (dt > 55 && dt < 400) { if (++corteLentos > 25 && corteQualidade > 1) { corteQualidade = Math.max(1, corteQualidade - 0.25); corteLentos = 0; } }
+                else if (dt < 42) corteLentos = Math.max(0, corteLentos - 1);
+            }
+            ultimoQuadroCorte = t;
+            const esc = corteRedimensionar();
+            // Fundo em cache: só repinta quando algo que ele mostra mudou
+            const sig = assinaturaDoFundo();
+            if (sig !== assinaturaFundo) {
+                assinaturaFundo = sig;
+                const real = cctx; cctx = ctxFundo;
+                cctx.setTransform(esc, 0, 0, esc, 0, 0); cctx.clearRect(0, 0, CORTE.W, CORTE.H);
+                desenharFundoCompleto();
+                cctx = real;
+            }
+            cctx.setTransform(1, 0, 0, 1, 0, 0);
+            cctx.clearRect(0, 0, corteCanvas.width, corteCanvas.height);
+            cctx.drawImage(camadaFundo, 0, 0);
+            cctx.setTransform(esc, 0, 0, esc, 0, 0);
+            desenharNuvens(t);
+            desenharInimigosCena(t);
             const { pos, porComodo } = layoutSoldados();
-            Object.keys(CORTE.comodos).forEach(k => desenharComodo(k, (porComodo[k] || []).length));
-            desenharMoveis(t);
+            Object.keys(CORTE.comodos).forEach(k => desenharComodoViva(k, (porComodo[k] || []).length));
+            desenharMoveisViva(t);
             desenharTirosCena(pos, t);
             posicoesCena = {};
             gameState.squad.forEach(s => {
@@ -4370,11 +4426,14 @@
             desenharEfeitosCena();
             desenharRodapeCena();
             // faixa de aviso e selo de pausa espelhados do mapa clássico
-            const bClas = document.getElementById('map-alert-banner'), bCorte = document.getElementById('corte-banner');
-            const mostrar = !bClas.classList.contains('hidden');
-            bCorte.classList.toggle('hidden', !mostrar);
-            const txt = document.getElementById('map-alert-text').textContent;
-            if (mostrar && bCorte.textContent !== '⚠ ' + txt) bCorte.textContent = '⚠ ' + txt;
+            const bCorte = document.getElementById('corte-banner');
+            const bar = gameState.barrage, haInimigo = gameState.enemies.length > 0;
+            bCorte.classList.toggle('hidden', !(bar || haInimigo));
+            let txt = '';
+            if (bar) txt = `💥 ARTILHARIA EM ${seg(bar.ticks)}s · ${(bar.alvos || []).length || 3} ALVOS${droneObservando() ? ' · GUIADA POR DRONE' : ''}`;
+            else if (haInimigo) txt = `⚠ CONTATO INIMIGO A ${Math.max(0, Math.round(Math.min(...gameState.enemies.map(e => e.distance))))}M`;
+            if (bCorte.textContent !== txt) bCorte.textContent = txt;
+            bCorte.style.right = bar ? '8.4rem' : '0.375rem';
             document.getElementById('corte-pausa').classList.toggle('hidden', !jogoPausado);
             if (cartaoAberto && Math.floor(t / 100) !== Math.floor((t - 17) / 100)) renderCartao();
         }
@@ -4560,20 +4619,21 @@
                 el.classList.remove('hidden');
                 const c = custo(50);
                 let txt, cls, pode = false;
+                const compacto = id === 'btn-cb-corte';
                 if (gameState.counterBattery) {
                     const aTempo = gameState.counterBattery.ticks < b.ticks;
-                    txt = `💥 CONTRA-BATERIA A CAMINHO · ${seg(gameState.counterBattery.ticks)}s${aTempo ? '' : ' (pode chegar tarde)'}`;
+                    txt = compacto ? `CONTRA-BAT. ${seg(gameState.counterBattery.ticks)}s${aTempo ? '' : '!'}` : `💥 CONTRA-BATERIA A CAMINHO · ${seg(gameState.counterBattery.ticks)}s${aTempo ? '' : ' (pode chegar tarde)'}`;
                     cls = 'bg-black/85 border-mil-amberMuted text-mil-amberMuted';
                 } else if (gameState.prestige < c) {
-                    txt = `💥 CONTRA-BATERIA · faltam ${c - Math.floor(gameState.prestige)} pts`;
+                    txt = compacto ? `CB · faltam ${c - Math.floor(gameState.prestige)}` : `💥 CONTRA-BATERIA · faltam ${c - Math.floor(gameState.prestige)} pts`;
                     cls = 'bg-black/85 border-mil-border text-mil-textMuted opacity-80';
                 } else {
-                    txt = `💥 PEDIR CONTRA-BATERIA · ${c} PTS${gameState.tacticalOrders.SIGNAL_JAM ? ' (desliga o bloqueio)' : ''}`;
+                    txt = compacto ? `💥 CONTRA-BAT. ${c}` : `💥 PEDIR CONTRA-BATERIA · ${c} PTS${gameState.tacticalOrders.SIGNAL_JAM ? ' (desliga o bloqueio)' : ''}`;
                     cls = 'bg-red-800 border-red-300 text-white animate-pulse';
                     pode = true;
                 }
                 if (el.textContent !== txt) el.textContent = txt;
-                const classe = 'absolute left-1/2 -translate-x-1/2 z-30 px-3 py-1.5 rounded border-2 font-bold text-xs whitespace-nowrap shadow-2xl ' + cls;
+                const classe = (id === 'btn-cb-corte' ? 'absolute right-1.5 top-1.5 z-30 px-2 h-7 rounded border-2 font-bold text-[11px] whitespace-nowrap shadow-2xl ' : 'absolute left-1/2 -translate-x-1/2 z-30 px-3 py-1.5 rounded border-2 font-bold text-xs whitespace-nowrap shadow-2xl ') + cls;
                 if (el.className !== classe) el.className = classe;
                 el.disabled = !pode;
             });

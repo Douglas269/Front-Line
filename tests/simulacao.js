@@ -340,7 +340,7 @@ async function run() {
       gameState.arsenal.posicoes[1].obra = 100; montarArma(1, 'metralhadora'); definirOperador(1, '');
       moverParaComodo(sv[0].id, 'ninhos'); c.corteNinhoComArma = gameState.arsenal.posicoes[1].operador === sv[0].id && comodoDoSoldado(sv[0]) === 'ninhos';
       moverParaComodo(sv[0].id, 'posto'); c.cortePostoLargaArma = gameState.arsenal.posicoes[1].operador === null;
-      renderCorte(); c.corteDesenhaSemErro = true;
+      renderCorte(true); c.corteDesenhaSemErro = true;
       // Contra-bateria rápida: aparece no aviso, pede, e some sem artilharia
       { const pr = gameState.prestige, jam = gameState.tacticalOrders.SIGNAL_JAM;
         gameState.prestige = 500; gameState.counterBattery = null; gameState.tacticalOrders.SIGNAL_JAM = true;
