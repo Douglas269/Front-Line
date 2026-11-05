@@ -3760,7 +3760,7 @@
         }
         function posInimigoCena(e) {
             const d = Math.max(0, Math.min(300, e.distance));
-            return { x: 200 + ((e.offsetX || 0) / 200) * 165, y: CORTE.SOLO - 6 - (d / 300) * 86 };
+            return { x: 200 + ((e.offsetX || 0) / 200) * 165, y: CORTE.SOLO - 6 - (d / 300) * 62 };
         }
         function posAlvoCena(a) {
             if (!a) return { x: 200, y: 200 };
@@ -3828,21 +3828,37 @@
             [[38, 96], [336, 92], [372, 102], [190, 104]].forEach(([x, y]) => {
                 cctx.fillRect(x, y, 4, CORTE.SOLO - y); cctx.fillRect(x - 6, y + 6, 8, 2); cctx.fillRect(x + 3, y + 12, 9, 2);
             });
+            // relevo distante: colinas e linha de árvores em silhueta (dá profundidade ao horizonte)
+            cctx.fillStyle = per >= 2 ? '#0a0e10' : '#3c4a40';
+            cctx.beginPath(); cctx.moveTo(0, CORTE.SOLO - 14);
+            for (let x = 0; x <= 400; x += 25) cctx.lineTo(x, CORTE.SOLO - 20 - Math.abs(Math.sin(x * 0.045)) * 9 - (x % 75 === 0 ? 4 : 0));
+            cctx.lineTo(400, CORTE.SOLO - 10); cctx.lineTo(0, CORTE.SOLO - 10); cctx.fill();
+            cctx.fillStyle = per >= 2 ? '#0d1214' : '#33403a';
+            cctx.beginPath(); cctx.moveTo(0, CORTE.SOLO - 8);
+            for (let x = 0; x <= 400; x += 20) cctx.lineTo(x, CORTE.SOLO - 12 - Math.abs(Math.sin(x * 0.07 + 1)) * 6);
+            cctx.lineTo(400, CORTE.SOLO - 6); cctx.lineTo(0, CORTE.SOLO - 6); cctx.fill();
             // terreno com crateras
             cctx.fillStyle = '#2f2a1f';
             cctx.beginPath(); cctx.moveTo(0, CORTE.SOLO - 4);
             for (let x = 0; x <= 400; x += 40) cctx.quadraticCurveTo(x + 20, CORTE.SOLO - 10 + (x % 80 ? 4 : -2), x + 40, CORTE.SOLO - 4);
             cctx.lineTo(400, CORTE.SOLO + 22); cctx.lineTo(0, CORTE.SOLO + 22); cctx.fill();
-            cctx.fillStyle = '#1b1712';
-            [[70, CORTE.SOLO - 2], [255, CORTE.SOLO - 3], [350, CORTE.SOLO - 1]].forEach(([x, y]) => { cctx.beginPath(); cctx.ellipse(x, y, 16, 4, 0, 0, Math.PI * 2); cctx.fill(); });
+            [[70, CORTE.SOLO - 2], [255, CORTE.SOLO - 3], [350, CORTE.SOLO - 1], [150, CORTE.SOLO - 5]].forEach(([x, y]) => {
+                cctx.fillStyle = '#1b1712'; cctx.beginPath(); cctx.ellipse(x, y, 16, 4, 0, 0, Math.PI * 2); cctx.fill();
+                cctx.strokeStyle = 'rgba(95,80,55,0.6)'; cctx.lineWidth = 1; cctx.beginPath(); cctx.ellipse(x, y - 0.6, 17, 4.4, 0, Math.PI * 1.05, Math.PI * 1.95); cctx.stroke(); // borda levantada
+            });
+            // arbustos e tocos queimados, restos de cerca
+            cctx.fillStyle = '#1a1c16';
+            [[22, 8], [112, 6], [212, 7], [300, 9], [388, 6]].forEach(([x, w]) => { cctx.beginPath(); cctx.ellipse(x, CORTE.SOLO - 6, w, w * 0.5, 0, Math.PI, 0); cctx.fill(); });
+            cctx.strokeStyle = '#1a1612'; cctx.lineWidth = 1.2;
+            for (let x = 232; x < 330; x += 14) { cctx.beginPath(); cctx.moveTo(x, CORTE.SOLO - 3); cctx.lineTo(x + 1, CORTE.SOLO - 14 - (x % 3)); cctx.stroke(); }
             // linha de alcance (140 m) e arame (50 m)
-            const yAlc = CORTE.SOLO - 6 - (140 / 300) * 86;
+            const yAlc = CORTE.SOLO - 6 - (140 / 300) * 62;
             cctx.setLineDash([4, 5]); cctx.strokeStyle = 'rgba(217,163,90,0.45)'; cctx.lineWidth = 1;
             cctx.beginPath(); cctx.moveTo(4, yAlc); cctx.lineTo(396, yAlc); cctx.stroke(); cctx.setLineDash([]);
             txtC(6, yAlc - 3, 'ALCANCE 140m', 'rgba(217,163,90,0.85)', 7, 700, 'left', 8.5);
             const ars = arsenalDe();
             if (ars.arame > 0) {
-                const ya = CORTE.SOLO - 6 - (50 / 300) * 86;
+                const ya = CORTE.SOLO - 6 - (50 / 300) * 62;
                 cctx.strokeStyle = `rgba(170,170,160,${0.3 + 0.5 * ars.arame / 100})`; cctx.lineWidth = 0.8;
                 cctx.beginPath();
                 for (let x = 150; x < 396; x += 9) { cctx.moveTo(x, ya - 3); cctx.lineTo(x + 9, ya + 3); cctx.moveTo(x, ya + 3); cctx.lineTo(x + 9, ya - 3); }
@@ -3852,12 +3868,20 @@
         }
         // Nuvens que passam (só de dia): a única parte do céu que se mexe
         function desenharNuvens(t) {
+            // névoa baixa derivando sobre a terra de ninguém (a parte "viva" do cenário)
+            const nev = cctx.createLinearGradient(0, CORTE.SOLO - 40, 0, CORTE.SOLO + 4);
+            nev.addColorStop(0, 'rgba(150,165,150,0)'); nev.addColorStop(1, periodoDoDia() >= 2 ? 'rgba(90,110,120,0.20)' : 'rgba(170,180,160,0.22)');
+            cctx.fillStyle = nev; cctx.fillRect(0, CORTE.SOLO - 40, CORTE.W, 44);
+            cctx.fillStyle = periodoDoDia() >= 2 ? 'rgba(120,140,150,0.07)' : 'rgba(200,205,190,0.10)';
+            const off = (t / 140) % 260;
+            for (let k = -1; k < 3; k++) { cctx.beginPath(); cctx.ellipse(k * 200 + off, CORTE.SOLO - 8, 110, 7, 0, 0, Math.PI * 2); cctx.fill(); }
             if (periodoDoDia() >= 2) return;
             cctx.fillStyle = 'rgba(190,200,180,0.10)';
             const dx = (t / 90) % 520;
             [[60, 24, 60], [250, 40, 80], [430, 18, 50]].forEach(([x, y, r]) => { cctx.beginPath(); cctx.ellipse(((x + dx) % 520) - 60, y, r, r / 6, 0, 0, Math.PI * 2); cctx.fill(); });
         }
 
+        // Inimigos em silhueta na terra de ninguém: infantaria correndo, patrulha agachada, drone voando, blindado
         function desenharInimigosCena(t) {
             if (!temVisao()) {
                 cctx.fillStyle = 'rgba(5,7,6,0.88)'; cctx.fillRect(0, 0, CORTE.W, CORTE.SOLO - 2);
@@ -3866,13 +3890,49 @@
                 return;
             }
             const maisPerto = gameState.enemies.slice().sort((a, b) => a.distance - b.distance).slice(0, 4);
-            gameState.enemies.forEach(e => {
+            // De trás para a frente: os mais distantes primeiro, os de perto ficam por cima
+            gameState.enemies.slice().sort((a, b) => b.distance - a.distance).forEach(e => {
                 const p = posInimigoCena(e);
-                const tam = e.type === 'blindado' ? 17 : 13;
-                if (!desenharSimbolo(SIDC_INIMIGO[e.type], p.x, p.y, tam, cctx)) {
-                    cctx.fillStyle = '#c86464'; cctx.fillRect(p.x - 5, p.y - 5, 10, 10);
+                const perto = 1 - Math.min(1, e.distance / 300);          // 0 longe, 1 colado na trincheira
+                const esc = 0.55 + 0.6 * perto;                           // quanto mais perto, maior (perspectiva)
+                const fase = t / 260 + (e.offsetX || 0) * 0.07;
+                const vida = Math.max(0, Math.min(1, e.hp / (e.maxHp || e.hp || 1)));
+                cctx.save(); cctx.translate(p.x, p.y);
+                cctx.fillStyle = 'rgba(0,0,0,0.35)'; cctx.beginPath(); cctx.ellipse(0, 1, 7 * esc, 2 * esc, 0, 0, Math.PI * 2); cctx.fill(); // sombra no chão
+                if (e.type === 'drone') {
+                    cctx.translate(0, -(22 + Math.sin(fase * 1.3) * 3));
+                    cctx.fillStyle = '#10161a'; cctx.strokeStyle = '#6fb3c9'; cctx.lineWidth = 0.9;
+                    cctx.fillRect(-6 * esc, -1.5, 12 * esc, 3);
+                    cctx.beginPath(); cctx.moveTo(-6 * esc, -1.5); cctx.lineTo(-10 * esc, -4); cctx.moveTo(6 * esc, -1.5); cctx.lineTo(10 * esc, -4); cctx.stroke();
+                    const gira = Math.sin(t / 25) > 0 ? 1 : 0.35;        // hélices girando
+                    cctx.fillStyle = 'rgba(180,220,235,0.7)'; cctx.fillRect(-12 * esc, -4.4, 5 * esc * gira, 0.9); cctx.fillRect(7 * esc, -4.4, 5 * esc * gira, 0.9);
+                    cctx.fillStyle = Math.sin(t / 140) > 0 ? '#ff3b30' : '#401010'; cctx.fillRect(-1, 1.5, 2, 1.5);
+                } else if (e.type === 'blindado') {
+                    cctx.fillStyle = '#16120d'; cctx.strokeStyle = '#e07a4a'; cctx.lineWidth = 0.9;
+                    const L = 24 * esc, A = 9 * esc;
+                    cctx.fillRect(-L / 2, -A, L, A * 0.6);                                 // casco
+                    cctx.beginPath(); cctx.moveTo(-L / 2, -A * 0.4); cctx.lineTo(L / 2, -A * 0.4); cctx.stroke();
+                    cctx.fillRect(-L * 0.22, -A * 1.55, L * 0.44, A * 0.6);                // torre
+                    cctx.fillRect(L * 0.2, -A * 1.28, L * 0.5, 1.4 * esc);                  // canhão
+                    cctx.fillStyle = '#0c0a08'; for (let k = 0; k < 5; k++) { cctx.beginPath(); cctx.arc(-L * 0.4 + k * L * 0.2, -A * 0.1, 1.7 * esc, 0, Math.PI * 2); cctx.fill(); } // rodas
+                    if (!jogoPausado && Math.random() < 0.18) { cctx.fillStyle = 'rgba(80,80,70,0.4)'; cctx.fillRect(-L / 2 - 4 - Math.random() * 6, -A * 0.4, 5, 3); } // fumaça do escapamento
+                } else {
+                    const agachado = e.type === 'patrulha';
+                    const passo = Math.sin(fase * (agachado ? 1.4 : 1));
+                    const alt = (agachado ? 11 : 15) * esc;
+                    cctx.fillStyle = '#2a0f10'; cctx.strokeStyle = '#2a0f10'; cctx.lineCap = 'round';
+                    cctx.lineWidth = 2.6 * esc;
+                    cctx.beginPath(); cctx.moveTo(-1.5 * esc, -alt * 0.45); cctx.lineTo(-1.5 * esc - passo * 3 * esc, 0); cctx.moveTo(1.5 * esc, -alt * 0.45); cctx.lineTo(1.5 * esc + passo * 3 * esc, 0); cctx.stroke();
+                    cctx.lineWidth = 3.4 * esc; cctx.beginPath(); cctx.moveTo(0, -alt * 0.42); cctx.lineTo(1.5 * esc, -alt * 0.88); cctx.stroke();   // tronco inclinado
+                    cctx.beginPath(); cctx.arc(2.4 * esc, -alt * 0.98, 2.1 * esc, 0, Math.PI * 2); cctx.fill();                                       // cabeça
+                    cctx.beginPath(); cctx.ellipse(2.3 * esc, -alt * 1.03, 2.6 * esc, 1.7 * esc, 0, Math.PI, 0); cctx.fill();                          // capacete
+                    cctx.lineWidth = 1.2 * esc; cctx.beginPath(); cctx.moveTo(2 * esc, -alt * 0.72); cctx.lineTo(7.5 * esc, -alt * 0.62); cctx.stroke(); // fuzil
+                    cctx.strokeStyle = 'rgba(224,100,90,0.6)'; cctx.lineWidth = 0.6; cctx.beginPath(); cctx.arc(2.4 * esc, -alt * 0.98, 2.4 * esc, 0, Math.PI * 2); cctx.stroke(); // contorno vermelho
+                    if (!agachado && perto > 0.3) { cctx.fillStyle = 'rgba(120,100,70,0.18)'; cctx.beginPath(); cctx.ellipse(-3 * esc, -1, 4 * esc, 1.4 * esc, 0, 0, Math.PI * 2); cctx.fill(); } // poeira
                 }
-                if (maisPerto.includes(e) || e.type === 'blindado') txtC(p.x, p.y - tam + 2, `${Math.round(e.distance)}m`, '#e07a7a', 7, 700, 'center', 8.5);
+                cctx.restore();
+                if (vida < 0.98 && e.type !== 'drone') { cctx.fillStyle = 'rgba(0,0,0,0.6)'; cctx.fillRect(p.x - 7, p.y - 22 * esc - 4, 14, 2.2); cctx.fillStyle = vida > 0.5 ? '#c86464' : '#ff8a5c'; cctx.fillRect(p.x - 7, p.y - 22 * esc - 4, 14 * vida, 2.2); }
+                if (maisPerto.includes(e) || e.type === 'blindado') txtC(p.x, p.y - (e.type === 'drone' ? 32 : 24 * esc) - 6, `${Math.round(e.distance)}m`, '#f08c80', 7, 700, 'center', 8.5);
             });
         }
 
@@ -4284,6 +4344,18 @@
                 if (ef.idade > ef.vida) { cenaEfeitos.splice(i, 1); continue; }
                 const k = ef.idade / ef.vida;
                 const p = ef.fixo || posAlvoCena(ef.alvo);
+                if (ef.tipo === 'explosao') {
+                    // clarão que ilumina o que está em volta (soma luz) e onda de choque
+                    const luz = Math.max(0, 1 - k * 2.2);
+                    if (luz > 0) {
+                        cctx.save(); cctx.globalCompositeOperation = 'lighter'; cctx.globalAlpha = 0.55 * luz;
+                        cctx.drawImage(brilhoLamparina, p.x - 70, p.y - 14 - 70, 140, 140); cctx.restore();
+                    }
+                    if (k < 0.5) { cctx.strokeStyle = `rgba(255,220,170,${0.5 * (1 - k * 2)})`; cctx.lineWidth = 1.6; cctx.beginPath(); cctx.arc(p.x, p.y - 12, 10 + k * 70, 0, Math.PI * 2); cctx.stroke(); }
+                    // estilhaços
+                    cctx.fillStyle = `rgba(255,200,120,${1 - k})`;
+                    for (let q = 0; q < 7; q++) { const a = (q / 7) * Math.PI * 2 + ef.sx * 6, d = 4 + k * 34 * (0.6 + (q % 3) * 0.25); cctx.fillRect(p.x + Math.cos(a) * d, p.y - 12 + Math.sin(a) * d * 0.8 + k * k * 14, 1.6, 1.6); }
+                }
                 if (ef.tipo === 'explosao' && atlasPronto) {
                     quadroAnimado('explosao', Math.min(1, k * 1.6), p.x, p.y - 14, 46, 1);
                     if (k > 0.35) quadroAnimado('fumaca', (k - 0.35) / 0.65, p.x + 4, p.y - 26 - 18 * k, 40, 0.8 * (1 - k));
@@ -4356,8 +4428,31 @@
             const cb = gameState.combate || { tiros: 0, abates: 0 };
             const noite = periodoDoDia() >= 2;
             txtC(150, y0 + 16, noite && !gameState.tacticalOrders.FULL_VIGILANCE ? 'NOITE · −15% DE MIRA' : `TIROS ${cb.tiros} · ABATES ${cb.abates}`, '#d9a35a', 8.5);
-            txtC(10, y0 + 40, 'Arraste um soldado para outro cômodo para trocar a função,', '#b3c4ae', 7.5, 400);
-            txtC(10, y0 + 52, 'ou toque nele e depois no cômodo. Toque para ver a ficha.', '#b3c4ae', 7.5, 400);
+            // avisos recentes (somem sozinhos); sem avisos, a dica de como jogar
+            const agora = performance.now();
+            while (avisosCena.length && agora - avisosCena[0].t0 > 7000) avisosCena.shift();
+            if (avisosCena.length) {
+                avisosCena.slice(-2).forEach((a, i, l) => {
+                    const idade = agora - a.t0, alfa = idade < 5500 ? 1 : 1 - (idade - 5500) / 1500;
+                    cctx.globalAlpha = Math.max(0, alfa); txtC(10, y0 + 40 + i * 13, a.txt, a.cor, 8, 600, 'left', 10); cctx.globalAlpha = 1;
+                });
+            } else {
+                txtC(10, y0 + 40, 'Arraste um soldado para outro cômodo para trocar a função.', '#8fa088', 7.5, 500, 'left', 9.5);
+                txtC(10, y0 + 53, 'Toque nele para ver o estado e as ações.', '#8fa088', 7.5, 500, 'left', 9.5);
+            }
+        }
+
+        // Resumo da ameaça para a faixa: quem vem e em quanto tempo entra no alcance de tiro
+        function resumoAmeaca() {
+            const en = gameState.enemies, cont = { infantaria: 0, patrulha: 0, drone: 0, blindado: 0 };
+            en.forEach(e => { cont[e.type] = (cont[e.type] || 0) + 1; });
+            let eta = Infinity;
+            en.forEach(e => { if (e.type === 'drone') return; const v = ENEMY_TYPES[e.type].speed * (gameState.tacticalOrders.SUPPRESSION && gameState.resources.ammoHeavy > 3 ? 0.3 : 1); eta = Math.min(eta, Math.max(0, (e.distance - 140) / v)); });
+            const partes = [];
+            if (cont.infantaria) partes.push(cont.infantaria + ' inf.'); if (cont.patrulha) partes.push(cont.patrulha + ' patr.');
+            if (cont.drone) partes.push(cont.drone + ' drone'); if (cont.blindado) partes.push(cont.blindado + ' blind.');
+            const alvo = isFinite(eta) ? (eta <= 0 ? 'NO ALCANCE' : `alcance em ${Math.max(1, Math.ceil(eta / GAME_CONFIG.TICKS_PER_SECOND))}s`) : '';
+            return `⚠ ${partes.join(' · ')}${alvo ? ' · ' + alvo : ''}`;
         }
 
         // Fundo completo (vai para o cache)
@@ -4431,7 +4526,7 @@
             bCorte.classList.toggle('hidden', !(bar || haInimigo));
             let txt = '';
             if (bar) txt = `💥 ARTILHARIA EM ${seg(bar.ticks)}s · ${(bar.alvos || []).length || 3} ALVOS${droneObservando() ? ' · GUIADA POR DRONE' : ''}`;
-            else if (haInimigo) txt = `⚠ CONTATO INIMIGO A ${Math.max(0, Math.round(Math.min(...gameState.enemies.map(e => e.distance))))}M`;
+            else if (haInimigo) txt = resumoAmeaca();
             if (bCorte.textContent !== txt) bCorte.textContent = txt;
             bCorte.style.right = bar ? '8.4rem' : '0.375rem';
             document.getElementById('corte-pausa').classList.toggle('hidden', !jogoPausado);
@@ -4702,7 +4797,20 @@
             }
         }
 
+        // Avisos importantes também aparecem na cena (rodapé) por alguns segundos
+        const avisosCena = [];
+        function avisoNaCena(msg, style) {
+            const grave = /text-red-(400|500) font-bold/.test(style);
+            const atencao = /text-mil-amberMuted font-bold/.test(style) && /pânico|apátic|heroic|fúria|ficou|recebeu|medalha|BLOQUEADOS|emboscad/i.test(msg);
+            if (!grave && !atencao) return;
+            if (/Nenhuma artilharia|insuficiente|Já há|Já existe/.test(msg)) return;
+            const limpo = msg.replace(/\s+/g, ' ').slice(0, 78);
+            if (avisosCena.length && avisosCena[avisosCena.length - 1].txt === limpo) return;
+            avisosCena.push({ txt: limpo, cor: grave ? '#ff8a7a' : '#e8c070', t0: performance.now() });
+            while (avisosCena.length > 3) avisosCena.shift();
+        }
         function logFeed(msg, style = 'text-mil-textGlow') {
+            try { avisoNaCena(msg, style); } catch (e) {}
             const feed = document.getElementById('feed-log');
             const times = ['08:00', '13:00', '20:00', '03:00'];
             const cycleIndex = Math.min(3, Math.floor(gameState.timeSeconds / 60));
