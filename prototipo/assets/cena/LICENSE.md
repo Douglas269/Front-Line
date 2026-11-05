@@ -6,4 +6,4 @@ clarão e fumaça branca do pacote **"Smoke Particle Assets"**, de Kenney
 Uso livre, inclusive comercial, sem obrigação de crédito; o crédito aparece mesmo assim na tela "Créditos".
 
 `atlas.json` guarda a posição de cada quadro (o mesmo mapa está dentro do jogo em `ATLAS_CENA`).
-Os soldados da cena são silhuetas desenhadas pelo próprio jogo (sem imagens).
+As poses dos soldados ficam em ../soldados/ (silhuetas geradas por IA, recortadas e com contorno reforçado pelo projeto); só o soldado dormindo é desenhado pelo jogo.

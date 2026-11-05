@@ -4130,7 +4130,7 @@
             cctx.drawImage(atlasImg, x, y, w, h, px - w * f / 2, py - h * f / 2, w * f, h * f);
             cctx.globalAlpha = 1;
         }
-        /* ===== Soldados em silhueta (desenhados pelo jogo, sem imagens) =====
+        /* ===== Soldados em silhueta (boneco articulado: reserva e soldado dormindo) =====
            Vistos de lado, virados para o inimigo (direita). Cada pose posiciona pés e mãos;
            joelhos e cotovelos são calculados (cinemática inversa), então os movimentos saem naturais.
            Contorno iluminado pela lamparina; detalhes por função (braçadeira da médica, pá do engenheiro,
@@ -4256,6 +4256,41 @@
             }
         }
 
+        /* ===== Soldados em silhueta (imagens) =====
+           Poses desenhadas por IA e recortadas (silhueta escura com contorno âmbar), em assets/soldados/.
+           ax/ay = ponto entre os pés; cruz = onde vai a braçadeira da médica; ponta = boca do fuzil.
+           Se a imagem ainda não carregou, o jogo usa o boneco articulado de antes. */
+        const SPRITES_SOLDADO = {"mira":{"w":170,"h":211,"ax":62.0,"ay":208,"cruz":[43.0,90.7],"ponta":[167,33]},"ninho":{"w":173,"h":172,"ax":50.0,"ay":169,"cruz":[51.0,74.0],"ponta":[170,33]},"andando":{"w":142,"h":197,"ax":87.0,"ay":193,"cruz":[62.0,84.7]},"trabalho":{"w":126,"h":197,"ax":80.0,"ay":193,"cruz":[54.0,84.7]},"come":{"w":154,"h":193,"ax":80.0,"ay":190,"cruz":[64.0,83.0]},"panico":{"w":162,"h":176,"ax":48.0,"ay":172,"cruz":[73.0,75.7]}};
+        const IMG_SOLDADO = {}, IMG_SOLDADO_FERIDO = {}, IMG_SOLDADO_LUZ = {}, IMG_SOLDADO_HALO = {};
+        Object.keys(SPRITES_SOLDADO).forEach(k => {
+            const im = new Image();
+            im.onload = () => {
+                const c = document.createElement('canvas'); c.width = im.width; c.height = im.height;
+                const g = c.getContext('2d'); g.drawImage(im, 0, 0);
+                g.globalCompositeOperation = 'source-atop'; g.fillStyle = 'rgba(190,40,40,0.75)'; g.fillRect(0, 0, c.width, c.height);
+                // camada só com o contorno âmbar, mais claro e com halo, somada à imagem de noite
+                const l = document.createElement('canvas'); l.width = im.width; l.height = im.height;
+                try { // (se o navegador bloquear a leitura dos pixels, o soldado só fica sem o brilho noturno)
+                    const lg = l.getContext('2d'), dados = lg.createImageData(im.width, im.height), px = dados.data;
+                    const g0 = document.createElement('canvas'); g0.width = im.width; g0.height = im.height;
+                    const g0c = g0.getContext('2d'); g0c.drawImage(im, 0, 0);
+                    const orig = g0c.getImageData(0, 0, im.width, im.height).data;
+                    for (let i = 0; i < px.length; i += 4) {
+                        const amb = Math.max(0, Math.min(1, (orig[i] - orig[i + 2] - 30) / 60));
+                        if (amb > 0 && orig[i + 3] > 0) { px[i] = 255; px[i + 1] = 165; px[i + 2] = 55; px[i + 3] = orig[i + 3] * amb; }
+                    }
+                    lg.putImageData(dados, 0, 0);
+                    const h = document.createElement('canvas'); h.width = im.width; h.height = im.height;
+                    const hg = h.getContext('2d');
+                    if ('filter' in hg) hg.filter = 'blur(2.5px)';
+                    hg.drawImage(l, 0, 0);
+                    IMG_SOLDADO_LUZ[k] = l; IMG_SOLDADO_HALO[k] = h;
+                } catch (e) { /* sem brilho */ }
+                IMG_SOLDADO_FERIDO[k] = c; IMG_SOLDADO[k] = im;
+            };
+            im.src = musicBase + 'assets/soldados/' + k + '.png';
+        });
+        const ESCALA_SPRITE = 0.185; // tamanho do soldado na cena (relativo a CORTE.ESC)
         function desenharSilhueta(s, x, y, pose, t) {
             const m = mentalDe(s);
             const flash = (feridosRecentes.get(s.id) || 0) > 0 && Math.floor(t / 80) % 2 === 0;
@@ -4274,6 +4309,49 @@
                 cctx.fillStyle = '#d8d2c0'; cctx.fillRect(-21, -3.5, 7, 3.5); // travesseiro
                 cctx.restore();
                 return;
+            }
+            const chave = pose === 'arrastado' ? 'andando' : pose;
+            if (IMG_SOLDADO[chave]) {
+                const d = SPRITES_SOLDADO[chave], F = ESCALA_SPRITE;
+                const fase = t / 1000 + s.id * 0.37;
+                const recuoS = Math.max(0, 1 - (t - (disparosCena[s.id] || -1e9)) / 140);
+                if (m === 'heroismo') {
+                    const gl = cctx.createRadialGradient(0, -22, 3, 0, -22, 28);
+                    gl.addColorStop(0, `rgba(255,190,70,${0.35 + 0.15 * Math.sin(t / 120)})`); gl.addColorStop(1, 'rgba(255,190,70,0)');
+                    cctx.fillStyle = gl; cctx.fillRect(-30, -54, 64, 60);
+                }
+                let dx = 0, dy = 0, rot = 0;
+                if (chave === 'mira' || chave === 'ninho') { dx = -recuoS * 1.6; dy = Math.sin(fase * 1.9) * 0.15; }
+                else if (chave === 'trabalho') { dy = -Math.abs(Math.sin(t / 150)) * 1.2; rot = Math.sin(t / 150) * 0.03; }
+                else if (chave === 'andando') { dy = -Math.abs(Math.sin(t / 90)) * 1.1; }
+                else if (chave === 'come') { dy = Math.sin(t / 700 + s.id) * 0.3; }
+                else if (chave === 'panico') { dx = Math.sin(t / 45) * 0.5; }
+                // sombra no chão (prende o soldado ao piso)
+                const larg = (chave === 'panico' || chave === 'ninho' ? 17 : chave === 'come' ? 16 : 14);
+                cctx.fillStyle = 'rgba(0,0,0,0.5)'; cctx.beginPath(); cctx.ellipse(0, 0.4, larg, 2.4, 0, 0, Math.PI * 2); cctx.fill();
+                cctx.save();
+                cctx.translate(dx, dy + 0.6); cctx.rotate(rot);
+                cctx.scale(F, F);
+                const img = (flash ? IMG_SOLDADO_FERIDO[chave] : IMG_SOLDADO[chave]);
+                if (m === 'apatia') cctx.globalAlpha = 0.75;
+                cctx.drawImage(img, -d.ax, -d.ay);
+                cctx.globalAlpha = 1;
+                if (per >= 2 && IMG_SOLDADO_LUZ[chave]) { // à noite o contorno brilha
+                    const pulso = 0.85 + 0.15 * Math.sin(t / 420 + s.id);
+                    cctx.globalCompositeOperation = 'lighter';
+                    cctx.globalAlpha = (per === 2 ? 0.8 : 0.65) * pulso; cctx.drawImage(IMG_SOLDADO_HALO[chave], -d.ax, -d.ay);
+                    cctx.globalAlpha = 0.7 * pulso; cctx.drawImage(IMG_SOLDADO_LUZ[chave], -d.ax, -d.ay);
+                    cctx.globalCompositeOperation = 'source-over'; cctx.globalAlpha = 1;
+                }
+                if (s.class === 'Médico') { // braçadeira branca com cruz vermelha
+                    const bx = d.cruz[0] - d.ax, by = d.cruz[1] - d.ay, u = 1 / F;
+                    cctx.fillStyle = '#e8e2d0'; cctx.fillRect(bx - 1.9 * u, by - 1.6 * u, 3.8 * u, 3.2 * u);
+                    cctx.fillStyle = '#b4252a'; cctx.fillRect(bx - 0.45 * u, by - 1.3 * u, 0.9 * u, 2.6 * u); cctx.fillRect(bx - 1.3 * u, by - 0.45 * u, 2.6 * u, 0.9 * u);
+                }
+                cctx.restore();
+                cctx.restore(); // fecha o translate/scale do soldado
+                if (d.ponta && recuoS > 0.5) quadroAnimado('clarao', 1 - recuoS, x + ((d.ponta[0] - d.ax) * F + dx) * CORTE.ESC, y + ((d.ponta[1] - d.ay) * F + dy) * CORTE.ESC, 11 * CORTE.ESC);
+                return { ponta: null };
             }
             const P = montarPose(s, pose, t);
             if (pose === 'come') { // caixote de munição usado de banco
@@ -4389,7 +4467,7 @@
                             : { x: c.x + 36 + leito * 66, y: c.y + (andar ? 90 : 64), pose: 'deitado', comodo: chave };
                     } else {
                         const passo = c.w / (lista.length + 1);
-                        const baseY = { posto: c.y + 92, ninhos: c.y + 102, cozinha: c.y + 100, oficina: c.y + 100 }[chave];
+                        const baseY = { posto: c.y + 97, ninhos: c.y + 102, cozinha: c.y + 112, oficina: c.y + 113 }[chave];
                         const pose = { posto: 'mira', ninhos: 'ninho', cozinha: 'come', oficina: 'trabalho' }[chave];
                         // Nomes de soldados muito próximos alternam a altura para não se sobrepor
                         pos[s.id] = { x: c.x + passo * (k + 1) - (chave === 'cozinha' ? 8 : 0), y: baseY, pose, comodo: chave, rotY: passo < 40 && k % 2 ? 9 : 0 };
@@ -5407,7 +5485,7 @@
            Ao abrir, ao voltar para o app e a cada minuto o jogo compara as duas. Se o site
            tiver uma versão diferente, o jogo trava numa tela que só sai atualizando.
            (tools/nova-versao.sh troca as duas juntas a cada atualização publicada.) */
-        const VERSAO_JOGO = '20261105.1155';
+        const VERSAO_JOGO = '20261105.1913';
         const ATUALIZOU_KEY = 'frontline-atualizou-para';
         async function verificarVersao() {
             if (!location.protocol.startsWith('http') || atualizacaoPendente) return;
