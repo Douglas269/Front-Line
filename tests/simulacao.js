@@ -377,6 +377,10 @@ async function run() {
       const rf = gameState.resources.rations; gameState.resources.rations = rf + 20; renderCorte(true); c.fundoRepintaQuandoMuda = assinaturaFundo !== sigA; gameState.resources.rations = rf; renderCorte(true);
       cenaEfeito('dia', { dia: 9, sub: 'teste' }); renderCorte(true); c.faixaNovoDiaDesenha = true;
       c.relatorioFinalMostraNumeros = relatorioFinal().includes('RELATÓRIO DA OPERAÇÃO') && relatorioFinal().includes('Inimigos abatidos');
+      { const guardaN = CONFIG.numeros; cenaEfeitos.length = 0; CONFIG.numeros = true;
+        numeroNaCena({ soldado: 1 }, '-9', '#ff6b5b', 10); c.numeroFlutuanteAparece = cenaEfeitos.some(e => e.tipo === 'numero');
+        cenaEfeitos.length = 0; CONFIG.numeros = false; numeroNaCena({ soldado: 1 }, '-9', '#ff6b5b', 10); c.numeroFlutuanteDesliga = cenaEfeitos.length === 0;
+        CONFIG.numeros = guardaN; renderCorte(true); }
       cenaEfeitos.length = 0; }
     // Dificuldade: Recruta mais leve que Soldado, Veterano mais duro; Soldado é o padrão
     { const guardaD = CONFIG.dificuldade;

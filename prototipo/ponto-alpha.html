@@ -2253,6 +2253,7 @@
                 alvo.hp = Math.max(0, alvo.hp - dano);
                 perdaMoral(alvo, 2);
                 marcarFerido(alvo);
+                numeroNaCena({ soldado: alvo.id }, '-' + Math.max(1, Math.round(dano)), '#ffb347', 12);
                 const pa = squadFrac(alvo);
                 addEffect('artillery', pa.fx, pa.fy);
                 if (alvo.hp <= 0) {
@@ -2754,6 +2755,7 @@
             target.hp = Math.max(0, target.hp - dmg);
             perdaMoral(target, 1.2);
             marcarFerido(target);
+            numeroNaCena({ soldado: target.id }, '-' + Math.max(1, Math.round(dmg)), '#ff6b5b', 10);
             const ph = squadFrac(target);
             addEffect('hit', ph.fx, ph.fy);
             if (target.hp <= 0) { logFeed(`❌ BAIXA EM COMBATE: ${target.rank} ${target.name} foi morto!`, 'text-red-500 font-bold'); impacto('morte'); }
@@ -2770,7 +2772,7 @@
             if (enemy.hp <= 0) somarCarreira({ abates: 1 });
             logFeed(`✅ ${tipo.label} NEUTRALIZADO NO SETOR${atirador ? ` por ${atirador.rank} ${atirador.name}` : ''}!`, 'text-mil-greenMuted font-bold');
             if (enemy.type === 'patrulha' && estado.general) lembrar('abatePatrulha', 1, 0.3);
-            estado.prestige += ganho(enemy.type === 'drone' ? 20 : enemy.type === 'blindado' ? 80 : 30);
+            { const gp = ganho(enemy.type === 'drone' ? 20 : enemy.type === 'blindado' ? 80 : 30); estado.prestige += gp; numeroNaCena({ inimigo: enemy }, '+' + gp, '#8fe08a', 9); }
         }
 
         // Chegou à trincheira: drone só sobrevoa; patrulha e infantaria invadem
@@ -3517,7 +3519,7 @@
            As preferências ficam no aparelho e, com conta, também na conta (vão junto para outro aparelho). */
         const CONFIG_KEY = 'frontline-config';
         const CARREIRA_KEY = 'frontline-carreira';
-        const CONFIG_PADRAO = { volMusica: 45, volEfeitos: 80, volAmbiente: 50, tremor: true, vibracao: true, rastros: true, textoGrande: false, apelido: '', visual: 'corte', pausaArtilharia: false, dificuldade: 'soldado' };
+        const CONFIG_PADRAO = { volMusica: 45, volEfeitos: 80, volAmbiente: 50, tremor: true, vibracao: true, rastros: true, textoGrande: false, apelido: '', visual: 'corte', pausaArtilharia: false, dificuldade: 'soldado', numeros: true };
         // Quem pediu "reduzir movimento" no aparelho começa sem tremor da tela e sem vibração (dá para ligar nas Configurações)
         if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) { CONFIG_PADRAO.tremor = false; CONFIG_PADRAO.vibracao = false; }
         let CONFIG = Object.assign({}, CONFIG_PADRAO, (() => { try { return JSON.parse(localStorage.getItem(CONFIG_KEY)) || {}; } catch (e) { return {}; } })());
@@ -3688,6 +3690,7 @@
                     <div class="text-mil-textMuted">Corte lateral: soldados nos cômodos, arraste para trocar a função. Clássico: mapa tático e lista do esquadrão.</div>
                     <div class="flex gap-2 pt-1">${opVisual('corte', 'Corte lateral')}${opVisual('classico', 'Clássico')}</div>
                 </div>` +
+                chave('numeros', 'Números flutuantes', 'Mostra na cena o dano que os soldados levam e o prestígio ganho ao abater inimigos') +
                 chave('pausaArtilharia', 'Pausar no aviso de artilharia', 'O jogo pausa sozinho quando a artilharia é anunciada, para decidir quem vai para o abrigo e pedir a contra-bateria') +
                 chave('tremor', 'Tremor da tela', 'O mapa treme com explosões e impactos') +
                 chave('vibracao', 'Vibração do celular', 'Vibra nos impactos fortes (só em aparelhos compatíveis)') +
@@ -3773,10 +3776,16 @@
         // Efeitos na cena: o alvo é resolvido na hora do desenho (soldado, cômodo, inimigo)
         function cenaEfeito(tipo, alvo) {
             if (cenaEfeitos.length > 40) cenaEfeitos.shift();
-            const vida = { explosao: 50, fogo: 240, abate: 30, morte: 40, tiro: 5, dia: 150 }[tipo] || 40;
+            const vida = { explosao: 50, fogo: 240, abate: 30, morte: 40, tiro: 5, dia: 150, numero: 55 }[tipo] || 40;
             let fixo = null;
             if (alvo && alvo.inimigo) fixo = posInimigoCena(alvo.inimigo); // o inimigo some da lista: guarda a posição agora
             cenaEfeitos.push({ tipo, alvo, fixo, idade: 0, vida, sx: Math.random() });
+        }
+        // Número flutuante sobre um soldado ou um ponto da cena (liga e desliga nas Configurações)
+        function numeroNaCena(alvo, txt, cor, tam) {
+            if (typeof CONFIG !== 'undefined' && CONFIG.numeros === false) return;
+            if (!modoCorte()) return;
+            cenaEfeito('numero', Object.assign({}, alvo, { txt, cor, tam }));
         }
         function posInimigoCena(e) {
             const d = Math.max(0, Math.min(300, e.distance));
@@ -3895,7 +3904,33 @@
             cctx.fillStyle = periodoDoDia() >= 2 ? 'rgba(120,140,150,0.07)' : 'rgba(200,205,190,0.10)';
             const off = (t / 140) % 260;
             for (let k = -1; k < 3; k++) { cctx.beginPath(); cctx.ellipse(k * 200 + off, CORTE.SOLO - 8, 110, 7, 0, 0, Math.PI * 2); cctx.fill(); }
-            if (periodoDoDia() >= 2) return;
+            // Vida no cenário: clarões de artilharia distante à noite; fumaça e corvos de dia
+            if (periodoDoDia() >= 2) {
+                [[6100, 0, 70], [9700, 2300, 312], [14300, 5100, 190]].forEach(([ciclo, desl, x]) => {
+                    const f = (t + desl) % ciclo;
+                    if (f < 160) {
+                        const a = 1 - f / 160;
+                        cctx.fillStyle = `rgba(255,190,110,${0.10 * a})`; cctx.fillRect(0, 0, CORTE.W, CORTE.SOLO);
+                        cctx.save(); cctx.globalCompositeOperation = 'lighter'; cctx.globalAlpha = 0.75 * a;
+                        cctx.drawImage(brilhoLamparina, x - 55, CORTE.SOLO - 48, 110, 70); cctx.restore();
+                    }
+                });
+                return;
+            }
+            // coluna de fumaça de um incêndio distante
+            for (let k = 0; k < 5; k++) {
+                const ph = ((t / 5200) + k * 0.2) % 1;
+                cctx.fillStyle = `rgba(50,52,46,${0.32 * (1 - ph)})`;
+                cctx.beginPath(); cctx.ellipse(352 + Math.sin(ph * 5 + k) * 6 + ph * 18, CORTE.SOLO - 12 - ph * 62, 4 + ph * 11, 3 + ph * 7, 0, 0, Math.PI * 2); cctx.fill();
+            }
+            // corvos cruzando o céu (de tempos em tempos)
+            { const ciclo = 23000, f = (t % ciclo) / ciclo;
+              if (f < 0.28) { const k = f / 0.28;
+                cctx.strokeStyle = 'rgba(15,18,14,0.85)'; cctx.lineWidth = 1.1;
+                [[0, 0], [14, 7], [-12, 9]].forEach(([dx, dy], i) => {
+                    const x = -20 + k * 460 + dx, y = 34 + dy + Math.sin(k * 14 + i) * 3, bat = Math.sin(t / 90 + i * 2) * 3;
+                    cctx.beginPath(); cctx.moveTo(x - 5, y + bat); cctx.quadraticCurveTo(x - 2, y - 2, x, y); cctx.quadraticCurveTo(x + 2, y - 2, x + 5, y + bat); cctx.stroke();
+                }); } }
             cctx.fillStyle = 'rgba(190,200,180,0.10)';
             const dx = (t / 90) % 520;
             [[60, 24, 60], [250, 40, 80], [430, 18, 50]].forEach(([x, y, r]) => { cctx.beginPath(); cctx.ellipse(((x + dx) % 520) - 60, y, r, r / 6, 0, 0, Math.PI * 2); cctx.fill(); });
@@ -4407,6 +4442,12 @@
                 } else if (ef.tipo === 'abate') {
                     cctx.globalAlpha = 1 - k; cctx.fillStyle = '#b3c4ae';
                     cctx.beginPath(); cctx.arc(p.x, p.y, 4 + 10 * k, 0, Math.PI * 2); cctx.fill(); cctx.globalAlpha = 1;
+                } else if (ef.tipo === 'numero') {
+                    // número que sobe e some (dano, prestígio); desvia um pouco para os lados
+                    const sobe = 22 * (1 - Math.pow(1 - k, 2));
+                    cctx.globalAlpha = k < 0.7 ? 1 : (1 - k) / 0.3;
+                    txtC(p.x + (ef.sx - 0.5) * 16, p.y - 30 - sobe, ef.alvo.txt, ef.alvo.cor, ef.alvo.tam || 10, 700, 'center', 11);
+                    cctx.globalAlpha = 1;
                 } else if (ef.tipo === 'dia') {
                     // faixa grande que aparece e some devagar
                     const a = k < 0.15 ? k / 0.15 : k > 0.7 ? (1 - k) / 0.3 : 1;
