@@ -20,7 +20,6 @@
     <!-- Supabase: login e salvamento na nuvem -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
     <!-- Recursos livres guardados no próprio jogo (ver tela Créditos) -->
-    <script src="vendor/milsymbol.js"></script>
     <script src="vendor/zzfx.js"></script>
     <script src="vendor/game-icons.js"></script>
     <!-- FontAwesome Icons -->
@@ -166,15 +165,21 @@
 
         <!-- SUB-HEADER: DATE, TIME & WEATHER BAR -->
         <div class="bg-mil-bg border-b border-mil-border px-3 py-1 flex justify-between items-center text-[13px] text-mil-textMuted font-mono z-20">
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 whitespace-nowrap">
                 <i class="fa-regular fa-clock text-mil-greenMuted"></i>
                 <span>DIA <strong id="lbl-day" class="text-mil-textGlow font-bold">1</strong>/30</span>
                 <span class="text-mil-border">|</span>
                 <span id="lbl-time-cycle" class="text-mil-textGlow font-bold">MANHÃ (08:00)</span>
             </div>
-            <div class="flex items-center gap-1.5">
-                <i id="ico-weather" class="fa-solid fa-cloud-sun text-mil-amberMuted"></i>
-                <span id="lbl-weather" class="text-mil-textGlow uppercase text-xs">Nublado</span>
+            <div class="flex items-center gap-2">
+                <div class="flex items-center gap-1.5">
+                    <i id="ico-weather" class="fa-solid fa-cloud-sun text-mil-amberMuted"></i>
+                    <span id="lbl-weather" class="text-mil-textGlow uppercase text-xs hidden min-[420px]:inline">Nublado</span>
+                </div>
+                <!-- Pausar fica no topo, sempre à vista e fácil de tocar -->
+                <button id="btn-pause" onclick="alternarPausa()" class="px-3 min-h-[34px] btn-tactical rounded font-bold text-xs flex items-center justify-center gap-1.5 uppercase tracking-wider whitespace-nowrap">
+                    <i id="ico-pause" class="fa-solid fa-pause text-mil-amberMuted"></i> <span id="lbl-pause" class="hidden min-[345px]:inline">Pausar</span>
+                </button>
             </div>
         </div>
 
@@ -195,47 +200,8 @@
                     <span id="lbl-tactical-status" class="text-mil-greenMuted font-bold uppercase tracking-wider">SETORES LIMPOS</span>
                 </div>
 
-                <!-- CANVAS MAP DISPLAY -->
-                <div id="mapa-classico" class="relative w-full h-56 bg-[#0c0f0d] overflow-hidden flex items-center justify-center">
-                    <canvas id="topoCanvas" class="w-full h-full block"></canvas>
-
-                    <!-- SELO DE PAUSA -->
-                    <div id="map-paused" class="hidden absolute top-12 left-1/2 -translate-x-1/2 z-30 px-2 py-1 rounded bg-black/85 border border-mil-amberMuted text-xs text-mil-amberMuted font-bold whitespace-nowrap">⏸ PAUSADO · decida com calma</div>
-
-                    <!-- BÚSSOLA: norte sempre para cima -->
-                    <div class="absolute top-2 right-2 z-30 pointer-events-none" title="Norte">
-                        <svg viewBox="0 0 64 64" width="54" height="54" aria-label="Bússola: norte para cima">
-                            <circle cx="32" cy="32" r="31" fill="rgba(8,10,9,0.88)" stroke="#8fad88" stroke-width="2"/>
-                            <polygon points="32,19 37,32 27,32" fill="#ff5c5c"/>
-                            <polygon points="32,45 37,32 27,32" fill="#b3c4ae"/>
-                            <text x="32" y="13" text-anchor="middle" font-family="Courier Prime, monospace" font-weight="700" font-size="12" fill="#ff5c5c">N</text>
-                            <text x="32" y="60" text-anchor="middle" font-family="Courier Prime, monospace" font-weight="700" font-size="11" fill="#d6e3d1">S</text>
-                            <text x="55" y="36" text-anchor="middle" font-family="Courier Prime, monospace" font-weight="700" font-size="11" fill="#d6e3d1">L</text>
-                            <text x="9" y="36" text-anchor="middle" font-family="Courier Prime, monospace" font-weight="700" font-size="11" fill="#d6e3d1">O</text>
-                        </svg>
-                    </div>
-
-                    <!-- FOG OF WAR NO VIGILANCE WARNING -->
-                    <div id="fog-warning" class="hidden absolute inset-0 bg-black/90 flex flex-col items-center justify-center text-center p-4 z-30">
-                        <i class="fa-solid fa-eye-slash text-mil-redAlert text-3xl mb-2 animate-bounce"></i>
-                        <span class="text-mil-redAlert font-bold text-xs uppercase tracking-widest">NENHUM SOLDADO EM VIGÍLIA</span>
-                        <p class="text-mil-textMuted text-xs mt-1 max-w-xs">Perímetro sem observação: o esquadrão atira às cegas (metade do dano). Coloque alguém de vigília.</p>
-                    </div>
-
-                    <!-- CONTRA-BATERIA RÁPIDA: aparece só durante o aviso de artilharia -->
-                    <button id="btn-cb-classico" onclick="contraBateriaRapida()" class="hidden absolute left-1/2 -translate-x-1/2 z-30 px-3 py-1.5 rounded border-2 font-bold text-xs whitespace-nowrap shadow-2xl" style="top:66px"></button>
-
-                    <!-- COMBAT ALERT BANNER -->
-                    <div id="map-alert-banner" class="hidden absolute top-2 left-2 right-16 bg-mil-redDark/90 border border-mil-redAlert px-2 py-1 rounded text-xs text-red-200 flex items-center justify-between z-20 shadow-2xl animate-alert-pulse">
-                        <span class="flex items-center gap-1.5 font-bold">
-                            <i class="fa-solid fa-triangle-exclamation text-red-400"></i>
-                            <span id="map-alert-text">CONTATO INIMIGO A 200M</span>
-                        </span>
-                    </div>
-                </div>
-
-                <!-- TRINCHEIRA EM CORTE LATERAL (visual novo; o clássico fica nas Configurações) -->
-                <div id="mapa-corte" class="hidden relative w-full bg-black overflow-hidden select-none">
+                <!-- TRINCHEIRA EM CORTE LATERAL -->
+                <div id="mapa-corte" class="relative w-full bg-black overflow-hidden select-none">
                     <canvas id="corteCanvas" class="w-full block" style="touch-action: pan-y"></canvas>
                     <div id="corte-banner" class="hidden absolute top-1.5 left-1.5 right-1.5 bg-mil-redDark/90 border border-mil-redAlert px-2 h-7 flex items-center rounded text-[11px] text-red-200 font-bold z-20 truncate whitespace-nowrap"></div>
                     <button id="btn-cb-corte" onclick="contraBateriaRapida()" class="hidden absolute left-1/2 -translate-x-1/2 z-30 px-3 py-1.5 rounded border-2 font-bold text-xs whitespace-nowrap shadow-2xl" style="top:38px"></button>
@@ -271,9 +237,6 @@
             </div>
 
             <!-- END OF TURN -->
-            <button id="btn-pause" onclick="alternarPausa()" class="w-full py-2 btn-tactical rounded font-bold text-xs flex items-center justify-center gap-2 uppercase tracking-wider">
-                <i id="ico-pause" class="fa-solid fa-pause text-mil-amberMuted"></i> <span id="lbl-pause">Pausar</span>
-            </button>
             <div class="flex justify-between items-center gap-2">
                 <div>
                     <button id="btn-install" onclick="instalarApp()" class="hidden text-xs px-2 py-1 btn-tactical rounded font-bold"><i class="fa-solid fa-mobile-screen-button"></i> Instalar no celular</button>
@@ -546,7 +509,6 @@
             <div class="bg-mil-panel border-2 border-mil-border rounded p-4 max-w-sm w-full space-y-2 shadow-2xl max-h-[90vh] overflow-y-auto text-xs leading-relaxed">
                 <div class="text-mil-amberMuted font-bold text-sm border-b border-mil-border pb-2">CRÉDITOS</div>
                 <p class="text-mil-textGlow"><b>FrontLine</b> — jogo de Ruan e Douglas.</p>
-                <p><b class="text-mil-textGlow">Símbolos militares do mapa:</b> <span class="text-mil-textMuted">milsymbol, de Måns Beckman (spatialillusions.com) — licença MIT.</span></p>
                 <p><b class="text-mil-textGlow">Efeitos sonoros:</b> <span class="text-mil-textMuted">gerados com ZzFX, de Frank Force — licença MIT.</span></p>
                 <p><b class="text-mil-textGlow">Ícones:</b> <span class="text-mil-textMuted">game-icons.net, de Lorc, Delapouite e colaboradores — licença CC BY 3.0.</span></p>
                 <p><b class="text-mil-textGlow">Explosões, fumaça, clarões e vapor:</b> <span class="text-mil-textMuted">"Smoke Particle Assets", de Kenney (kenney.nl) — licença CC0.</span></p>
@@ -859,7 +821,6 @@
                 { id: 6, rank: 'Sd.', name: 'Mendes', class: 'Atirador de Elite', hp: 95, fatigue: 10, hunger: 15, thirst: 15, moral: 88, duty: 'WATCH' }
             ],
             enemies: [],
-            rainParticles: [],
             effects: [], // explosões, impactos e comboio no mapa
             barrage: null, // artilharia inimiga prevista: { ticks } ou null
             cargas: {}, // carga emergencial a caminho, por item: { rations: ticks, water: ticks, ... }
@@ -877,54 +838,8 @@
             general: null // general inimigo (criado por newGeneral)
         };
 
-        /* ==========================================================================
-           REALISTIC TOPOGRAPHIC & MILITARY MAP RENDERER (CANVAS 2D)
-           ========================================================================== */
-        const canvas = document.getElementById('topoCanvas');
-        const ctx = canvas.getContext('2d');
-
-        function resizeCanvas() {
-            canvas.width = canvas.parentElement.clientWidth;
-            canvas.height = canvas.parentElement.clientHeight;
-            initRain();
-        }
-        window.addEventListener('resize', resizeCanvas);
-
-        function initRain() {
-            gameState.rainParticles = [];
-            for (let i = 0; i < 40; i++) {
-                gameState.rainParticles.push({
-                    x: Math.random() * canvas.width,
-                    y: Math.random() * canvas.height,
-                    length: 8 + Math.random() * 12,
-                    speed: 4 + Math.random() * 4
-                });
-            }
-        }
-
-        // Generate static realistic topographic contour lines
-        const contourPaths = [];
-        function generateContourLines() {
-            contourPaths.length = 0;
-            const w = 400;
-            const h = 250;
-            // Draw 7 concentric realistic contour bands representing hills
-            for (let level = 1; level <= 7; level++) {
-                const points = [];
-                const radiusX = level * 35 + Math.sin(level) * 10;
-                const radiusY = level * 20 + Math.cos(level) * 8;
-                const step = (Math.PI * 2) / 24;
-
-                for (let a = 0; a < Math.PI * 2; a += step) {
-                    const noise = Math.sin(a * 4 + level) * 6;
-                    const px = (w / 2) + Math.cos(a) * (radiusX + noise);
-                    const py = (h / 2.2) + Math.sin(a) * (radiusY + noise);
-                    points.push({ x: px, y: py });
-                }
-                contourPaths.push(points);
-            }
-        }
-        generateContourLines();
+        // Tamanho de referência da cena para os efeitos (posições em frações da tela)
+        const MAPA_REF = { width: 400, height: 224 };
 
         /* ==========================================================================
            SITUAÇÃO DA GUERRA NO MAPA (frações da tela, para funcionar em qualquer tamanho)
@@ -941,303 +856,23 @@
         // Posição de um soldado na trincheira, em frações da tela (para efeitos)
         function squadFrac(soldier) {
             const idx = gameState.squad.indexOf(soldier);
-            return { fx: SQUAD_X[idx] ?? 0.5, fy: (canvas.height - 43) / canvas.height };
+            return { fx: SQUAD_X[idx] ?? 0.5, fy: (MAPA_REF.height - 43) / MAPA_REF.height };
         }
 
         // Posição de um inimigo, em frações da tela (mesma geometria do desenho)
         function enemyFrac(enemy) {
-            const w = canvas.width, h = canvas.height;
+            const w = MAPA_REF.width, h = MAPA_REF.height;
             const trenchY = h - 35;
             const ey = trenchY - ((enemy.distance / 300) * (h - 60)) - 10;
             const ex = (w / 2) + ((enemy.offsetX / 200) * (w * 0.4));
             return { fx: ex / w, fy: ey / h };
         }
 
-        // Rótulo com fundo escuro, para ficar legível por cima das linhas
-        function drawLabel(text, x, y, align, color) {
-            const m = ctx.measureText(text).width;
-            const left = align === 'right' ? x - m : x;
-            ctx.fillStyle = 'rgba(8,10,9,0.85)';
-            ctx.fillRect(left - 3, y - 11, m + 6, 14);
-            ctx.fillStyle = color;
-            ctx.textAlign = 'left';
-            ctx.fillText(text, left, y);
-        }
-
-        function drawWarLayer(w, h, trenchY) {
-            ctx.save();
-            ctx.font = '11px "Courier Prime"';
-
-            // 1. Linha de suprimento: retaguarda (canto inferior direito) até a trincheira
-            const ok = gameState.supplyLineEff > 30;
-            ctx.strokeStyle = ok ? 'rgba(143,173,136,0.85)' : 'rgba(200,100,100,0.95)';
-            ctx.lineWidth = 2;
-            ctx.setLineDash(ok ? [] : [6, 4]);
-            ctx.beginPath();
-            ctx.moveTo(w * 0.92, h - 2);
-            ctx.lineTo(w * 0.5, trenchY + 6);
-            ctx.stroke();
-            ctx.setLineDash([]);
-
-            drawLabel((ok ? 'SUPRIMENTO ' : 'LINHA CORTADA ') + gameState.supplyLineEff + '%', 6, h - 6, 'left', ok ? '#b3c4ae' : '#e08a8a');
-            drawLabel('RETAGUARDA', w - 6, h - 6, 'right', '#b3c4ae');
-
-            // Estado da trincheira, logo acima da linha
-            const tr = Math.round(gameState.trench);
-            const corTr = tr >= 70 ? '#b3c4ae' : tr >= 40 ? '#d9a35a' : '#e08a8a';
-            drawLabel(`TRINCHEIRA ${tr}%${trincheiraRompida() ? ' · ROMPIDA' : ''}`, 6, trenchY - 22, 'left', trincheiraRompida() ? '#ff5c5c' : corTr);
-
-            // 2. Alcance de tiro do inimigo (140m)
-            const yRange = trenchY - ((140 / 300) * (h - 60)) - 10;
-            ctx.strokeStyle = 'rgba(179,125,46,0.6)';
-            ctx.setLineDash([3, 5]);
-            ctx.beginPath();
-            ctx.moveTo(6, yRange);
-            ctx.lineTo(w - 6, yRange);
-            ctx.stroke();
-            ctx.setLineDash([]);
-            drawLabel('ALCANCE DE TIRO 140m', 6, yRange - 4, 'left', '#d9a35a');
-            const cbt = gameState.combate;
-            if (cbt && cbt.tiros > 0) drawLabel(`TIROS ${cbt.tiros} · ACERTOS ${cbt.acertos} · ABATES ${cbt.abates}`, w - 6, trenchY - 22, 'right', '#b9c4a0');
-
-            // 3. Rastro de aproximação: cada inimigo vem do norte (topo do mapa)
-            gameState.enemies.forEach(en => {
-                const p = enemyFrac(en);
-                const ex = p.fx * w, ey = p.fy * h;
-                ctx.strokeStyle = 'rgba(200,100,100,0.4)';
-                ctx.setLineDash([2, 4]);
-                ctx.beginPath();
-                ctx.moveTo(ex, 0);
-                ctx.lineTo(ex, ey);
-                ctx.stroke();
-                ctx.setLineDash([]);
-            });
-
-            // 4. Explosões, impactos e comboio
-            gameState.effects = gameState.effects.filter(ef => ef.age < ef.life);
-            gameState.effects.forEach(ef => {
-                ef.age++;
-                const t = ef.age / ef.life;
-                const x = ef.fx * w, y = ef.fy * h;
-                if (ef.type === 'convoy') {
-                    // Caminhão sai da retaguarda e chega à trincheira
-                    const px = w * 0.92 + (w * 0.5 - w * 0.92) * t;
-                    const py = (h - 2) + ((trenchY + 6) - (h - 2)) * t;
-                    ctx.fillStyle = '#8fad88';
-                    ctx.fillRect(px - 6, py - 3, 12, 6);
-                    ctx.fillStyle = '#0c0f0d';
-                    ctx.fillRect(px - 4, py + 2, 2, 2);
-                    ctx.fillRect(px + 2, py + 2, 2, 2);
-                } else if (ef.type === 'rastro') {
-                    ctx.globalAlpha = 1 - t;
-                    ctx.strokeStyle = ef.cor || '#ffe08a';
-                    ctx.lineWidth = 1;
-                    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(ef.tx * w, ef.ty * h); ctx.stroke();
-                    ctx.globalAlpha = 1;
-                } else if (ef.type === 'morte') {
-                    ctx.globalAlpha = 0.35 * (1 - t);
-                    ctx.fillStyle = '#8b0000';
-                    ctx.fillRect(0, 0, w, h);
-                    ctx.globalAlpha = 1;
-                } else if (ef.type === 'hit') {
-                    ctx.globalAlpha = 1 - t;
-                    ctx.fillStyle = '#ffb347';
-                    ctx.beginPath();
-                    ctx.arc(x, y, 3 + 3 * (1 - t), 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.globalAlpha = 1;
-                } else {
-                    const max = ef.type === 'artillery' ? 24 : ef.type === 'blast' ? 16 : 9;
-                    const r = max * (0.3 + t * 0.7);
-                    ctx.globalAlpha = 1 - t;
-                    ctx.fillStyle = ef.type === 'kill' ? '#b3c4ae' : '#e0882b';
-                    ctx.beginPath();
-                    ctx.arc(x, y, r, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.strokeStyle = '#ffd08a';
-                    ctx.stroke();
-                    ctx.globalAlpha = 1;
-                }
-            });
-            ctx.restore();
-        }
-
+        // Desenha a trincheira em corte a cada quadro
         function renderMap() {
-            if (!ctx) return;
-            // Visual em corte lateral: desenha a trincheira em corte no lugar do mapa tático
-            if (typeof modoCorte === 'function' && modoCorte()) {
-                try { renderCorte(); } catch (e) { console.error(e); }
-                requestAnimationFrame(renderMap);
-                return;
-            }
-            const w = canvas.width;
-            const h = canvas.height;
-
-            // 1. Base Map Color (Sombrio Oliva/Carvão)
-            ctx.fillStyle = '#111613';
-            ctx.fillRect(0, 0, w, h);
-
-            // 2. Draw Topographic Elevation Contours (Subtle Olive)
-            ctx.strokeStyle = '#232e26';
-            ctx.lineWidth = 1;
-            contourPaths.forEach((points, idx) => {
-                ctx.beginPath();
-                ctx.moveTo((points[0].x / 400) * w, (points[0].y / 250) * h);
-                for (let i = 1; i < points.length; i++) {
-                    ctx.lineTo((points[i].x / 400) * w, (points[i].y / 250) * h);
-                }
-                ctx.closePath();
-                ctx.stroke();
-
-                // Height Label on Contour
-                if (idx % 2 === 0) {
-                    ctx.fillStyle = '#2d3b31';
-                    ctx.font = '11px "Courier Prime"';
-                    ctx.fillText(`${120 + idx * 25}m`, (points[0].x / 400) * w, (points[0].y / 250) * h);
-                }
-            });
-
-            // 3. Draw Trench Line (Ponto Alpha)
-            const trenchY = h - 35;
-            ctx.strokeStyle = '#3e4c3a';
-            ctx.lineWidth = 2.5;
-            ctx.beginPath();
-            ctx.moveTo(20, trenchY);
-            ctx.lineTo(w * 0.3, trenchY - 5);
-            ctx.lineTo(w * 0.5, trenchY + 5);
-            ctx.lineTo(w * 0.8, trenchY - 3);
-            ctx.lineTo(w - 20, trenchY);
-            ctx.stroke();
-
-            // 4. Vision Cones & Fog of War
-            const watchmen = gameState.squad.filter(s => s.duty === 'WATCH' && s.hp > 0).length;
-            const hasVision = watchmen > 0 || gameState.tacticalOrders.FULL_VIGILANCE;
-
-            document.getElementById('fog-warning').classList.toggle('hidden', hasVision);
-
-            if (hasVision) {
-                // Render Dynamic Vision Cones from Trench Position
-                ctx.fillStyle = 'rgba(90, 115, 86, 0.08)';
-                ctx.beginPath();
-                ctx.moveTo(w / 2, trenchY);
-                ctx.arc(w / 2, trenchY, h * 0.95, Math.PI * 1.15, Math.PI * 1.85);
-                ctx.closePath();
-                ctx.fill();
-
-                desenharDefesas(w, h, trenchY);
-                desenharAlvosArtilharia(w, h, trenchY);
-
-                // 5. Draw Squad Markers (NATO Blue-Steel Rectangle Symbols)
-                gameState.squad.forEach((soldier, idx) => {
-                    if (soldier.hp <= 0) return;
-                    const sx = w * SQUAD_X[idx];
-                    const sy = trenchY - 8;
-
-                    // NATO Rectangle Symbol (pisca em vermelho logo depois de ser ferido)
-                    const flash = feridosRecentes.get(soldier.id) || 0;
-                    if (flash > 0) feridosRecentes.set(soldier.id, flash - 1);
-                    if (desenharSimbolo(SIDC_AMIGO[soldier.class] || SIDC_AMIGO['Fuzileiro Regular'], sx, sy, 11)) {
-                        if (flash > 0 && flash % 4 < 2) { ctx.fillStyle = 'rgba(220,40,40,0.65)'; ctx.fillRect(sx - 10, sy - 7, 20, 14); }
-                        return;
-                    }
-                    ctx.fillStyle = flash > 0 && flash % 4 < 2 ? '#a83232' : '#2c3e50';
-                    ctx.strokeStyle = flash > 0 ? '#ff6b5b' : '#5a7356';
-                    ctx.lineWidth = 1.2;
-                    ctx.fillRect(sx - 7, sy - 5, 14, 10);
-                    ctx.strokeRect(sx - 7, sy - 5, 14, 10);
-
-                    // NATO Internal Cross / Dot
-                    ctx.fillStyle = '#8fad88';
-                    ctx.fillRect(sx - 1, sy - 1, 2, 2);
-                });
-
-                // 6. Draw Enemies (NATO Dark-Red Diamond Symbols)
-                gameState.enemies.forEach(enemy => {
-                    const pos = enemyFrac(enemy);
-                    const ex = pos.fx * w, ey = pos.fy * h;
-
-                    // Símbolo militar OTAN (milsymbol); sem a biblioteca, cai nas formas simples abaixo
-                    if (desenharSimbolo(SIDC_INIMIGO[enemy.type], ex, ey, enemy.type === 'blindado' ? 20 : 15)) {
-                        // desenhado
-                    } else if (enemy.type === 'blindado') {
-                        ctx.fillStyle = '#3a1f12';
-                        ctx.strokeStyle = '#e07a4a';
-                        ctx.lineWidth = 2;
-                        ctx.fillRect(ex - 11, ey - 7, 22, 14);
-                        ctx.strokeRect(ex - 11, ey - 7, 22, 14);
-                        ctx.beginPath(); ctx.moveTo(ex - 11, ey); ctx.lineTo(ex + 11, ey); ctx.stroke();
-                    } else if (enemy.type === 'drone') {
-                        ctx.fillStyle = '#1f3a4d';
-                        ctx.strokeStyle = '#6fb3c9';
-                        ctx.lineWidth = 1.5;
-                        ctx.beginPath();
-                        ctx.arc(ex, ey, 6, 0, Math.PI * 2);
-                        ctx.fill();
-                        ctx.stroke();
-                    } else if (enemy.type === 'patrulha') {
-                        ctx.fillStyle = '#4a3a17';
-                        ctx.strokeStyle = '#d9a35a';
-                        ctx.lineWidth = 1.5;
-                        ctx.fillRect(ex - 6, ey - 6, 12, 12);
-                        ctx.strokeRect(ex - 6, ey - 6, 12, 12);
-                    } else {
-                        ctx.fillStyle = '#4a1717';
-                        ctx.strokeStyle = '#8a2b2b';
-                        ctx.lineWidth = 1.5;
-                        ctx.beginPath();
-                        ctx.moveTo(ex, ey - 7);
-                        ctx.lineTo(ex + 7, ey);
-                        ctx.lineTo(ex, ey + 7);
-                        ctx.lineTo(ex - 7, ey);
-                        ctx.closePath();
-                        ctx.fill();
-                        ctx.stroke();
-                    }
-
-                    // Rótulo com tipo e distância
-                    const rotulo = enemy.type === 'infantaria' ? '' : ENEMY_TYPES[enemy.type].label.slice(0, 3) + ' ';
-                    ctx.fillStyle = enemy.type === 'drone' ? '#8fc4d8' : '#c86464';
-                    ctx.font = '12px "Courier Prime"';
-                    ctx.fillText(`${rotulo}${Math.round(enemy.distance)}m`, ex - 14, ey - 10);
-                });
-                drawWarLayer(w, h, trenchY);
-            } else {
-                // Dense Fog overlay when no vision
-                ctx.fillStyle = 'rgba(8, 10, 9, 0.88)';
-                ctx.fillRect(0, 0, w, h);
-            }
-
-            // 7. Clima: chuva na chuva forte, flocos na neve
-            if (gameState.weather === 'Neve') {
-                ctx.fillStyle = 'rgba(220, 230, 225, 0.6)';
-                gameState.rainParticles.forEach(p => {
-                    ctx.fillRect(p.x, p.y, 2, 2);
-                    p.y += p.speed * 0.25;
-                    p.x += Math.sin(p.y / 20) * 0.3;
-                    if (p.y > h) { p.y = -4; p.x = Math.random() * w; }
-                });
-            } else if (gameState.weather === 'Chuva Forte') {
-                ctx.strokeStyle = 'rgba(120, 145, 130, 0.25)';
-                ctx.lineWidth = 0.8;
-                gameState.rainParticles.forEach(p => {
-                    ctx.beginPath();
-                    ctx.moveTo(p.x, p.y);
-                    ctx.lineTo(p.x - 2, p.y + p.length);
-                    ctx.stroke();
-
-                    p.y += p.speed;
-                    p.x -= 0.5;
-                    if (p.y > h) {
-                        p.y = -10;
-                        p.x = Math.random() * w;
-                    }
-                });
-            }
-
+            try { renderCorte(); } catch (e) { console.error(e); }
             requestAnimationFrame(renderMap);
         }
-
-        resizeCanvas();
         requestAnimationFrame(renderMap);
 
         /* ==========================================================================
@@ -1361,7 +996,7 @@
             document.getElementById('lbl-pause').textContent = jogoPausado ? 'Continuar' : 'Pausar';
             document.getElementById('ico-pause').className = `fa-solid ${jogoPausado ? 'fa-play' : 'fa-pause'} text-mil-amberMuted`;
             document.getElementById('btn-pause').classList.toggle('btn-active-order', jogoPausado);
-            document.getElementById('map-paused').classList.toggle('hidden', !jogoPausado);
+            document.getElementById('corte-pausa').classList.toggle('hidden', !jogoPausado);
             if (jogoPausado && !gameEnded) saveGame();
         }
 
@@ -2205,7 +1840,7 @@
             const perdaR = Math.round(r.rations * f * 10) / 10, perdaA = Math.round(r.water * f * 10) / 10;
             r.rations = Math.max(0, r.rations - perdaR);
             r.water = Math.max(0, r.water - perdaA);
-            addEffect('artillery', DEPOSITO_X, (canvas.height - 19) / canvas.height);
+            addEffect('artillery', DEPOSITO_X, (MAPA_REF.height - 19) / MAPA_REF.height);
             impacto('deposito');
             cenaEfeito('explosao', { comodo: 'deposito' }); cenaEfeito('fogo', { comodo: 'deposito' });
             logFeed(`🔥 ${fonte} atingiu o depósito de mantimentos! Perdidos ${perdaR.toFixed(1)} rações e ${perdaA.toFixed(1)} L de água.`, 'text-red-400 font-bold');
@@ -2234,7 +1869,7 @@
                 if (a.tipo === 'ninho') {
                     cenaEfeito('explosao', { comodo: 'ninhos' });
                     const pn = arsenalDe().posicoes[a.i];
-                    addEffect('artillery', pn.x, (canvas.height - 21) / canvas.height);
+                    addEffect('artillery', pn.x, (MAPA_REF.height - 21) / MAPA_REF.height);
                     if (pn.obra > 0) {
                         const tinha = pn.obra >= 100;
                         pn.obra = Math.max(0, pn.obra - DEPOSITO.NINHO_DANO);
@@ -2452,7 +2087,7 @@
         // Blindado chega à trincheira: esmaga parte da obra e fere quem estiver no caminho
         function blindadoNaTrincheira(estado, enemy, alive) {
             trenchDamage(DEF.BLINDADO_TRINCHEIRA, 'o blindado');
-            addEffect('blast', 0.5, (canvas.height - 35) / canvas.height);
+            addEffect('blast', 0.5, (MAPA_REF.height - 35) / MAPA_REF.height);
             logFeed('🚜 O BLINDADO PASSOU POR CIMA DA TRINCHEIRA!', 'text-red-500 font-bold');
             impacto('blindado');
             cenaEfeito('explosao', { comodo: 'posto' }); cenaEfeito('explosao', { comodo: 'ninhos' });
@@ -2628,52 +2263,6 @@
                 : (jam ? 'Rádio ocupado pelo Bloqueio de Sinal.' : 'Nenhuma requisição pendente.');
         }
 
-        // Mapa: ninhos sobre a trincheira e a linha de arame
-        function desenharDefesas(w, h, trenchY) {
-            const ars = arsenalDe();
-            ctx.font = '11px "Courier Prime"';
-            // Depósito de mantimentos
-            const dx = w * DEPOSITO_X, dy = trenchY + 16;
-            if (!desenharSimbolo(SIDC_DEPOSITO, dx, dy, 11)) {
-                ctx.fillStyle = 'rgba(40,30,15,0.95)'; ctx.strokeStyle = '#b08a4a'; ctx.lineWidth = 1.2;
-                ctx.fillRect(dx - 13, dy - 7, 26, 13); ctx.strokeRect(dx - 13, dy - 7, 26, 13);
-                ctx.fillStyle = '#d9b77a'; ctx.textAlign = 'center'; ctx.fillText('DEP', dx, dy + 4); ctx.textAlign = 'left';
-            }
-            if (ars.arame > 0) {
-                const ya = trenchY - ((DEF.ARAME.zona / 300) * (h - 60)) - 10;
-                ctx.strokeStyle = `rgba(170,170,160,${0.25 + 0.5 * ars.arame / 100})`;
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                for (let x = 8; x < w - 8; x += 8) { ctx.moveTo(x, ya - 3); ctx.lineTo(x + 8, ya + 3); ctx.moveTo(x, ya + 3); ctx.lineTo(x + 8, ya - 3); }
-                ctx.stroke();
-            }
-            ars.posicoes.forEach(p => {
-                if (p.obra <= 0 && !p.construindo) return;
-                const x = w * p.x, y = trenchY + 14; // logo abaixo da linha da trincheira
-                const pronto = p.obra >= 100;
-                ctx.lineWidth = 1.5;
-                ctx.strokeStyle = pronto ? (operadorAtivo(p) ? '#8fad88' : '#d9a35a') : 'rgba(217,163,90,0.6)';
-                ctx.fillStyle = 'rgba(20,28,20,0.9)';
-                if (!pronto) ctx.setLineDash([3, 3]);
-                // Ninho pronto com arma: símbolo militar da arma + sigla ao lado (borda mostra se está atirando)
-                if (pronto && p.arma && typeof ms !== 'undefined') {
-                    ctx.fillRect(x - 24, y - 10, 48, 20);
-                    ctx.strokeRect(x - 24, y - 10, 48, 20);
-                    desenharSimbolo(SIDC_ARMA[p.arma], x - 10, y, 13);
-                    ctx.fillStyle = '#cfe0c4';
-                    ctx.fillText(EQUIP[p.arma].sigla, x + 2, y + 4);
-                    return;
-                }
-                ctx.fillRect(x - 15, y - 8, 30, 15);
-                ctx.strokeRect(x - 15, y - 8, 30, 15);
-                ctx.setLineDash([]);
-                ctx.fillStyle = pronto ? '#cfe0c4' : '#d9a35a';
-                ctx.textAlign = 'center';
-                ctx.fillText(pronto ? (p.arma ? EQUIP[p.arma].sigla : '—') : `${Math.floor(p.obra)}%`, x, y + 4);
-                ctx.textAlign = 'left';
-            });
-        }
-
         function processEnemiesAndCombat(estado = gameState) {
             processCounterBattery();
             processBarrage();
@@ -2793,7 +2382,7 @@
             const dano = massacre ? 0
                 : (infantaria ? GAME_CONFIG.INVASION_DAMAGE : GAME_CONFIG.INVASION_DAMAGE / 2) * diff().enemyDmgMult * PRESSURE.ENEMY_DAMAGE * trenchInvasionMult();
             trenchDamage(infantaria ? TRENCH.DAMAGE_INVASION : TRENCH.DAMAGE_INVASION / 2, 'a invasão');
-            addEffect('blast', 0.5, (canvas.height - 35) / canvas.height);
+            addEffect('blast', 0.5, (MAPA_REF.height - 35) / MAPA_REF.height);
             tremer(5, 350); vibrar(120);
             cenaEfeito('explosao', { comodo: 'posto' });
             if (trincheiraRompida() && infantaria) {
@@ -2811,30 +2400,18 @@
             });
         }
 
-        // Status no topo do mapa e faixa de aviso (artilharia prevista ou contato mais próximo)
+        // Status no topo da cena (artilharia prevista ou combate)
         function atualizarStatusDeCombate(estado, emCombate) {
             const statusEl = document.getElementById('lbl-tactical-status');
-            const banner = document.getElementById('map-alert-banner');
-            const bannerText = document.getElementById('map-alert-text');
-            if (emCombate) {
+            if (estado.barrage) {
+                statusEl.textContent = '💥 BOMBARDEIO PREVISTO';
+                statusEl.className = 'text-red-400 font-bold animate-pulse';
+            } else if (emCombate) {
                 statusEl.textContent = '⚠️ ENGAJAMENTO DE COMBATE';
                 statusEl.className = 'text-red-400 font-bold animate-pulse';
             } else {
                 statusEl.textContent = 'SETORES LIMPOS';
                 statusEl.className = 'text-mil-greenMuted font-bold';
-            }
-            if (estado.barrage) {
-                banner.classList.remove('hidden');
-                const alvosTxt = (estado.barrage.alvos || []).map(a => a.tipo === 'soldado' ? (estado.squad.find(m => m.id === a.id) || {}).name : a.tipo === 'deposito' ? 'DEPÓSITO' : 'NINHO').join(', ').toUpperCase();
-                bannerText.textContent = `ARTILHARIA EM ${seg(estado.barrage.ticks)}s${alvosTxt ? ' · ALVOS: ' + alvosTxt : ''}${droneObservando(estado) ? ' · GUIADA POR DRONE' : ''}${estado.counterBattery ? ` · CONTRA-BATERIA EM ${seg(estado.counterBattery.ticks)}s` : ''}`;
-                statusEl.textContent = '💥 BOMBARDEIO PREVISTO';
-                statusEl.className = 'text-red-400 font-bold animate-pulse';
-            } else if (estado.enemies.length > 0) {
-                const nearest = Math.max(0, Math.round(Math.min(...estado.enemies.map(e => e.distance))));
-                banner.classList.remove('hidden');
-                bannerText.textContent = `CONTATO INIMIGO A ${nearest}M`;
-            } else {
-                banner.classList.add('hidden');
             }
         }
 
@@ -3130,7 +2707,7 @@
             });
 
             document.getElementById(`panel-${tabName}`).classList.remove('hidden');
-            if (modoCorte()) document.getElementById('conteudo-abas').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            document.getElementById('conteudo-abas').scrollIntoView({ behavior: 'smooth', block: 'start' });
             document.getElementById(`tab-${tabName}`).className = 'py-2 border-b-2 border-mil-greenMuted text-mil-textGlow bg-mil-panel font-bold';
             playTacticalBeep(800, 0.03);
         }
@@ -3220,7 +2797,7 @@
 
             // Lista do esquadrão: só redesenha quando algo visível muda. Redesenhar a cada
             // segundo trocava os botões no meio do toque e o celular perdia o clique.
-            const assinatura = (modoCorte() ? 'C' + soldadoSelecionado : 'L') + JSON.stringify(gameState.squad.map(s => [Math.round(s.hp), Math.round(s.fatigue), Math.round(s.hunger), Math.round(s.thirst), Math.round(s.moral), s.duty, !!s.deserted, s.mental && s.mental.tipo, s.mental && s.mental.ciclos, soldadoMarcado(s), (s.medalhas || []).join()]));
+            const assinatura = ('C' + soldadoSelecionado) + JSON.stringify(gameState.squad.map(s => [Math.round(s.hp), Math.round(s.fatigue), Math.round(s.hunger), Math.round(s.thirst), Math.round(s.moral), s.duty, !!s.deserted, s.mental && s.mental.tipo, s.mental && s.mental.ciclos, soldadoMarcado(s), (s.medalhas || []).join()]));
             if (assinatura === lastSquadSignature) return;
             lastSquadSignature = assinatura;
             const squadContainer = document.getElementById('squad-list');
@@ -3229,7 +2806,7 @@
             renderFichasCorte();
             gameState.squad.forEach(soldier => {
                 // No visual em corte só aparece a ficha do soldado selecionado na cena
-                if (modoCorte() && soldier.id !== soldadoSelecionado) return;
+                if (soldier.id !== soldadoSelecionado) return;
                 const hp = Math.max(0, Math.round(soldier.hp));
                 const card = document.createElement('div');
                 card.className = `p-2 rounded border flex flex-col gap-1 ${hp <= 0 ? 'bg-mil-redDark/30 border-red-900 opacity-60' : 'bg-mil-bg border-mil-border'}`;
@@ -3346,13 +2923,13 @@
             if (!CONFIG.tremor) return;
             tremorForca = Math.max(forca, performance.now() < tremorAte ? tremorForca : 0);
             tremorAte = Math.max(tremorAte, performance.now() + ms);
-            const el = canvas && canvas.parentElement;
+            const el = corteCanvas;
             if (!el || el.__tremendo) return;
             el.__tremendo = true;
             const passo = () => {
                 const resta = tremorAte - performance.now();
                 if (resta <= 0) { el.style.transform = ''; el.__tremendo = false; tremorForca = 0; return; }
-                const f = tremorForca * Math.min(1, resta / 200);
+                const f = Math.min(2.5, tremorForca) * Math.min(1, resta / 200);
                 el.style.transform = `translate(${(Math.random() * 2 - 1) * f}px, ${(Math.random() * 2 - 1) * f}px)`;
                 requestAnimationFrame(passo);
             };
@@ -3405,44 +2982,6 @@
             const a = squadFrac(s), b = enemyFrac(alvo);
             gameState.effects.push({ type: 'rastro', fx: a.fx, fy: a.fy, tx: b.fx, ty: b.fy, cor, age: 0, life: 6 });
         }
-        // Marcas de alvo da artilharia no mapa (piscando durante o aviso)
-        function desenharAlvosArtilharia(w, h, trenchY) {
-            if (!gameState.barrage || !(gameState.barrage.alvos || []).length) return;
-            const pisca = 0.45 + 0.4 * Math.sin(performance.now() / 120);
-            gameState.barrage.alvos.forEach(a => {
-                let x, y;
-                if (a.tipo === 'deposito') { x = w * DEPOSITO_X; y = trenchY + 16; }
-                else if (a.tipo === 'ninho') { x = w * arsenalDe().posicoes[a.i].x; y = trenchY + 14; }
-                else { const s = gameState.squad.find(m => m.id === a.id); if (!s || s.hp <= 0) return; const p = squadFrac(s); x = p.fx * w; y = trenchY - 8; }
-                ctx.strokeStyle = `rgba(255,70,60,${pisca})`; ctx.lineWidth = 2;
-                ctx.beginPath(); ctx.arc(x, y, 13, 0, Math.PI * 2); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - 18, y); ctx.lineTo(x - 8, y); ctx.moveTo(x + 8, y); ctx.lineTo(x + 18, y);
-                ctx.moveTo(x, y - 18); ctx.lineTo(x, y - 8); ctx.moveTo(x, y + 8); ctx.lineTo(x, y + 18); ctx.stroke();
-            });
-        }
-
-
-        /* ===== Símbolos militares OTAN no mapa (milsymbol, licença MIT) ===== */
-        const SIDC_INIMIGO = { infantaria: 'SHGPUCI----', patrulha: 'SHGPUCR----', drone: 'SHAPMFQ----', blindado: 'SHGPUCA----' };
-        const SIDC_AMIGO = { 'Fuzileiro Regular': 'SFGPUCI----', 'Metralhador': 'SFGPUCI----', 'Atirador de Elite': 'SFGPUCI----', 'Médico': 'SFGPUSM----', 'Engenheiro': 'SFGPUCE----' };
-        const SIDC_ARMA = { metralhadora: 'SFGPEWRH---', morteiro: 'SFGPEWOL---', lancaAT: 'SFGPEWTL---' };
-        const SIDC_DEPOSITO = 'SFGPUSS----';
-        const cacheSimbolos = {};
-        // Desenha o símbolo centrado em (x, y). Devolve false se a biblioteca não carregou.
-        function desenharSimbolo(sidc, x, y, tamanho, c2d = ctx) {
-            if (typeof ms === 'undefined' || !sidc) return false;
-            const chave = sidc + '|' + tamanho;
-            let c = cacheSimbolos[chave];
-            if (!c) {
-                try {
-                    const sim = new ms.Symbol(sidc, { size: tamanho, outlineWidth: 2, outlineColor: 'rgba(0,0,0,0.85)' });
-                    c = cacheSimbolos[chave] = { img: sim.asCanvas(), anc: sim.getAnchor(), esc: 1 };
-                } catch (e) { return false; }
-            }
-            c2d.drawImage(c.img, x - c.anc.x, y - c.anc.y, c.img.width * c.esc, c.img.height * c.esc);
-            return true;
-        }
-
         /* ===== Sons com ZzFX (licença MIT): gerados uma vez e tocados pelo áudio do jogo ===== */
         // Parâmetros: volume, aleatório, frequência, ataque, sustentação, liberação, forma, curva, deslize,
         //             delta, salto, tempo do salto, repetição, ruído, modulação, bitcrush, atraso, volume sust., decaimento, tremolo
@@ -3519,7 +3058,7 @@
            As preferências ficam no aparelho e, com conta, também na conta (vão junto para outro aparelho). */
         const CONFIG_KEY = 'frontline-config';
         const CARREIRA_KEY = 'frontline-carreira';
-        const CONFIG_PADRAO = { volMusica: 45, volEfeitos: 80, volAmbiente: 50, tremor: true, vibracao: true, rastros: true, textoGrande: false, apelido: '', visual: 'corte', pausaArtilharia: false, dificuldade: 'soldado', numeros: true };
+        const CONFIG_PADRAO = { volMusica: 45, volEfeitos: 80, volAmbiente: 50, tremor: true, vibracao: true, rastros: true, textoGrande: false, apelido: '', pausaArtilharia: false, dificuldade: 'soldado', numeros: true };
         // Quem pediu "reduzir movimento" no aparelho começa sem tremor da tela e sem vibração (dá para ligar nas Configurações)
         if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) { CONFIG_PADRAO.tremor = false; CONFIG_PADRAO.vibracao = false; }
         let CONFIG = Object.assign({}, CONFIG_PADRAO, (() => { try { return JSON.parse(localStorage.getItem(CONFIG_KEY)) || {}; } catch (e) { return {}; } })());
@@ -3677,7 +3216,6 @@
                     <div><div class="text-mil-textGlow font-bold">${rot}</div><div class="text-mil-textMuted">${desc}</div></div>
                     <button onclick="alternarConfig('${k}')" class="px-3 py-1.5 btn-tactical rounded font-bold whitespace-nowrap ${CONFIG[k] ? 'btn-active-order' : ''}">${CONFIG[k] ? 'Ligado' : 'Desligado'}</button>
                 </div>`;
-            const opVisual = (v, rot) => `<button onclick="CONFIG.visual='${v}'; salvarConfig(); renderConfig();" class="flex-1 py-1.5 btn-tactical rounded font-bold ${CONFIG.visual === v ? 'btn-active-order' : ''}">${rot}</button>`;
             const opDif = (v) => `<button onclick="CONFIG.dificuldade='${v}'; salvarConfig(); renderConfig();" class="flex-1 py-1.5 btn-tactical rounded font-bold ${CONFIG.dificuldade === v ? 'btn-active-order' : ''}">${MODOS_DIFICULDADE[v].nome}</button>`;
             document.getElementById('cfg-jogo').innerHTML =
                 `<div class="bg-mil-bg border border-mil-border rounded p-2 space-y-1">
@@ -3685,11 +3223,7 @@
                     <div class="text-mil-textMuted">${(MODOS_DIFICULDADE[CONFIG.dificuldade] || MODOS_DIFICULDADE.soldado).desc}. Vale já para a partida em andamento; o nível (1 a 25) continua subindo a cada vitória.</div>
                     <div class="flex gap-2 pt-1">${opDif('recruta')}${opDif('soldado')}${opDif('veterano')}</div>
                 </div>
-                <div class="bg-mil-bg border border-mil-border rounded p-2 space-y-1">
-                    <div class="text-mil-textGlow font-bold">Visual da trincheira</div>
-                    <div class="text-mil-textMuted">Corte lateral: soldados nos cômodos, arraste para trocar a função. Clássico: mapa tático e lista do esquadrão.</div>
-                    <div class="flex gap-2 pt-1">${opVisual('corte', 'Corte lateral')}${opVisual('classico', 'Clássico')}</div>
-                </div>` +
+` +
                 chave('numeros', 'Números flutuantes', 'Mostra na cena o dano que os soldados levam e o prestígio ganho ao abater inimigos') +
                 chave('pausaArtilharia', 'Pausar no aviso de artilharia', 'O jogo pausa sozinho quando a artilharia é anunciada, para decidir quem vai para o abrigo e pedir a contra-bateria') +
                 chave('tremor', 'Tremor da tela', 'O mapa treme com explosões e impactos') +
@@ -3713,7 +3247,7 @@
            A cena é desenhada ao vivo num canvas: céu e terra de ninguém com os inimigos,
            e embaixo os cômodos da trincheira com cada soldado no cômodo da sua função.
            Trocar a função: arrastar o soldado para outro cômodo, ou tocar no soldado e
-           depois no cômodo. O visual clássico continua nas Configurações → Jogo.
+           depois no cômodo.
            ========================================================================== */
         const CORTE = {
             W: 400, H: 474, SOLO: 118, ESC: 1.3, // ESC: tamanho dos soldados
@@ -3734,7 +3268,6 @@
         let posicoesCena = {};         // id do soldado -> { x, y } (atualizado a cada quadro)
         const animPos = {};            // posição animada de cada soldado (para caminhar entre cômodos)
         const cenaEfeitos = [];        // explosões, fogo, abates e flashes na cena
-        const modoCorte = () => (typeof CONFIG !== 'undefined' && CONFIG.visual === 'corte');
 
         // Em qual cômodo o soldado está (pela função e por operar um ninho)
         function comodoDoSoldado(s) {
@@ -3784,7 +3317,6 @@
         // Número flutuante sobre um soldado ou um ponto da cena (liga e desliga nas Configurações)
         function numeroNaCena(alvo, txt, cor, tam) {
             if (typeof CONFIG !== 'undefined' && CONFIG.numeros === false) return;
-            if (!modoCorte()) return;
             cenaEfeito('numero', Object.assign({}, alvo, { txt, cor, tam }));
         }
         function posInimigoCena(e) {
@@ -4632,7 +4164,6 @@
         }
 
         function renderCorte(forcar) {
-            if (!modoCorte()) return;
             const t = performance.now();
             // No máximo ~40 quadros por segundo (economiza bateria); no celular lento, reduz a resolução sozinho
             if (!forcar && t - ultimoQuadroCorte < 22) return;
@@ -4682,7 +4213,7 @@
             desenharClimaCena(t);
             desenharEfeitosCena();
             desenharRodapeCena();
-            // faixa de aviso e selo de pausa espelhados do mapa clássico
+            // faixa de aviso e selo de pausa da cena
             const bCorte = document.getElementById('corte-banner');
             const bar = gameState.barrage, haInimigo = gameState.enemies.length > 0;
             bCorte.classList.toggle('hidden', !(bar || haInimigo));
@@ -4791,7 +4322,7 @@
         function renderCartao(posicionar) {
             const el = document.getElementById('corte-cartao');
             const s = gameState.squad.find(m => m.id === soldadoSelecionado);
-            if (!cartaoAberto || !modoCorte() || !s || s.hp <= 0 || s.deserted) { el.classList.add('hidden'); cartaoAberto = cartaoAberto && !!s && s.hp > 0; return; }
+            if (!cartaoAberto || !s || s.hp <= 0 || s.deserted) { el.classList.add('hidden'); cartaoAberto = cartaoAberto && !!s && s.hp > 0; return; }
             const m = mentalDe(s), comodo = comodoDoSoldado(s);
             const sig = JSON.stringify([s.id, Math.round(s.hp), Math.round(s.fatigue), Math.round(s.hunger), Math.round(s.thirst), Math.round(s.moral), s.duty, m, comodo, soldadoMarcado(s)]);
             if (sig !== assinaturaCartao) {
@@ -4833,7 +4364,7 @@
         const temMouse = window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
         function mostrarDica(cx, cy) {
             const dica = document.getElementById('corte-dica');
-            if (!temMouse || arrasto || !modoCorte()) { dica.classList.add('hidden'); return; }
+            if (!temMouse || arrasto) { dica.classList.add('hidden'); return; }
             const p = pontoNaCena(cx, cy), id = soldadoEm(p.x, p.y);
             const s = id && gameState.squad.find(m => m.id === id);
             if (!s || (cartaoAberto && id === soldadoSelecionado)) { dica.classList.add('hidden'); corteCanvas.style.cursor = ''; return; }
@@ -4869,7 +4400,7 @@
         }
         function renderBotaoContraBateria() {
             const b = gameState.barrage;
-            ['btn-cb-corte', 'btn-cb-classico'].forEach(id => {
+            ['btn-cb-corte'].forEach(id => {
                 const el = document.getElementById(id);
                 if (!el) return;
                 if (!b || gameEnded) { el.classList.add('hidden'); return; }
@@ -4898,31 +4429,23 @@
 
         // ---------- troca de visual ----------
         function aplicarVisual() {
-            const corte = modoCorte();
-            if (!corte && typeof fecharCartao === 'function') fecharCartao();
-            document.body.classList.toggle('modo-corte', corte);
-            document.getElementById('mapa-classico').classList.toggle('hidden', corte);
-            document.getElementById('mapa-corte').classList.toggle('hidden', !corte);
-            document.getElementById('barra-recursos').classList.toggle('hidden', !corte);
-            document.getElementById('corte-fichas').classList.toggle('hidden', !corte);
+            document.body.classList.add('modo-corte');
+            document.getElementById('barra-recursos').classList.remove('hidden');
+            document.getElementById('corte-fichas').classList.remove('hidden');
             const abas = document.getElementById('barra-abas');
             const container = abas.closest('.max-w-md') || document.body;
-            const conteudo = document.getElementById('conteudo-abas');
-            if (corte && abas.parentElement !== container) container.appendChild(abas);            // abas presas embaixo
-            if (!corte && abas.nextElementSibling !== conteudo) conteudo.parentElement.insertBefore(abas, conteudo); // volta ao lugar
+            if (abas.parentElement !== container) container.appendChild(abas); // abas presas embaixo
             const tab = document.getElementById('tab-squad');
-            if (tab) tab.textContent = corte ? 'TRINCHEIRA' : 'ESQUADRÃO';
+            if (tab) tab.textContent = 'TRINCHEIRA';
             const viva = gameState.squad.find(m => m.id === soldadoSelecionado && m.hp > 0) || gameState.squad.find(m => m.hp > 0);
             if (viva) soldadoSelecionado = viva.id;
             lastSquadSignature = '';
-            if (!corte) resizeCanvas();
             updateUI();
         }
 
         // Fichas do modo corte: botões para escolher o soldado (a ficha completa vem logo abaixo)
         function renderFichasCorte() {
             const el = document.getElementById('corte-fichas');
-            if (!modoCorte()) { el.innerHTML = ''; return; }
             el.innerHTML = `<div class="text-mil-textMuted">Toque num soldado (aqui ou na cena) para ver a ficha. Arraste na cena para trocar de cômodo.</div>
                 <div class="grid grid-cols-3 gap-1">${gameState.squad.map(s => {
                     const vivo = s.hp > 0 && !s.deserted;
@@ -4937,7 +4460,6 @@
 
         function renderBarraRecursos() {
             const el = document.getElementById('barra-recursos');
-            if (!modoCorte()) return;
             const r = gameState.resources;
             const cel = (rot, v, baixo) => `<div class="rec-corte ${baixo ? 'baixo' : ''}">${rot}<b>${v}</b></div>`;
             const html = cel('Ração', Math.floor(r.rations), r.rations < 10) + cel('Água', Math.floor(r.water) + 'L', r.water < 10) +
@@ -5485,7 +5007,7 @@
            Ao abrir, ao voltar para o app e a cada minuto o jogo compara as duas. Se o site
            tiver uma versão diferente, o jogo trava numa tela que só sai atualizando.
            (tools/nova-versao.sh troca as duas juntas a cada atualização publicada.) */
-        const VERSAO_JOGO = '20261105.1913';
+        const VERSAO_JOGO = '20261105.2345';
         const ATUALIZOU_KEY = 'frontline-atualizou-para';
         async function verificarVersao() {
             if (!location.protocol.startsWith('http') || atualizacaoPendente) return;

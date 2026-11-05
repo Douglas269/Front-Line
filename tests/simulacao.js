@@ -63,11 +63,11 @@ async function run() {
     c.racoesEntregues = gameState.resources.rations > racoesAntesDaEntrega;
     // Pausa: nada acontece até continuar
     alternarPausa(true); const tPausa = gameState.timeSeconds; updateGameTick(); updateGameTick();
-    c.pausaParaORelogio = gameState.timeSeconds === tPausa && !document.getElementById('map-paused').classList.contains('hidden');
+    c.pausaParaORelogio = gameState.timeSeconds === tPausa && !document.getElementById('corte-pausa').classList.contains('hidden');
     alternarPausa(false); updateGameTick();
-    c.continuarRetomaORelogio = gameState.timeSeconds === tPausa + 1 && document.getElementById('map-paused').classList.contains('hidden');
+    c.continuarRetomaORelogio = gameState.timeSeconds === tPausa + 1 && document.getElementById('corte-pausa').classList.contains('hidden');
     gameState.timeSeconds = 0;
-    c.cardsRenderizados = modoCorte() ? (document.querySelectorAll('#squad-list > div').length === 1 && document.querySelectorAll('#corte-fichas button').length === 6) : document.querySelectorAll('#squad-list > div').length === 6;
+    c.cardsRenderizados = document.querySelectorAll('#squad-list > div').length === 1 && document.querySelectorAll('#corte-fichas button').length === 6;
 
     Object.assign(gameState, { day: 1, timeSeconds: 0, enemies: [], activeCrisis: null, resources: { rations: 36, water: 48, ammoRifle: 550, ammoHeavy: 200, medkits: 3 }, squad: init });
     updateUI();
@@ -327,10 +327,10 @@ async function run() {
     gameState.squad.forEach(s => { s.hp = 100; s.duty = 'WATCH'; });
     gameState.trench = 100; gameState.barrage = { ticks: 1 }; processBarrage();
     c.artilhariaEstragaTrincheira = gameState.trench === 100 - 3 * TRENCH.DAMAGE_BARRAGE;
-    // Visual em corte lateral: cômodos, mover soldados, ninhos e volta ao clássico
-    { const sv = gameState.squad, guardaV = CONFIG.visual, guardaS = JSON.stringify(sv.map(m => [m.duty, m.mental, m.hp]));
+    // Visual em corte lateral: cômodos, mover soldados e ninhos
+    { const sv = gameState.squad, guardaS = JSON.stringify(sv.map(m => [m.duty, m.mental, m.hp]));
       sv.forEach(m => { m.hp = 100; m.mental = null; m.deserted = false; });
-      CONFIG.visual = 'corte'; aplicarVisual();
+      aplicarVisual();
       c.corteAtiva = document.body.classList.contains('modo-corte') && !document.getElementById('mapa-corte').classList.contains('hidden');
       sv[0].duty = 'WATCH'; sv[1].duty = 'REST'; sv[2].duty = 'RATIONING'; sv[3].duty = 'MAINTENANCE';
       c.corteComodos = comodoDoSoldado(sv[0]) === 'posto' && comodoDoSoldado(sv[1]) === 'abrigo' && comodoDoSoldado(sv[2]) === 'cozinha' && comodoDoSoldado(sv[3]) === 'oficina';
@@ -359,9 +359,7 @@ async function run() {
         cartaoFuncao('REST'); c.corteCartaoTrocaFuncao = s0.duty === 'REST';
         fecharCartao(); c.corteCartaoFecha = !cartaoAberto && document.getElementById('corte-cartao').classList.contains('hidden');
         [s0.hunger, s0.thirst, s0.fatigue, s0.moral, s0.hp] = g0; }
-      CONFIG.visual = 'classico'; aplicarVisual();
-      c.corteVoltaAoClassico = !document.getElementById('mapa-classico').classList.contains('hidden') && document.getElementById('barra-abas').nextElementSibling === document.getElementById('conteudo-abas');
-      CONFIG.visual = guardaV; aplicarVisual(); gameState.arsenal = novoArsenal();
+      aplicarVisual(); gameState.arsenal = novoArsenal();
       JSON.parse(guardaS).forEach((g, i) => { sv[i].duty = g[0]; sv[i].mental = g[1]; sv[i].hp = g[2]; }); }
     // Cena: faixa de ameaça, avisos no rodapé, cache do fundo, faixa de novo dia e relatório final
     { const en0 = gameState.enemies;
@@ -404,8 +402,7 @@ async function run() {
       ['conta', 'som', 'jogo', 'dados'].forEach(a => abaConfig(a)); c.configAbasRenderizam = document.getElementById('cfg-dados').innerHTML.includes(VERSAO_JOGO);
       fecharConfig(); c.configFecha = !configAberto;
       CONFIG = JSON.parse(guardaCfg); salvarConfig(); }
-    // Recursos livres: símbolos OTAN, sons ZzFX, ícones e medalhas
-    c.milsymbolCarregou = typeof ms !== 'undefined' && Object.values(SIDC_INIMIGO).concat(Object.values(SIDC_AMIGO), Object.values(SIDC_ARMA), [SIDC_DEPOSITO]).every(x => new ms.Symbol(x, { size: 15 }).isValid());
+    // Recursos livres: sons ZzFX, ícones e medalhas
     c.sonsZzfxGeram = typeof zzfxGerar === 'function' && Object.values(SONS).every(par => { const a = zzfxGerar(...par); let pico = 0; for (const v of a) pico = Math.max(pico, Math.abs(v)); return a.length > 1000 && pico > 0.01; });
     c.iconesCarregaram = typeof icone === 'function' && Object.values(EQUIP).concat(Object.values(MUNICOES), Object.values(CARGAS)).every(e => icone(e.icone).startsWith('<svg')) && [...document.querySelectorAll('[data-icone]')].every(el => el.innerHTML.startsWith('<svg'));
     { const m = gameState.squad[5]; const guardaM = { stats: m.stats, medalhas: m.medalhas, quaseMorreu: m.quaseMorreu, hp: m.hp };

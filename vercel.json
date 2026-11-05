@@ -23,6 +23,10 @@
     {
       "source": "/vendor/:path*",
       "destination": "/prototipo/vendor/:path*"
+    },
+    {
+      "source": "/assets/:path*",
+      "destination": "/prototipo/assets/:path*"
     }
   ],
   "headers": [
