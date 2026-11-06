@@ -207,7 +207,7 @@
                     <button id="btn-cb-corte" onclick="contraBateriaRapida()" class="hidden absolute left-1/2 -translate-x-1/2 z-30 px-3 py-1.5 rounded border-2 font-bold text-xs whitespace-nowrap shadow-2xl" style="top:38px"></button>
                     <div id="corte-cartao" class="hidden absolute z-30 w-48 bg-mil-panel/95 border border-mil-greenMuted rounded shadow-2xl p-1.5 text-[10px] leading-tight" onclick="event.stopPropagation()"></div>
                     <div id="corte-dica" class="hidden absolute z-30 pointer-events-none bg-black/90 border border-mil-border rounded px-2 py-1 text-[11px] text-mil-textGlow whitespace-nowrap"></div>
-                    <div id="corte-pausa" class="hidden absolute left-1/2 -translate-x-1/2 z-20 px-2 py-1 rounded bg-black/85 border border-mil-amberMuted text-xs text-mil-amberMuted font-bold whitespace-nowrap" style="top:44%">⏸ PAUSADO · decida com calma</div>
+                    <div id="corte-pausa" class="hidden absolute right-2 z-20 px-2 py-0.5 rounded bg-black/80 border border-mil-amberMuted text-[11px] text-mil-amberMuted font-bold whitespace-nowrap pointer-events-none" style="top:10%">⏸ PAUSADO</div>
                 </div>
 
                 <!-- QUICK ORDERS PANEL -->
@@ -1150,18 +1150,18 @@
         // estoque proporcional ao que realmente consumiu (não desperdiça se já está saciado).
         /* ===== Fome, sede e fadiga =====
            Valores por ciclo de 10 s de jogo (24 ciclos = 1 dia). Crítico: fome e sede em 75,
-           fadiga em 85. Com tempo nublado e sem comer: sede crítica em ~2 dias, fome em ~3;
-           de vigília sem descansar, fadiga crítica em ~2 dias. Algumas escolhas cobram do corpo. */
+           fadiga em 85. Com tempo nublado e sem comer: sede crítica em ~2,3 dias, fome em ~3,4;
+           de vigília sem descansar, fadiga crítica em ~2,3 dias. Algumas escolhas cobram do corpo. */
         const NECESSIDADES = {
-            FOME: 1.05,           // ~3 dias até o crítico (nublado)
-            SEDE: 1.55,           // ~2 dias até o crítico (nublado)
+            FOME: 0.92,           // ~3,4 dias até o crítico (nublado)
+            SEDE: 1.35,           // ~2,3 dias até o crítico (nublado)
             CLIMA: {              // multiplicadores de fome e sede
                 'Nublado':       { fome: 1,    sede: 1 },
                 'Névoa Espessa': { fome: 1,    sede: 1 },
                 'Chuva Forte':   { fome: 1.15, sede: 0.8 },  // molhado e frio gasta energia; dá para beber da chuva
                 'Neve':          { fome: 1.35, sede: 0.9 }   // frio intenso queima energia
             },
-            FADIGA: { WATCH: 1.75, MAINTENANCE: 1.1, RATIONING: 0.6, REST: -3.5 },
+            FADIGA: { WATCH: 1.55, MAINTENANCE: 0.97, RATIONING: 0.53, REST: -3.5 },
             // Escolhas que cobram do corpo (somadas por ciclo):
             COMBATE:     { fadiga: 0.6, sede: 0.5 },   // de vigília com inimigo no setor
             SUPRESSAO:   { fadiga: 0.5, sede: 0.4 },   // Fogo Supressão em combate: atirando sem parar
@@ -4002,7 +4002,7 @@
                         const baseY = { posto: c.y + 97, ninhos: c.y + 102, cozinha: c.y + 112, oficina: c.y + 113 }[chave];
                         const pose = { posto: 'mira', ninhos: 'ninho', cozinha: 'come', oficina: 'trabalho' }[chave];
                         // Nomes de soldados muito próximos alternam a altura para não se sobrepor
-                        pos[s.id] = { x: c.x + passo * (k + 1) - (chave === 'cozinha' ? 8 : 0), y: baseY, pose, comodo: chave, rotY: passo < 40 && k % 2 ? 9 : 0 };
+                        pos[s.id] = { x: chave === 'cozinha' && lista.length > 1 ? c.x + 22 + (c.w - 46) * k / (lista.length - 1) : c.x + passo * (k + 1) - (chave === 'cozinha' ? 8 : 0), y: baseY, pose, comodo: chave, rotY: passo < 40 && k % 2 ? 9 : 0 };
                     }
                 });
             });
@@ -5007,7 +5007,7 @@
            Ao abrir, ao voltar para o app e a cada minuto o jogo compara as duas. Se o site
            tiver uma versão diferente, o jogo trava numa tela que só sai atualizando.
            (tools/nova-versao.sh troca as duas juntas a cada atualização publicada.) */
-        const VERSAO_JOGO = '20261105.2345';
+        const VERSAO_JOGO = '20261106.0111';
         const ATUALIZOU_KEY = 'frontline-atualizou-para';
         async function verificarVersao() {
             if (!location.protocol.startsWith('http') || atualizacaoPendente) return;

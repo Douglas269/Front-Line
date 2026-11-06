@@ -411,14 +411,14 @@ async function run() {
       verificarMedalhas(); c.medalhaNaoRepete = m.medalhas.filter(x => x === 'combate').length === 1;
       c.medalhaVitoriaPorNivel = medalhaDaVitoria(1) !== medalhaDaVitoria(25);
       Object.assign(m, guardaM); }
-    // Fome, sede e fadiga: ~2 dias de sede, ~3 de fome (nublado), ~2 dias de vigília até a fadiga crítica
+    // Fome, sede e fadiga: ~2,3 dias de sede, ~3,4 de fome (nublado), ~2,3 dias de vigília até a fadiga crítica
     { const w0 = gameState.weather, sorteioX = Math.random; Math.random = () => 0.99; gameState.weather = 'Nublado'; gameState.enemies = [];
       Object.assign(gameState.tacticalOrders, { SUPPRESSION: false, SHELTER: false, CONSERVE: false, FULL_VIGILANCE: false, SIGNAL_JAM: false });
       const s = gameState.squad[0]; const guard = { ...s }; Object.assign(s, { hunger: 0, thirst: 0, fatigue: 0, duty: 'WATCH', hp: 100 });
       const cicloAte = (campo, lim) => { const r = ritmoNecessidades(s)[campo]; return lim / r / 24; };
-      c.sedeCriticaEm2Dias = Math.abs(cicloAte('sede', 75) - 2) < 0.1;
-      c.fomeCriticaEm3Dias = Math.abs(cicloAte('fome', 75) - 3) < 0.15;
-      c.fadigaCriticaEm2DiasDeVigilia = Math.abs(cicloAte('fadiga', 85) - 2) < 0.1;
+      c.sedeCriticaEm2Dias = Math.abs(cicloAte('sede', 75) - 2.3) < 0.1;
+      c.fomeCriticaEm3Dias = Math.abs(cicloAte('fome', 75) - 3.4) < 0.15;
+      c.fadigaCriticaEm2DiasDeVigilia = Math.abs(cicloAte('fadiga', 85) - 2.3) < 0.1;
       gameState.weather = 'Neve'; c.neveDaMaisFome = ritmoNecessidades(s).fome > NECESSIDADES.FOME;
       gameState.weather = 'Chuva Forte'; c.chuvaDaMenosSede = ritmoNecessidades(s).sede < NECESSIDADES.SEDE;
       gameState.weather = 'Nublado'; const base = ritmoNecessidades(s).fadiga;
