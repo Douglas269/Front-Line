@@ -504,6 +504,19 @@
             </div>
         </div>
 
+        <!-- CONFIRMAÇÃO no estilo do jogo (no lugar da caixa do navegador) -->
+        <div id="modal-confirmar" class="hidden fixed inset-0 bg-black/85 z-[110] flex items-center justify-center p-4" onclick="responderConfirmacao(false)">
+            <div class="bg-mil-panel border-2 border-mil-amberMuted rounded p-4 max-w-sm w-full space-y-3 shadow-2xl text-center" onclick="event.stopPropagation()">
+                <div id="conf-icone" class="text-3xl">⚠️</div>
+                <div id="conf-titulo" class="text-mil-amberMuted font-bold text-sm uppercase tracking-wider"></div>
+                <p id="conf-texto" class="text-[13px] text-mil-textGlow leading-relaxed font-normal"></p>
+                <div class="flex gap-2 pt-1">
+                    <button onclick="responderConfirmacao(false)" class="flex-1 py-2.5 btn-tactical rounded font-bold text-sm">Cancelar</button>
+                    <button id="conf-ok" onclick="responderConfirmacao(true)" class="flex-1 py-2.5 btn-tactical rounded font-bold text-sm"></button>
+                </div>
+            </div>
+        </div>
+
         <!-- CRÉDITOS: recursos livres usados no jogo -->
         <div id="modal-creditos" class="hidden absolute inset-0 bg-black/90 z-50 flex items-center justify-center p-4" onclick="if (event.target === this) fecharCreditos()">
             <div class="bg-mil-panel border-2 border-mil-border rounded p-4 max-w-sm w-full space-y-2 shadow-2xl max-h-[90vh] overflow-y-auto text-xs leading-relaxed">
@@ -984,8 +997,29 @@
             return true;
         }
 
+        // Pergunta de confirmação no estilo do jogo: devolve true se o jogador confirmar
+        let respostaConfirmacao = null;
+        function confirmarJogo({ icone = '⚠️', titulo, texto, ok = 'Confirmar', perigo = false }) {
+            return new Promise(resolve => {
+                if (respostaConfirmacao) respostaConfirmacao(false);
+                respostaConfirmacao = resolve;
+                document.getElementById('conf-icone').textContent = icone;
+                document.getElementById('conf-titulo').textContent = titulo;
+                document.getElementById('conf-texto').textContent = texto;
+                const b = document.getElementById('conf-ok');
+                b.textContent = ok;
+                b.className = 'flex-1 py-2.5 btn-tactical rounded font-bold text-sm ' + (perigo ? 'text-red-400' : '');
+                document.getElementById('modal-confirmar').classList.remove('hidden');
+            });
+        }
+        function responderConfirmacao(v) {
+            document.getElementById('modal-confirmar').classList.add('hidden');
+            const r = respostaConfirmacao; respostaConfirmacao = null;
+            if (r) r(v);
+        }
+
         async function novaPartida() {
-            if (!confirm('Começar uma nova partida? O progresso atual será apagado.')) return;
+            if (!await confirmarJogo({ icone: '🪖', titulo: 'Nova partida', texto: 'Começar uma nova partida? A partida atual será apagada e você volta ao dia 1, com o esquadrão descansado e alimentado.', ok: 'Começar de novo', perigo: true })) return;
             skipPageHideSave = true; // trava qualquer salvamento (a pausa ao sair da página regravava a partida antiga)
             try { localStorage.removeItem(SAVE_KEY); localStorage.setItem(NOVA_KEY, String(Date.now())); } catch (e) {}
             // Apaga também a cópia da conta e espera terminar (até 3 s); senão ela voltava ao reabrir
@@ -3155,8 +3189,8 @@
                 msg.textContent = r.error ? traduzirErro(r.error.message) : 'Senha trocada.';
             } catch (e) { msg.textContent = 'Sem conexão: tente de novo com internet.'; }
         }
-        function apagarProgresso() {
-            if (!confirm('Apagar a partida em andamento e voltar ao nível 1 neste aparelho? Isso não pode ser desfeito.')) return;
+        async function apagarProgresso() {
+            if (!await confirmarJogo({ icone: '🗑️', titulo: 'Apagar progresso', texto: 'Apagar a partida em andamento e voltar ao nível 1 neste aparelho? Isso não pode ser desfeito.', ok: 'Apagar', perigo: true })) return;
             skipPageHideSave = true;
             [SAVE_KEY, LEVEL_KEY].forEach(k => { try { localStorage.removeItem(k); } catch (e) {} });
             location.reload();
@@ -4765,7 +4799,7 @@
         }
 
         async function sairDaConta() {
-            if (!confirm('Sair da conta? O progresso já está salvo nela e volta quando você entrar de novo.')) return;
+            if (!await confirmarJogo({ icone: '🚪', titulo: 'Sair da conta', texto: 'Sair da conta? O progresso já está salvo nela e volta quando você entrar de novo.', ok: 'Sair' })) return;
             skipPageHideSave = true;
             await enviarNuvem(true);
             try { await sb.auth.signOut(); } catch (e) {}
@@ -5011,7 +5045,7 @@
            Ao abrir, ao voltar para o app e a cada minuto o jogo compara as duas. Se o site
            tiver uma versão diferente, o jogo trava numa tela que só sai atualizando.
            (tools/nova-versao.sh troca as duas juntas a cada atualização publicada.) */
-        const VERSAO_JOGO = '20261106.0125';
+        const VERSAO_JOGO = '20261106.0143';
         const ATUALIZOU_KEY = 'frontline-atualizou-para';
         async function verificarVersao() {
             if (!location.protocol.startsWith('http') || atualizacaoPendente) return;
