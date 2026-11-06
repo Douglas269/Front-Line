@@ -361,6 +361,8 @@ async function run() {
         [s0.hunger, s0.thirst, s0.fatigue, s0.moral, s0.hp] = g0; }
       aplicarVisual(); gameState.arsenal = novoArsenal();
       JSON.parse(guardaS).forEach((g, i) => { sv[i].duty = g[0]; sv[i].mental = g[1]; sv[i].hp = g[2]; }); }
+    // Nova partida: depois de apagar, nada regrava a partida antiga
+    { localStorage.removeItem(SAVE_KEY); skipPageHideSave = true; saveGame(); c.novaPartidaNaoRegrava = localStorage.getItem(SAVE_KEY) === null; skipPageHideSave = false; }
     // Cena: faixa de ameaça, avisos no rodapé, cache do fundo, faixa de novo dia e relatório final
     { const en0 = gameState.enemies;
       gameState.enemies = [{ type: 'infantaria', distance: 240, hp: 100, maxHp: 100, offsetX: 0 }, { type: 'infantaria', distance: 200, hp: 100, maxHp: 100, offsetX: 10 }, { type: 'drone', distance: 220, hp: 30, maxHp: 30, offsetX: 5 }];

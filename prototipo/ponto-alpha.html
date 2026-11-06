@@ -813,12 +813,12 @@
                 medkits: 3
             },
             squad: [
-                { id: 1, rank: 'Sgt.', name: 'Silva', class: 'Fuzileiro Regular', hp: 100, fatigue: 10, hunger: 10, thirst: 10, moral: 85, duty: 'WATCH' },
-                { id: 2, rank: 'Cbo.', name: 'Santos', class: 'Metralhador', hp: 100, fatigue: 15, hunger: 15, thirst: 15, moral: 80, duty: 'WATCH' },
-                { id: 3, rank: 'Sd.', name: 'Ferreira', class: 'Fuzileiro Regular', hp: 90, fatigue: 20, hunger: 20, thirst: 20, moral: 75, duty: 'REST' },
-                { id: 4, rank: 'Sd.', name: 'Costa', class: 'Médico', hp: 100, fatigue: 5, hunger: 10, thirst: 10, moral: 90, duty: 'MAINTENANCE' },
-                { id: 5, rank: 'Sd.', name: 'Oliveira', class: 'Engenheiro', hp: 100, fatigue: 10, hunger: 10, thirst: 10, moral: 85, duty: 'RATIONING' },
-                { id: 6, rank: 'Sd.', name: 'Mendes', class: 'Atirador de Elite', hp: 95, fatigue: 10, hunger: 15, thirst: 15, moral: 88, duty: 'WATCH' }
+                { id: 1, rank: 'Sgt.', name: 'Silva', class: 'Fuzileiro Regular', hp: 100, fatigue: 0, hunger: 0, thirst: 0, moral: 85, duty: 'WATCH' },
+                { id: 2, rank: 'Cbo.', name: 'Santos', class: 'Metralhador', hp: 100, fatigue: 0, hunger: 0, thirst: 0, moral: 80, duty: 'WATCH' },
+                { id: 3, rank: 'Sd.', name: 'Ferreira', class: 'Fuzileiro Regular', hp: 100, fatigue: 0, hunger: 0, thirst: 0, moral: 75, duty: 'REST' },
+                { id: 4, rank: 'Sd.', name: 'Costa', class: 'Médico', hp: 100, fatigue: 0, hunger: 0, thirst: 0, moral: 90, duty: 'MAINTENANCE' },
+                { id: 5, rank: 'Sd.', name: 'Oliveira', class: 'Engenheiro', hp: 100, fatigue: 0, hunger: 0, thirst: 0, moral: 85, duty: 'RATIONING' },
+                { id: 6, rank: 'Sd.', name: 'Mendes', class: 'Atirador de Elite', hp: 100, fatigue: 0, hunger: 0, thirst: 0, moral: 88, duty: 'WATCH' }
             ],
             enemies: [],
             effects: [], // explosões, impactos e comboio no mapa
@@ -905,8 +905,11 @@
            SALVAMENTO NO NAVEGADOR (progresso fica no próprio aparelho)
            ========================================================================== */
         const SAVE_KEY = 'frontline-ponto-alpha-v1';
+        const NOVA_KEY = 'frontline-nova-partida'; // quando o jogador começou a última partida nova (a nuvem mais velha que isso é ignorada)
+        let skipPageHideSave = false; // depois de "Nova partida"/apagar progresso, nada regrava a partida antiga
 
         function saveGame() {
+            if (skipPageHideSave) return;
             try {
                 localStorage.setItem(SAVE_KEY, JSON.stringify({
                     v: 1,
@@ -981,12 +984,12 @@
             return true;
         }
 
-        let skipPageHideSave = false; // evita regravar a partida antiga ao recarregar após "Nova partida"
-
-        function novaPartida() {
+        async function novaPartida() {
             if (!confirm('Começar uma nova partida? O progresso atual será apagado.')) return;
-            skipPageHideSave = true;
-            clearSave();
+            skipPageHideSave = true; // trava qualquer salvamento (a pausa ao sair da página regravava a partida antiga)
+            try { localStorage.removeItem(SAVE_KEY); localStorage.setItem(NOVA_KEY, String(Date.now())); } catch (e) {}
+            // Apaga também a cópia da conta e espera terminar (até 3 s); senão ela voltava ao reabrir
+            try { await Promise.race([enviarNuvem(true), new Promise(r => setTimeout(r, 3000))]); } catch (e) {}
             location.reload();
         }
 
@@ -4805,7 +4808,8 @@
             if (nuvem) {
                 let local = null;
                 try { local = JSON.parse(lerLocal(SAVE_KEY) || 'null'); } catch (e) {}
-                const nuvemMaisNova = nuvem.partida && (!local || !local.savedAt || new Date(nuvem.updated_at).getTime() > local.savedAt);
+                let nova = 0; try { nova = +(lerLocal(NOVA_KEY) || 0); } catch (e) {}
+                const nuvemMaisNova = nuvem.partida && new Date(nuvem.updated_at).getTime() > nova && (!local || !local.savedAt || new Date(nuvem.updated_at).getTime() > local.savedAt);
                 if (nuvemMaisNova) gravarLocal(SAVE_KEY, JSON.stringify(nuvem.partida));
                 gravarLocal(LEVEL_KEY, String(Math.max(loadLevel(), nuvem.nivel || 1)));
                 if (nuvem.tutorial_visto) gravarLocal(TUTORIAL_KEY, '1');
@@ -5007,7 +5011,7 @@
            Ao abrir, ao voltar para o app e a cada minuto o jogo compara as duas. Se o site
            tiver uma versão diferente, o jogo trava numa tela que só sai atualizando.
            (tools/nova-versao.sh troca as duas juntas a cada atualização publicada.) */
-        const VERSAO_JOGO = '20261106.0111';
+        const VERSAO_JOGO = '20261106.0125';
         const ATUALIZOU_KEY = 'frontline-atualizou-para';
         async function verificarVersao() {
             if (!location.protocol.startsWith('http') || atualizacaoPendente) return;
