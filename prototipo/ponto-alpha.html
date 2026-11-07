@@ -250,7 +250,7 @@
             </div>
 
             <!-- TACTICAL FEED LOG (Terminal Output Style) -->
-            <div class="bg-black/90 border-tactical rounded p-2 text-xs h-20 overflow-y-auto flex flex-col gap-1 font-mono text-mil-textGlow" id="feed-log">
+            <div class="bg-black/90 border-tactical rounded p-2 text-xs min-h-[2.75rem] max-h-20 overflow-y-auto flex flex-col gap-1 font-mono text-mil-textGlow" id="feed-log">
                 <div class="text-mil-amberMuted">[08:00] Ponto Alpha estabelecido. Comandante assumiu posições de defesa em Komona.</div>
             </div>
 
@@ -482,9 +482,9 @@
             <p class="text-xs text-mil-textMuted mb-5 font-normal">Defenda a trincheira por 30 dias.</p>
             <form id="form-login" onsubmit="event.preventDefault(); entrarNaConta(false);" class="w-full max-w-xs space-y-3">
                 <input id="login-email" type="email" autocomplete="email" required placeholder="E-mail"
-                       class="w-full px-3 py-2 rounded bg-black border border-mil-border text-mil-textGlow text-base font-normal focus:outline-none focus:border-mil-greenMuted">
+                       class="w-full px-3 py-2 rounded bg-mil-panel border border-mil-border text-mil-textGlow text-base font-normal focus:outline-none focus:border-mil-greenMuted">
                 <input id="login-senha" type="password" autocomplete="current-password" required minlength="6" placeholder="Senha (mínimo 6 caracteres)"
-                       class="w-full px-3 py-2 rounded bg-black border border-mil-border text-mil-textGlow text-base font-normal focus:outline-none focus:border-mil-greenMuted">
+                       class="w-full px-3 py-2 rounded bg-mil-panel border border-mil-border text-mil-textGlow text-base font-normal focus:outline-none focus:border-mil-greenMuted">
                 <p id="login-msg" class="text-xs min-h-[1rem] font-normal"></p>
                 <button id="btn-entrar" type="submit" class="w-full py-2 btn-tactical rounded font-bold text-sm">Entrar</button>
                 <button id="btn-criar" type="button" onclick="entrarNaConta(true)" class="w-full py-2 btn-tactical rounded text-sm">Criar conta</button>
@@ -552,7 +552,7 @@
                         <div id="cfg-avatar" class="w-14 h-14 rounded-full bg-mil-oliveDark border-2 border-mil-greenMuted flex items-center justify-center text-2xl font-bold text-mil-textGlow">?</div>
                         <div class="min-w-0">
                             <div id="cfg-nome" class="text-mil-textGlow font-bold text-sm truncate">Comandante</div>
-                            <div id="cfg-email" class="text-mil-textMuted truncate"></div>
+                            <div id="cfg-email" class="text-mil-textMuted break-words leading-tight"></div>
                             <div id="cfg-tipo" class="text-mil-amberMuted font-bold"></div>
                         </div>
                     </div>
@@ -645,10 +645,30 @@
         let audioCtx = null;
         let isAudioMuted = true;
 
+        /* Mixagem: cada controle de volume é um canal próprio (efeitos, ambiente, música).
+           Todo som passa pelo seu canal; mexer num controle muda só aquele canal,
+           na hora, inclusive nos sons que já estão tocando. */
+        const canais = { efeitos: null, ambiente: null, musica: null };
+        let musicaNoMixer = false;
         function initAudio() {
             if (!audioCtx) {
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                ['efeitos', 'ambiente', 'musica'].forEach(k => { canais[k] = audioCtx.createGain(); canais[k].connect(audioCtx.destination); });
+                // A música (arquivos mp3) entra no mixer também: assim o controle funciona igual em todo aparelho (no iPhone o volume do <audio> é ignorado)
+                try {
+                    [bgmWar, bgmBattle].forEach(el => { audioCtx.createMediaElementSource(el).connect(canais.musica); el.volume = 1; });
+                    musicaNoMixer = true;
+                } catch (e) { musicaNoMixer = false; }
+                aplicarVolumes();
             }
+        }
+        const saidaEfeitos = () => canais.efeitos || audioCtx.destination;
+        function aplicarVolumes() {
+            const vm = Math.max(0, Math.min(1, (CONFIG.volMusica ?? 45) / 100));
+            if (musicaNoMixer && canais.musica) { canais.musica.gain.value = vm; bgmWar.volume = 1; bgmBattle.volume = 1; }
+            else { bgmWar.volume = vm; bgmBattle.volume = vm; }
+            if (canais.efeitos) canais.efeitos.gain.value = volumeEfeitos();
+            if (canais.ambiente) canais.ambiente.gain.value = volumeAmbiente();
         }
 
         /* Música: trilha de guerra no turno; trilha de combate quando há inimigos.
@@ -681,7 +701,7 @@
             lp.type = 'lowpass';
             lp.frequency.value = 500;
             const gain = audioCtx.createGain();
-            gain.gain.value = 0.10 * volumeAmbiente();
+            gain.gain.value = 0.10; // o volume escolhido fica no canal do ambiente (0% = silêncio de verdade)
             const lfo = audioCtx.createOscillator();
             lfo.frequency.value = 0.07;
             const lfoGain = audioCtx.createGain();
@@ -690,7 +710,7 @@
             lfoGain.connect(gain.gain);
             src.connect(lp);
             lp.connect(gain);
-            gain.connect(audioCtx.destination);
+            gain.connect(canais.ambiente || audioCtx.destination);
             src.start();
             lfo.start();
             ambientNodes = { src, lfo, gain };
@@ -739,10 +759,10 @@
                 const gain = audioCtx.createGain();
                 osc.type = 'sine';
                 osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-                gain.gain.setValueAtTime(0.05 * volumeEfeitos() + 0.0001, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
                 gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
                 osc.connect(gain);
-                gain.connect(audioCtx.destination);
+                gain.connect(saidaEfeitos());
                 osc.start();
                 osc.stop(audioCtx.currentTime + duration);
             } catch (e) {}
@@ -766,12 +786,12 @@
                 filter.frequency.linearRampToValueAtTime(100, audioCtx.currentTime + 0.1);
 
                 const gain = audioCtx.createGain();
-                gain.gain.setValueAtTime(0.15 * volumeEfeitos() + 0.0001, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
                 gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
 
                 whiteNoise.connect(filter);
                 filter.connect(gain);
-                gain.connect(audioCtx.destination);
+                gain.connect(saidaEfeitos());
                 whiteNoise.start();
             } catch (e) {}
         }
@@ -1112,8 +1132,8 @@
                 const sm = diff().supplyMult;
                 const delRations = Math.floor(20 * sm * comidaDoNivel() * (gameState.supplyLineEff / 100));
                 const delWater = Math.floor(22 * sm * comidaDoNivel() * (gameState.supplyLineEff / 100));
-                const delAmmo = Math.floor(700 * sm * (gameState.supplyLineEff / 100));
-                const delHeavy = Math.floor(80 * sm * (gameState.supplyLineEff / 100)); // munição pesada (~40 no nível 1)
+                const delAmmo = Math.floor(PRESSURE.CONVOY_AMMO * sm * (gameState.supplyLineEff / 100));
+                const delHeavy = Math.floor(PRESSURE.CONVOY_HEAVY * sm * (gameState.supplyLineEff / 100)); // munição pesada
 
                 // Sem ninguém fora da vigília para descarregar, metade da carga se perde
                 const recebida = supplyReceivers() > 0 ? 1 : 0.5;
@@ -1306,14 +1326,14 @@
 
         // Dificuldade à escolha do jogador (Configurações → Jogo). Os níveis 1 a 25 continuam subindo em cima disso.
         const MODOS_DIFICULDADE = {
-            recruta:  { nome: 'Recruta',  desc: 'Inimigos mais fracos e mais suprimentos: bom para aprender e passar de nível',  dano: 0.85,  vida: 0.92, eventos: 0.9,  suprimento: 1.15, premio: 1.15, custo: 0.85 },
+            recruta:  { nome: 'Recruta',  desc: 'Inimigos mais fracos e mais suprimentos: bom para aprender e passar de nível',  dano: 0.92,  vida: 0.96, eventos: 0.95, suprimento: 1.1,  premio: 1.08, custo: 0.92 },
             soldado:  { nome: 'Soldado',  desc: 'O equilíbrio padrão do jogo',                                                   dano: 1,    vida: 1,    eventos: 1,    suprimento: 1,    premio: 1,    custo: 1 },
-            veterano: { nome: 'Veterano', desc: 'Inimigos mais duros e suprimentos mais curtos: para quem quer sofrer',          dano: 1.15, vida: 1.1,  eventos: 1.1,  suprimento: 0.9,  premio: 0.9,  custo: 1.1 }
+            veterano: { nome: 'Veterano', desc: 'Inimigos mais duros e suprimentos mais curtos: para quem quer sofrer',          dano: 1.06, vida: 1.04, eventos: 1.04, suprimento: 0.95, premio: 0.92, custo: 1.08 }
         };
         function diff() {
-            // Calibrado para quem joga bem: ~10% de vitória do nível 1 ao 12
-            // (dificuldade 5,94) e queda de ~0,5 ponto por nível até ~3% no 25 (6,05).
-            // Recalibrado depois da cozinha, da trincheira, do recebimento e das crises.
+            // Rebalanceado com o jogador automático usando as defesas (tests/balanco.js), com o comboio maior:
+            // Soldado vence ~100% no nível 1, ~93% no 13 e ~65% no 25; Veterano ~48%, ~28% e ~5%;
+            // Recruta vence sempre. A subida por nível vem do bloco PRESSURE e das crises.
             const lv = Math.max(1, Math.min(MAX_LEVEL, gameState.level));
             const d = lv <= 12 ? 5.94 : 5.94 + (6.05 - 5.94) * (lv - 12) / 13;
             // Modo de dificuldade escolhido nas Configurações (Soldado = o equilíbrio padrão)
@@ -1354,14 +1374,18 @@
             WAVE_EVERY_DAYS: 5,    // +1 soldado por onda a cada 5 dias
             WAVE_CAP: 12,          // máximo por onda (fora extras de nível e de patrulha)
             ENEMY_HP: 1.0,         // multiplicador geral da vida dos inimigos
-            ENEMY_HP_PER_DAY: 5,   // vida base cresce +5 por dia (era +8)
+            ENEMY_HP_PER_DAY: 4.5, // vida base cresce +4,5 por dia (com o comboio maior a munição dá conta)
             ENEMY_DAMAGE: 0.4,     // dano de cada inimigo (ondas maiores e resistentes já somam muito dano no total)
+            ENEMY_DMG_PER_DAY: 0.07, // o dano dos inimigos cresce 7% (do valor base) a cada dia
             GENERAL_INCOME: 1.75,  // ritmo de ataques do general (1 = ritmo do antigo sorteio; era 2,0)
             CONVOY_EVERY_DAYS: 2,  // comboio de suprimentos a cada 2 dias
+            CONVOY_AMMO: 850,      // munição leve por comboio, antes da eficiência da linha e da dificuldade (era 700)
+            CONVOY_HEAVY: 160,     // munição pesada por comboio (era 80)
             // A cada nível acima do 1:
-            FOOD_LOSS_PER_LEVEL: 0.015,   // −1,5% de ração e água no comboio (nível 25: −36%)
-            WAVE_PLUS_EVERY_LEVELS: 6,    // +1 soldado por onda a cada 6 níveis (7, 13, 19, 25: +4)
-            ATTACK_RATE_PER_LEVEL: 0.02,  // general ataca 2% mais rápido (nível 25: +48%)
+            FOOD_LOSS_PER_LEVEL: 0.004,   // −0,4% de ração e água no comboio (nível 25: −10%)
+            WAVE_PLUS_EVERY_LEVELS: 99,   // soldados extras por onda por nível: desligado (o +1 no nível 25 derrubava a vitória de 55% para 15% de uma vez)
+            ENEMY_HP_PER_LEVEL: 0.002,    // no lugar disso, inimigos 0,2% mais resistentes por nível (nível 25: +5%), uma subida suave
+            ATTACK_RATE_PER_LEVEL: 0.003, // general ataca 0,3% mais rápido por nível (nível 25: +7%)
             AMMO_SPEND: 3,              // gasto de munição pesada na supressão ×3 (a leve agora é bala a bala)
             AMMO_CAP_RIFLE: 2000,       // capacidade do paiol: munição leve
             AMMO_CAP_HEAVY: 600,        // capacidade do paiol: munição pesada
@@ -1387,11 +1411,11 @@
         const ENEMY_TYPES = {
             // Dano: cai com os ferimentos (vida atual / vida máxima) e cresce com os dias,
             // mas não acompanha os bônus de vida (senão vida extra viraria dano em dobro)
-            infantaria: { label: 'INFANTARIA', speed: 0.85, hpMult: 1.0, attackChance: 0.35, dmg: (e) => 1.6 * (e.hp / (e.maxHp || e.hp)) * (1 + 0.08 * gameState.day) },
-            patrulha:   { label: 'PATRULHA',   speed: 1.15, hpMult: 0.6, attackChance: 0.30, dmg: (e) => 1.2 * (e.hp / (e.maxHp || e.hp)) * (1 + 0.08 * gameState.day) },
+            infantaria: { label: 'INFANTARIA', speed: 0.85, hpMult: 1.0, attackChance: 0.35, dmg: (e) => 1.6 * (e.hp / (e.maxHp || e.hp)) * (1 + PRESSURE.ENEMY_DMG_PER_DAY * gameState.day) },
+            patrulha:   { label: 'PATRULHA',   speed: 1.15, hpMult: 0.6, attackChance: 0.30, dmg: (e) => 1.2 * (e.hp / (e.maxHp || e.hp)) * (1 + PRESSURE.ENEMY_DMG_PER_DAY * gameState.day) },
             drone:      { label: 'DRONE',      speed: 1.5,  hpMult: 0.35, attackChance: 0.15, dmg: () => 2 },
             // Blindado: lento e resistente; fuzil quase não fere (só anticarro, morteiro e artilharia rendem)
-            blindado:   { label: 'BLINDADO',   speed: 0.55, hpMult: 3.0,  attackChance: 0.12, dmg: (e) => 2.2 * (e.hp / (e.maxHp || e.hp)) * (1 + 0.08 * gameState.day) }
+            blindado:   { label: 'BLINDADO',   speed: 0.55, hpMult: 3.0,  attackChance: 0.12, dmg: (e) => 2.2 * (e.hp / (e.maxHp || e.hp)) * (1 + PRESSURE.ENEMY_DMG_PER_DAY * gameState.day) }
         };
         const BARRAGE_WARNING_TICKS = 64;  // aviso antes da artilharia cair (8 s reais)
         const ARTILLERY_SUPPORT_DAMAGE = 200; // dano da artilharia de apoio em cada inimigo
@@ -1517,7 +1541,7 @@
                 balas += c; dano += c * chanceDeAcerto(s, a, alvo) * a.dano;
             });
             if (dano <= 0) return 0;
-            const vida = (100 + gameState.day * PRESSURE.ENEMY_HP_PER_DAY) * diff().enemyHpMult * PRESSURE.ENEMY_HP;
+            const vida = (100 + gameState.day * PRESSURE.ENEMY_HP_PER_DAY) * diff().enemyHpMult * PRESSURE.ENEMY_HP * (1 + PRESSURE.ENEMY_HP_PER_LEVEL * nivelAcima());
             return Math.ceil(vida / (dano / balas));
         }
 
@@ -1541,7 +1565,7 @@
 
         function spawnEnemy(type, startDist) {
             const t = ENEMY_TYPES[type];
-            const vida = (100 + gameState.day * PRESSURE.ENEMY_HP_PER_DAY) * t.hpMult * diff().enemyHpMult * PRESSURE.ENEMY_HP;
+            const vida = (100 + gameState.day * PRESSURE.ENEMY_HP_PER_DAY) * t.hpMult * diff().enemyHpMult * PRESSURE.ENEMY_HP * (1 + PRESSURE.ENEMY_HP_PER_LEVEL * nivelAcima());
             gameState.enemies.push({
                 id: Date.now() + Math.random(),
                 type,
@@ -1995,8 +2019,9 @@
             morteiro:        { qtd: 1, custo: 150, rotulo: 'Morteiro 60 mm' },
             lancaAT:         { qtd: 1, custo: 120, rotulo: 'Lança-rojão AT' }
         };
-        // O comboio às vezes traz extras (disponibilidade do QG): [item, quantidade, chance]
-        const EXTRAS_DO_COMBOIO = [['granadas', 4, 0.6], ['granadaMorteiro', 6, 0.4], ['foguetesAT', 1, 0.3], ['arame', 1, 0.25]];
+        // Extras do comboio: [item, quantidade, chance]. Granadas de morteiro e foguetes anticarro vêm sempre;
+        // granadas de mão e arame dependem da disponibilidade do QG
+        const EXTRAS_DO_COMBOIO = [['granadas', 4, 0.6], ['granadaMorteiro', 10, 1], ['foguetesAT', 4, 1], ['arame', 1, 0.25]];
 
         function novoArsenal() {
             const ponto = (id, nome, x) => ({ id, nome, x, obra: 0, construindo: false, arma: null, operador: null, recarga: 0, acc: 0 });
@@ -2982,30 +3007,14 @@
             else if (tipo === 'anticarro') { tremer(4, 300); somAnticarro(); }
             else if (tipo === 'granada') { tremer(3, 250); somExplosao(0.5); }
         }
-        // Ruído branco filtrado: base dos sons de explosão
-        function ruido(dur, freqIni, freqFim, vol, atraso = 0) {
-            if (isAudioMuted || !audioCtx) return;
-            try {
-                const t0 = audioCtx.currentTime + atraso;
-                const n = Math.floor(audioCtx.sampleRate * dur);
-                const buf = audioCtx.createBuffer(1, n, audioCtx.sampleRate);
-                const d = buf.getChannelData(0);
-                for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
-                const src = audioCtx.createBufferSource(); src.buffer = buf;
-                const f = audioCtx.createBiquadFilter(); f.type = 'lowpass';
-                f.frequency.setValueAtTime(freqIni, t0); f.frequency.exponentialRampToValueAtTime(Math.max(30, freqFim), t0 + dur);
-                const g = audioCtx.createGain(); g.gain.setValueAtTime(vol * volumeEfeitos() + 0.0001, t0); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-                src.connect(f); f.connect(g); g.connect(audioCtx.destination); src.start(t0);
-            } catch (e) {}
-        }
         function tom(tipo, f0, f1, dur, vol, atraso = 0) {
             if (isAudioMuted || !audioCtx) return;
             try {
                 const t0 = audioCtx.currentTime + atraso;
                 const o = audioCtx.createOscillator(); o.type = tipo;
                 o.frequency.setValueAtTime(f0, t0); o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t0 + dur);
-                const g = audioCtx.createGain(); g.gain.setValueAtTime(vol * volumeEfeitos() + 0.0001, t0); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-                o.connect(g); g.connect(audioCtx.destination); o.start(t0); o.stop(t0 + dur);
+                const g = audioCtx.createGain(); g.gain.setValueAtTime(vol + 0.0001, t0); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+                o.connect(g); g.connect(saidaEfeitos()); o.start(t0); o.stop(t0 + dur);
             } catch (e) {}
         }
         function somExplosao(forca) { tocarSom('explosao', forca); }
@@ -3045,8 +3054,8 @@
                 }
                 const src = audioCtx.createBufferSource();
                 src.buffer = lista[Math.floor(Math.random() * lista.length)];
-                const g = audioCtx.createGain(); g.gain.value = volume * volumeEfeitos();
-                src.connect(g); g.connect(audioCtx.destination);
+                const g = audioCtx.createGain(); g.gain.value = volume;
+                src.connect(g); g.connect(saidaEfeitos());
                 src.start(audioCtx.currentTime + atraso);
             } catch (e) {}
         }
@@ -3104,9 +3113,7 @@
         const volumeAmbiente = () => Math.max(0, Math.min(2, (CONFIG.volAmbiente ?? 50) / 50));
 
         function aplicarConfig() {
-            const vm = Math.max(0, Math.min(1, (CONFIG.volMusica ?? 45) / 100));
-            bgmWar.volume = vm; bgmBattle.volume = vm;
-            if (ambientNodes && ambientNodes.gain) ambientNodes.gain.gain.value = 0.10 * volumeAmbiente();
+            aplicarVolumes();
             document.documentElement.style.fontSize = CONFIG.textoGrande ? '112%' : '';
             atualizarConta();
             if (typeof aplicarVisual === 'function') aplicarVisual();
@@ -5045,7 +5052,7 @@
            Ao abrir, ao voltar para o app e a cada minuto o jogo compara as duas. Se o site
            tiver uma versão diferente, o jogo trava numa tela que só sai atualizando.
            (tools/nova-versao.sh troca as duas juntas a cada atualização publicada.) */
-        const VERSAO_JOGO = '20261106.0143';
+        const VERSAO_JOGO = '20261107.1603';
         const ATUALIZOU_KEY = 'frontline-atualizou-para';
         async function verificarVersao() {
             if (!location.protocol.startsWith('http') || atualizacaoPendente) return;

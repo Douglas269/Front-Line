@@ -48,7 +48,7 @@ Jogo de estratégia tático com foco em realismo de comando, combate blindado e 
 
 ### Configurações (engrenagem no cabeçalho)
 - **Conta:** perfil com inicial, nome de comandante (aparece no botão de conta do cabeçalho), e-mail, tipo de conta, nível e data de criação; carreira (partidas, vitórias, derrotas, abates, melhor dia, nível); trocar senha e sair da conta. Sem conta: botão para entrar ou criar conta. O botão de conta do cabeçalho, com conta, abre o perfil.
-- **Som:** liga/desliga geral e volumes separados de música, efeitos (tiros, explosões, alarmes) e som ambiente (vento), cada um com botão "Testar".
+- **Som:** liga/desliga geral e volumes separados de música, efeitos (tiros, explosões, alarmes) e som ambiente (vento), cada um com botão "Testar". Cada controle é um canal próprio do mixer (`canais.musica`, `canais.efeitos`, `canais.ambiente`): mexer num não muda os outros, vale na hora até para os sons que já estão tocando, 0% é silêncio de verdade, e a música passa pelo mixer para o controle funcionar também no iPhone.
 - **Jogo:** tremor da tela, vibração do celular, rastros dos tiros e texto maior; rever o tutorial; restaurar padrões.
 - **Dados:** versão do jogo, onde o progresso está salvo, créditos e apagar o progresso do aparelho.
 - O relógio para com a tela aberta. As preferências ficam no aparelho (`frontline-config`) e, com conta, também nos metadados da conta no Supabase, junto com a carreira (`frontline-carreira`): ao entrar em outro aparelho, vêm junto.
@@ -69,7 +69,7 @@ Jogo de estratégia tático com foco em realismo de comando, combate blindado e 
 - **Arame farpado:** estendido a 50 m com 1 rolo; infantaria e patrulha andam pela metade enquanto atravessam; desgasta com o uso, o blindado rasga rápido.
 - **Blindado inimigo** (plano "Ataque blindado" do general, a partir do dia 10, um por vez): lento, resistente, atira pouco. Fuzil faz 15% do dano, .50 35%, granada 30%, morteiro 50%, anticarro e artilharia de apoio 100%. Os fuzileiros só atiram nele quando não há outro alvo. Se chega à trincheira: −15% de conservação e fere 2 soldados. O general prefere o blindado quando o jogador não tem anticarro pronto.
 - **Inventário inicial:** 1 metralhadora .50, 1 morteiro, 1 lança-rojão, 12 granadas de morteiro, 3 foguetes, 10 granadas de mão, 2 rolos de arame.
-- **Disponibilidade:** cada comboio pode trazer extras do QG (granadas 60%, granadas de morteiro 40%, foguete 30%, arame 25%). Requisições pagas com prestígio chegam no próximo comboio: 6 granadas (40), 8 granadas de morteiro (60), 2 foguetes (80), 1 rolo de arame (40), metralhadora .50 (150), morteiro (150), lança-rojão (120), mais o custo da dificuldade. O Bloqueio de Sinal impede requisições.
+- **Disponibilidade:** todo comboio traz **10 granadas de morteiro e 4 foguetes anticarro**, e às vezes extras do QG (granadas de mão 60%, arame 25%). Requisições pagas com prestígio chegam no próximo comboio: 6 granadas (40), 8 granadas de morteiro (60), 2 foguetes (80), 1 rolo de arame (40), metralhadora .50 (150), morteiro (150), lança-rojão (120), mais o custo da dificuldade. O Bloqueio de Sinal impede requisições.
 - No mapa: os ninhos aparecem logo abaixo da trincheira (sigla da arma; verde com operador ativo, laranja parado, tracejado em obra) e o arame como uma linha a 50 m.
 - Medição com o jogador automático (15 partidas por nível): sem usar as defesas, ~16 / 15 / 14 / 12 dias (níveis 1 / 6 / 12 / 25); usando as defesas, ~22 / 18 / 16 / 14 dias. Antes desta mecânica eram ~21 / 18 / 16 / 13.
 
@@ -98,7 +98,7 @@ Jogo de estratégia tático com foco em realismo de comando, combate blindado e 
 - Ordens táticas: Fogo Supressão (ataque +60%, inimigos 70% mais lentos, gasta munição), Abrigo Reforçado (dano recebido −75%, ataque −60%), Economizar Munição (gasto −65%, ataque −30%) e Vigília Total (mapa visível sem vigias, +0,4 de fadiga a cada 10 s para todos). Pares que se contradizem não ficam ligados juntos: Fogo Supressão × Economizar Munição e Abrigo Reforçado × Vigília Total (ligar uma desliga a outra).
 - Carga Emergencial: pedida por item, cada um com o seu preço e a sua entrega: Rações (+20, 45 pts), Água (+30 L, 45 pts), Munição leve (+250, 50 pts) e Munição pesada (+60, 50 pts), mais o custo da dificuldade. Dá para ter os quatro a caminho ao mesmo tempo, mas cada item um pedido por vez. Chega 150 s reais depois do pedido no nível 1 e +10 s a cada nível (nível 25: 390 s); o prazo dobra com a linha de suprimento cortada. Sem ninguém fora da vigília, metade do item se perde.
 - Fome e sede sobem com o tempo para todos (ritmo no bloco `NECESSIDADES`, acima) e só caem na Cozinha. É preciso revezar os soldados na cozinha. A partir de 75%, fome ou sede tiram vida e moral.
-- Pressão (bloco `PRESSURE` no código, fácil de ajustar): ondas de infantaria começam com 6 soldados e ganham +1 a cada 5 dias (máximo 12, mais extras de nível e de patrulha); vida dos inimigos = (100 + 5 por dia) × dificuldade (antes era +8 por dia e mais 35%; agora têm 28% menos vida no dia 1 e 46% menos no dia 30); dano de cada inimigo ×0,4 (ondas grandes somam muito dano no total); general ataca a 1,75× o ritmo do antigo sorteio (era 2×); comboio de suprimentos a cada 2 dias (dias pares). Carga base do comboio (antes da dificuldade e da eficiência da linha): 20 rações, 22 L de água (era 15), 700 de munição leve e 80 de munição pesada; no nível 1, com linha boa, chegam ~10 rações, ~360 de munição leve e ~40 de pesada. Rebalanceado depois do tiro bala a bala: antes chegavam só ~60 balas por comboio e a munição acabava no dia 7. A aba Logística mostra o dia do próximo comboio.
+- Pressão (bloco `PRESSURE` no código, fácil de ajustar): ondas de infantaria começam com 6 soldados e ganham +1 a cada 5 dias (máximo 12, mais extras de nível e de patrulha); vida dos inimigos = (100 + 4,5 por dia) × dificuldade (era +5); dano de cada inimigo ×0,4 e crescendo 7% do valor base por dia (era 8%); general ataca a 1,75× o ritmo do antigo sorteio (era 2×); comboio de suprimentos a cada 2 dias (dias pares). Carga base do comboio (antes da dificuldade e da eficiência da linha): 20 rações, 22 L de água (era 15), 850 de munição leve e 160 de munição pesada (era 700 e 80); no nível 1, com linha boa, chegam ~10 rações, ~465 de munição leve e ~87 de pesada, mais as granadas de morteiro e os foguetes. Rebalanceado depois do tiro bala a bala: antes chegavam só ~60 balas por comboio e a munição acabava no dia 7. A aba Logística mostra o dia do próximo comboio.
 - Combate (tiro bala a bala, bloco `ARMAS`/`TIRO` no código): cada soldado dispara com a sua arma e cada bala sai do paiol. Cada bala tem chance de acertar; cada acerto tira vida do inimigo. Metade dos tiros vai no inimigo mais próximo, o resto é espalhado.
   - Armas (por segundo real): Fuzileiro ~2,5 balas, 42% de acerto, 48 de dano; Metralhador ~7 balas, 30%, 40; Atiradora de Elite ~0,6 bala, 90%, 160; Médica e Engenheiro ~2 balas, 30%, 40. Sem munição leve: pistola e baioneta (pouco dano, não gasta paiol).
   - Pontaria: cai com a distância (alcance de 300 m; perto acerta mais), com vida, moral e cansaço baixos, à noite e de madrugada (−15%, a Vigília Total compensa), com névoa (−20%) e chuva forte (−10%); sem vigia, atira às cegas (metade). Drones são alvos mais difíceis (−20%).
@@ -119,22 +119,26 @@ Jogo de estratégia tático com foco em realismo de comando, combate blindado e 
 - Os valores "a cada 10 s" acima contam segundos de jogo (10 s de jogo ≈ 1,25 s real).
 
 ### Modos de dificuldade (Configurações → Jogo → Dificuldade)
-- **Recruta** (dano inimigo ×0,85, vida ×0,92, eventos ×0,9, suprimentos ×1,15, prestígio ×1,15, apoios ×0,85), **Soldado** (o equilíbrio padrão) e **Veterano** (dano ×1,15, vida ×1,1, eventos ×1,1, suprimentos ×0,9, prestígio ×0,9, apoios ×1,1). Vale já na partida em andamento, e os 25 níveis continuam subindo a cada vitória por cima do modo escolhido. Bloco `MODOS_DIFICULDADE` no código.
-- Medição com o jogador automático usando as defesas (nível 6): Recruta vence ~90%; Soldado chega perto do dia 25 sem vencer; Veterano chega ao dia 19.
+- **Recruta** (dano inimigo ×0,92, vida ×0,96, eventos ×0,95, suprimentos ×1,1, prestígio ×1,08, apoios ×0,92), **Soldado** (o equilíbrio padrão) e **Veterano** (dano ×1,06, vida ×1,04, eventos ×1,04, suprimentos ×0,95, prestígio ×0,92, apoios ×1,08). O prestígio e o custo dos apoios pesam muito: 10% a menos de prestígio e 10% a mais de custo derrubavam a vitória de 75% para 25%. Vale já na partida em andamento, e os 25 níveis continuam subindo a cada vitória por cima do modo escolhido. Bloco `MODOS_DIFICULDADE` no código.
+- Rebalanceamento: antes o jogador automático **nunca vencia** no Soldado nem no Veterano. Agora o critério é: se o robô consegue passar, um jogador atento também consegue. Medição com `DEF=1 node tests/balanco.js` (40 partidas por nível; margem de uns 15 pontos), veja a tabela em **Níveis de dificuldade**.
 
 ### Níveis de dificuldade
 - 25 níveis. Cada vitória sobe um nível; derrota mantém o nível. O nível fica salvo no navegador, mesmo com "Nova partida".
 - Cada nível define uma dificuldade que aumenta a frequência de eventos, a vida e o dano dos inimigos e o tamanho das ondas, e diminui a entrega diária de suprimentos e o prestígio ganho; os apoios da Central ficam mais caros.
-- Além disso, cada nível acima do 1 aperta de forma visível (bloco `PRESSURE`): −1,5% de ração e água no comboio (nível 25: −36%), +1 soldado por onda a cada 6 níveis (níveis 7, 13, 19 e 25; nível 25: +4) e ataques do general 2% mais rápidos (nível 25: +48%).
-- A calibração por nível (~10% de vitória para o jogador automático no nível 1) é anterior às hordas maiores. Hoje o jogador automático não vence no nível 1 e aguenta ~12 dias; a dificuldade real depende de quem joga. Ficar parado não vence em nenhum nível.
-- Vitórias medidas com `node tests/niveis.js` (100 partidas por nível medido; margem de cerca de 3 a 6 pontos):
+- Além disso, cada nível acima do 1 aperta de forma visível (bloco `PRESSURE`): −0,4% de ração e água no comboio (nível 25: −10%), inimigos 0,2% mais resistentes (nível 25: +5%) e ataques do general 0,3% mais rápidos (nível 25: +7%). Antes eram −1,5%, +1 soldado por onda a cada 6 níveis e 2%: no nível 25 o esquadrão morria de fome mesmo jogando bem, e o soldado extra por onda derrubava a vitória de uma vez.
+- Vitórias do jogador automático **usando as defesas** (`DIF_MODO=<modo> DEF=1 node tests/balanco.js 1,7,13,19,25 40`; 40 partidas por nível, margem de uns 15 pontos):
 
-| Nível | Sem ação | Jogador atento (automático) |
-|---|---|---|
-| 1 a 12 | 0% (~3 dias) | ~0% (aguenta ~12 dias) |
-| 25 | 0% | ~4% |
+| Nível | Recruta | Soldado | Veterano |
+|---|---|---|---|
+| 1 | 100% | 100% | 48% |
+| 7 | 100% | 95% | 38% |
+| 13 | 98% | 93% | 28% |
+| 19 | 100% | 85% | 33% |
+| 25 | 100% | 65% | 5% |
 
-Entre o 12 e o 25 a dificuldade sobe em linha reta, então a chance cai aos poucos entre esses valores. Diferenças de 0,5 ponto por nível são pequenas demais para medir partida a partida.
+Medido com o comboio maior (850 de munição leve, 160 de pesada, 10 granadas de morteiro e 4 foguetes anticarro por comboio). O robô decide a cada segundo, sem cansar; um jogador de verdade tende a ir um pouco pior, por isso o Soldado ficou folgado para o robô.
+
+Ficar parado não vence em nenhum nível. `node tests/niveis.js` mede o robô mais simples, que não constrói defesas.
 
 O "jogador atento" é um robô simples: manda à cozinha quem passa de 40 de fome ou sede, reveza descanso, põe o Engenheiro para reparar a trincheira abaixo de 70%, mantém alguém fora da vigília para descarregar, usa abrigo antes da artilharia, supressão com inimigos à vista, bloqueio de sinal com drone no setor, contra-bateria quando ainda dá tempo, e pede apoios quando pode pagar. Na dificuldade 5,0, ele vence 82% usando o bloqueio e a contra-bateria, contra 75% sem eles.
 

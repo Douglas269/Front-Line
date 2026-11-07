@@ -233,7 +233,7 @@ async function run() {
       gameState.prestige = 1000; const ped0 = ars.itens.foguetesAT; requisitar('foguetesAT');
       c.defRequisicaoCobra = gameState.prestige === 1000 - custo(80) && ars.pedidos.length === 1;
       Math.random = () => 0.99; entregarArsenal(1);
-      c.defRequisicaoChegaNoComboio = ars.itens.foguetesAT === ped0 + 2 && ars.pedidos.length === 0;
+      c.defRequisicaoChegaNoComboio = ars.itens.foguetesAT === ped0 + 2 + 4 && ars.pedidos.length === 0; // 2 da requisição + 4 que o comboio sempre traz
       // Salvamento leva o arsenal
       saveGame(); const salvo = JSON.parse(localStorage.getItem(SAVE_KEY));
       c.defEntraNoSalvamento = salvo.arsenal && salvo.arsenal.posicoes[1].arma === 'morteiro';
@@ -247,9 +247,9 @@ async function run() {
     gameState.resources.ammoRifle = PRESSURE.AMMO_CAP_RIFLE - 10;
     c.paiolLimita = addAmmoRifle(250) === 10 && gameState.resources.ammoRifle === PRESSURE.AMMO_CAP_RIFLE;
     gameState.resources.ammoRifle = 500;
-    // Vida do inimigo: (100 + 5·dia) × multiplicadores
+    // Vida do inimigo: (100 + 4,5·dia) × multiplicadores × resistência do nível
     { const d0 = gameState.day; gameState.day = 10; const n = gameState.enemies.length; spawnEnemy('infantaria', 260);
-      const e = gameState.enemies[n]; c.vidaInimigoReduzida = Math.abs(e.maxHp - 150 * diff().enemyHpMult) < 0.01;
+      const e = gameState.enemies[n]; c.vidaInimigoReduzida = Math.abs(e.maxHp - 145 * diff().enemyHpMult * (1 + PRESSURE.ENEMY_HP_PER_LEVEL * nivelAcima())) < 0.01;
       gameState.enemies.splice(n, 1); gameState.day = d0; }
     prepCombate(); gameState.squad.forEach(s => s.duty = 'WATCH');
     gameState.tacticalOrders.SIGNAL_JAM = true; Math.random = () => 0.01;
@@ -300,7 +300,7 @@ async function run() {
     gameState.level = 1; const comida1 = comidaDoNivel(), onda1 = ondaDoNivel(), ritmo1 = ritmoDoNivel();
     gameState.level = 25; const comida25 = comidaDoNivel(), onda25 = ondaDoNivel(), ritmo25 = ritmoDoNivel();
     gameState.level = nivelOrig;
-    c.niveisAltosApertam = comida1 === 1 && Math.abs(comida25 - 0.64) < 0.001 && onda1 === 0 && onda25 === 4 && ritmo1 === 1 && Math.abs(ritmo25 - 1.48) < 0.001;
+    c.niveisAltosApertam = comida1 === 1 && Math.abs(comida25 - 0.904) < 0.001 && onda1 === 0 && onda25 === 0 && ritmo1 === 1 && Math.abs(ritmo25 - 1.072) < 0.001;
 
     // Trincheira rompida: a invasão de infantaria vira massacre
     const sorteioR = Math.random; Math.random = () => 0.99;

@@ -12,12 +12,12 @@ const LEVELS = (process.argv[2] || '1,4,7,10').split(',').map(Number);
 const N = Number(process.argv[3] || 30);
 
 const INITIAL_SQUAD = [
-  { id: 1, rank: 'Sgt.', name: 'Silva', class: 'Fuzileiro Regular', hp: 100, fatigue: 10, hunger: 10, thirst: 10, moral: 85, duty: 'WATCH' },
-  { id: 2, rank: 'Cbo.', name: 'Santos', class: 'Metralhador', hp: 100, fatigue: 15, hunger: 15, thirst: 15, moral: 80, duty: 'WATCH' },
-  { id: 3, rank: 'Sd.', name: 'Ferreira', class: 'Fuzileiro Regular', hp: 90, fatigue: 20, hunger: 20, thirst: 20, moral: 75, duty: 'REST' },
-  { id: 4, rank: 'Sd.', name: 'Costa', class: 'Médico', hp: 100, fatigue: 5, hunger: 10, thirst: 10, moral: 90, duty: 'MAINTENANCE' },
-  { id: 5, rank: 'Sd.', name: 'Oliveira', class: 'Engenheiro', hp: 100, fatigue: 10, hunger: 10, thirst: 10, moral: 85, duty: 'RATIONING' },
-  { id: 6, rank: 'Sd.', name: 'Mendes', class: 'Atirador de Elite', hp: 95, fatigue: 10, hunger: 15, thirst: 15, moral: 88, duty: 'WATCH' }
+  { id: 1, rank: 'Sgt.', name: 'Silva', class: 'Fuzileiro Regular', hp: 100, fatigue: 0, hunger: 0, thirst: 0, moral: 85, duty: 'WATCH' },
+  { id: 2, rank: 'Cbo.', name: 'Santos', class: 'Metralhador', hp: 100, fatigue: 0, hunger: 0, thirst: 0, moral: 80, duty: 'WATCH' },
+  { id: 3, rank: 'Sd.', name: 'Ferreira', class: 'Fuzileiro Regular', hp: 100, fatigue: 0, hunger: 0, thirst: 0, moral: 75, duty: 'REST' },
+  { id: 4, rank: 'Sd.', name: 'Costa', class: 'Médico', hp: 100, fatigue: 0, hunger: 0, thirst: 0, moral: 90, duty: 'MAINTENANCE' },
+  { id: 5, rank: 'Sd.', name: 'Oliveira', class: 'Engenheiro', hp: 100, fatigue: 0, hunger: 0, thirst: 0, moral: 85, duty: 'RATIONING' },
+  { id: 6, rank: 'Sd.', name: 'Mendes', class: 'Atirador de Elite', hp: 100, fatigue: 0, hunger: 0, thirst: 0, moral: 88, duty: 'WATCH' }
 ];
 
 async function measure(page, level, policy) {
