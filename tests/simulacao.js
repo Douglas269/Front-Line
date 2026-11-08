@@ -198,7 +198,7 @@ async function run() {
       gameState.resources.ammoHeavy = 100;
       gameState.enemies = [{ type: 'infantaria', distance: 200, hp: 1e9, maxHp: 1e9, offsetX: 0 }];
       for (let k = 0; k < 8; k++) processEnemiesAndCombat();
-      c.defMGGastaPesada = gameState.resources.ammoHeavy === 96;
+      c.defMGGastaPesada = gameState.resources.ammoHeavy === 100 - 4 * PRESSURE.MG_AMMO_PER_SHOT; // 4 disparos em 8 segundos de jogo
       c.defOperadorNaoUsaFuzil = santos.stats.tiros === 4;
       // Operador fora da vigília: arma parada
       santos.duty = 'REST'; const h0 = gameState.resources.ammoHeavy;
@@ -247,9 +247,9 @@ async function run() {
     gameState.resources.ammoRifle = PRESSURE.AMMO_CAP_RIFLE - 10;
     c.paiolLimita = addAmmoRifle(250) === 10 && gameState.resources.ammoRifle === PRESSURE.AMMO_CAP_RIFLE;
     gameState.resources.ammoRifle = 500;
-    // Vida do inimigo: (100 + 4,5·dia) × multiplicadores × resistência do nível
+    // Vida do inimigo: (100 + 5·dia) × multiplicadores × resistência do nível
     { const d0 = gameState.day; gameState.day = 10; const n = gameState.enemies.length; spawnEnemy('infantaria', 260);
-      const e = gameState.enemies[n]; c.vidaInimigoReduzida = Math.abs(e.maxHp - 145 * diff().enemyHpMult * (1 + PRESSURE.ENEMY_HP_PER_LEVEL * nivelAcima())) < 0.01;
+      const e = gameState.enemies[n]; c.vidaInimigoReduzida = Math.abs(e.maxHp - 150 * diff().enemyHpMult * (1 + PRESSURE.ENEMY_HP_PER_LEVEL * nivelAcima())) < 0.01;
       gameState.enemies.splice(n, 1); gameState.day = d0; }
     prepCombate(); gameState.squad.forEach(s => s.duty = 'WATCH');
     gameState.tacticalOrders.SIGNAL_JAM = true; Math.random = () => 0.01;

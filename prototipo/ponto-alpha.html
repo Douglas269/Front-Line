@@ -1328,11 +1328,11 @@
         const MODOS_DIFICULDADE = {
             recruta:  { nome: 'Recruta',  desc: 'Inimigos mais fracos e mais suprimentos: bom para aprender e passar de nível',  dano: 0.92,  vida: 0.96, eventos: 0.95, suprimento: 1.1,  premio: 1.08, custo: 0.92 },
             soldado:  { nome: 'Soldado',  desc: 'O equilíbrio padrão do jogo',                                                   dano: 1,    vida: 1,    eventos: 1,    suprimento: 1,    premio: 1,    custo: 1 },
-            veterano: { nome: 'Veterano', desc: 'Inimigos mais duros e suprimentos mais curtos: para quem quer sofrer',          dano: 1.06, vida: 1.04, eventos: 1.04, suprimento: 0.95, premio: 0.92, custo: 1.08 }
+            veterano: { nome: 'Veterano', desc: 'Inimigos mais duros e suprimentos mais curtos: para quem quer sofrer',          dano: 1.06, vida: 1.04, eventos: 1.04, suprimento: 0.95, premio: 0.95, custo: 1.05 }
         };
         function diff() {
             // Rebalanceado com o jogador automático usando as defesas (tests/balanco.js), com o comboio maior:
-            // Soldado vence ~100% no nível 1, ~93% no 13 e ~65% no 25; Veterano ~48%, ~28% e ~5%;
+            // Soldado vence ~90% no nível 1, ~90% no 13 e ~73% no 25; Veterano ~78%, ~73% e ~10%;
             // Recruta vence sempre. A subida por nível vem do bloco PRESSURE e das crises.
             const lv = Math.max(1, Math.min(MAX_LEVEL, gameState.level));
             const d = lv <= 12 ? 5.94 : 5.94 + (6.05 - 5.94) * (lv - 12) / 13;
@@ -1374,7 +1374,7 @@
             WAVE_EVERY_DAYS: 5,    // +1 soldado por onda a cada 5 dias
             WAVE_CAP: 12,          // máximo por onda (fora extras de nível e de patrulha)
             ENEMY_HP: 1.0,         // multiplicador geral da vida dos inimigos
-            ENEMY_HP_PER_DAY: 4.5, // vida base cresce +4,5 por dia (com o comboio maior a munição dá conta)
+            ENEMY_HP_PER_DAY: 5,   // vida base cresce +5 por dia (compensa a munição pesada que agora dura mais)
             ENEMY_DAMAGE: 0.4,     // dano de cada inimigo (ondas maiores e resistentes já somam muito dano no total)
             ENEMY_DMG_PER_DAY: 0.07, // o dano dos inimigos cresce 7% (do valor base) a cada dia
             GENERAL_INCOME: 1.75,  // ritmo de ataques do general (1 = ritmo do antigo sorteio; era 2,0)
@@ -1384,9 +1384,10 @@
             // A cada nível acima do 1:
             FOOD_LOSS_PER_LEVEL: 0.004,   // −0,4% de ração e água no comboio (nível 25: −10%)
             WAVE_PLUS_EVERY_LEVELS: 99,   // soldados extras por onda por nível: desligado (o +1 no nível 25 derrubava a vitória de 55% para 15% de uma vez)
-            ENEMY_HP_PER_LEVEL: 0.002,    // no lugar disso, inimigos 0,2% mais resistentes por nível (nível 25: +5%), uma subida suave
+            ENEMY_HP_PER_LEVEL: 0.001,    // no lugar disso, inimigos 0,1% mais resistentes por nível (nível 25: +2,4%), uma subida suave
             ATTACK_RATE_PER_LEVEL: 0.003, // general ataca 0,3% mais rápido por nível (nível 25: +7%)
-            AMMO_SPEND: 3,              // gasto de munição pesada na supressão ×3 (a leve agora é bala a bala)
+            AMMO_SPEND: 2,              // gasto de munição pesada na supressão ×2 (era ×3)
+            MG_AMMO_PER_SHOT: 0.5,      // munição pesada por disparo da metralhadora .50 (era 1: ela esvaziava o paiol por volta do dia 15)
             AMMO_CAP_RIFLE: 2000,       // capacidade do paiol: munição leve
             AMMO_CAP_HEAVY: 600,        // capacidade do paiol: munição pesada
         };
@@ -1990,7 +1991,7 @@
              requisitar com prestígio (chega no próximo comboio).
            ========================================================================== */
         const EQUIP = {
-            metralhadora: { nome: 'Metralhadora .50', sigla: 'MG', icone: 'machine-gun', desc: 'Gasta munição pesada (~4 por segundo)' },
+            metralhadora: { nome: 'Metralhadora .50', sigla: 'MG', icone: 'machine-gun', desc: 'Gasta munição pesada (~2 por segundo)' },
             morteiro:     { nome: 'Morteiro 60 mm', sigla: 'MRT', icone: 'mortar', desc: 'Fogo indireto de 60 a 300 m, atinge grupos' },
             lancaAT:      { nome: 'Lança-rojão anticarro', sigla: 'AT', icone: 'rocket', desc: 'Dispara só em blindados até 200 m' }
         };
@@ -2045,7 +2046,7 @@
             const ars = arsenalDe(estado);
             return ars.posicoes.some(p => {
                 if (operadorAtivo(p, estado) !== s) return false;
-                if (p.arma === 'metralhadora') return estado.resources.ammoHeavy >= 1;
+                if (p.arma === 'metralhadora') return estado.resources.ammoHeavy >= PRESSURE.MG_AMMO_PER_SHOT;
                 if (p.arma === 'morteiro') return ars.itens.granadaMorteiro >= 1;
                 return ars.itens.foguetesAT >= 1 && estado.enemies.some(e => e.type === 'blindado' && e.distance <= DEF.AT.alcance);
             });
@@ -2076,10 +2077,10 @@
                     while (p.acc >= 1) {
                         p.acc -= 1;
                         const vivos = alvos.filter(e => e.hp > 0);
-                        if (!vivos.length || estado.resources.ammoHeavy < 1) { p.acc = 0; break; }
+                        if (!vivos.length || estado.resources.ammoHeavy < PRESSURE.MG_AMMO_PER_SHOT) { p.acc = 0; break; }
                         const prox = vivos.reduce((a, e) => (e.distance < a.distance ? e : a), vivos[0]);
                         const alvo = Math.random() < 0.5 ? prox : vivos[Math.floor(Math.random() * vivos.length)];
-                        estado.resources.ammoHeavy -= 1;
+                        estado.resources.ammoHeavy -= PRESSURE.MG_AMMO_PER_SHOT;
                         st.tiros++; estado.combate.tiros++;
                         rastro(op, alvo, '#ffb347');
                         if (Math.random() < 0.15) somMetralhadora();
@@ -5052,7 +5053,7 @@
            Ao abrir, ao voltar para o app e a cada minuto o jogo compara as duas. Se o site
            tiver uma versão diferente, o jogo trava numa tela que só sai atualizando.
            (tools/nova-versao.sh troca as duas juntas a cada atualização publicada.) */
-        const VERSAO_JOGO = '20261107.1603';
+        const VERSAO_JOGO = '20261108.0255';
         const ATUALIZOU_KEY = 'frontline-atualizou-para';
         async function verificarVersao() {
             if (!location.protocol.startsWith('http') || atualizacaoPendente) return;

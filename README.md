@@ -62,7 +62,7 @@ Jogo de estratégia tático com foco em realismo de comando, combate blindado e 
 ### Defesas (aba Defesas)
 - **Pontos defensivos:** 3 na trincheira (flanco esquerdo, centro, flanco direito). Cada um começa como terreno livre e precisa de obra: quem está na Manutenção trabalha nela em vez de reparar a trincheira (soldado 4 pontos por ciclo, Engenheiro 12; 100 = pronto; o Engenheiro sozinho leva ~10 s reais). Uma obra por vez.
 - **Armas pesadas** (montadas num ponto pronto, com um operador escolhido; o operador precisa estar de Vigília e, enquanto opera, não usa o fuzil):
-  - Metralhadora .50: ~4 balas/s real, 25% de acerto, 60 de dano; gasta munição pesada. Prefere alvos sem blindagem.
+  - Metralhadora .50: ~3 balas/s real, 25% de acerto, 60 de dano; gasta meia munição pesada por disparo (era 1: o paiol pesado secava por volta do dia 15; agora dura até ~dia 21 a 24). Prefere alvos sem blindagem.
   - Morteiro 60 mm: um disparo a cada 5 s reais, de 60 a 300 m, no maior grupo; até 110 de dano em cada inimigo do grupo (70% de acerto base); gasta granadas de morteiro.
   - Lança-rojão anticarro: só dispara em blindados até 200 m; 900 de dano (75% de acerto base); recarga 6 s reais; gasta foguetes.
 - **Granadas de mão:** lançadas sozinhas (se liberadas) por quem está de vigília em inimigos a menos de 25 m: até 3 inimigos, 140 de dano.
@@ -98,7 +98,7 @@ Jogo de estratégia tático com foco em realismo de comando, combate blindado e 
 - Ordens táticas: Fogo Supressão (ataque +60%, inimigos 70% mais lentos, gasta munição), Abrigo Reforçado (dano recebido −75%, ataque −60%), Economizar Munição (gasto −65%, ataque −30%) e Vigília Total (mapa visível sem vigias, +0,4 de fadiga a cada 10 s para todos). Pares que se contradizem não ficam ligados juntos: Fogo Supressão × Economizar Munição e Abrigo Reforçado × Vigília Total (ligar uma desliga a outra).
 - Carga Emergencial: pedida por item, cada um com o seu preço e a sua entrega: Rações (+20, 45 pts), Água (+30 L, 45 pts), Munição leve (+250, 50 pts) e Munição pesada (+60, 50 pts), mais o custo da dificuldade. Dá para ter os quatro a caminho ao mesmo tempo, mas cada item um pedido por vez. Chega 150 s reais depois do pedido no nível 1 e +10 s a cada nível (nível 25: 390 s); o prazo dobra com a linha de suprimento cortada. Sem ninguém fora da vigília, metade do item se perde.
 - Fome e sede sobem com o tempo para todos (ritmo no bloco `NECESSIDADES`, acima) e só caem na Cozinha. É preciso revezar os soldados na cozinha. A partir de 75%, fome ou sede tiram vida e moral.
-- Pressão (bloco `PRESSURE` no código, fácil de ajustar): ondas de infantaria começam com 6 soldados e ganham +1 a cada 5 dias (máximo 12, mais extras de nível e de patrulha); vida dos inimigos = (100 + 4,5 por dia) × dificuldade (era +5); dano de cada inimigo ×0,4 e crescendo 7% do valor base por dia (era 8%); general ataca a 1,75× o ritmo do antigo sorteio (era 2×); comboio de suprimentos a cada 2 dias (dias pares). Carga base do comboio (antes da dificuldade e da eficiência da linha): 20 rações, 22 L de água (era 15), 850 de munição leve e 160 de munição pesada (era 700 e 80); no nível 1, com linha boa, chegam ~10 rações, ~465 de munição leve e ~87 de pesada, mais as granadas de morteiro e os foguetes. Rebalanceado depois do tiro bala a bala: antes chegavam só ~60 balas por comboio e a munição acabava no dia 7. A aba Logística mostra o dia do próximo comboio.
+- Pressão (bloco `PRESSURE` no código, fácil de ajustar): ondas de infantaria começam com 6 soldados e ganham +1 a cada 5 dias (máximo 12, mais extras de nível e de patrulha); vida dos inimigos = (100 + 5 por dia) × dificuldade; dano de cada inimigo ×0,4 e crescendo 7% do valor base por dia (era 8%); general ataca a 1,75× o ritmo do antigo sorteio (era 2×); comboio de suprimentos a cada 2 dias (dias pares). Carga base do comboio (antes da dificuldade e da eficiência da linha): 20 rações, 22 L de água (era 15), 850 de munição leve e 160 de munição pesada (era 700 e 80); no nível 1, com linha boa, chegam ~10 rações, ~465 de munição leve e ~87 de pesada, mais as granadas de morteiro e os foguetes. Rebalanceado depois do tiro bala a bala: antes chegavam só ~60 balas por comboio e a munição acabava no dia 7. A aba Logística mostra o dia do próximo comboio.
 - Combate (tiro bala a bala, bloco `ARMAS`/`TIRO` no código): cada soldado dispara com a sua arma e cada bala sai do paiol. Cada bala tem chance de acertar; cada acerto tira vida do inimigo. Metade dos tiros vai no inimigo mais próximo, o resto é espalhado.
   - Armas (por segundo real): Fuzileiro ~2,5 balas, 42% de acerto, 48 de dano; Metralhador ~7 balas, 30%, 40; Atiradora de Elite ~0,6 bala, 90%, 160; Médica e Engenheiro ~2 balas, 30%, 40. Sem munição leve: pistola e baioneta (pouco dano, não gasta paiol).
   - Pontaria: cai com a distância (alcance de 300 m; perto acerta mais), com vida, moral e cansaço baixos, à noite e de madrugada (−15%, a Vigília Total compensa), com névoa (−20%) e chuva forte (−10%); sem vigia, atira às cegas (metade). Drones são alvos mais difíceis (−20%).
@@ -119,24 +119,24 @@ Jogo de estratégia tático com foco em realismo de comando, combate blindado e 
 - Os valores "a cada 10 s" acima contam segundos de jogo (10 s de jogo ≈ 1,25 s real).
 
 ### Modos de dificuldade (Configurações → Jogo → Dificuldade)
-- **Recruta** (dano inimigo ×0,92, vida ×0,96, eventos ×0,95, suprimentos ×1,1, prestígio ×1,08, apoios ×0,92), **Soldado** (o equilíbrio padrão) e **Veterano** (dano ×1,06, vida ×1,04, eventos ×1,04, suprimentos ×0,95, prestígio ×0,92, apoios ×1,08). O prestígio e o custo dos apoios pesam muito: 10% a menos de prestígio e 10% a mais de custo derrubavam a vitória de 75% para 25%. Vale já na partida em andamento, e os 25 níveis continuam subindo a cada vitória por cima do modo escolhido. Bloco `MODOS_DIFICULDADE` no código.
+- **Recruta** (dano inimigo ×0,92, vida ×0,96, eventos ×0,95, suprimentos ×1,1, prestígio ×1,08, apoios ×0,92), **Soldado** (o equilíbrio padrão) e **Veterano** (dano ×1,06, vida ×1,04, eventos ×1,04, suprimentos ×0,95, prestígio ×0,95, apoios ×1,05). O prestígio e o custo dos apoios pesam muito: 10% a menos de prestígio e 10% a mais de custo derrubavam a vitória de 75% para 25%. Vale já na partida em andamento, e os 25 níveis continuam subindo a cada vitória por cima do modo escolhido. Bloco `MODOS_DIFICULDADE` no código.
 - Rebalanceamento: antes o jogador automático **nunca vencia** no Soldado nem no Veterano. Agora o critério é: se o robô consegue passar, um jogador atento também consegue. Medição com `DEF=1 node tests/balanco.js` (40 partidas por nível; margem de uns 15 pontos), veja a tabela em **Níveis de dificuldade**.
 
 ### Níveis de dificuldade
 - 25 níveis. Cada vitória sobe um nível; derrota mantém o nível. O nível fica salvo no navegador, mesmo com "Nova partida".
 - Cada nível define uma dificuldade que aumenta a frequência de eventos, a vida e o dano dos inimigos e o tamanho das ondas, e diminui a entrega diária de suprimentos e o prestígio ganho; os apoios da Central ficam mais caros.
-- Além disso, cada nível acima do 1 aperta de forma visível (bloco `PRESSURE`): −0,4% de ração e água no comboio (nível 25: −10%), inimigos 0,2% mais resistentes (nível 25: +5%) e ataques do general 0,3% mais rápidos (nível 25: +7%). Antes eram −1,5%, +1 soldado por onda a cada 6 níveis e 2%: no nível 25 o esquadrão morria de fome mesmo jogando bem, e o soldado extra por onda derrubava a vitória de uma vez.
+- Além disso, cada nível acima do 1 aperta de forma visível (bloco `PRESSURE`): −0,4% de ração e água no comboio (nível 25: −10%), inimigos 0,1% mais resistentes (nível 25: +2,4%) e ataques do general 0,3% mais rápidos (nível 25: +7%). Antes eram −1,5%, +1 soldado por onda a cada 6 níveis e 2%: no nível 25 o esquadrão morria de fome mesmo jogando bem, e o soldado extra por onda derrubava a vitória de uma vez.
 - Vitórias do jogador automático **usando as defesas** (`DIF_MODO=<modo> DEF=1 node tests/balanco.js 1,7,13,19,25 40`; 40 partidas por nível, margem de uns 15 pontos):
 
 | Nível | Recruta | Soldado | Veterano |
 |---|---|---|---|
-| 1 | 100% | 100% | 48% |
-| 7 | 100% | 95% | 38% |
-| 13 | 98% | 93% | 28% |
-| 19 | 100% | 85% | 33% |
-| 25 | 100% | 65% | 5% |
+| 1 | 100% | 90% | 78% |
+| 7 | 100% | 95% | 60% |
+| 13 | 100% | 90% | 73% |
+| 19 | 100% | 78% | 38% |
+| 25 | 98% | 73% | 10% |
 
-Medido com o comboio maior (850 de munição leve, 160 de pesada, 10 granadas de morteiro e 4 foguetes anticarro por comboio). O robô decide a cada segundo, sem cansar; um jogador de verdade tende a ir um pouco pior, por isso o Soldado ficou folgado para o robô.
+Medido com o comboio maior (850 de munição leve, 160 de pesada, 10 granadas de morteiro e 4 foguetes anticarro por comboio) e a metralhadora .50 gastando meia munição pesada por disparo. O robô decide a cada segundo, sem cansar; um jogador de verdade tende a ir um pouco pior, por isso o Soldado ficou folgado para o robô.
 
 Ficar parado não vence em nenhum nível. `node tests/niveis.js` mede o robô mais simples, que não constrói defesas.
 
