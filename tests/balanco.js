@@ -86,7 +86,7 @@ const INIT = eval(src.slice(src.indexOf('const INITIAL_SQUAD = ') + 22, src.inde
       for (let run = 0; run < N; run++) {
         gameEnded = false; msgs.length = 0;
         Object.assign(gameState, { arsenal: novoArsenal(), level, day: 1, timeSeconds: 0, prestige: 150, weather: 'Nublado', supplyLineEff: 85,
-          enemies: [], activeCrisis: null, barrage: null, cargas: {}, lastIntelDay: 0, effects: [], trench: 100, crisisCooldown: 240, convoyAmbush: false, weakenNextWave: false, counterBattery: null, nextWaveBoost: 0, general: newGeneral(), combate: { tiros: 0, acertos: 0, abates: 0 },
+          enemies: [], activeCrisis: null, barrage: null, cargas: {}, lastIntelDay: 0, trench: 100, crisisCooldown: 240, convoyAmbush: false, weakenNextWave: false, counterBattery: null, nextWaveBoost: 0, general: newGeneral(), combate: { tiros: 0, acertos: 0, abates: 0 },
           tacticalOrders: { SUPPRESSION: false, SHELTER: false, CONSERVE: false, FULL_VIGILANCE: false, SIGNAL_JAM: false },
           resources: { rations: 36, water: 48, ammoRifle: 900, ammoHeavy: 350, medkits: 3 }, squad: init.map(s => ({ ...s })) });
         let ticks = 0, semMunDia = null, semPesDia = null, tmin = 100, primeira = null;

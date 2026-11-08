@@ -7,6 +7,11 @@ Jogo de estratégia tático com foco em realismo de comando, combate blindado e 
 - `docs/regras.md` — regras do jogo (reutilizáveis entre campanhas)
 - `docs/campanha/cronica.md` — crônica da campanha atual
 - `data/estado_batalhao.json` — estado do batalhão no ponto de pausa atual
+- `prototipo/ponto-alpha.html` — a página do jogo (estrutura das telas e estilos próprios)
+- `prototipo/assets/js/` — o código do jogo, dividido por assunto e carregado em ordem pela página (todos compartilham as mesmas variáveis globais):
+  `01-base.js` (áudio e estado), `02-regras.js` (salvamento, necessidades, inimigos, general e combate), `03-defesas-crises.js`, `04-interface.js` (interface, sons, medalhas e configurações), `05-cena.js` (trincheira em corte) e `06-conta.js` (rádio, fim de jogo, conta, tutorial, atualização e início do jogo; é o último a carregar e só ele liga o relógio do jogo)
+- `prototipo/assets/css/tailwind.css` — CSS fixo gerado por `tools/gerar-css.sh` (rodar depois de mudar classes no HTML ou no código). Antes o Tailwind vinha de um CDN de desenvolvimento (398 KB, montado no celular a cada abertura); agora são 17 KB
+- `tools/nova-versao.sh` — marca uma versão nova: troca `VERSAO_JOGO` (em `06-conta.js`), o `versao.json` e o `?v=` dos arquivos na página
 
 ## Campanha atual
 
@@ -48,7 +53,7 @@ Jogo de estratégia tático com foco em realismo de comando, combate blindado e 
 
 ### Configurações (engrenagem no cabeçalho)
 - **Conta:** perfil com inicial, nome de comandante (aparece no botão de conta do cabeçalho), e-mail, tipo de conta, nível e data de criação; carreira (partidas, vitórias, derrotas, abates, melhor dia, nível); trocar senha e sair da conta. Sem conta: botão para entrar ou criar conta. O botão de conta do cabeçalho, com conta, abre o perfil.
-- **Som:** liga/desliga geral e volumes separados de música, efeitos (tiros, explosões, alarmes) e som ambiente (vento), cada um com botão "Testar". Cada controle é um canal próprio do mixer (`canais.musica`, `canais.efeitos`, `canais.ambiente`): mexer num não muda os outros, vale na hora até para os sons que já estão tocando, 0% é silêncio de verdade, e a música passa pelo mixer para o controle funcionar também no iPhone.
+- **Som:** liga/desliga geral e volumes separados de música, efeitos (tiros, explosões, alarmes) e som ambiente (vento), cada um com botão "Testar". Cada controle é um canal próprio do mixer (`canais.musica`, `canais.efeitos`, `canais.ambiente`): mexer num não muda os outros, vale na hora até para os sons que já estão tocando, 0% é silêncio de verdade, e a música passa pelo mixer para o controle funcionar também no iPhone. Ao sair do app o som para, e volta ao retornar ou no primeiro toque (iPhone e alguns Androids travam o áudio em segundo plano). As músicas só são baixadas quando o som é ligado (antes eram 1,4 MB baixados ao abrir, mesmo com som desligado).
 - **Jogo:** tremor da tela, vibração do celular, rastros dos tiros e texto maior; rever o tutorial; restaurar padrões.
 - **Dados:** versão do jogo, onde o progresso está salvo, créditos e apagar o progresso do aparelho.
 - O relógio para com a tela aberta. As preferências ficam no aparelho (`frontline-config`) e, com conta, também nos metadados da conta no Supabase, junto com a carreira (`frontline-carreira`): ao entrar em outro aparelho, vêm junto.

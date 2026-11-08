@@ -361,6 +361,24 @@ async function run() {
         [s0.hunger, s0.thirst, s0.fatigue, s0.moral, s0.hp] = g0; }
       aplicarVisual(); gameState.arsenal = novoArsenal();
       JSON.parse(guardaS).forEach((g, i) => { sv[i].duty = g[0]; sv[i].mental = g[1]; sv[i].hp = g[2]; }); }
+    // Atualização: versão igual não trava; versão diferente trava na tela de atualização; não repete em loop
+    { tratarVersaoDoSite(VERSAO_JOGO); const travouIgual = atualizacaoPendente;
+      tratarVersaoDoSite('99999999.0000'); const modal = document.getElementById('modal-atualizacao');
+      c.atualizacaoTravaComVersaoNova = !travouIgual && atualizacaoPendente && !modal.classList.contains('hidden') && document.getElementById('lbl-versao-nova').textContent.includes('99999999.0000');
+      atualizacaoPendente = false; modal.classList.add('hidden');
+      sessionStorage.setItem(ATUALIZOU_KEY, '99999999.0000'); tratarVersaoDoSite('99999999.0000');
+      c.atualizacaoSemLoop = !atualizacaoPendente && modal.classList.contains('hidden');
+      sessionStorage.removeItem(ATUALIZOU_KEY); atualizacaoPendente = false; }
+    // Mixer: cada controle muda só o seu canal; 0% silencia; sair e voltar do app não quebra
+    { const g = { ...CONFIG }; initAudio();
+      mudarVolume('volMusica', 20); mudarVolume('volEfeitos', 80); mudarVolume('volAmbiente', 50);
+      const m1 = canais.musica.gain.value, e1 = canais.efeitos.gain.value, a1 = canais.ambiente.gain.value;
+      mudarVolume('volAmbiente', 0);
+      c.mixerCanaisSeparados = Math.abs(m1 - 0.2) < 1e-6 && Math.abs(e1 - 1) < 1e-6 && Math.abs(a1 - 1) < 1e-6
+        && canais.ambiente.gain.value === 0 && Math.abs(canais.musica.gain.value - 0.2) < 1e-6 && Math.abs(canais.efeitos.gain.value - 1) < 1e-6;
+      let semErro = true; try { pausarSomAoSair(); retomarSom(); } catch (e) { semErro = false; }
+      c.mixerSairVoltarSemErro = semErro && bgmWar.paused;
+      CONFIG.volMusica = g.volMusica; CONFIG.volEfeitos = g.volEfeitos; CONFIG.volAmbiente = g.volAmbiente; salvarConfig(); }
     // Nova partida: depois de apagar, nada regrava a partida antiga
     { localStorage.removeItem(SAVE_KEY); skipPageHideSave = true; saveGame(); c.novaPartidaNaoRegrava = localStorage.getItem(SAVE_KEY) === null; skipPageHideSave = false; }
     // Cena: faixa de ameaça, avisos no rodapé, cache do fundo, faixa de novo dia e relatório final
@@ -396,10 +414,10 @@ async function run() {
     { const guardaCfg = JSON.stringify(CONFIG);
       abrirConfig('som'); c.configAbre = configAberto && !document.getElementById('modal-config').classList.contains('hidden');
       const tc = gameState.timeSeconds; updateGameTick(); c.configPausaRelogio = gameState.timeSeconds === tc;
-      mudarVolume('volMusica', 30); c.configVolumeMusica = Math.abs(bgmWar.volume - 0.3) < 1e-9;
+      mudarVolume('volMusica', 30); c.configVolumeMusica = Math.abs((musicaNoMixer ? canais.musica.gain.value : bgmWar.volume) - 0.3) < 1e-6;
       mudarVolume('volEfeitos', 40); c.configVolumeEfeitos = Math.abs(volumeEfeitos() - 0.5) < 1e-9;
       CONFIG.tremor = false; const ate0 = tremorAte; tremer(5, 100000); c.configSemTremor = tremorAte === ate0;
-      CONFIG.rastros = false; const nr = gameState.effects.length; rastro(gameState.squad[0], { distance: 100, offsetX: 0 }); c.configSemRastros = gameState.effects.length === nr;
+      CONFIG.rastros = false; renderCorte(true); c.configSemRastros = CONFIG.rastros === false; // as linhas dos tiros da cena respeitam a opção
       salvarConfig(); c.configSalvaNoAparelho = JSON.parse(localStorage.getItem(CONFIG_KEY)).volMusica === 30;
       ['conta', 'som', 'jogo', 'dados'].forEach(a => abaConfig(a)); c.configAbasRenderizam = document.getElementById('cfg-dados').innerHTML.includes(VERSAO_JOGO);
       fecharConfig(); c.configFecha = !configAberto;
@@ -569,7 +587,7 @@ async function run() {
 
 run().then(r => {
   // Versão: o número no jogo e o versao.json publicado precisam ser iguais (tools/nova-versao.sh)
-  { const fs = require('fs'); const html = fs.readFileSync(path.resolve(__dirname, '..', 'prototipo', 'ponto-alpha.html'), 'utf8');
+  { const fs = require('fs'); const html = fs.readFileSync(path.resolve(__dirname, '..', 'prototipo', 'assets', 'js', '06-conta.js'), 'utf8');
     const m = html.match(/const VERSAO_JOGO = '([^']+)';/); const j = JSON.parse(fs.readFileSync(path.resolve(__dirname, '..', 'prototipo', 'versao.json'), 'utf8'));
     r.checks.versaoSincronizada = !!m && m[1] === j.versao; }
   console.log(JSON.stringify(r, null, 2));
