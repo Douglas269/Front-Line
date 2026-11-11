@@ -33,6 +33,8 @@
                     convoyAmbush: gameState.convoyAmbush,
                     weakenNextWave: gameState.weakenNextWave,
                     counterBattery: gameState.counterBattery,
+                    recargaContra: gameState.recargaContra,
+                    ofensiva: gameState.ofensiva,
                     nextWaveBoost: gameState.nextWaveBoost,
                     general: gameState.general,
                     feed: document.getElementById('feed-log').innerHTML,
@@ -75,6 +77,8 @@
                 convoyAmbush: !!data.convoyAmbush,
                 weakenNextWave: !!data.weakenNextWave,
                 counterBattery: data.counterBattery || null,
+                recargaContra: data.recargaContra || 0,
+                ofensiva: data.ofensiva || null,
                 nextWaveBoost: data.nextWaveBoost || 0,
                 general: data.general || newGeneral()
             });
@@ -123,6 +127,32 @@
             if (jogoPausado && !gameEnded) saveGame();
         }
 
+        /* ===== Avançar o tempo 2× nos momentos calmos =====
+           Só acelera sem inimigos, sem bombardeio e sem crise; no primeiro contato volta sozinho ao normal. */
+        let velocidadeRapida = false;
+        const momentoCalmo = () => !gameState.enemies.length && !gameState.barrage && !gameState.activeCrisis && !gameEnded;
+        function atualizarBotaoRapido() {
+            const b = document.getElementById('btn-rapido');
+            if (!b) return;
+            b.classList.toggle('btn-active-order', velocidadeRapida);
+            b.classList.toggle('opacity-50', !velocidadeRapida && !momentoCalmo());
+        }
+        function alternarRapido() {
+            if (!velocidadeRapida && !momentoCalmo()) { logFeed('⏩ Só dá para acelerar quando não há inimigo nem bombardeio.', 'text-mil-amberMuted'); return; }
+            velocidadeRapida = !velocidadeRapida;
+            if (velocidadeRapida && jogoPausado) alternarPausa(false);
+            atualizarBotaoRapido();
+            playTacticalBeep(velocidadeRapida ? 950 : 650, 0.03);
+        }
+        function passoDoRelogio() {
+            updateGameTick();
+            if (velocidadeRapida) {
+                if (momentoCalmo() && !jogoPausado) updateGameTick();
+                else if (!momentoCalmo()) { velocidadeRapida = false; logFeed('⏩ Contato! O tempo voltou ao normal.', 'text-mil-amberMuted font-bold'); }
+            }
+            atualizarBotaoRapido();
+        }
+
         // Vira o dia (chamado sozinho no fim da madrugada)
         function endTurn() {
             if (gameEnded) return;
@@ -153,6 +183,7 @@
             }
             gameState.combate = { tiros: 0, acertos: 0, abates: 0 };
             logFeed(`=== DIA ${gameState.day} INICIADO ===`, 'text-mil-amberMuted font-bold');
+            agendarOfensiva();
             playTacticalBeep(1000, 0.08);
 
             // Weather Transition
@@ -328,9 +359,50 @@
             }
         }
 
+        /* ===== Escala automática (Configurações → Jogo) =====
+           Quem está com fome ou sede vai à cozinha; quem está exausto vai descansar; depois cada um
+           volta ao posto que o jogador escolheu. Em combate, só sai do posto quem está em estado crítico,
+           e nunca deixa a trincheira sem ninguém de vigília. Trocar a função na mão vira a nova escolha. */
+        const ESCALA = { COMER: 50, SACIADO: 10, DESCANSAR: 75, DESCANSADO: 20, CRITICO: 75, CANSACO_CRITICO: 90 };
+        function escalaAutomatica() {
+            if (typeof CONFIG === 'undefined' || CONFIG.escalaAuto === false) return;
+            const vivos = gameState.squad.filter(s => s.hp > 0 && !s.deserted);
+            const r = gameState.resources, temComida = r.rations >= 1 || r.water >= 1;
+            const ameaca = gameState.enemies.some(e => e.type !== 'drone' && e.distance < 160) || !!gameState.barrage;
+            const vigias = () => vivos.filter(s => s.duty === 'WATCH').length;
+            vivos.forEach(s => {
+                if (mentalDe(s) === 'panico') return;
+                if (s.dutyBase === undefined) s.dutyBase = (s.duty === 'RATIONING' || s.duty === 'REST') ? 'WATCH' : s.duty;
+                const fome = Math.max(s.hunger, s.thirst);
+                const deixaSemVigia = s.duty === 'WATCH' && vigias() <= 1;
+                // Volta ao posto
+                if (s.autoMotivo === 'comer' && s.duty === 'RATIONING' && ((s.hunger < ESCALA.SACIADO && s.thirst < ESCALA.SACIADO) || !temComida)) {
+                    s.duty = s.dutyBase; s.autoMotivo = null;
+                    logFeed(`🍲 ${s.rank} ${s.name} comeu e voltou ao posto.`, 'text-mil-textMuted', true); return;
+                }
+                if (s.autoMotivo === 'descansar' && s.duty === 'REST' && (s.fatigue < ESCALA.DESCANSADO || (ameaca && s.fatigue < 60))) {
+                    s.duty = s.dutyBase; s.autoMotivo = null;
+                    logFeed(`💤 ${s.rank} ${s.name} descansou e voltou ao posto.`, 'text-mil-textMuted', true); return;
+                }
+                if (s.duty === 'RATIONING' || s.duty === 'REST') return; // já está comendo ou descansando
+                // Vai comer
+                if (fome >= ESCALA.COMER && temComida && (!ameaca || fome >= ESCALA.CRITICO) && !(deixaSemVigia && ameaca)) {
+                    s.duty = 'RATIONING'; s.autoMotivo = 'comer';
+                    logFeed(`🍲 ${s.rank} ${s.name} foi comer (escala automática).`, 'text-mil-textMuted', true); return;
+                }
+                // Vai descansar
+                if (s.fatigue >= ESCALA.DESCANSAR && (!ameaca || s.fatigue >= ESCALA.CANSACO_CRITICO) && !(deixaSemVigia && ameaca) && !deixaSemVigia) {
+                    s.duty = 'REST'; s.autoMotivo = 'descansar';
+                    logFeed(`💤 ${s.rank} ${s.name} foi descansar (escala automática).`, 'text-mil-textMuted', true);
+                }
+            });
+        }
+
         function processSquadNeeds() {
             if (gameState.timeSeconds % 10 !== 0) return;
             processarMental();
+            escalaAutomatica();
+            francoAtirador();
             gameState.squad.forEach(s => { if (s.hp > 0 && s.hp < 25) s.quaseMorreu = true; });
 
             // Desgaste natural da trincheira (mais rápido com chuva forte)
@@ -397,7 +469,7 @@
         };
         function diff() {
             // Rebalanceado com o jogador automático usando as defesas (tests/balanco.js), com o comboio maior:
-            // Soldado vence ~90% no nível 1, ~90% no 13 e ~73% no 25; Veterano ~78%, ~73% e ~10%;
+            // Soldado vence ~100% no nível 1, ~93% no 13 e ~65% no 25; Veterano ~100%, ~70% e ~15%;
             // Recruta vence sempre. A subida por nível vem do bloco PRESSURE e das crises.
             const lv = Math.max(1, Math.min(MAX_LEVEL, gameState.level));
             const d = lv <= 12 ? 5.94 : 5.94 + (6.05 - 5.94) * (lv - 12) / 13;
@@ -449,7 +521,7 @@
             // A cada nível acima do 1:
             FOOD_LOSS_PER_LEVEL: 0.004,   // −0,4% de ração e água no comboio (nível 25: −10%)
             WAVE_PLUS_EVERY_LEVELS: 99,   // soldados extras por onda por nível: desligado (o +1 no nível 25 derrubava a vitória de 55% para 15% de uma vez)
-            ENEMY_HP_PER_LEVEL: 0.001,    // no lugar disso, inimigos 0,1% mais resistentes por nível (nível 25: +2,4%), uma subida suave
+            ENEMY_HP_PER_LEVEL: 0,        // resistência extra por nível: desligada (agora os modificadores de nível fazem esse papel)
             ATTACK_RATE_PER_LEVEL: 0.003, // general ataca 0,3% mais rápido por nível (nível 25: +7%)
             AMMO_SPEND: 2,              // gasto de munição pesada na supressão ×2 (era ×3)
             MG_AMMO_PER_SHOT: 0.5,      // munição pesada por disparo da metralhadora .50 (era 1: ela esvaziava o paiol por volta do dia 15)
@@ -469,6 +541,41 @@
             return Math.max(0, Math.round(gameState.resources.ammoRifle - antes));
         }
         const nivelAcima = () => Math.max(0, Math.min(MAX_LEVEL, gameState.level) - 1);
+
+        /* ===== Modificadores por faixa de nível =====
+           Cada faixa traz uma regra nova que muda o jeito de jogar (e elas se somam). */
+        const MODIFICADORES = [
+            { nivel: 5,  id: 'noites',    nome: 'Noites longas',       desc: 'À noite a mira cai 25% (antes 15%): use a Vigília Total ou segure o fogo.' },
+            { nivel: 9,  id: 'franco',    nome: 'Franco-atirador',     desc: 'Um atirador inimigo dispara de vez em quando em quem está de vigília. Abrigo Reforçado protege; o Atirador de Elite de vigília pode abatê-lo.' },
+            { nivel: 13, id: 'noturno',   nome: 'Assaltos noturnos',   desc: 'Ondas que chegam à noite vêm com 2 soldados a mais.' },
+            { nivel: 17, id: 'blindados', nome: 'Blindados em dupla',  desc: 'A partir do dia 15, o blindado pode vir acompanhado de outro.' },
+            { nivel: 21, id: 'pesada',    nome: 'Artilharia pesada',   desc: 'Os bombardeios inimigos dão 25% mais dano.' }
+        ];
+        const modAtivo = (id) => MODIFICADORES.some(m => m.id === id && Math.min(MAX_LEVEL, gameState.level || 1) >= m.nivel);
+        const modificadoresAtivos = () => MODIFICADORES.filter(m => Math.min(MAX_LEVEL, gameState.level || 1) >= m.nivel);
+        const proximoModificador = () => MODIFICADORES.find(m => m.nivel > Math.min(MAX_LEVEL, gameState.level || 1)) || null;
+        const miraDeNoite = () => (modAtivo('noites') ? 0.75 : TIRO.NOITE);
+
+        // Franco-atirador (nível 9+): ~1 disparo por dia em quem está de vigília
+        const FRANCO = { CHANCE: 0.04, DANO: 14, CONTRA: 0.5 };
+        function francoAtirador() {
+            if (!modAtivo('franco') || Math.random() >= FRANCO.CHANCE) return;
+            const vigias = gameState.squad.filter(s => s.hp > 0 && s.duty === 'WATCH' && !s.deserted);
+            if (!vigias.length) return;
+            const elite = vigias.find(s => s.class === 'Atirador de Elite' && mentalDe(s) !== 'panico');
+            if (elite && Math.random() < FRANCO.CONTRA) {
+                gameState.prestige += ganho(20);
+                logFeed(`🎯 ${elite.rank} ${elite.name} viu o reflexo da luneta e abateu o FRANCO-ATIRADOR inimigo (+${ganho(20)} Prestígio).`, 'text-mil-greenMuted font-bold');
+                return;
+            }
+            const alvo = vigias[Math.floor(Math.random() * vigias.length)];
+            const dano = FRANCO.DANO * diff().enemyDmgMult * (gameState.tacticalOrders.SHELTER ? 0.25 : 1);
+            alvo.hp = Math.max(0, alvo.hp - dano);
+            marcarFerido(alvo);
+            logFeed(`🎯 FRANCO-ATIRADOR: ${alvo.rank} ${alvo.name} foi atingido na vigília (−${Math.round(dano)} de vida)${gameState.tacticalOrders.SHELTER ? ', o abrigo segurou a maior parte' : ''}.`, 'text-red-400 font-bold');
+            if (alvo.hp <= 0) { logFeed(`❌ BAIXA: ${alvo.rank} ${alvo.name} foi morto pelo franco-atirador!`, 'text-red-500 font-bold'); impacto('morte'); }
+            else impacto('artilharia');
+        }
         const comidaDoNivel = () => Math.max(0.3, 1 - PRESSURE.FOOD_LOSS_PER_LEVEL * nivelAcima());
         const ondaDoNivel = () => Math.floor(nivelAcima() / PRESSURE.WAVE_PLUS_EVERY_LEVELS);
         const ritmoDoNivel = () => 1 + PRESSURE.ATTACK_RATE_PER_LEVEL * nivelAcima();
@@ -532,7 +639,7 @@
             if (mentalDe(s) === 'heroismo') p *= MENTAL.HEROISMO_PRECISAO;
             if (o.SHELTER) p *= TIRO.ABRIGO.prec;
             if (!temVisao(estado)) p *= BLIND_FIRE;
-            if (ehNoite(estado) && !o.FULL_VIGILANCE) p *= TIRO.NOITE;
+            if (ehNoite(estado) && !o.FULL_VIGILANCE) p *= miraDeNoite();
             if (estado.weather === 'Névoa Espessa') p *= TIRO.NEVOA;
             if (estado.weather === 'Chuva Forte') p *= TIRO.CHUVA;
             if (enemy) {
@@ -615,7 +722,8 @@
             const marcada = gameState.nextWaveBoost || 0;
             gameState.nextWaveBoost = 0;
             const base = Math.min(PRESSURE.WAVE_CAP, PRESSURE.WAVE_BASE + Math.floor((gameState.day - 1) / PRESSURE.WAVE_EVERY_DAYS));
-            const count = base + Math.max(0, extra - 2) + ondaDoNivel() + marcada;
+            const noturno = modAtivo('noturno') && gameState.timeSeconds >= 120 ? 2 : 0; // Assaltos noturnos (nível 13+)
+            const count = base + Math.max(0, extra - 2) + ondaDoNivel() + marcada + noturno;
             if (marcada) logFeed(`🎯 A patrulha marcou a posição: esta onda vem com ${marcada} soldados a mais.`, 'text-red-400 font-bold');
             for (let i = 0; i < count; i++) spawnEnemy('infantaria', startDist);
             logFeed(`🚨 ALERTA: Tropa inimiga avança sobre o setor!`, 'text-red-400 font-bold');
@@ -781,6 +889,7 @@
                 playTacticalBeep(500, 0.1);
             } else if (acao === 'blindado') {
                 spawnEnemy('blindado', 280);
+                if (modAtivo('blindados') && gameState.day >= 15 && Math.random() < 0.5) { spawnEnemy('blindado', 300); logFeed('🚜🚜 São DOIS blindados!', 'text-red-400 font-bold'); }
                 logFeed('🚜 BLINDADO INIMIGO avançando! Fuzil quase não fere: use o anticarro, o morteiro ou a artilharia.', 'text-red-400 font-bold');
                 playTacticalBeep(300, 0.25);
             } else if (acao === 'drone') {
@@ -801,12 +910,70 @@
             }
         }
 
+        /* ===== Ofensivas anunciadas =====
+           De tempos em tempos o general marca um ataque grande para um dia e hora. O rádio intercepta a
+           ordem na véspera; no dia ele fica quieto juntando forças e, na hora, vem tudo junto: onda maior,
+           artilharia e (a partir do dia 10) blindado. Quem resiste ganha prestígio e moral. */
+        const OFENSIVA = { PRIMEIRA: [6, 8], INTERVALO: [6, 8], HORA: [66, 96], EXTRA_BASE: 6, EXTRA_POR_DIAS: 8, PREMIO: 40, MORAL: 4 };
+        const sorteiaEntre = ([a, b]) => a + Math.floor(Math.random() * (b - a + 1));
+        function agendarOfensiva() {
+            const of = gameState.ofensiva;
+            if (!of || of.feita) {
+                const dia = of ? of.dia + sorteiaEntre(OFENSIVA.INTERVALO) : sorteiaEntre(OFENSIVA.PRIMEIRA);
+                gameState.ofensiva = dia <= GAME_CONFIG.TOTAL_DAYS ? { dia: Math.max(dia, gameState.day + 1), hora: sorteiaEntre(OFENSIVA.HORA), anunciada: false, ativa: false, feita: false } : null;
+            }
+            const o = gameState.ofensiva;
+            if (o && !o.anunciada && o.dia - gameState.day <= 1) {
+                o.anunciada = true;
+                const quando = o.dia === gameState.day ? 'HOJE à tarde' : 'AMANHÃ à tarde';
+                logFeed(`📻 INTERCEPTADO: o general prepara uma OFENSIVA para ${quando}. Descanse o esquadrão, encha o paiol e reforce a trincheira.`, 'text-red-400 font-bold');
+                addDiaryEntry(`O rádio pegou uma ordem do inimigo: ofensiva marcada para o dia ${o.dia}, à tarde. Vamos nos preparar.`);
+                tocarSom('alarme', 0.5);
+            }
+        }
+        function processarOfensiva() {
+            const o = gameState.ofensiva;
+            if (!o || o.feita || o.dia !== gameState.day) return;
+            if (!o.ativa && gameState.timeSeconds >= o.hora) {
+                o.ativa = true;
+                const extra = OFENSIVA.EXTRA_BASE + Math.floor(gameState.day / OFENSIVA.EXTRA_POR_DIAS);
+                gameState.nextWaveBoost = (gameState.nextWaveBoost || 0) + extra;
+                logFeed(`⚔️ OFENSIVA INIMIGA! Eles vêm com tudo: onda reforçada${gameState.day >= 10 ? ', blindado' : ''} e artilharia.`, 'text-red-500 font-bold');
+                spawnEnemyAssault(270);
+                if (gameState.day >= 10) executarPasso('blindado');
+                if (!gameState.barrage) executarPasso('artilharia');
+                impacto('ofensiva');
+                return;
+            }
+            // Repelida: ninguém mais avançando e sem bombardeio pendente
+            if (o.ativa && !gameState.barrage && !gameState.enemies.some(e => e.type !== 'drone')) {
+                o.feita = true; o.ativa = false;
+                const vivos = gameState.squad.filter(s => s.hp > 0);
+                if (!vivos.length) return;
+                gameState.prestige += ganho(OFENSIVA.PREMIO);
+                vivos.forEach(s => { s.moral = Math.min(100, s.moral + OFENSIVA.MORAL); });
+                logFeed(`🎖️ OFENSIVA REPELIDA! O Comando reconhece a resistência (+${ganho(OFENSIVA.PREMIO)} Prestígio) e o esquadrão ganha moral.`, 'text-mil-greenMuted font-bold');
+                addDiaryEntry(`Seguramos a ofensiva do dia ${gameState.day}. Ninguém aqui vai esquecer esta tarde.`);
+            }
+        }
+        // Texto para a faixa da cena: aviso da ofensiva que vem (véspera e no próprio dia)
+        function avisoOfensiva() {
+            const o = gameState.ofensiva;
+            if (!o || !o.anunciada || o.feita || o.ativa) return '';
+            if (o.dia === gameState.day + 1) return '⚔️ OFENSIVA INIMIGA AMANHÃ À TARDE';
+            if (o.dia === gameState.day) return `⚔️ OFENSIVA INIMIGA EM ${seg(Math.max(0, o.hora - gameState.timeSeconds))}s`;
+            return '';
+        }
+
         // Um segundo do general: junta orçamento, avança o plano em curso ou pensa no próximo
         function randomEventCheck() {
             if (!gameState.general) gameState.general = newGeneral();
             const g = gameState.general;
+            processarOfensiva();
             if (gameState.day < 2) { g.postura = 'Observando'; return; }
             g.budget = Math.min(12, g.budget + generalIncome());
+            const of = gameState.ofensiva;
+            if (of && of.dia === gameState.day && !of.ativa && !of.feita) { g.postura = 'Preparando a ofensiva'; g.plan = null; return; } // calmaria antes da tempestade
             lembrar('vigias', gameState.squad.filter(s => s.hp > 0 && s.duty === 'WATCH').length, 0.01);
             if (gameState.enemies.some(e => e.type === 'drone')) lembrar('bloqueio', gameState.tacticalOrders.SIGNAL_JAM ? 1 : 0, 0.02);
 
@@ -828,6 +995,8 @@
             const m = gameState.general ? gameState.general.memoria : null;
             if (!m) return [];
             const l = [];
+            const of = gameState.ofensiva;
+            if (of && of.anunciada && !of.feita) l.push(`Prepara uma OFENSIVA para o dia ${of.dia}, à tarde: onda reforçada e artilharia${of.dia >= 10 ? ', com blindado' : ''}.`);
             if (m.abrigo > 0.6) l.push('Percebeu que vocês se abrigam na artilharia: espere infantaria junto com os bombardeios.');
             if (m.contraBateria > 0.4) l.push(`Está mudando as baterias de lugar por causa da contra-bateria: aviso de artilharia em ${seg(barrageWarning())}s.`);
             if (m.bloqueio > 0.6) l.push('Os drones dele estão sendo bloqueados: está trocando drones por patrulhas.');
@@ -907,12 +1076,19 @@
         }
 
         // Contra-bateria a caminho: se chegar antes do impacto, cancela o bombardeio
+        // Contra-bateria: depois de usada a Central recarrega; com drone inimigo observando,
+        // a artilharia deles muda de posição e o tiro pode errar (vale cegar o drone antes)
+        const CONTRA = { RECARGA: 150, ERRO_COM_DRONE: 0.5 }; // 150 s de jogo = 25 s reais
         function processCounterBattery() {
+            if (gameState.recargaContra > 0) gameState.recargaContra--;
             if (!gameState.counterBattery) return;
             gameState.counterBattery.ticks--;
             if (gameState.counterBattery.ticks > 0) return;
             gameState.counterBattery = null;
-            if (gameState.barrage) {
+            gameState.recargaContra = CONTRA.RECARGA;
+            if (gameState.barrage && droneObservando() && Math.random() < CONTRA.ERRO_COM_DRONE) {
+                logFeed('💥 A contra-bateria ERROU: o drone inimigo avisou e a artilharia deles mudou de posição. Cegue ou derrube o drone antes da próxima.', 'text-red-400 font-bold');
+            } else if (gameState.barrage) {
                 gameState.barrage = null;
                 logFeed('💥 CONTRA-BATERIA: a artilharia inimiga foi silenciada antes de disparar!', 'text-mil-greenMuted font-bold');
                 if (gameState.general) lembrar('contraBateria', 1, 0.3);
@@ -1002,7 +1178,7 @@
                 const alvo = gameState.squad.find(m => m.id === a.id);
                 cenaEfeito('explosao', alvo && alvo.hp > 0 ? { soldado: a.id } : { comodo: 'posto' });
                 if (!alvo || alvo.hp <= 0) return; // já caído: o projétil só revolve a trincheira
-                let dano = BARRAGE_DAMAGE * diff().enemyDmgMult * PRESSURE.ENEMY_DAMAGE * (observada ? DRONE_SPOT_ARTILLERY : 1);
+                let dano = BARRAGE_DAMAGE * diff().enemyDmgMult * PRESSURE.ENEMY_DAMAGE * (observada ? DRONE_SPOT_ARTILLERY : 1) * (modAtivo('pesada') ? 1.25 : 1);
                 if (gameState.tacticalOrders.SHELTER) dano *= shelterMult();
                 const noAbrigo = alvo.duty === 'REST';
                 if (noAbrigo) dano *= ABRIGO_SUBTERRANEO;

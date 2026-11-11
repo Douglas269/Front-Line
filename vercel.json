@@ -5,6 +5,14 @@
       "destination": "/prototipo/ponto-alpha.html"
     },
     {
+      "source": "/duelo.html",
+      "destination": "/prototipo/duelo.html"
+    },
+    {
+      "source": "/duelo",
+      "destination": "/prototipo/duelo.html"
+    },
+    {
       "source": "/versao.json",
       "destination": "/prototipo/versao.json"
     },
@@ -76,6 +84,15 @@
         {
           "key": "Content-Type",
           "value": "application/manifest+json"
+        }
+      ]
+    },
+    {
+      "source": "/(duelo.html|prototipo/duelo.html)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
         }
       ]
     }

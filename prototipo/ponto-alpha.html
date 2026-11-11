@@ -102,7 +102,7 @@
         }
     </style>
     <!-- Tailwind: CSS fixo gerado por tools/gerar-css.sh (antes era montado no celular pelo CDN) -->
-    <link rel="stylesheet" href="assets/css/tailwind.css?v=20261108.1011">
+    <link rel="stylesheet" href="assets/css/tailwind.css?v=20261111.1744">
 </head>
 <body class="h-screen w-screen overflow-hidden flex justify-center bg-black">
 
@@ -143,10 +143,14 @@
                 <span id="lbl-time-cycle" class="text-mil-textGlow font-bold">MANHÃ (08:00)</span>
             </div>
             <div class="flex items-center gap-2">
-                <div class="flex items-center gap-1.5">
+                <div class="hidden min-[360px]:flex items-center gap-1.5">
                     <i id="ico-weather" class="fa-solid fa-cloud-sun text-mil-amberMuted"></i>
                     <span id="lbl-weather" class="text-mil-textGlow uppercase text-xs hidden min-[420px]:inline">Nublado</span>
                 </div>
+                <!-- Avançar o tempo 2× quando está calmo (volta sozinho ao normal no primeiro contato) -->
+                <button id="btn-rapido" onclick="alternarRapido()" title="Avançar o tempo 2× enquanto está calmo" class="px-2.5 min-h-[34px] btn-tactical rounded font-bold text-xs flex items-center justify-center gap-1 whitespace-nowrap">
+                    <i class="fa-solid fa-forward text-mil-amberMuted"></i><span id="lbl-rapido">2×</span>
+                </button>
                 <!-- Pausar fica no topo, sempre à vista e fácil de tocar -->
                 <button id="btn-pause" onclick="alternarPausa()" class="px-3 min-h-[34px] btn-tactical rounded font-bold text-xs flex items-center justify-center gap-1.5 uppercase tracking-wider whitespace-nowrap">
                     <i id="ico-pause" class="fa-solid fa-pause text-mil-amberMuted"></i> <span id="lbl-pause" class="hidden min-[345px]:inline">Pausar</span>
@@ -213,7 +217,9 @@
                     <button id="btn-install" onclick="instalarApp()" class="hidden text-xs px-2 py-1 btn-tactical rounded font-bold"><i class="fa-solid fa-mobile-screen-button"></i> Instalar no celular</button>
                     <span id="hint-ios" class="hidden text-xs text-mil-textMuted">No iPhone: Compartilhar → Adicionar à Tela de Início</span>
                 </div>
-                <div class="flex gap-3">
+                <div class="flex flex-wrap justify-end gap-x-3 gap-y-1.5 items-center">
+                    <!-- Modo Online: duelo 1×1 com um amigo (página própria; o modo de um jogador não muda) -->
+                    <a href="duelo.html" class="text-xs px-2 py-1 btn-tactical rounded font-bold whitespace-nowrap">⚔️ Duelo online</a>
                     <button onclick="abrirTutorial()" class="text-xs underline text-mil-textMuted hover:text-mil-textGlow whitespace-nowrap">Como jogar</button>
                     <button onclick="abrirCreditos()" class="text-xs underline text-mil-textMuted hover:text-mil-textGlow whitespace-nowrap">Créditos</button>
                     <button onclick="novaPartida()" class="text-xs underline text-mil-textMuted hover:text-mil-textGlow whitespace-nowrap">Nova partida</button>
@@ -610,11 +616,11 @@
 
     <!-- JAVASCRIPT GAME ENGINE -->
     <!-- Código do jogo, dividido por assunto (a ordem importa) -->
-    <script src="assets/js/01-base.js?v=20261108.1011"></script>
-    <script src="assets/js/02-regras.js?v=20261108.1011"></script>
-    <script src="assets/js/03-defesas-crises.js?v=20261108.1011"></script>
-    <script src="assets/js/04-interface.js?v=20261108.1011"></script>
-    <script src="assets/js/05-cena.js?v=20261108.1011"></script>
-    <script src="assets/js/06-conta.js?v=20261108.1011"></script>
+    <script src="assets/js/01-base.js?v=20261111.1744"></script>
+    <script src="assets/js/02-regras.js?v=20261111.1744"></script>
+    <script src="assets/js/03-defesas-crises.js?v=20261111.1744"></script>
+    <script src="assets/js/04-interface.js?v=20261111.1744"></script>
+    <script src="assets/js/05-cena.js?v=20261111.1744"></script>
+    <script src="assets/js/06-conta.js?v=20261111.1744"></script>
 </body>
 </html>

@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0c0f0d">
+<title>FrontLine · Duelo online</title>
+<link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+  :root { --bg: #0c0f0d; --painel: #131815; --borda: #27332b; --verde: #8fad88; --verdeEsc: #5a7356; --ambar: #d39a45; --ambarEsc: #b37d2e; --texto: #d6e3d1; --mudo: #9fb39a; --verm: #ff8a7a; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--texto); font-family: "Courier New", ui-monospace, monospace; }
+  body { display: flex; justify-content: center; }
+  #app { width: 100%; max-width: 480px; padding: 12px 12px calc(24px + env(safe-area-inset-bottom)); }
+  button, input { font-family: inherit; color: inherit; }
+  button { cursor: pointer; }
+  button:disabled { opacity: .4; cursor: default; }
+  h1 { font-size: 20px; letter-spacing: 2px; color: var(--ambar); margin: 6px 0 2px; }
+  h2 { font-size: 16px; letter-spacing: 1px; color: var(--ambar); margin: 14px 0 6px; }
+  .sub { color: var(--mudo); font-size: 13px; line-height: 1.45; }
+  .caixa { background: var(--painel); border: 1px solid var(--borda); border-radius: 10px; padding: 10px 12px; margin-top: 10px; }
+  .grande { width: 100%; padding: 14px; border-radius: 10px; border: 1px solid var(--ambar); background: #2a2214; color: #ffd28a; font-weight: 700; font-size: 15px; letter-spacing: 1px; margin-top: 10px; }
+  .secundario { width: 100%; padding: 11px; border-radius: 10px; border: 1px solid var(--borda); background: var(--painel); font-weight: 700; font-size: 14px; margin-top: 8px; }
+  .campo { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--borda); background: #0f1411; font-size: 16px; margin-top: 8px; }
+  .codigo { font-size: 38px; letter-spacing: 8px; text-align: center; color: #ffd28a; font-weight: 700; margin: 8px 0; }
+  .erro { color: var(--verm); font-size: 13px; min-height: 18px; margin-top: 6px; }
+  .topoLinha { display: flex; justify-content: space-between; align-items: center; }
+  a.voltar { color: var(--mudo); font-size: 13px; }
+  .trofeus { font-size: 26px; font-weight: 700; color: #ffd28a; }
+  .placar { display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 15px; }
+  .placar .num { font-size: 22px; color: #ffd28a; padding: 0 8px; }
+  .tempo { height: 8px; background: #1b221d; border-radius: 4px; overflow: hidden; margin-top: 6px; }
+  .tempo div { height: 100%; background: var(--ambarEsc); transition: width .25s linear; }
+  .tempo.urgente div { background: #c0392b; }
+  .recs { display: flex; gap: 6px; margin-top: 8px; }
+  .rec { flex: 1; background: var(--painel); border: 1px solid var(--borda); border-radius: 6px; padding: 4px; text-align: center; font-size: 11px; color: var(--mudo); }
+  .rec b { display: block; font-size: 15px; color: var(--texto); }
+  .esq { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .sold { display: flex; align-items: center; gap: 8px; background: #0f1411; border: 1px solid var(--borda); border-radius: 8px; padding: 7px; text-align: left; }
+  .ponto { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  .sold .nm { font-weight: 700; font-size: 13px; }
+  .sold .fn { font-size: 12px; color: var(--ambar); }
+  .linhaBtns { display: flex; gap: 6px; }
+  .opc { flex: 1; padding: 9px 4px; border-radius: 8px; border: 1px solid var(--borda); background: #0f1411; font-weight: 700; font-size: 12px; }
+  .opc small { display: block; font-weight: 400; font-size: 10px; color: var(--mudo); }
+  .opc.on { border-color: var(--ambar); background: #2a2214; color: #ffd28a; }
+  .item { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px dashed var(--borda); }
+  .item:last-child { border-bottom: none; }
+  .item .txt { flex: 1; font-size: 13px; }
+  .item .txt small { display: block; color: var(--mudo); font-size: 11px; }
+  .passo { width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--borda); background: #0f1411; font-size: 18px; font-weight: 700; }
+  .qtd { min-width: 22px; text-align: center; font-weight: 700; color: #ffd28a; }
+  .comprar { padding: 7px 10px; border-radius: 8px; border: 1px solid var(--borda); background: #0f1411; font-size: 12px; font-weight: 700; white-space: nowrap; }
+  .comprar.on { border-color: var(--ambar); color: #ffd28a; background: #2a2214; }
+  .intel { background: #1d1a12; border: 1px solid #5c4a26; border-radius: 8px; padding: 8px 10px; font-size: 12px; color: #e8d3a5; margin-top: 8px; line-height: 1.45; }
+  canvas { width: 100%; display: block; border-radius: 8px; border: 1px solid var(--borda); background: #1b1510; }
+  .rotCampo { font-size: 12px; color: var(--mudo); margin: 10px 0 4px; display: flex; justify-content: space-between; }
+  .resultado { text-align: center; font-size: 18px; font-weight: 700; margin-top: 8px; }
+  .bom { color: #a9d39f; } .ruim { color: var(--verm); }
+  .espera { text-align: center; padding: 24px 0; }
+  .espera .icone { font-size: 40px; }
+  .pisca { animation: pisca 1s infinite alternate; } @keyframes pisca { to { opacity: .4; } }
+</style>
+</head>
+<body>
+<div id="app"><div class="espera"><div class="icone">⚔️</div><div class="sub">Carregando o duelo…</div></div></div>
+<!-- Supabase: contas e partidas online -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
+<script src="assets/js/duelo-motor.js?v=20261111.1744"></script>
+<script src="assets/js/duelo.js?v=20261111.1744"></script>
+</body>
+</html>

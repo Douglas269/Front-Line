@@ -122,11 +122,11 @@
             document.getElementById('lbl-cost-artillery').textContent = `${custo(100)} PTS`;
             document.getElementById('lbl-cost-medevac').textContent = `${custo(150)} PTS`;
             const counterBtn = document.getElementById('btn-counter');
-            const counterOk = !!gameState.barrage && !gameState.counterBattery;
+            const counterOk = !!gameState.barrage && !gameState.counterBattery && !(gameState.recargaContra > 0);
             counterBtn.disabled = !counterOk;
             counterBtn.classList.toggle('opacity-40', !counterOk);
             document.getElementById('lbl-counter-btn').textContent = gameState.counterBattery
-                ? `A CAMINHO ${seg(gameState.counterBattery.ticks)}s` : gameState.barrage ? `${custo(50)} PTS` : 'SEM ALVO';
+                ? `A CAMINHO ${seg(gameState.counterBattery.ticks)}s` : gameState.recargaContra > 0 ? `RECARGA ${seg(gameState.recargaContra)}s` : gameState.barrage ? `${custo(50)} PTS` : 'SEM ALVO';
 
             // Relatório de patrulha: um envio por dia
             const intelSent = gameState.lastIntelDay === gameState.day;
@@ -294,6 +294,7 @@
         function vibrar(padrao) { try { if (CONFIG.vibracao && !document.hidden && navigator.vibrate) navigator.vibrate(padrao); } catch (e) {} }
         function impacto(tipo) {
             if (tipo === 'artilharia') { tremer(7, 450); vibrar(90); somExplosao(1); }
+            else if (tipo === 'ofensiva') { tremer(4, 400); vibrar([120, 60, 120, 60, 120]); tocarSom('alarme', 0.9); }
             else if (tipo === 'deposito') { tremer(5, 350); vibrar([60, 40, 60]); somExplosao(0.8); }
             else if (tipo === 'morte') { tremer(4, 300); vibrar([200, 80, 200]); cenaEfeito('morte', {}); tocarSom('queda', 0.8); }
             else if (tipo === 'blindado') { tremer(8, 600); vibrar([150, 60, 150]); somExplosao(1.2); }
@@ -391,7 +392,7 @@
            As preferências ficam no aparelho e, com conta, também na conta (vão junto para outro aparelho). */
         const CONFIG_KEY = 'frontline-config';
         const CARREIRA_KEY = 'frontline-carreira';
-        const CONFIG_PADRAO = { volMusica: 45, volEfeitos: 80, volAmbiente: 50, tremor: true, vibracao: true, rastros: true, textoGrande: false, apelido: '', pausaArtilharia: false, dificuldade: 'soldado', numeros: true };
+        const CONFIG_PADRAO = { volMusica: 45, volEfeitos: 80, volAmbiente: 50, tremor: true, vibracao: true, rastros: true, textoGrande: false, apelido: '', escalaAuto: true, pausaArtilharia: false, dificuldade: 'soldado', numeros: true };
         // Quem pediu "reduzir movimento" no aparelho começa sem tremor da tela e sem vibração (dá para ligar nas Configurações)
         if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) { CONFIG_PADRAO.tremor = false; CONFIG_PADRAO.vibracao = false; }
         let CONFIG = Object.assign({}, CONFIG_PADRAO, (() => { try { return JSON.parse(localStorage.getItem(CONFIG_KEY)) || {}; } catch (e) { return {}; } })());
@@ -414,6 +415,17 @@
                 clearTimeout(envioConfigTimer);
                 envioConfigTimer = setTimeout(() => { sb.auth.updateUser({ data: { config: CONFIG, carreira: lerCarreira() } }).catch(() => {}); }, 1200);
             }
+        }
+        // Troféus do Duelo online (3 por duelo vencido), lidos da conta
+        let trofeusDuelo = null, trofeusLidoEm = 0;
+        async function buscarTrofeus() {
+            if (!sb || !usuario || Date.now() - trofeusLidoEm < 30000) return;
+            trofeusLidoEm = Date.now();
+            try {
+                const { data, error } = await sb.rpc('meus_trofeus');
+                if (error || !data || !data[0]) return;
+                if (trofeusDuelo !== data[0].trofeus) { trofeusDuelo = data[0].trofeus; if (configAberto) renderConfig(); }
+            } catch (e) {}
         }
         function lerCarreira() {
             try { return Object.assign({ partidas: 0, vitorias: 0, derrotas: 0, abates: 0, melhorDia: 0 }, JSON.parse(localStorage.getItem(CARREIRA_KEY)) || {}); }
@@ -519,7 +531,9 @@
             if (document.activeElement !== ap) ap.value = CONFIG.apelido || '';
             const c = lerCarreira();
             const caixa = (rot, v) => `<div class="bg-mil-bg border border-mil-border rounded p-2 text-center"><div class="text-mil-textMuted">${rot}</div><div class="text-mil-textGlow font-bold text-sm">${v}</div></div>`;
-            document.getElementById('cfg-carreira').innerHTML = caixa('Partidas', c.partidas) + caixa('Vitórias', c.vitorias) + caixa('Derrotas', c.derrotas) + caixa('Abates', c.abates) + caixa('Melhor dia', c.melhorDia) + caixa('Nível', gameState.level);
+            document.getElementById('cfg-carreira').innerHTML = caixa('Partidas', c.partidas) + caixa('Vitórias', c.vitorias) + caixa('Derrotas', c.derrotas) + caixa('Abates', c.abates) + caixa('Melhor dia', c.melhorDia) + caixa('Nível', gameState.level) +
+                (usuario ? caixa('🏆 Troféus', trofeusDuelo === null ? '…' : trofeusDuelo) + caixa('Duelos', trofeusDuelo === null ? '…' : `<a href="duelo.html" class="underline">jogar</a>`) : '');
+            buscarTrofeus();
             document.getElementById('cfg-conta-acoes').innerHTML = usuario ? `
                 <div class="bg-mil-bg border border-mil-border rounded p-2 space-y-1">
                     <div class="text-mil-textGlow font-bold">Trocar senha</div>
@@ -554,13 +568,20 @@
                     <button onclick="alternarConfig('${k}')" class="px-3 py-1.5 btn-tactical rounded font-bold whitespace-nowrap ${CONFIG[k] ? 'btn-active-order' : ''}">${CONFIG[k] ? 'Ligado' : 'Desligado'}</button>
                 </div>`;
             const opDif = (v) => `<button onclick="CONFIG.dificuldade='${v}'; salvarConfig(); renderConfig();" class="flex-1 py-1.5 btn-tactical rounded font-bold ${CONFIG.dificuldade === v ? 'btn-active-order' : ''}">${MODOS_DIFICULDADE[v].nome}</button>`;
-            document.getElementById('cfg-jogo').innerHTML =
+            const mods = modificadoresAtivos(), prox = proximoModificador();
+            const blocoMods = `<div class="bg-mil-bg border border-mil-border rounded p-2 space-y-1">
+                    <div class="text-mil-textGlow font-bold">Regras do nível ${gameState.level}</div>
+                    ${mods.length ? mods.map(m => `<div><span class="text-mil-amberMuted font-bold">${m.nome}</span> <span class="text-mil-textMuted">· ${m.desc}</span></div>`).join('') : '<div class="text-mil-textMuted">Nenhuma regra extra ainda.</div>'}
+                    ${prox ? `<div class="text-mil-textMuted">No nível ${prox.nivel}: ${prox.nome}.</div>` : ''}
+                </div>`;
+            document.getElementById('cfg-jogo').innerHTML = blocoMods +
                 `<div class="bg-mil-bg border border-mil-border rounded p-2 space-y-1">
                     <div class="text-mil-textGlow font-bold">Dificuldade</div>
                     <div class="text-mil-textMuted">${(MODOS_DIFICULDADE[CONFIG.dificuldade] || MODOS_DIFICULDADE.soldado).desc}. Vale já para a partida em andamento; o nível (1 a 25) continua subindo a cada vitória.</div>
                     <div class="flex gap-2 pt-1">${opDif('recruta')}${opDif('soldado')}${opDif('veterano')}</div>
                 </div>
 ` +
+                chave('escalaAuto', 'Escala automática', 'Soldados com fome ou sede vão comer e os exaustos vão descansar sozinhos, e depois voltam ao posto que você escolheu. Em combate só saem em estado crítico') +
                 chave('numeros', 'Números flutuantes', 'Mostra na cena o dano que os soldados levam e o prestígio ganho ao abater inimigos') +
                 chave('pausaArtilharia', 'Pausar no aviso de artilharia', 'O jogo pausa sozinho quando a artilharia é anunciada, para decidir quem vai para o abrigo e pedir a contra-bateria') +
                 chave('tremor', 'Tremor da tela', 'O mapa treme com explosões e impactos') +

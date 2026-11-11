@@ -872,7 +872,7 @@
             barra(10, y0 + 20, 120, tr / 100, tr > 50 ? '#5a7356' : tr > 20 ? '#d9a35a' : '#c0392b');
             const cb = gameState.combate || { tiros: 0, abates: 0 };
             const noite = periodoDoDia() >= 2;
-            txtC(150, y0 + 16, noite && !gameState.tacticalOrders.FULL_VIGILANCE ? 'NOITE · −15% DE MIRA' : `TIROS ${cb.tiros} · ABATES ${cb.abates}`, '#d9a35a', 8.5);
+            txtC(150, y0 + 16, noite && !gameState.tacticalOrders.FULL_VIGILANCE ? `NOITE · −${Math.round(100 * (1 - miraDeNoite()))}% DE MIRA` : `TIROS ${cb.tiros} · ABATES ${cb.abates}`, '#d9a35a', 8.5);
             // avisos recentes (somem sozinhos); sem avisos, a dica de como jogar
             const agora = performance.now();
             while (avisosCena.length && agora - avisosCena[0].t0 > 7000) avisosCena.shift();
@@ -973,11 +973,12 @@
             desenharRodapeCena();
             // faixa de aviso e selo de pausa da cena
             const bCorte = document.getElementById('corte-banner');
-            const bar = gameState.barrage, haInimigo = gameState.enemies.length > 0;
-            bCorte.classList.toggle('hidden', !(bar || haInimigo));
+            const bar = gameState.barrage, haInimigo = gameState.enemies.length > 0, ofTxt = avisoOfensiva();
+            bCorte.classList.toggle('hidden', !(bar || haInimigo || ofTxt));
             let txt = '';
             if (bar) txt = `💥 ARTILHARIA EM ${seg(bar.ticks)}s · ${(bar.alvos || []).length || 3} ALVOS${droneObservando() ? ' · GUIADA POR DRONE' : ''}`;
             else if (haInimigo) txt = resumoAmeaca();
+            else if (ofTxt) txt = ofTxt;
             if (bCorte.textContent !== txt) bCorte.textContent = txt;
 
             document.getElementById('corte-pausa').classList.toggle('hidden', !jogoPausado);
@@ -1170,6 +1171,9 @@
                     const aTempo = gameState.counterBattery.ticks < b.ticks;
                     txt = compacto ? `CONTRA-BAT. ${seg(gameState.counterBattery.ticks)}s${aTempo ? '' : '!'}` : `💥 CONTRA-BATERIA A CAMINHO · ${seg(gameState.counterBattery.ticks)}s${aTempo ? '' : ' (pode chegar tarde)'}`;
                     cls = 'bg-black/85 border-mil-amberMuted text-mil-amberMuted';
+                } else if (gameState.recargaContra > 0) {
+                    txt = compacto ? `CB · recarga ${seg(gameState.recargaContra)}s` : `💥 CONTRA-BATERIA RECARREGANDO · ${seg(gameState.recargaContra)}s`;
+                    cls = 'bg-black/85 border-mil-border text-mil-textMuted opacity-80';
                 } else if (gameState.prestige < c) {
                     txt = compacto ? `CB · faltam ${c - Math.floor(gameState.prestige)}` : `💥 CONTRA-BATERIA · faltam ${c - Math.floor(gameState.prestige)} pts`;
                     cls = 'bg-black/85 border-mil-border text-mil-textMuted opacity-80';
@@ -1234,6 +1238,7 @@
             }
             if (soldier && soldier.hp > 0) {
                 soldier.duty = duty;
+                soldier.dutyBase = duty; soldier.autoMotivo = null; // escolha do jogador: a escala automática respeita
                 updateUI();
                 playTacticalBeep(750, 0.02);
             }
@@ -1251,8 +1256,8 @@
             avisosCena.push({ txt: limpo, cor: grave ? '#ff8a7a' : '#e8c070', t0: performance.now() });
             while (avisosCena.length > 3) avisosCena.shift();
         }
-        function logFeed(msg, style = 'text-mil-textGlow') {
-            try { avisoNaCena(msg, style); } catch (e) {}
+        function logFeed(msg, style = 'text-mil-textGlow', semCena = false) {
+            if (!semCena) { try { avisoNaCena(msg, style); } catch (e) {} }
             const feed = document.getElementById('feed-log');
             const times = ['08:00', '13:00', '20:00', '03:00'];
             const cycleIndex = Math.min(3, Math.floor(gameState.timeSeconds / 60));

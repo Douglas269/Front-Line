@@ -27,6 +27,7 @@
             if (type === 'COUNTER') {
                 if (!gameState.barrage) return logFeed('Nenhuma artilharia inimiga detectada para contra-bateria.', 'text-mil-amberMuted');
                 if (gameState.counterBattery) return logFeed('A contra-bateria já está a caminho.', 'text-mil-amberMuted');
+                if (gameState.recargaContra > 0) return logFeed(`A artilharia da Central está recarregando: contra-bateria disponível em ${seg(gameState.recargaContra)}s.`, 'text-mil-amberMuted');
                 if (gameState.prestige < custo(50)) return logFeed('Prestígio insuficiente para contra-bateria!', 'text-red-400');
                 gameState.prestige -= custo(50);
                 // Apoio da Central (2d5): tempo de resposta
@@ -123,7 +124,8 @@
                 saveLevel(proximo);
                 endGame(`<img src="${musicBase}assets/medals/${medalhaDaVitoria(nivel)}" alt="Medalha" class="mx-auto" style="height:96px;image-rendering:pixelated">`, 'VITÓRIA DA REPÚBLICA', 'text-mil-greenMuted',
                     `Você manteve a trincheira Alpha por 30 dias no nível ${nivel}! ` +
-                    (nivel < MAX_LEVEL ? `Próxima operação: nível ${proximo}, mais difícil.` : 'Você venceu o nível máximo.'));
+                    (nivel < MAX_LEVEL ? `Próxima operação: nível ${proximo}, mais difícil.` : 'Você venceu o nível máximo.') +
+                    (() => { const m = MODIFICADORES.find(x => x.nivel === proximo); return m && nivel < MAX_LEVEL ? ` Novidade no nível ${proximo}: ${m.nome}. ${m.desc}` : ''; })());
             }
         }
 
@@ -327,6 +329,7 @@
             { t: '🪖 A trincheira por dentro', x: 'A cena mostra a trincheira em corte: posto de vigília, ninhos, cozinha, depósito, abrigo e oficina. Cada soldado está no cômodo da sua função. Arraste o soldado para outro cômodo (ou toque nele e depois no cômodo) para trocar a função. Prefere o mapa antigo? Configurações → Jogo → Visual clássico.' },
             { t: '👀 Lendo a cena de relance', x: 'A faixa vermelha no topo diz quem está chegando e em quantos segundos entra no alcance. Os ícones acima da cabeça mostram quem está ferido, com fome, sede ou cansaço (amarelo = atenção, vermelho = crítico). Avisos importantes, como pânico e baixas, aparecem no rodapé da cena. Para mais tempo de pensar, use Pausar, ou ligue a pausa automática na artilharia em Configurações. Se estiver difícil, escolha Recruta em Configurações → Jogo → Dificuldade.' },
             { t: '🛡️ Defesas', x: 'Na aba Defesas, construa ninhos na trincheira (quem está na Manutenção trabalha na obra; o Engenheiro é mais rápido). Monte neles a metralhadora .50, o morteiro ou o anticarro e escolha um operador de vigília. A partir do dia 8 podem vir blindados: fuzil quase não fere, use o anticarro. Granadas e arame farpado também ajudam.' },
+            { t: '⏩ Escala, ofensivas e pressa', x: 'A escala automática manda comer quem está com fome e descansar quem está exausto, e depois devolve cada um ao posto que você escolheu (dá para desligar em Configurações → Jogo). Quando está calmo, o botão ⏩ ao lado do Pausar acelera o tempo; no primeiro contato ele volta ao normal. Fique de olho no rádio: na véspera de uma OFENSIVA ele avisa, e no dia o inimigo vem com tudo à tarde.' },
             { t: '✅ Para começar', x: 'Um bom começo: 2 soldados de vigília, 1 na cozinha, o Engenheiro na manutenção e o resto descansando. Reveze quando a fadiga, a fome ou a sede subirem. Você pode rever este guia em "Como jogar". Boa sorte, comandante.' }
         ];
 
@@ -477,6 +480,11 @@
         document.getElementById('lbl-level').textContent = `NÍVEL ${gameState.level}`;
 
         // Restaura a partida salva, se houver, e salva ao sair da página
+        // Partida nova: avisa as regras extras do nível (modificadores)
+        if (!localStorage.getItem(SAVE_KEY)) {
+            const mods = modificadoresAtivos();
+            if (mods.length) logFeed(`⚙️ Nível ${gameState.level}: ${mods.map(m => m.nome).join(', ')}. Detalhes em Configurações → Jogo.`, 'text-mil-amberMuted font-bold');
+        }
         if (loadGame()) {
             normalizeOrders();
             alternarPausa(true);
@@ -497,7 +505,7 @@
            Ao abrir, ao voltar para o app e a cada minuto o jogo compara as duas. Se o site
            tiver uma versão diferente, o jogo trava numa tela que só sai atualizando.
            (tools/nova-versao.sh troca as duas juntas a cada atualização publicada.) */
-        const VERSAO_JOGO = '20261108.1011';
+        const VERSAO_JOGO = '20261111.1744';
         const ATUALIZOU_KEY = 'frontline-atualizou-para';
         async function verificarVersao() {
             if (!location.protocol.startsWith('http') || atualizacaoPendente) return;
@@ -578,4 +586,4 @@
 
         // Liga o relógio do jogo e o desenho da cena só depois de todos os arquivos carregados
         requestAnimationFrame(renderMap);
-        const relogioId = setInterval(updateGameTick, GAME_CONFIG.UPDATE_INTERVAL_MS);
+        const relogioId = setInterval(passoDoRelogio, GAME_CONFIG.UPDATE_INTERVAL_MS);

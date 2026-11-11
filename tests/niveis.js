@@ -1,6 +1,7 @@
 // Calibração dos níveis de dificuldade do Ponto Alpha.
 // Mede a taxa de vitória em cada nível com dois perfis de jogador:
 //   parado: nenhuma ação
+//   escala: nenhuma ação, só com a escala automática do jogo ligada (comer e descansar sozinhos)
 //   atento: jogador automático com decisões razoáveis (cozinha, descanso, reparo, abrigo, bloqueio, contra-bateria, apoios)
 // Uso: node tests/niveis.js [níveis separados por vírgula] [partidas por perfil]
 //   ex.: node tests/niveis.js 1,4,7,10 30
@@ -27,6 +28,7 @@ async function measure(page, level, policy) {
     if (typeof fecharTutorial === 'function') fecharTutorial();
     if (typeof relogioId !== 'undefined') clearInterval(relogioId);
     playTacticalBeep = () => {}; playGunshotSound = () => {}; saveGame = () => {}; saveLevel = () => {};
+    CONFIG.escalaAuto = policy === 'escala'; // perfil 'escala': fica parado, só com a escala automática do jogo
 
     // Jogador atento: decide antes de cada segundo de jogo
     function atento() {
@@ -113,7 +115,7 @@ async function measure(page, level, policy) {
 (async () => {
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--no-sandbox'] });
   for (const level of LEVELS) {
-    for (const policy of ['parado', 'atento']) {
+    for (const policy of ['parado', 'escala', 'atento']) {
       const page = await browser.newPage();
       await page.goto(GAME, { waitUntil: 'load' });
       const r = await measure(page, level, policy);

@@ -343,7 +343,7 @@ async function run() {
       renderCorte(true); c.corteDesenhaSemErro = true;
       // Contra-bateria rápida: aparece no aviso, pede, e some sem artilharia
       { const pr = gameState.prestige, jam = gameState.tacticalOrders.SIGNAL_JAM;
-        gameState.prestige = 500; gameState.counterBattery = null; gameState.tacticalOrders.SIGNAL_JAM = true;
+        gameState.prestige = 500; gameState.counterBattery = null; gameState.recargaContra = 0; gameState.tacticalOrders.SIGNAL_JAM = true;
         gameState.barrage = { ticks: 60, alvos: [{ tipo: 'deposito' }] }; renderBotaoContraBateria();
         c.contraBateriaRapidaAparece = !document.getElementById('btn-cb-corte').classList.contains('hidden');
         contraBateriaRapida(); c.contraBateriaRapidaPede = !!gameState.counterBattery && !gameState.tacticalOrders.SIGNAL_JAM && gameState.prestige === 500 - custo(50);
@@ -361,6 +361,53 @@ async function run() {
         [s0.hunger, s0.thirst, s0.fatigue, s0.moral, s0.hp] = g0; }
       aplicarVisual(); gameState.arsenal = novoArsenal();
       JSON.parse(guardaS).forEach((g, i) => { sv[i].duty = g[0]; sv[i].mental = g[1]; sv[i].hp = g[2]; }); }
+    // Jogabilidade nova: escala automática, contra-bateria com recarga, ofensivas, modificadores e 2×
+    { const sv = gameState.squad, guarda = JSON.stringify(sv.map(m => [m.duty, m.hunger, m.thirst, m.fatigue, m.hp, m.mental, m.dutyBase, m.autoMotivo]));
+      const g0 = { enemies: gameState.enemies, barrage: gameState.barrage, level: gameState.level, day: gameState.day, t: gameState.timeSeconds, prest: gameState.prestige, of: gameState.ofensiva, r: { ...gameState.resources } };
+      const rnd = Math.random;
+      CONFIG.escalaAuto = true; gameState.enemies = []; gameState.barrage = null; gameState.resources.rations = 30; gameState.resources.water = 30;
+      sv.forEach(m => { m.hp = 100; m.mental = null; m.deserted = false; m.hunger = 0; m.thirst = 0; m.fatigue = 0; m.duty = 'WATCH'; m.dutyBase = 'WATCH'; m.autoMotivo = null; });
+      const s1 = sv[1]; setSoldierDuty(s1.id, 'MAINTENANCE'); s1.hunger = 60;
+      escalaAutomatica(); const foiComer = s1.duty === 'RATIONING';
+      s1.hunger = 2; s1.thirst = 2; escalaAutomatica();
+      c.escalaComeEVoltaAoPosto = foiComer && s1.duty === 'MAINTENANCE';
+      s1.fatigue = 80; escalaAutomatica(); const foiDescansar = s1.duty === 'REST'; s1.fatigue = 5; escalaAutomatica();
+      c.escalaDescansaEVolta = foiDescansar && s1.duty === 'MAINTENANCE';
+      gameState.enemies = [{ type: 'infantaria', distance: 100, hp: 100, maxHp: 100, offsetX: 0 }];
+      s1.hunger = 60; escalaAutomatica(); const seguraEmCombate = s1.duty === 'MAINTENANCE';
+      s1.hunger = 80; escalaAutomatica(); c.escalaSoSaiCriticoEmCombate = seguraEmCombate && s1.duty === 'RATIONING';
+      CONFIG.escalaAuto = false; gameState.enemies = []; sv[2].hunger = 90; escalaAutomatica(); c.escalaDesligavel = sv[2].duty === 'WATCH'; CONFIG.escalaAuto = true;
+      // Contra-bateria: recarga depois de usada e erro com drone observando
+      gameState.prestige = 500; gameState.recargaContra = 0; gameState.tacticalOrders.SIGNAL_JAM = false;
+      gameState.barrage = { ticks: 60, alvos: [] }; gameState.enemies = [{ type: 'drone', distance: 200, hp: 50, maxHp: 50, offsetX: 0 }];
+      gameState.counterBattery = { ticks: 1 }; Math.random = () => 0; processCounterBattery(); Math.random = rnd;
+      const errou = !!gameState.barrage && gameState.recargaContra > 0;
+      const p0 = gameState.prestige; requestSupport('COUNTER'); c.contraBateriaErraComDroneERecarrega = errou && !gameState.counterBattery && gameState.prestige === p0;
+      gameState.recargaContra = 0; gameState.enemies = []; gameState.counterBattery = { ticks: 1 }; processCounterBattery();
+      c.contraBateriaSemDroneAcerta = gameState.barrage === null;
+      // Ofensiva: agenda, anuncia, ataca reforçada e dá prêmio quando repelida
+      gameState.ofensiva = null; gameState.day = 1; agendarOfensiva();
+      const agendada = gameState.ofensiva && gameState.ofensiva.dia >= 6 && gameState.ofensiva.dia <= 8 && !gameState.ofensiva.anunciada;
+      gameState.day = gameState.ofensiva.dia - 1; agendarOfensiva(); const anunciou = gameState.ofensiva.anunciada && avisoOfensiva().includes('AMANHÃ');
+      gameState.day = gameState.ofensiva.dia; gameState.timeSeconds = gameState.ofensiva.hora; gameState.enemies = []; gameState.barrage = null; gameState.nextWaveBoost = 0;
+      processarOfensiva(); const inf = gameState.enemies.filter(e => e.type === 'infantaria').length;
+      c.ofensivaAgendaAnunciaEAtaca = agendada && anunciou && gameState.ofensiva.ativa && inf >= PRESSURE.WAVE_BASE + OFENSIVA.EXTRA_BASE && !!gameState.barrage;
+      const pr = gameState.prestige; gameState.enemies = []; gameState.barrage = null; processarOfensiva();
+      c.ofensivaRepelidaDaPremio = gameState.ofensiva.feita && gameState.prestige > pr;
+      // Modificadores por nível
+      gameState.level = 4; const nenhum = modificadoresAtivos().length === 0 && miraDeNoite() === TIRO.NOITE;
+      gameState.level = 9; c.modificadoresPorNivel = nenhum && modAtivo('noites') && modAtivo('franco') && !modAtivo('noturno') && miraDeNoite() === 0.75 && proximoModificador().id === 'noturno';
+      gameState.level = 25; Math.random = () => 0; const vig = sv.find(m => m.duty === 'WATCH' && m.class !== 'Atirador de Elite'); sv.forEach(m => { if (m.class === 'Atirador de Elite') m.duty = 'REST'; });
+      const hp0 = vig.hp; francoAtirador(); Math.random = rnd; c.francoAtiradorAtinge = vig.hp < hp0;
+      gameState.level = g0.level;
+      // Avançar 2×: só no calmo, dois segundos por passo, e volta sozinho ao normal no contato
+      gameState.enemies = []; gameState.barrage = null; gameState.activeCrisis = null; jogoPausado = false; gameState.timeSeconds = 10;
+      alternarRapido(); const t0 = gameState.timeSeconds; passoDoRelogio(); const dois = gameState.timeSeconds - t0 === 2;
+      gameState.enemies = [{ type: 'infantaria', distance: 250, hp: 100, maxHp: 100, offsetX: 0 }]; passoDoRelogio();
+      c.avancoRapidoSoNoCalmo = dois && velocidadeRapida === false;
+      velocidadeRapida = false;
+      Object.assign(gameState, { enemies: g0.enemies, barrage: g0.barrage, day: g0.day, timeSeconds: g0.t, prestige: g0.prest, ofensiva: g0.of, resources: g0.r, counterBattery: null, recargaContra: 0 });
+      JSON.parse(guarda).forEach((g, i) => { [sv[i].duty, sv[i].hunger, sv[i].thirst, sv[i].fatigue, sv[i].hp, sv[i].mental, sv[i].dutyBase, sv[i].autoMotivo] = g; }); }
     // Atualização: versão igual não trava; versão diferente trava na tela de atualização; não repete em loop
     { tratarVersaoDoSite(VERSAO_JOGO); const travouIgual = atualizacaoPendente;
       tratarVersaoDoSite('99999999.0000'); const modal = document.getElementById('modal-atualizacao');

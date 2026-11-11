@@ -2,11 +2,12 @@
 // Uso: DIF_MODO=soldado DEF=1 node tests/balanco.js <níveis> <partidas> [ajuste em JS]
 //   ex.: DIF_MODO=veterano DEF=1 node tests/balanco.js 1,13,25 40
 // DEF=1: o jogador automático também constrói e usa as defesas (metralhadora, morteiro, anticarro, arame).
+// ESCALA=1: liga a escala automática do jogo (normalmente desligada, porque o robô já cuida de comida e descanso).
 const { chromium } = require('playwright');
 const fs = require('fs');
 const path = require('path');
 const GAME = path.resolve(__dirname, '..', 'prototipo', 'ponto-alpha.html'); const LEVELS = (process.argv[2] || '1,13,25').split(',').map(Number); const N = +(process.argv[3] || 20);
-const AJUSTE = process.argv[4] || ''; const DIF = process.env.DIF_MODO || ''; const USA_DEF = process.env.DEF === '1';
+const AJUSTE = process.argv[4] || ''; const DIF = process.env.DIF_MODO || ''; const USA_DEF = process.env.DEF === '1'; const ESCALA = process.env.ESCALA === '1';
 const src = fs.readFileSync(path.join(__dirname, 'niveis.js'), 'utf8');
 const INIT = eval(src.slice(src.indexOf('const INITIAL_SQUAD = ') + 22, src.indexOf('];', src.indexOf('const INITIAL_SQUAD')) + 1));
 
@@ -14,12 +15,12 @@ const INIT = eval(src.slice(src.indexOf('const INITIAL_SQUAD = ') + 22, src.inde
   const b = await chromium.launch();
   for (const level of LEVELS) {
     const p = await b.newPage(); await p.goto('file://' + GAME, { waitUntil: 'load' });
-    const r = await p.evaluate(({ init, level, N, AJUSTE, USA_DEF, DIF }) => {
+    const r = await p.evaluate(({ init, level, N, AJUSTE, USA_DEF, DIF, ESCALA }) => {
       const msgs = [];
       logFeed = (m) => msgs.push(m); updateUI = () => {}; addDiaryEntry = () => {};
       entrarComoConvidado(); fecharTutorial(); clearInterval(relogioId);
       playTacticalBeep = () => {}; playGunshotSound = () => {}; saveGame = () => {}; saveLevel = () => {};
-      if (AJUSTE) (new Function(AJUSTE))(); if (DIF) CONFIG.dificuldade = DIF;
+      CONFIG.escalaAuto = ESCALA; if (AJUSTE) (new Function(AJUSTE))(); if (DIF) CONFIG.dificuldade = DIF;
       const pedidos = { SUPPLY: 0, ARTILLERY: 0, MEDEVAC: 0, COUNTER: 0 };
       const rs = requestSupport; requestSupport = (t) => { const p0 = gameState.prestige; rs(t); if (gameState.prestige < p0) pedidos[t]++; };
       // Jogador atento "humano": supressão só quando a infantaria aperta; economiza com paiol baixo
@@ -140,13 +141,13 @@ const INIT = eval(src.slice(src.indexOf('const INITIAL_SQUAD = ') + 22, src.inde
         combateSemMunLeve: Math.round(100 * A.semMunTicks / Math.max(1, A.combTicks)) + '%', zeraLeve: med(A.diaSemMun), zeraPesada: med(A.diaSemPesada),
         semRacao: pc(A.semRacao), semAgua: pc(A.semAgua), fomeOuSede75: pc(A.fomeAlta),
         trincheiraMin: Math.round(A.trenchMin / N), rompida: pc(A.rompida),
-        porMinuto: (() => { const min = A.ticks / 8 / 60; return { ondas: +(A.ondas / min).toFixed(2), artilharia: +(A.art / min).toFixed(2), drones: +(A.drones / min).toFixed(2), patrulhas: +(A.patr / min).toFixed(2), blindados: +(A.blindados / min).toFixed(2) }; })(),
+        porMinuto: (() => { const min = A.ticks / GAME_CONFIG.TICKS_PER_SECOND / 60; return { ondas: +(A.ondas / min).toFixed(2), artilharia: +(A.art / min).toFixed(2), drones: +(A.drones / min).toFixed(2), patrulhas: +(A.patr / min).toFixed(2), blindados: +(A.blindados / min).toFixed(2) }; })(),
         tempoSobFogo: Math.round(100 * A.sobFogo / A.ticks) + '%', artilhariaDuranteCombate: Math.round(100 * A.simult / Math.max(1, A.sobFogo)) + '%',
         blindados: +(A.blindados / N).toFixed(1), blindadosNaTrincheira: +(A.blindTrinc / N).toFixed(1), precisao: Math.round(100 * A.acertos / Math.max(1, A.tiros)) + '%', abates: +(A.abates / N).toFixed(1), tirosPorAbate: Math.round(A.tiros / Math.max(1, A.abates)),
         ondas: +(A.ondas / N).toFixed(1), invasoes: +(A.invasoes / N).toFixed(1), prestigioFinal: Math.round(A.prestigio / N),
         pedidosPorPartida: Object.fromEntries(Object.entries(pedidos).map(([k, v]) => [k, +(v / N).toFixed(1)])), mortes: A.mortes,
         estoqueMedio: Object.fromEntries(Object.entries(A.estoque).map(([k, e]) => [k, { leve: Math.round(e.leve / e.n), pesada: Math.round(e.pesada / e.n), morteiro: Math.round(e.morteiro / e.n), at: Math.round(e.at / e.n) }])) };
-    }, { init: INIT, level, N, AJUSTE, USA_DEF, DIF });
+    }, { init: INIT, level, N, AJUSTE, USA_DEF, DIF, ESCALA });
     console.log(JSON.stringify(r));
     await p.close();
   }

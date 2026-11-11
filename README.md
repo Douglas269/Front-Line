@@ -58,6 +58,21 @@ Jogo de estratégia tático com foco em realismo de comando, combate blindado e 
 - **Dados:** versão do jogo, onde o progresso está salvo, créditos e apagar o progresso do aparelho.
 - O relógio para com a tela aberta. As preferências ficam no aparelho (`frontline-config`) e, com conta, também nos metadados da conta no Supabase, junto com a carreira (`frontline-carreira`): ao entrar em outro aparelho, vêm junto.
 
+### Jogabilidade: escala automática, ofensivas, modificadores e avançar 2×
+- **Escala automática** (Configurações → Jogo, ligada por padrão; bloco `ESCALA`): quem passa de 50 de fome ou sede vai à cozinha e quem passa de 75 de cansaço vai descansar; depois cada um volta ao posto que você escolheu. Em combate só sai do posto quem está em estado crítico (75 de fome/sede, 90 de cansaço) e nunca deixa a trincheira sem vigia. Trocar a função na mão (arrastar ou pelo cartão) vira a nova escolha. Medido: um jogador que não faz nada aguenta ~13 dias com a escala, contra ~6 sem ela.
+- **Ofensivas anunciadas** (bloco `OFENSIVA`): a primeira no dia 6 a 8 e depois a cada 6 a 8 dias. Na véspera o rádio intercepta a ordem (aviso no feed, no diário, na faixa da cena e na aba Rádio); no dia o general fica quieto juntando forças e, à tarde, ataca com onda reforçada (+6 soldados, +1 a cada 8 dias), artilharia e, a partir do dia 10, blindado. Repelida: +40 de prestígio e +4 de moral para todos.
+- **Modificadores por nível** (bloco `MODIFICADORES`, se somam): nível 5 **Noites longas** (mira à noite −25% em vez de −15%); nível 9 **Franco-atirador** (~1 disparo por dia em quem está de vigília; Abrigo Reforçado segura 75%; o Atirador de Elite de vigília abate o franco-atirador em 50% das vezes); nível 13 **Assaltos noturnos** (ondas à noite com +2); nível 17 **Blindados em dupla** (a partir do dia 15); nível 21 **Artilharia pesada** (+25% de dano nos bombardeios). A lista do nível atual fica em Configurações → Jogo, e a tela de vitória avisa o que vem no próximo nível.
+- **Avançar 2×** (botão ⏩ ao lado do Pausar): acelera o tempo quando não há inimigo, bombardeio nem crise, e volta sozinho ao normal no primeiro contato.
+
+### Duelo online (1×1, melhor de 5)
+Modo a mais: o jogo de um jogador continua igual. Botão **⚔️ Duelo online** no rodapé do jogo, ou o endereço `/duelo.html`.
+- **Como jogar com um amigo:** entre na conta (a mesma do jogo), toque em **Desafiar um amigo** e mande o código de 5 letras ou o link (`/duelo.html?c=CÓDIGO`). Ele abre, entra na conta e o duelo começa.
+- **Cada rodada:** **1 minuto** para montar, em segredo, a **defesa** (escala dos 6 soldados, postura, melhorias com Comando ★ e contra-bateria) e o **ataque** (gasta pontos em infantaria, artilharia e blindado; o orçamento cresce a cada rodada). Os dois dão **OK** (ou o tempo acaba e o plano vai como estiver) e a batalha acontece: o seu ataque contra a defesa dele e o dele contra a sua, ao mesmo tempo, com replay dos dois campos. Vence a rodada quem sofreu menos dano.
+- **Duelo:** melhor de 5 (quem fizer 3 rodadas primeiro). Se a trincheira de alguém cair, ele perde na hora. Soldados, trincheira, munição e melhorias continuam de uma rodada para a outra; à noite quem descansou se recupera. Depois de cada rodada dá para ver o que o outro fez (ataque e defesa) para ler o estilo dele.
+- **Troféus:** quem vence o duelo ganha **3 troféus** (aparecem no lobby do duelo e em Configurações → Conta). Se o adversário sumir por 3 minutos depois de você dar OK, dá para pedir vitória por **W.O.**
+- **Como funciona por dentro:** o motor (`prototipo/assets/js/duelo-motor.js`) é determinístico: com a mesma semente e os mesmos planos, os dois celulares calculam exatamente o mesmo resultado, então só as decisões viajam pela internet. Ele também corrige planos trapaceados (ataque ou compras acima do permitido). No Supabase ficam as tabelas `duelos` e `duelo_planos` (o plano do adversário só aparece quando os dois confirmaram a rodada) e as funções `criar_duelo`, `entrar_duelo`, `enviar_plano`, `status_rodada`, `informar_resultado` (o vencedor só vale quando os dois celulares concordam), `reivindicar_wo`, `cancelar_duelo` e `meus_trofeus`.
+- **Testes:** `node tests/duelo.js` (motor: determinismo, anti-trapaça, estratégia importa: o jogador esperto vence o aleatório 200 de 200) e `node tests/duelo-tela.js` (dois navegadores jogando um duelo inteiro contra um servidor falso com as mesmas regras do banco).
+
 ### Tutorial
 - Na primeira vez que o jogo é aberto, aparece um guia de 10 passos (objetivo, funções, fome/sede/trincheira, mapa, ordens, rádio e general, trincheira por dentro, lendo a cena de relance, defesas, como começar). O relógio fica parado enquanto ele está aberto. Dá para pular, voltar e rever pelo link **Como jogar**, ao lado de "Nova partida".
 
@@ -115,7 +130,7 @@ Jogo de estratégia tático com foco em realismo de comando, combate blindado e 
   - Drone observador: enquanto houver drone no setor (e o sinal dele não estiver bloqueado), a artilharia inimiga causa +50% de dano, os tiros inimigos +20% e a artilharia fica mais provável.
   - Bloqueio de Sinal (ordem tática): drones param de guiar o inimigo e cada um tem ~40% de chance por segundo real de cair; o rádio fica ocupado (sem relatório e sem apoios da Central).
   - **Contra-bateria rápida:** durante o aviso de artilharia, um botão vermelho aparece logo abaixo do aviso, em cima da cena (nos dois visuais), com o custo; depois do pedido mostra a contagem e avisa se pode chegar tarde. Se o Bloqueio de Sinal estiver ligado, o botão desliga o bloqueio e já pede. Sem prestígio, mostra quanto falta.
-  - Contra-bateria (rádio): só durante aviso de artilharia; chega em 1 a 5 s reais (2d5) e, se chegar antes do impacto, cancela o bombardeio.
+  - Contra-bateria (rádio): só durante aviso de artilharia; chega em 1 a 5 s reais (2d5) e, se chegar antes do impacto, cancela o bombardeio. Depois de usada, a Central **recarrega por 25 s reais** (não dá para responder a todo bombardeio), e com **drone inimigo observando ela erra 50% das vezes** (a artilharia deles muda de posição): vale cegar ou derrubar o drone antes (bloco `CONTRA`).
   - Patrulha batedora: 10 s reais dentro do alcance sem ser abatida marca a posição e recua; a próxima onda vem com 1 soldado a mais.
   - Sem ninguém de vigília (e sem Vigília Total), o esquadrão atira às cegas: metade do dano.
 - Crises: raras (no máximo uma por dia; na prática ~1 a cada 5 ou 6 dias), só fora de combate, e o relógio para enquanto a crise está aberta. Oito tipos: congelamento (neve), infecção (chuva ou névoa), desabamento (chuva forte), ração estragada, deserção (moral < 30), emboscada no comboio, interceptação de rádio (1d10: 10 enfraquece a próxima onda, 7–9 dá prestígio, 2–4 atrai patrulha, 1 atrai artilharia) e franco-atirador (duelo do Atirador de Elite). Cada uma tem uma opção que custa agora e outra que custa mais depois; frequência e gravidade sobem até 30% no nível 25. A crise aberta entra no salvamento.
@@ -130,16 +145,18 @@ Jogo de estratégia tático com foco em realismo de comando, combate blindado e 
 ### Níveis de dificuldade
 - 25 níveis. Cada vitória sobe um nível; derrota mantém o nível. O nível fica salvo no navegador, mesmo com "Nova partida".
 - Cada nível define uma dificuldade que aumenta a frequência de eventos, a vida e o dano dos inimigos e o tamanho das ondas, e diminui a entrega diária de suprimentos e o prestígio ganho; os apoios da Central ficam mais caros.
-- Além disso, cada nível acima do 1 aperta de forma visível (bloco `PRESSURE`): −0,4% de ração e água no comboio (nível 25: −10%), inimigos 0,1% mais resistentes (nível 25: +2,4%) e ataques do general 0,3% mais rápidos (nível 25: +7%). Antes eram −1,5%, +1 soldado por onda a cada 6 níveis e 2%: no nível 25 o esquadrão morria de fome mesmo jogando bem, e o soldado extra por onda derrubava a vitória de uma vez.
+- Além disso, cada nível acima do 1 aperta de forma visível (bloco `PRESSURE`): −0,4% de ração e água no comboio (nível 25: −10%), modificadores de nível (veja **Jogabilidade**) e ataques do general 0,3% mais rápidos (nível 25: +7%). Antes eram −1,5%, +1 soldado por onda a cada 6 níveis e 2%: no nível 25 o esquadrão morria de fome mesmo jogando bem, e o soldado extra por onda derrubava a vitória de uma vez.
 - Vitórias do jogador automático **usando as defesas** (`DIF_MODO=<modo> DEF=1 node tests/balanco.js 1,7,13,19,25 40`; 40 partidas por nível, margem de uns 15 pontos):
 
 | Nível | Recruta | Soldado | Veterano |
 |---|---|---|---|
-| 1 | 100% | 90% | 78% |
-| 7 | 100% | 95% | 60% |
-| 13 | 100% | 90% | 73% |
-| 19 | 100% | 78% | 38% |
-| 25 | 98% | 73% | 10% |
+| 1 | 100% | 100% | 100% |
+| 7 | 100% | 100% | 98% |
+| 13 | 100% | 93% | 70% |
+| 19 | 100% | 83% | 58% |
+| 25 | 100% | 65% | 15% |
+
+Medido já com as ofensivas anunciadas, a contra-bateria com recarga e os modificadores de nível (o robô não usa a escala automática nem o 2×, porque já faz isso sozinho). Os níveis baixos ficaram fáceis para o robô, que reage a cada segundo; a subida agora vem principalmente dos modificadores (níveis 5, 9, 13, 17 e 21).
 
 Medido com o comboio maior (850 de munição leve, 160 de pesada, 10 granadas de morteiro e 4 foguetes anticarro por comboio) e a metralhadora .50 gastando meia munição pesada por disparo. O robô decide a cada segundo, sem cansar; um jogador de verdade tende a ir um pouco pior, por isso o Soldado ficou folgado para o robô.
 

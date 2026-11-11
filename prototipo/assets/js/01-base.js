@@ -243,6 +243,8 @@
             convoyAmbush: false, // próximo comboio vai pela estrada vigiada
             weakenNextWave: false, // interceptação revelou a próxima onda
             counterBattery: null, // contra-bateria a caminho: { ticks } ou null
+            recargaContra: 0, // segundos de jogo até a Central poder fazer outra contra-bateria
+            ofensiva: null, // ofensiva anunciada pelo general: { dia, hora, anunciada, ativa }
             nextWaveBoost: 0, // soldados extras na próxima onda (patrulha marcou a posição)
             general: null // general inimigo (criado por newGeneral)
         };
