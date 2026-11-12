@@ -141,7 +141,7 @@ function jogar({ N, FASE, EST }) {
     let s = await naTela(cap.x, cap.y);
     await p.mouse.click(caixa.x + s.x, caixa.y + s.y + 6);
     ck.tocaNoExercito = await p.evaluate(() => !!G.sel && G.sel.tipo === 'ex');
-    await p.click('#painel button:has-text("Mover / atacar")');
+    await p.click('#painel button:has-text("Mover /")');
     const alvo = await p.evaluate((viz) => { const q = viz.map(id => G.prov[id]).find(q => q.dono !== 'jogador'); return { id: q.id, x: q.x, y: q.y }; }, cap.viz);
     s = await naTela(alvo.x, alvo.y + 25);
     await p.mouse.click(caixa.x + s.x, caixa.y + s.y);
@@ -173,6 +173,32 @@ function jogar({ N, FASE, EST }) {
     await p.click('#zoom button >> nth=1');
     ck.zoom = await p.evaluate((z) => cam.z < z, c1.z);
     ck.semRolagemLateral = await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
+    // mover livre pelo seu território, mudar o rumo em marcha e recrutar em qualquer província
+    Object.assign(ck, await p.evaluate(() => {
+        novoJogo(1); Object.keys(G.pensar).forEach(k => { G.pensar[k] = 1e9; });
+        const r = {}, cap = G.prov[G.capitalJogador];
+        const anel = [...new Set(cap.viz.flatMap(v => [v, ...G.prov[v].viz]))].filter(id => id !== cap.id).slice(0, 6);
+        anel.forEach(id => { const q = G.prov[id]; if (q.capital) return; G.ex = G.ex.filter(e => !(e.prov === id && e.dono !== 'jogador')); q.dono = 'jogador'; });
+        const campo = minhas().find(q => !ehCidade(q));
+        G.fac.jogador.moedas = 500;
+        r.recrutaEmQualquerProvincia = recrutar(campo.id) === 1 && recrutar(campo.id, 5) === 5;
+        const e = exParadosEm(cap.id, 'jogador')[0];
+        const longe = minhas().filter(q => q !== cap).sort((a, z) => Math.hypot(z.x - cap.x, z.y - cap.y) - Math.hypot(a.x - cap.x, a.y - cap.y))[0];
+        const m = ordem(e.id, longe.id, 3, 'mover');
+        r.moveSoPeloSeuTerritorio = !!m && m.rota.every(id => G.prov[id].dono === 'jogador');
+        for (let i = 0; i < 6; i++) passoMapa(0.5);
+        const outro = minhas().find(q => q !== longe && q !== cap && q.id !== m.rota[0]);
+        r.mudaORumoEmMarcha = ordem(m.id, outro.id, 0, 'mover') === m && m.rota[m.rota.length - 1] === outro.id;
+        for (let i = 0; i < 400 && m.rota.length; i++) passoMapa(0.5);
+        r.chegaNoNovoDestino = exParadosEm(outro.id, 'jogador').some(x => x.s.length >= 3);
+        // batalha: ninguém passa da trincheira
+        const q = Object.values(G.prov).find(x => x.dono === 'neutro' && exParadosEm(x.id, 'neutro').length);
+        const ex = criarExercito('jogador', q.viz[0], 8); const bt = criarBatalha(ex, q, exParadosEm(q.id, 'neutro'));
+        let menor = Infinity; for (let i = 0; i < 600 && !bt.terminou; i++) { bt.passo(0.25); bt.atq.forEach(a => { menor = Math.min(menor, a.dist); }); }
+        r.ninguemPassaDaTrincheira = menor >= 0;
+        G.ex = G.ex.filter(x => x !== ex);
+        return r;
+    }));
     Object.entries(ck).forEach(([k, v]) => { if (!v) falhas.push('tela: ' + k); });
     info.tela = ck;
 

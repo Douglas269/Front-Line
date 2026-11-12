@@ -132,14 +132,14 @@ function criarExercito(dono, provId, qtd, soldados) {
 }
 
 /* ---------- Caminhos ---------- */
-function caminho(deId, paraId) { // menor distância pelas estradas (Dijkstra pequeno)
+function caminho(deId, paraId, soDe) { // menor distância pelas estradas (Dijkstra pequeno); soDe: só passa por províncias desse dono
     const dist = { [deId]: 0 }, ant = {}, aberto = new Set([deId]), feito = new Set();
     while (aberto.size) {
         let a = null; aberto.forEach(id => { if (a === null || dist[id] < dist[a]) a = id; });
         aberto.delete(a); feito.add(a);
         if (a === paraId) break;
         G.prov[a].viz.forEach(b => {
-            if (feito.has(b)) return;
+            if (feito.has(b) || (soDe && b !== paraId && G.prov[b].dono !== soDe)) return;
             const d = dist[a] + Math.hypot(G.prov[a].x - G.prov[b].x, G.prov[a].y - G.prov[b].y);
             if (dist[b] === undefined || d < dist[b]) { dist[b] = d; ant[b] = a; aberto.add(b); }
         });
@@ -150,19 +150,31 @@ function caminho(deId, paraId) { // menor distância pelas estradas (Dijkstra pe
 }
 
 /* ---------- Ordens (jogador e bots usam as mesmas) ---------- */
+// Rota de um exército até o destino. Em marcha, ele segue até a próxima província e de lá muda o rumo.
+// Para uma província sua, vai por dentro do seu território quando dá.
+function rotaPara(e, destId) {
+    const base = e.rota.length ? e.rota[0] : e.prov;
+    if (destId === base) return e.rota.length ? { rota: [base], dist: Math.hypot(e.x - G.prov[base].x, e.y - G.prov[base].y) } : null;
+    const c = (G.prov[destId].dono === e.dono && caminho(base, destId, e.dono)) || caminho(base, destId);
+    if (!c) return null;
+    if (!e.rota.length) return c;
+    return { rota: [base, ...c.rota], dist: c.dist + Math.hypot(e.x - G.prov[base].x, e.y - G.prov[base].y) };
+}
 function ordem(exId, destId, qtd, missao) {
     let e = G.ex.find(x => x.id === exId);
-    if (!e || !parado(e) || destId === e.prov) return false;
-    const c = caminho(e.prov, destId); if (!c) return false;
-    qtd = Math.max(1, Math.min(qtd || e.s.length, e.s.length));
+    if (!e || e.emBatalha || (!e.rota.length && destId === e.prov)) return false;
+    const emMarcha = e.rota.length > 0;
+    const c = rotaPara(e, destId); if (!c) return false;
+    qtd = emMarcha ? e.s.length : Math.max(1, Math.min(qtd || e.s.length, e.s.length));
     if (qtd < e.s.length) { // divide: vão os mais inteiros
         const ord = vivos(e.s).sort((a, b) => eficacia(b) - eficacia(a)), vao = ord.slice(0, qtd);
         e.s = e.s.filter(s => !vao.includes(s));
         e = criarExercito(e.dono, e.prov, 0, vao);
     }
-    Object.assign(e, { rota: c.rota, missao: missao || 'mover', origem: e.prov, de: e.prov, alertado: false });
+    Object.assign(e, { rota: c.rota, missao: missao || 'mover', alertado: false });
+    if (!emMarcha) Object.assign(e, { origem: e.prov, de: e.prov });
     const alvo = G.prov[destId];
-    if (e.dono === 'jogador') noticia(`${missao === 'saque' ? '💰 Saque' : alvo.dono !== 'jogador' ? '⚔️ Ataque' : '🚶 Tropa'} a caminho de ${alvo.nome} com ${e.s.length} soldados (~${Math.ceil(c.dist / C.VEL)}s).`);
+    if (e.dono === 'jogador') noticia(`${emMarcha ? '↪ Novo rumo: ' : ''}${missao === 'saque' ? '💰 Saque' : alvo.dono !== 'jogador' ? '⚔️ Ataque' : '🚶 Tropa'} a caminho de ${alvo.nome} com ${e.s.length} soldados (~${Math.ceil(c.dist / C.VEL)}s).`);
     else avisarSeVisivel(e);
     return e;
 }
@@ -177,13 +189,18 @@ function avisarSeVisivel(e) {
 }
 function recrutarEm(provId, dono) {
     const p = G.prov[provId], f = G.fac[dono], custo = custoRecrutar(dono);
-    if (!p || p.dono !== dono || !ehCidade(p) || f.moedas < custo) return false;
+    if (!p || p.dono !== dono || f.moedas < custo) return false;
     f.moedas -= custo;
     const e = exParadosEm(provId, dono)[0] || criarExercito(dono, provId, 0);
     e.s.push(soldado(dono === 'jogador' ? NOMES_JOG[Math.floor(Math.random() * NOMES_JOG.length)] : 'Inimigo'));
     return true;
 }
-function recrutar(id) { if (recrutarEm(id, 'jogador')) noticia(`🪖 Novo soldado em ${G.prov[id].nome}.`); }
+function recrutar(id, n = 1) {
+    let feitos = 0; while (feitos < n && recrutarEm(id, 'jogador')) feitos++;
+    if (feitos) noticia(`🪖 ${feitos === 1 ? 'Novo soldado' : feitos + ' novos soldados'} em ${G.prov[id].nome}.`);
+    return feitos;
+}
+function custoVarios(dono, n) { let t = 0; const tropa = tropaDe(dono); for (let k = 0; k < n; k++) t += C.RECRUTAR + C.RECRUTAR_EXTRA * Math.max(0, tropa + k - C.TROPA_BASE); return t; }
 function fortificar(id, dono = 'jogador') {
     const p = G.prov[id], f = G.fac[dono];
     if (!p || p.dono !== dono || f.moedas < C.FORTIFICAR || p.trinch >= 100) return false;
@@ -259,7 +276,7 @@ function pensarBot(dono) {
     if (!provs.length || G.eliminados[dono]) return;
     const capital = provs.find(p => p.capital && p.dono === dono);
     // 1) recrutar (sempre que sobra dinheiro), primeiro onde está mais ameaçado
-    const cidades = provs.filter(ehCidade).sort((a, b) => (ameaca(b, dono) - forca(exParadosEm(b.id, dono).flatMap(e => e.s))) - (ameaca(a, dono) - forca(exParadosEm(a.id, dono).flatMap(e => e.s))));
+    const cidades = provs.slice().sort((a, b) => (ameaca(b, dono) - forca(exParadosEm(b.id, dono).flatMap(e => e.s))) - (ameaca(a, dono) - forca(exParadosEm(a.id, dono).flatMap(e => e.s))));
     for (let k = 0; k < 3 && cidades.length; k++) { if (f.moedas < custoRecrutar(dono) + FX.reserva || Math.random() < 0.2) break; recrutarEm(cidades[0].id, dono); }
     // 2) fortificar a capital (o defensivo mais)
     if (capital && capital.trinch < 95 && f.moedas > (FX.perso === 'defensivo' ? 45 : 90) && Math.random() < 0.5) fortificar(capital.id, dono);
@@ -377,7 +394,7 @@ function criarBatalha(e, alvo, defensores) {
     const defS = defensores.flatMap(d => d.s).filter(s => s.vida > 0);
     const b = {
         ex: e, atqDono: e.dono, defDono: alvo.dono, alvo, saque: e.missao === 'saque', defensores, t: 0, terminou: false, vencedor: null,
-        atq: e.s.map(s => ({ s, dist: C.DIST, x: 60 + Math.random() * 280 })),
+        atq: e.s.map((s, i, l) => ({ s, dist: C.DIST + Math.random() * 25, x: 30 + (i + 0.5) * (340 / l.length) + (Math.random() - 0.5) * Math.min(14, 300 / l.length) })), // espalhados pela frente
         def: defS.map((s, i) => ({ s, x: 50 + i * (300 / Math.max(1, defS.length - 1 || 1)) })),
         postAtq: 'avancar', postDef: 'equilibrio', efeitos: [], rapido: false
     };
@@ -389,7 +406,7 @@ function passoBatalha(b, dt) {
     b.t += dt;
     const fa = G.fac[b.atqDono], fd = G.fac[b.defDono];
     const atqVivos = b.atq.filter(a => a.s.vida > 0), defVivos = b.def.filter(d => d.s.vida > 0);
-    atqVivos.forEach(a => { a.dist = Math.min(C.DIST, a.dist - C.VELBAT[b.postAtq] * dt); });
+    atqVivos.forEach(a => { a.dist = Math.max(0, Math.min(C.DIST + 25, a.dist - C.VELBAT[b.postAtq] * dt)); }); // para na beira da trincheira
     const pd = b.postDef === 'abrigar' ? { dano: 0.5, rec: 0.5 } : b.postDef === 'atacar' ? { dano: 1.4, rec: 1.3 } : { dano: 1, rec: 1 };
     const exposicao = b.postAtq === 'cobertura' ? 0.5 : 1;
     const dano = () => C.DANO_TIRO * (0.7 + 0.6 * Math.random());
@@ -416,7 +433,7 @@ function passoBatalha(b, dt) {
     const sobraA = b.atq.filter(a => a.s.vida > 0), sobraD = b.def.filter(d => d.s.vida > 0);
     if (!sobraD.length && sobraA.length) { b.terminou = true; b.vencedor = 'atq'; }
     else if (!sobraA.length) { b.terminou = true; b.vencedor = 'def'; }
-    else if (b.postAtq === 'recuar' && sobraA.every(a => a.dist >= C.DIST)) { b.terminou = true; b.vencedor = 'def'; b.recuou = true; }
+    else if (b.postAtq === 'recuar' && sobraA.every(a => a.dist >= C.DIST + 20)) { b.terminou = true; b.vencedor = 'def'; b.recuou = true; }
     else if (b.t >= C.BAT_DURACAO) { b.terminou = true; b.vencedor = 'def'; b.tempo = true; }
 }
 function artilhariaNaBatalha(b, lado) {
@@ -537,6 +554,8 @@ cvM.addEventListener('pointerup', soltar);
 cvM.addEventListener('pointercancel', ev => { toques.delete(ev.pointerId); arrasto = null; pinca = null; });
 cvM.addEventListener('wheel', ev => { ev.preventDefault(); const r = cvM.getBoundingClientRect(); zoomEm(ev.deltaY < 0 ? 1.15 : 1 / 1.15, ev.clientX - r.left, ev.clientY - r.top); }, { passive: false });
 window.addEventListener('resize', () => { ajustar(cvM); ajustar(cvB); limitarCam(); });
+// a área do mapa muda de altura quando o painel de baixo muda: acompanha o tamanho de verdade
+if (window.ResizeObserver) new ResizeObserver(() => { ajustar(cvM); limitarCam(); }).observe(cvM);
 
 /* ---------- Toque no mapa: escolher exército, destino ou província ---------- */
 function provNoPonto(wx, wy) {
@@ -561,8 +580,8 @@ function escolherDestino(exId, missao) { G.modo = { exId, missao }; G.pendente =
 function prepararOrdem(exId, destId, missao) {
     const e = G.ex.find(x => x.id === exId);
     G.modo = null;
-    if (!e || destId === e.prov) { renderPainel(); return; }
-    const c = caminho(e.prov, destId);
+    if (!e || (!e.rota.length && destId === e.prov)) { renderPainel(); return; }
+    const c = rotaPara(e, destId);
     if (!c) return renderPainel();
     G.pendente = { exId, destId, missao, qtd: e.s.length, rota: c.rota, seg: Math.ceil(c.dist / C.VEL) };
     G.sel = { tipo: 'ex', id: exId };
@@ -585,6 +604,7 @@ function desenharMapa() {
     const r = cvM.getBoundingClientRect(), d = DPR();
     cxM.setTransform(1, 0, 0, 1, 0, 0); cxM.fillStyle = '#12202a'; cxM.fillRect(0, 0, cvM.width, cvM.height);
     if (!MAPA) return;
+    if (!toques.size) limitarCam(); // mantém o mapa na tela mesmo se a área mudou de tamanho
     const T = (x, y) => paraTela(x, y);
     cxM.setTransform(cam.z * d, 0, 0, cam.z * d, (r.width / 2 - cam.x * cam.z) * d, (r.height / 2 - cam.y * cam.z) * d);
     cxM.drawImage(TERRENO, 0, 0, MAPA.W, MAPA.H);
@@ -660,7 +680,7 @@ function renderPainel() {
     if (G.modo) {
         const e = G.ex.find(x => x.id === G.modo.exId);
         html = `<div class="titulo"><span>${G.modo.missao === 'saque' ? '💰 Saquear' : '⚔️ Mover / atacar'}</span><span class="dono">${e ? e.s.length + ' soldados' : ''}</span></div>
-            <div class="info">Toque no mapa na província de destino. Pode ser vizinha ou longe: a tropa vai pelas estradas e conquista o que estiver sem defesa no caminho.</div>
+            <div class="info">Toque no mapa na província de destino. Pode ser sua (a tropa vai por dentro do seu território) ou inimiga, vizinha ou longe.</div>
             <div class="acoes">${botao('✖ Cancelar', '', 'G.modo=null;renderPainel()')}</div>`;
     } else if (G.pendente) {
         const o = G.pendente, e = G.ex.find(x => x.id === o.exId), p = G.prov[o.destId];
@@ -670,7 +690,7 @@ function renderPainel() {
         html = `<div class="titulo"><span>${o.missao === 'saque' ? '💰 Saquear' : p.dono === 'jogador' ? '🚶 Mover para' : '⚔️ Atacar'} ${p.nome}</span><span class="dono" style="color:${FACCOES[p.dono].cor}">${quem}</span></div>
             <div class="info">${p.dono === 'jogador' ? 'Província sua.' : defVis === null ? 'Defesa: <b>desconhecida</b> (mande um espião).' : `Defesa: <b>${defVis}</b> soldados · trincheira ${Math.round(p.trinch)}%${p.capital ? ' · capital (+25%)' : ''}.`}
             Chega em ~${o.seg}s${o.rota.length > 1 ? ', passando por ' + o.rota.slice(0, -1).map(id => G.prov[id].nome).join(', ') : ''}.</div>
-            <div class="seletor">Soldados: <button class="passo" onclick="G.pendente.qtd=Math.max(1,G.pendente.qtd-1);renderPainel()">−</button><b>${o.qtd}</b><button class="passo" onclick="G.pendente.qtd=Math.min(${e.s.length},G.pendente.qtd+1);renderPainel()">+</button><span class="info">ficam ${e.s.length - o.qtd}</span></div>
+            ${e.rota.length ? `<div class="info">Vão os ${e.s.length} soldados (a tropa já está em marcha).</div>` : `<div class="seletor">Soldados: <button class="passo" onclick="G.pendente.qtd=Math.max(1,G.pendente.qtd-1);renderPainel()">−</button><b>${o.qtd}</b><button class="passo" onclick="G.pendente.qtd=Math.min(${e.s.length},G.pendente.qtd+1);renderPainel()">+</button><button class="passo" style="width:auto;padding:0 8px;font-size:12px" onclick="G.pendente.qtd=${e.s.length};renderPainel()">todos</button><span class="info">ficam ${e.s.length - o.qtd}</span></div>`}
             <div class="acoes">${botao('✔ Confirmar', '', 'confirmarOrdem()', { forte: true })}${botao('✖ Cancelar', '', 'G.pendente=null;renderPainel()')}</div>`;
     } else if (G.sel && G.sel.tipo === 'ex') {
         const e = G.ex.find(x => x.id === G.sel.id);
@@ -679,8 +699,8 @@ function renderPainel() {
         html = `<div class="titulo"><span>🪖 Exército · ${e.s.length} soldados</span><span class="dono" style="color:${FACCOES.jogador.cor}">${e.rota.length ? (e.missao === 'saque' ? 'saqueando' : e.missao === 'voltar' ? 'voltando' : 'em marcha') : 'em ' + p.nome}</span></div>
             <div class="soldados">${e.s.map(s => `<span class="sd" title="${s.nome}" style="background:${corFome(s)}"></span>`).join('')}</div>
             <div class="info">${fome ? `<b style="color:#e3b04b">${fome} com fome</b>` : 'tropa alimentada'}${cans ? ` · ${cans} cansados` : ''} · força ${forca(e.s).toFixed(1)}${e.rota.length ? ` · indo para ${G.prov[e.rota[e.rota.length - 1]].nome}` : ''}</div>`;
-        html += e.rota.length ? `<div class="acoes">${botao('✋ Parar', 'na próxima província', `cancelarMarcha('${e.id}')`)}</div>`
-            : `<div class="acoes">${botao('⚔️ Mover / atacar', 'depois toque no destino', `escolherDestino('${e.id}','ataque')`, { forte: true })}${botao('💰 Saquear', `rouba ${Math.round(C.SAQUE_PARTE * 100)}% das moedas e volta`, `escolherDestino('${e.id}','saque')`)}</div>`;
+        html += e.rota.length ? `<div class="acoes">${botao('↪ Mudar destino', 'depois toque no novo destino', `escolherDestino('${e.id}','ataque')`, { forte: true })}${botao('✋ Parar', 'na próxima província', `cancelarMarcha('${e.id}')`)}</div>`
+            : `<div class="acoes">${botao('🚶 Mover / ⚔️ Atacar', 'toque no destino: sua província ou inimiga', `escolherDestino('${e.id}','ataque')`, { forte: true })}${botao('💰 Saquear', `rouba ${Math.round(C.SAQUE_PARTE * 100)}% das moedas e volta`, `escolherDestino('${e.id}','saque')`)}</div>`;
     } else if (G.sel && G.sel.tipo === 'prov') {
         const p = G.prov[G.sel.id], f = G.fac.jogador, vis = provVisivel(p.id), cor = FACCOES[p.dono].cor;
         const pr = C.PROD[p.tipo];
@@ -696,13 +716,18 @@ function renderPainel() {
         html += '</div><div class="acoes">';
         if (p.dono === 'jogador') {
             const meu = exParadosEm(p.id, 'jogador')[0];
-            if (ehCidade(p)) html += botao('🪖 Recrutar', `${custoRecrutar('jogador')} 🪙 (fica mais caro com a tropa)`, `recrutar('${p.id}');renderPainel()`, { off: f.moedas < custoRecrutar('jogador') });
+            const c5 = custoVarios('jogador', 5);
+            html += botao('🪖 Recrutar 1', `${custoRecrutar('jogador')} 🪙`, `recrutar('${p.id}');renderPainel()`, { off: f.moedas < custoRecrutar('jogador') });
+            html += botao('🪖 Recrutar 5', `${c5} 🪙 (cada um fica mais caro)`, `recrutar('${p.id}',5);renderPainel()`, { off: f.moedas < c5 });
             html += botao('🛡 Fortificar', `${C.FORTIFICAR} 🪙 · +${C.FORT_GANHO}% de trincheira`, `fortificar('${p.id}');renderPainel()`, { off: f.moedas < C.FORTIFICAR || p.trinch >= 100 });
-            if (meu) html += botao('🪖 Exército daqui', `${meu.s.length} soldados`, `G.sel={tipo:'ex',id:'${meu.id}'};renderPainel()`);
+            if (meu) html += botao('🪖 Exército daqui', `${meu.s.length} soldados · mover`, `G.sel={tipo:'ex',id:'${meu.id}'};renderPainel()`);
+            // trazer tropa de outra província sua (as mais perto primeiro)
+            exDe('jogador').filter(e => parado(e) && e.prov !== p.id).map(e => ({ e, c: rotaPara(e, p.id) })).filter(o => o.c).sort((a, b) => a.c.dist - b.c.dist).slice(0, 2)
+                .forEach(o => { html += botao(`🚶 Trazer ${o.e.s.length}`, `de ${G.prov[o.e.prov].nome} · ~${Math.ceil(o.c.dist / C.VEL)}s`, `prepararOrdem('${o.e.id}','${p.id}','mover')`); });
         } else {
             html += botao('👁 Espião', `${C.ESPIAO} 🪙 · viaja e só observa`, `espionar('${p.id}');renderPainel()`, { off: f.moedas < C.ESPIAO || G.espioes.length >= C.ESPIAO_MAX });
             // atalho: atacar com um dos seus exércitos parados (o mais perto primeiro)
-            exDe('jogador').filter(parado).map(e => ({ e, c: caminho(e.prov, p.id) })).filter(o => o.c).sort((a, b) => a.c.dist - b.c.dist).slice(0, 3)
+            exDe('jogador').filter(parado).map(e => ({ e, c: rotaPara(e, p.id) })).filter(o => o.c).sort((a, b) => a.c.dist - b.c.dist).slice(0, 3)
                 .forEach(o => { html += botao(`⚔️ Atacar com ${o.e.s.length}`, `de ${G.prov[o.e.prov].nome} · ~${Math.ceil(o.c.dist / C.VEL)}s`, `prepararOrdem('${o.e.id}','${p.id}','ataque')`, { forte: true }); });
         }
         html += '</div>';
@@ -767,15 +792,35 @@ function desenharBatalha() {
     cxB.fillStyle = '#4a3b28'; cxB.fillRect(0, yTrinch - 8, BW, 16);
     cxB.fillStyle = '#7a6646'; for (let x = 0; x < BW; x += 15) { cxB.beginPath(); cxB.ellipse(x + 7.5, yTrinch + (defEmbaixo ? -8 : 8), 8, 4.5, 0, 0, Math.PI * 2); cxB.fill(); cxB.strokeStyle = 'rgba(40,30,18,.6)'; cxB.lineWidth = 0.8; cxB.stroke(); }
     const corDef = FACCOES[b.defDono].cor, corAtq = FACCOES[b.atqDono].cor;
-    b.def.forEach(d => { if (d.s.vida > 0) desenharGente(d.x, yTrinch + (defEmbaixo ? 18 : -2), b.defDono === 'jogador', d.s, corDef, false); });
-    b.atq.forEach(a => {
-        if (a.s.vida <= 0) return;
-        const y = yTrinch + (yInicio - yTrinch) * (a.dist / C.DIST);
-        desenharGente(a.x, y, b.atqDono === 'jogador', a.s, corAtq, true);
-        if (a.dist < 220 && Math.random() < 0.05) { cxB.strokeStyle = 'rgba(255,224,138,.6)'; cxB.beginPath(); cxB.moveTo(a.x, y - 8); cxB.lineTo(a.x + (Math.random() - 0.5) * 60, yTrinch); cxB.stroke(); }
+    // posição na tela: o atacante para na beira da trincheira (nunca passa dos sacos de areia)
+    const yDef = yTrinch + (defEmbaixo ? 18 : -2);              // onde ficam os defensores
+    const yBeira = yTrinch + (yInicio - yTrinch) * 0.09;        // beira da trincheira, do lado do atacante
+    const yDoAtq = (dist) => yBeira + (yInicio - yBeira) * (dist / (C.DIST + 25));
+    // fim da batalha: quem venceu o ataque pula para dentro da trincheira e finca a bandeira
+    let pulo = 0;
+    if (b.terminou) { if (!b.fimEm) b.fimEm = performance.now(); pulo = Math.min(1, (performance.now() - b.fimEm) / 900); }
+    const venceuAtq = b.terminou && b.vencedor === 'atq';
+    b.def.forEach(d => { if (d.s.vida > 0) desenharGente(d.x, yDef, b.defDono === 'jogador', d.s, corDef, false); });
+    b.atq.filter(a => a.s.vida > 0).sort((a, z) => (defEmbaixo ? 1 : -1) * (yDoAtq(a.dist) - yDoAtq(z.dist))).forEach(a => {
+        let y = yDoAtq(a.dist);
+        if (venceuAtq) y = y + (yDef - y) * pulo;
+        const andando = !b.terminou && (a.dist > 0 || b.postAtq === 'recuar'); // na beira, para e mira
+        desenharGente(a.x, y, b.atqDono === 'jogador', a.s, corAtq, andando);
+        if (!b.terminou && a.dist < 220 && Math.random() < 0.05) { cxB.strokeStyle = 'rgba(255,224,138,.6)'; cxB.beginPath(); cxB.moveTo(a.x, y - 8); cxB.lineTo(a.x + (Math.random() - 0.5) * 60, yDef - 10); cxB.stroke(); }
     });
+    if (b.terminou) { // bandeira e aviso do resultado
+        const cx = BW / 2, venceu = venceuAtq ? corAtq : corDef;
+        if (venceuAtq && pulo >= 1) {
+            cxB.strokeStyle = '#d8d0b8'; cxB.lineWidth = 2; cxB.beginPath(); cxB.moveTo(cx, yTrinch + 4); cxB.lineTo(cx, yTrinch - 40); cxB.stroke();
+            cxB.fillStyle = venceu; cxB.beginPath(); cxB.moveTo(cx, yTrinch - 40); cxB.lineTo(cx + 26, yTrinch - 33); cxB.lineTo(cx, yTrinch - 26); cxB.fill();
+        }
+        const txt = venceuAtq ? (b.saque ? '💰 SAQUEADA' : '🏴 CONQUISTADA') : b.recuou ? '↩ RECUARAM' : '🛡 TRINCHEIRA MANTIDA';
+        cxB.font = 'bold 20px "Courier New", monospace'; cxB.textAlign = 'center';
+        const yt = BH / 2; cxB.fillStyle = 'rgba(0,0,0,.6)'; cxB.fillRect(40, yt - 22, BW - 80, 34);
+        cxB.fillStyle = venceu; cxB.fillText(txt, cx, yt + 2); cxB.textAlign = 'left';
+    }
     b.efeitos.forEach(f => {
-        const y = f.y < 0 ? yTrinch : yTrinch + (yInicio - yTrinch) * (f.y / C.DIST);
+        const y = f.y < 0 ? yDef - 10 : yDoAtq(f.y);
         if (f.tipo === 'explosao') { cxB.fillStyle = `rgba(255,160,60,${f.vida})`; cxB.beginPath(); cxB.arc(f.x, y, 18 * (1.3 - f.vida), 0, Math.PI * 2); cxB.fill(); }
         else { cxB.fillStyle = `rgba(255,90,70,${f.vida})`; cxB.font = 'bold 12px monospace'; cxB.fillText('✖', f.x - 4, y - 14); }
     });
@@ -819,7 +864,8 @@ function mostrarInicio() {
         <div class="lista">🪖 <b>Exércitos:</b> toque num exército seu (quadrado verde), depois em <b>Mover / atacar</b> e no destino. Você escolhe quantos soldados vão.<br>
         🏴 Entrar em província sem defesa conquista. Com defesa, tem batalha de até 2 minutos.<br>
         🍞 Todo soldado come. Sem comida, luta pior e adoece.<br>
-        🏘 Cidades recrutam. Campos dão comida, morros e florestas dão munição.<br>
+        🪖 Recrute em qualquer província sua (1 ou 5 de uma vez) e mova a tropa livremente pelo seu território.<br>
+        🏘 Cidades e a capital dão moedas. Campos dão comida, morros e florestas dão munição.<br>
         👁 <b>Espião:</b> viaja até a província e só observa: mostra tropas, tesouro e quem o dono está atacando.<br>
         💰 <b>Saque:</b> rouba ${Math.round(C.SAQUE_PARTE * 100)}% das moedas do dono e volta para casa.<br>
         ★ Vence quem tomar todas as capitais inimigas, ou quem tiver mais províncias quando o tempo acabar. Se perder a sua capital, acabou.<br>
@@ -853,7 +899,7 @@ function laco(agora) {
             b.passo(dt * (b.rapido ? 2 : 1));
             b.efeitos.forEach(f => f.vida -= dt); b.efeitos = b.efeitos.filter(f => f.vida > 0);
             desenharBatalha(); atualizarBatalhaUI();
-            if (b.terminou && !b.fechando) { b.fechando = true; setTimeout(fecharBatalha, 1200); }
+            if (b.terminou && !b.fechando) { b.fechando = true; setTimeout(fecharBatalha, 1900); }
         } else passoMapa(dt * G.velocidade);
     }
     if (G) { desenharMapa(); atualizarTopo(); }
