@@ -13,6 +13,14 @@
       "destination": "/prototipo/duelo.html"
     },
     {
+      "source": "/conquista.html",
+      "destination": "/prototipo/conquista.html"
+    },
+    {
+      "source": "/conquista",
+      "destination": "/prototipo/conquista.html"
+    },
+    {
       "source": "/versao.json",
       "destination": "/prototipo/versao.json"
     },
@@ -89,6 +97,15 @@
     },
     {
       "source": "/(duelo.html|prototipo/duelo.html)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        }
+      ]
+    },
+    {
+      "source": "/(conquista.html|prototipo/conquista.html)",
       "headers": [
         {
           "key": "Cache-Control",

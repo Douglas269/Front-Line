@@ -1,4 +1,4 @@
-// FrontLine · Duelo online (1×1, melhor de 5)
+// FrontLine · Trincheiras online (duelo 1×1, melhor de 5)
 // Cada rodada: 1 minuto para montar a defesa e o ataque em segredo → OK dos dois → os dois celulares
 // calculam o mesmo resultado (duelo-motor.js) e mostram o replay. Quem vencer o duelo ganha 3 troféus.
 // O servidor (Supabase) guarda só o duelo e os planos; window.DUELO_API permite testar com um servidor falso.
@@ -100,7 +100,7 @@
     // ---------- Login ----------
     function telaLogin(msg) {
         pararTudo(); tela = 'login';
-        mostrar(`<div class="topoLinha"><h1>⚔️ DUELO ONLINE</h1><a class="voltar" href="${linkDoJogo()}">← jogo</a></div>
+        mostrar(`<div class="topoLinha"><h1>⚔️ TRINCHEIRAS ONLINE</h1><a class="voltar" href="${linkDoJogo()}">← modos</a></div>
             <div class="sub">Para duelar com um amigo, entre na sua conta do FrontLine (a mesma do jogo).</div>
             <div class="caixa">
                 <input id="email" class="campo" type="email" placeholder="E-mail" autocomplete="email">
@@ -129,7 +129,7 @@
             const adv = d.jogador_a === eu.id ? (d.nome_b || 'esperando amigo') : d.nome_a;
             return `<button class="secundario" data-id="${esc(d.id)}">${d.estado === 'aguardando' ? '⏳' : '⚔️'} ${esc(d.codigo)} · contra ${esc(adv)} · rodada ${d.rodada}</button>`;
         }).join('');
-        mostrar(`<div class="topoLinha"><h1>⚔️ DUELO ONLINE</h1><a class="voltar" href="${linkDoJogo()}">← jogo</a></div>
+        mostrar(`<div class="topoLinha"><h1>⚔️ TRINCHEIRAS ONLINE</h1><a class="voltar" href="${linkDoJogo()}">← modos</a></div>
             <div class="sub">Você contra um amigo, melhor de 5. A cada rodada, 1 minuto para montar a defesa e o ataque em segredo. Quando os dois dão OK, a batalha acontece. Quem vencer o duelo ganha <b>3 troféus</b>.</div>
             <div class="caixa topoLinha"><div><div class="sub">Comandante</div><b>${esc(meuNome)}</b></div><div style="text-align:right"><div class="trofeus">🏆 ${t.trofeus}</div><div class="sub">${t.vitorias} vitórias · ${t.derrotas} derrotas</div></div></div>
             <div class="erro">${esc(msg || '')}</div>
@@ -438,7 +438,7 @@
             <div class="sub pisca" id="confirmando" style="margin-top:6px">${duelo.estado !== 'fim' ? 'Confirmando o resultado com o outro celular…' : ''}</div></div>
             <button class="grande" id="bRevanche">⚔️ REVANCHE</button>
             <button class="secundario" id="bLobby">Voltar ao lobby</button>
-            <a class="voltar" href="${linkDoJogo()}" style="display:block;text-align:center;margin-top:14px">← voltar ao jogo</a>`);
+            <a class="voltar" href="${linkDoJogo()}" style="display:block;text-align:center;margin-top:14px">← modos de jogo</a>`);
         document.getElementById('bRevanche').onclick = async () => { try { duelo = await API.criar(meuNome); tela = ''; telaSala(); } catch (e) { telaLobby(e.message); } };
         document.getElementById('bLobby').onclick = () => telaLobby();
         // espera o outro celular confirmar e então mostra o total de troféus já atualizado

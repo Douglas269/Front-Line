@@ -8,7 +8,7 @@ cd "$(dirname "$0")/.."
 V="${1:-$(date -u +%Y%m%d.%H%M)}"
 ARQ_VERSAO=prototipo/assets/js/06-conta.js
 sed -i "s/const VERSAO_JOGO = '[^']*';/const VERSAO_JOGO = '$V';/" "$ARQ_VERSAO"
-sed -i -E "s#(assets/(js|css)/[A-Za-z0-9_-]+\.(js|css))\?v=[0-9.]+#\1?v=$V#g" prototipo/ponto-alpha.html prototipo/duelo.html
+sed -i -E "s#(assets/(js|css)/[A-Za-z0-9_-]+\.(js|css))\?v=[0-9.]+#\1?v=$V#g" prototipo/ponto-alpha.html prototipo/duelo.html prototipo/conquista.html
 printf '{"versao": "%s"}\n' "$V" > prototipo/versao.json
 grep -q "const VERSAO_JOGO = '$V';" "$ARQ_VERSAO"
 echo "Versão $V"

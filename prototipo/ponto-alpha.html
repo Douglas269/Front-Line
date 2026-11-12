@@ -102,7 +102,7 @@
         }
     </style>
     <!-- Tailwind: CSS fixo gerado por tools/gerar-css.sh (antes era montado no celular pelo CDN) -->
-    <link rel="stylesheet" href="assets/css/tailwind.css?v=20261111.1744">
+    <link rel="stylesheet" href="assets/css/tailwind.css?v=20261112.0748">
 </head>
 <body class="h-screen w-screen overflow-hidden flex justify-center bg-black">
 
@@ -218,8 +218,8 @@
                     <span id="hint-ios" class="hidden text-xs text-mil-textMuted">No iPhone: Compartilhar → Adicionar à Tela de Início</span>
                 </div>
                 <div class="flex flex-wrap justify-end gap-x-3 gap-y-1.5 items-center">
-                    <!-- Modo Online: duelo 1×1 com um amigo (página própria; o modo de um jogador não muda) -->
-                    <a href="duelo.html" class="text-xs px-2 py-1 btn-tactical rounded font-bold whitespace-nowrap">⚔️ Duelo online</a>
+                    <!-- Volta para a tela inicial (Trincheiras, Trincheiras online e Conquista) -->
+                    <button onclick="abrirMenuModos()" class="text-xs px-2 py-1 btn-tactical rounded font-bold whitespace-nowrap">🏠 Modos de jogo</button>
                     <button onclick="abrirTutorial()" class="text-xs underline text-mil-textMuted hover:text-mil-textGlow whitespace-nowrap">Como jogar</button>
                     <button onclick="abrirCreditos()" class="text-xs underline text-mil-textMuted hover:text-mil-textGlow whitespace-nowrap">Créditos</button>
                     <button onclick="novaPartida()" class="text-xs underline text-mil-textMuted hover:text-mil-textGlow whitespace-nowrap">Nova partida</button>
@@ -452,6 +452,27 @@
             </div>
         </div>
 
+        <!-- TELA INICIAL: escolha do modo (aparece ao abrir o jogo) -->
+        <div id="tela-modos" class="absolute inset-0 bg-mil-bg z-[70] flex flex-col items-center justify-center p-6 overflow-y-auto">
+            <img src="icons/icon-192.png" alt="" class="w-20 h-20 rounded mb-3">
+            <h1 class="text-2xl font-bold text-mil-textGlow tracking-wider">FrontLine</h1>
+            <p class="text-xs text-mil-textMuted mb-5 font-normal">Escolha o modo de jogo.</p>
+            <div class="w-full max-w-xs space-y-3">
+                <button id="modo-trincheiras" type="button" onclick="escolherModo('trincheiras')" class="w-full p-3 btn-tactical rounded text-left">
+                    <span class="block font-bold text-sm">🪖 Trincheiras</span>
+                    <span class="block text-xs text-mil-textMuted font-normal mt-1">Segure a sua trincheira por 30 dias. Um jogador.</span>
+                </button>
+                <a id="modo-online" href="duelo.html" class="block w-full p-3 btn-tactical rounded text-left">
+                    <span class="block font-bold text-sm">⚔️ Trincheiras online</span>
+                    <span class="block text-xs text-mil-textMuted font-normal mt-1">Duelo 1×1 com um amigo, por código. Precisa de conta.</span>
+                </a>
+                <a id="modo-conquista" href="conquista.html" class="block w-full p-3 btn-tactical rounded text-left">
+                    <span class="block font-bold text-sm">🗺️ Conquista <span class="text-mil-amberMuted">· novo</span></span>
+                    <span class="block text-xs text-mil-textMuted font-normal mt-1">Mapa de províncias contra 3 bots. Alimente a tropa, espione e conquiste.</span>
+                </a>
+            </div>
+        </div>
+
         <!-- TELA DE LOGIN -->
         <div id="tela-login" class="hidden absolute inset-0 bg-mil-bg z-[60] flex flex-col items-center justify-center p-6 overflow-y-auto">
             <img src="icons/icon-192.png" alt="" class="w-20 h-20 rounded mb-3">
@@ -616,11 +637,11 @@
 
     <!-- JAVASCRIPT GAME ENGINE -->
     <!-- Código do jogo, dividido por assunto (a ordem importa) -->
-    <script src="assets/js/01-base.js?v=20261111.1744"></script>
-    <script src="assets/js/02-regras.js?v=20261111.1744"></script>
-    <script src="assets/js/03-defesas-crises.js?v=20261111.1744"></script>
-    <script src="assets/js/04-interface.js?v=20261111.1744"></script>
-    <script src="assets/js/05-cena.js?v=20261111.1744"></script>
-    <script src="assets/js/06-conta.js?v=20261111.1744"></script>
+    <script src="assets/js/01-base.js?v=20261112.0748"></script>
+    <script src="assets/js/02-regras.js?v=20261112.0748"></script>
+    <script src="assets/js/03-defesas-crises.js?v=20261112.0748"></script>
+    <script src="assets/js/04-interface.js?v=20261112.0748"></script>
+    <script src="assets/js/05-cena.js?v=20261112.0748"></script>
+    <script src="assets/js/06-conta.js?v=20261112.0748"></script>
 </body>
 </html>

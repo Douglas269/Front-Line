@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0c0f0d">
+<title>FrontLine · Conquista</title>
+<link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+  :root { --bg: #0c0f0d; --painel: #131815; --borda: #27332b; --ambar: #d39a45; --ambarEsc: #b37d2e; --texto: #d6e3d1; --mudo: #9fb39a; --verm: #ff8a7a; --verde: #8fd17f; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--texto); font-family: "Courier New", ui-monospace, monospace; overflow: hidden; }
+  body { display: flex; justify-content: center; }
+  #app { width: 100%; max-width: 480px; height: 100%; display: flex; flex-direction: column; }
+  button { font-family: inherit; color: inherit; cursor: pointer; }
+  button:disabled { opacity: .4; cursor: default; }
+  #topo { padding: 8px 10px 6px; border-bottom: 1px solid var(--borda); }
+  #l1 { display: flex; justify-content: space-between; font-weight: 700; }
+  #fase { color: var(--ambar); letter-spacing: 1px; }
+  #bMenu { background: none; border: 1px solid var(--borda); border-radius: 6px; padding: 0 5px; font-size: 13px; }
+  a.voltarMenu { display: block; text-align: center; margin-top: 12px; color: var(--mudo); font-size: 13px; }
+  #recs { display: flex; gap: 6px; margin-top: 6px; }
+  .rec { flex: 1; background: var(--painel); border: 1px solid var(--borda); border-radius: 6px; padding: 3px; text-align: center; font-size: 11px; color: var(--mudo); }
+  .rec b { display: block; font-size: 15px; color: var(--texto); }
+  .rec.baixo b { color: var(--verm); }
+  #mapaBox { position: relative; flex: 1; min-height: 0; }
+  #mapa { width: 100%; height: 100%; display: block; }
+  #aviso { position: absolute; left: 8px; right: 8px; top: 8px; padding: 6px 10px; border-radius: 8px; font-size: 12px; font-weight: 700; text-align: center; background: rgba(19,24,21,.88); border: 1px solid var(--borda); color: var(--mudo); }
+  #aviso.alerta { background: rgba(74,23,23,.92); border-color: #8a2b2b; color: #ffd6cf; }
+  #painel { border-top: 1px solid var(--borda); padding: 8px 10px calc(10px + env(safe-area-inset-bottom)); min-height: 150px; }
+  .titulo { display: flex; justify-content: space-between; align-items: baseline; font-weight: 700; }
+  .titulo .dono { font-size: 12px; }
+  .info { font-size: 12px; color: var(--mudo); margin: 4px 0 6px; line-height: 1.4; }
+  .soldados { display: flex; flex-wrap: wrap; gap: 3px; margin: 4px 0; }
+  .sd { width: 18px; height: 18px; border-radius: 4px; border: 1px solid rgba(255,255,255,.15); }
+  .acoes { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; }
+  .acao { padding: 10px 6px; border-radius: 8px; border: 1px solid var(--borda); background: var(--painel); font-weight: 700; font-size: 13px; }
+  .acao small { display: block; font-weight: 400; font-size: 10px; color: var(--mudo); }
+  .acao.forte { border-color: var(--ambar); background: #2a2214; color: #ffd28a; }
+  .seletor { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 13px; }
+  .passo { width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--borda); background: var(--painel); font-size: 18px; font-weight: 700; }
+  /* Batalha */
+  #batalha { position: fixed; inset: 0; background: var(--bg); display: none; flex-direction: column; z-index: 20; }
+  #batalha .cab { padding: 10px; border-bottom: 1px solid var(--borda); }
+  #batalha .placar { display: flex; justify-content: space-between; font-weight: 700; margin-top: 4px; }
+  #tempoBat { height: 6px; background: #1b221d; border-radius: 3px; overflow: hidden; margin-top: 6px; }
+  #tempoBat div { height: 100%; background: var(--ambarEsc); }
+  #cvBat { flex: 1; width: 100%; min-height: 0; display: block; }
+  #batalha .ctrl { padding: 8px 10px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--borda); }
+  .linha { display: flex; gap: 6px; }
+  .opc { flex: 1; padding: 11px 4px; border-radius: 8px; border: 1px solid var(--borda); background: var(--painel); font-weight: 700; font-size: 12px; }
+  .opc small { display: block; font-weight: 400; font-size: 10px; color: var(--mudo); }
+  .opc.on { border-color: var(--ambar); background: #2a2214; color: #ffd28a; }
+  /* Telas (início, resultado) */
+  #tela { position: fixed; inset: 0; background: rgba(5,7,6,.95); display: none; justify-content: center; align-items: flex-start; overflow-y: auto; z-index: 30; }
+  #tela .caixa { width: 100%; max-width: 480px; padding: 22px 16px; }
+  h2 { color: var(--ambar); letter-spacing: 1px; margin: 4px 0 6px; }
+  .sub { color: var(--mudo); font-size: 13px; line-height: 1.5; }
+  .grande { width: 100%; padding: 14px; border-radius: 10px; border: 1px solid var(--ambar); background: #2a2214; color: #ffd28a; font-weight: 700; font-size: 15px; letter-spacing: 1px; margin-top: 12px; }
+  .lista { font-size: 13px; line-height: 1.6; margin-top: 8px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="topo">
+    <div id="l1"><span><button id="bMenu" onclick="voltarAoMenu()" title="Modos de jogo">🏠</button> <span id="fase">CONQUISTA · FASE 1</span></span><span id="relogio">00:00</span></div>
+    <div id="recs">
+      <div class="rec" id="rCom">🍞 Comida<b>0</b></div>
+      <div class="rec" id="rMun">🔫 Munição<b>0</b></div>
+      <div class="rec" id="rMoe">🪙 Moedas<b>0</b></div>
+    </div>
+  </div>
+  <div id="mapaBox"><canvas id="mapa"></canvas><div id="aviso">Toque numa província</div></div>
+  <div id="painel"></div>
+</div>
+<div id="batalha">
+  <div class="cab">
+    <div style="display:flex;justify-content:space-between;font-weight:700"><span id="batTitulo">BATALHA</span><span id="batTempo">2:00</span></div>
+    <div class="placar"><span id="batNos"></span><span id="batEles"></span></div>
+    <div id="tempoBat"><div></div></div>
+  </div>
+  <canvas id="cvBat"></canvas>
+  <div class="ctrl">
+    <div class="linha" id="batPost"></div>
+    <div class="linha" style="margin-top:6px">
+      <button class="opc" id="bArt">💥 Artilharia<small>30 🪙</small></button>
+      <button class="opc" id="bVel">⏩ 2×<small>acelerar</small></button>
+    </div>
+  </div>
+</div>
+<div id="tela"><div class="caixa" id="telaCaixa"></div></div>
+
+<script src="assets/js/conquista.js?v=20261112.0748"></script>
+
+</body>
+</html>

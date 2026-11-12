@@ -144,6 +144,22 @@
         function lerLocal(chave) { try { return localStorage.getItem(chave); } catch (e) { return null; } }
         function gravarLocal(chave, valor) { try { localStorage.setItem(chave, valor); } catch (e) {} }
 
+        // Tela inicial com os modos: Trincheiras (este jogo), Trincheiras online e Conquista (páginas próprias)
+        let menuAberto = !document.getElementById('tela-modos').classList.contains('hidden');
+        function abrirMenuModos() {
+            menuAberto = true;
+            document.getElementById('tela-modos').classList.remove('hidden');
+        }
+        function fecharMenuModos() {
+            menuAberto = false;
+            document.getElementById('tela-modos').classList.add('hidden');
+        }
+        function escolherModo(modo) {
+            if (modo === 'online') { location.href = 'duelo.html'; return; }
+            if (modo === 'conquista') { location.href = 'conquista.html'; return; }
+            fecharMenuModos(); // Trincheiras: segue para o login (se precisar) e o jogo
+        }
+
         function abrirLogin() {
             loginAberto = true;
             document.getElementById('tela-login').classList.remove('hidden');
@@ -242,6 +258,7 @@
         }
 
         function entrarComoConvidado() {
+            fecharMenuModos();
             gravarLocal(MODE_KEY, 'convidado');
             fecharLogin();
             atualizarConta();
@@ -505,7 +522,7 @@
            Ao abrir, ao voltar para o app e a cada minuto o jogo compara as duas. Se o site
            tiver uma versão diferente, o jogo trava numa tela que só sai atualizando.
            (tools/nova-versao.sh troca as duas juntas a cada atualização publicada.) */
-        const VERSAO_JOGO = '20261111.1744';
+        const VERSAO_JOGO = '20261112.0748';
         const ATUALIZOU_KEY = 'frontline-atualizou-para';
         async function verificarVersao() {
             if (!location.protocol.startsWith('http') || atualizacaoPendente) return;

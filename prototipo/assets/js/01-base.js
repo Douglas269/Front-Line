@@ -261,8 +261,8 @@
         // 8 segundos de jogo por segundo real; updateGameTick decide se o relógio anda (pausa, fim, crise...)
 
         function updateGameTick() {
-            // Pausado, com crise, tutorial ou login aberto: o relógio para
-            if (gameEnded || jogoPausado || atualizacaoPendente || gameState.activeCrisis || tutorialAberto || loginAberto || perfilAberto || configAberto) return;
+            // Pausado, com crise, tutorial, login ou a tela de modos aberta: o relógio para
+            if (gameEnded || jogoPausado || atualizacaoPendente || gameState.activeCrisis || tutorialAberto || loginAberto || perfilAberto || configAberto || menuAberto) return;
             gameState.timeSeconds++;
 
             normalizeOrders();

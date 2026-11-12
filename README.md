@@ -64,8 +64,25 @@ Jogo de estratégia tático com foco em realismo de comando, combate blindado e 
 - **Modificadores por nível** (bloco `MODIFICADORES`, se somam): nível 5 **Noites longas** (mira à noite −25% em vez de −15%); nível 9 **Franco-atirador** (~1 disparo por dia em quem está de vigília; Abrigo Reforçado segura 75%; o Atirador de Elite de vigília abate o franco-atirador em 50% das vezes); nível 13 **Assaltos noturnos** (ondas à noite com +2); nível 17 **Blindados em dupla** (a partir do dia 15); nível 21 **Artilharia pesada** (+25% de dano nos bombardeios). A lista do nível atual fica em Configurações → Jogo, e a tela de vitória avisa o que vem no próximo nível.
 - **Avançar 2×** (botão ⏩ ao lado do Pausar): acelera o tempo quando não há inimigo, bombardeio nem crise, e volta sozinho ao normal no primeiro contato.
 
-### Duelo online (1×1, melhor de 5)
-Modo a mais: o jogo de um jogador continua igual. Botão **⚔️ Duelo online** no rodapé do jogo, ou o endereço `/duelo.html`.
+### Tela inicial: três modos
+Ao abrir o jogo aparece a escolha do modo (o relógio fica parado enquanto ela está aberta). O botão **🏠 Modos de jogo** no rodapé volta para ela.
+- **🪖 Trincheiras:** o jogo de um jogador de sempre (login ou convidado, depois a trincheira).
+- **⚔️ Trincheiras online:** o duelo 1×1 com um amigo (`/duelo.html`).
+- **🗺️ Conquista:** o modo novo, em mapa de províncias (`/conquista.html`).
+
+### Conquista (fase 1: Fronteira)
+Página própria: `prototipo/conquista.html` com `prototipo/assets/js/conquista.js`. O modo Trincheiras não muda.
+- **Mapa:** você começa em **Alfa** (o seu QG) com 8 soldados. Em volta, três bots com personalidades diferentes: **Bravo** agressivo (ataca mais que os outros e às vezes deixa a casa vazia), **Charlie** ladrão (vive saqueando) e **Delta ★** defensivo (a capital, com 10 soldados). Nos cantos de baixo ficam **Eco** e **Foxtrot**, províncias livres com 5 milicianos que não atacam ninguém: quem chegar primeiro leva. Os bots atacam você e uns aos outros, mas sem pressa: cada um espera pelo menos 45 s entre um ataque e outro e só ataca quando acha que tem bem mais força. Recrutar e defender eles fazem sempre.
+- **Comida:** todo soldado precisa comer. A comida sai sozinha do estoque; soldado com fome luta pior e, com fome demais, perde vida. Os bots também precisam alimentar a tropa e às vezes esquecem.
+- **Espião (15 🪙, 45 s):** sem ele você só vê "fraca/média/forte". Com ele vê a tropa, a fome, o tesouro e quem o bot está atacando, para atacar quem acabou de sair para brigar.
+- **Moedas:** recrutam soldados (cada um acima de 8 fica mais caro), pagam espião e artilharia. O **saque** manda 2 soldados roubarem 40% do tesouro sem conquistar; os bots também saqueiam você.
+- **Conquistar** traz metade do tesouro e da comida do dono, a produção da província e 2 moradores que viram soldados. Alfa produz em dobro e defende melhor.
+- **Batalha:** até 2 minutos na trincheira, com postura (atacar, equilíbrio, abrigar), artilharia (30 🪙) e 2×. O mapa para enquanto você luta. Defender é mais fácil: atacar com o mesmo número quase sempre perde; com artilharia ou com 50% a mais, normalmente ganha.
+- **Fase:** 15 minutos. Vitória: ter as 6 províncias. Derrota: perder Alfa. Na campanha planejada, a fase 2 é a região central e a fase 3 a capital; depois vem o modo online.
+- **Teste:** `node tests/conquista.js` confere a tela de modos e joga dezenas de fases sem tela. Hoje, um jogador automático cuidadoso vence cerca de metade das fases e o descuidado perde quase todas.
+
+### Trincheiras online (duelo 1×1, melhor de 5)
+Modo a mais: o jogo de um jogador continua igual. Escolha **⚔️ Trincheiras online** na tela inicial, ou abra o endereço `/duelo.html`.
 - **Como jogar com um amigo:** entre na conta (a mesma do jogo), toque em **Desafiar um amigo** e mande o código de 5 letras ou o link (`/duelo.html?c=CÓDIGO`). Ele abre, entra na conta e o duelo começa.
 - **Cada rodada:** **1 minuto** para montar, em segredo, a **defesa** (escala dos 6 soldados, postura, melhorias com Comando ★ e contra-bateria) e o **ataque** (gasta pontos em infantaria, artilharia e blindado; o orçamento cresce a cada rodada). Os dois dão **OK** (ou o tempo acaba e o plano vai como estiver) e a batalha acontece: o seu ataque contra a defesa dele e o dele contra a sua, ao mesmo tempo, com replay dos dois campos. Vence a rodada quem sofreu menos dano.
 - **Duelo:** melhor de 5 (quem fizer 3 rodadas primeiro). Se a trincheira de alguém cair, ele perde na hora. Soldados, trincheira, munição e melhorias continuam de uma rodada para a outra; à noite quem descansou se recupera. Depois de cada rodada dá para ver o que o outro fez (ataque e defesa) para ler o estilo dele.

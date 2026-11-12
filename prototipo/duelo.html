@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0c0f0d">
-<title>FrontLine · Duelo online</title>
+<title>FrontLine · Trincheiras online</title>
 <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
 <link rel="manifest" href="manifest.webmanifest">
 <style>
@@ -26,7 +26,8 @@
   .codigo { font-size: 38px; letter-spacing: 8px; text-align: center; color: #ffd28a; font-weight: 700; margin: 8px 0; }
   .erro { color: var(--verm); font-size: 13px; min-height: 18px; margin-top: 6px; }
   .topoLinha { display: flex; justify-content: space-between; align-items: center; }
-  a.voltar { color: var(--mudo); font-size: 13px; }
+  a.voltar { color: var(--mudo); font-size: 13px; white-space: nowrap; }
+  .topoLinha h1 { font-size: 17px; letter-spacing: 1px; }
   .trofeus { font-size: 26px; font-weight: 700; color: #ffd28a; }
   .placar { display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 15px; }
   .placar .num { font-size: 22px; color: #ffd28a; padding: 0 8px; }
@@ -64,10 +65,10 @@
 </style>
 </head>
 <body>
-<div id="app"><div class="espera"><div class="icone">⚔️</div><div class="sub">Carregando o duelo…</div></div></div>
+<div id="app"><div class="espera"><div class="icone">⚔️</div><div class="sub">Carregando Trincheiras online…</div></div></div>
 <!-- Supabase: contas e partidas online -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
-<script src="assets/js/duelo-motor.js?v=20261111.1744"></script>
-<script src="assets/js/duelo.js?v=20261111.1744"></script>
+<script src="assets/js/duelo-motor.js?v=20261112.0748"></script>
+<script src="assets/js/duelo.js?v=20261112.0748"></script>
 </body>
 </html>
