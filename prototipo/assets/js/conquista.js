@@ -76,6 +76,37 @@ const custoRecrutar = (dono) => C.RECRUTAR + C.RECRUTAR_EXTRA * Math.max(0, trop
 const ehCidade = (p) => p.tipo === 'cidade' || p.tipo === 'capital';
 const vivoNoJogo = (dono) => dono === 'jogador' || dono === 'neutro' || !G.eliminados[dono];
 function noticia(txt, alerta) { G.noticias.unshift({ txt, alerta, t: G.t }); G.noticias = G.noticias.slice(0, 30); }
+/* ---------- Salvamento (no aparelho) ----------
+   A partida é gravada a cada poucos segundos, ao trocar de aba e ao sair. O mapa não vai no
+   salvamento: ele sai sempre igual da semente da fase; só vão os donos, as tropas e os recursos. */
+const SAVE_CONQ = 'frontline-conquista-partida';
+function salvarPartida() {
+    if (!G || G.fim || G.batalha || G.semSalvar) return false; // batalha aberta: guarda o salvamento anterior
+    const dados = {
+        v: 1, fase: G.fase.n, t: G.t, fac: G.fac, ciclo: G.ciclo, velocidade: G.velocidade, proxId,
+        capitalJogador: G.capitalJogador, espiado: G.espiado, revelado: G.revelado, espioes: G.espioes,
+        ultimoAtaque: G.ultimoAtaque, eliminados: G.eliminados, pensar: G.pensar, noticias: G.noticias.slice(0, 10), ultimoRelatorio: G.ultimoRelatorio,
+        prov: Object.fromEntries(Object.values(G.prov).map(p => [p.id, { dono: p.dono, tipo: p.tipo, trinch: p.trinch, capital: p.capital }])),
+        ex: G.ex.map(e => ({ id: e.id, dono: e.dono, s: e.s, prov: e.prov, de: e.de, rota: e.rota, x: e.x, y: e.y, missao: e.missao, origem: e.origem, alertado: e.alertado })),
+        salvoEm: Date.now()
+    };
+    try { localStorage.setItem(SAVE_CONQ, JSON.stringify(dados)); return true; } catch (e) { return false; }
+}
+function lerSalvamento() { try { const d = JSON.parse(localStorage.getItem(SAVE_CONQ) || 'null'); return d && d.v === 1 && FASES[d.fase - 1] ? d : null; } catch (e) { return null; } }
+function apagarSalvamento() { try { localStorage.removeItem(SAVE_CONQ); } catch (e) {} }
+function carregarPartida() {
+    const d = lerSalvamento(); if (!d) return false;
+    novoJogo(d.fase);
+    Object.entries(d.prov).forEach(([id, q]) => { if (G.prov[id]) Object.assign(G.prov[id], q); });
+    Object.assign(G, { t: d.t, fac: d.fac, ciclo: d.ciclo, velocidade: d.velocidade || 1, capitalJogador: d.capitalJogador, espiado: d.espiado || {}, revelado: d.revelado || {},
+        espioes: d.espioes || [], ultimoAtaque: d.ultimoAtaque || {}, eliminados: d.eliminados || {}, pensar: d.pensar || G.pensar, noticias: d.noticias || [], ultimoRelatorio: d.ultimoRelatorio });
+    G.ex = d.ex.filter(e => G.prov[e.prov]).map(e => ({ ...e, rota: (e.rota || []).filter(id => G.prov[id]), emBatalha: false }));
+    proxId = Math.max(proxId, d.proxId || 0);
+    G.sel = { tipo: 'prov', id: G.capitalJogador }; G.pausado = true;
+    noticia('💾 Partida carregada. Está pausada: toque em ▶ para continuar.');
+    const c = G.prov[G.capitalJogador]; centralizar(c.x, c.y);
+    return true;
+}
 function lerFase() { try { return Math.max(1, +(localStorage.getItem('frontline-conquista-fase') || 1)); } catch (e) { return 1; } }
 function liberarFase(n) { try { if (n > lerFase()) localStorage.setItem('frontline-conquista-fase', String(n)); } catch (e) {} }
 
@@ -88,7 +119,7 @@ function novoJogo(numFase) {
         fase: F, t: 0, fim: null, sel: null, modo: null, pendente: null, noticias: [], espiado: {}, revelado: {}, espioes: [],
         ultimoAtaque: {}, eliminados: {}, batalha: null, ciclo: 0, ex: [], velocidade: 1,
         fac: { jogador: { comida: 40, mun: 150, moedas: 50 }, neutro: { comida: 0, mun: 100, moedas: 0 } },
-        prov: {}, pensar: {}
+        prov: {}, pensar: {}, pausado: false
     };
     F.bots.forEach((b, i) => { G.fac[b] = { comida: 40, mun: 150, moedas: b === 'delta' ? 70 : 50 }; G.pensar[b] = 60 + i * 12 + r() * 10; });
     MAPA.prov.forEach(pm => {
@@ -847,19 +878,25 @@ function atualizarTopo() {
     document.getElementById('relogio').textContent = `⏰ ${String(Math.floor(resta / 60)).padStart(2, '0')}:${String(Math.floor(resta % 60)).padStart(2, '0')}`;
     document.getElementById('fase').textContent = `FASE ${G.fase.n} · ${G.fase.nome.toUpperCase()}`;
     document.getElementById('bVelMapa').textContent = G.velocidade === 1 ? '1×' : '2×';
+    const bp = document.getElementById('bPausa'); bp.textContent = G.pausado ? '▶' : '⏸'; bp.classList.toggle('on', !!G.pausado);
+    document.getElementById('faixaPausa').style.display = G.pausado && !G.fim ? 'block' : 'none';
+    const bpb = document.getElementById('bPausaBat'); if (bpb) bpb.textContent = G.pausado ? '▶ Continuar' : '⏸ Pausar';
     const av = document.getElementById('aviso'), n = G.noticias[0];
     if (n && G.t - n.t < (n.alerta ? 7 : 4.5)) { av.textContent = n.txt; av.className = n.alerta ? 'alerta' : ''; av.style.display = 'block'; }
     else av.style.display = 'none';
 }
 const linkMenu = () => (location.protocol.startsWith('http') ? '/' : 'ponto-alpha.html');
 const botaoMenu = () => `<a class="voltarMenu" href="${linkMenu()}">← Modos de jogo</a>`;
-function voltarAoMenu() { if (G.fim || confirm('Sair da Conquista? A fase em andamento se perde.')) location.href = linkMenu(); }
+function voltarAoMenu() { salvarPartida(); location.href = linkMenu(); } // a partida fica salva
 function mostrarTela(html) { document.getElementById('telaCaixa').innerHTML = html; document.getElementById('tela').style.display = 'flex'; }
 function esconderTela() { document.getElementById('tela').style.display = 'none'; }
-function comecarFase(n) { novoJogo(n); esconderTela(); renderPainel(); }
+function comecarFase(n) { apagarSalvamento(); novoJogo(n); G.semSalvar = false; esconderTela(); renderPainel(); salvarPartida(); }
+function continuarPartida() { if (carregarPartida()) { esconderTela(); renderPainel(); } else mostrarInicio(); }
+function pausar(v) { if (!G || G.fim) return; G.pausado = v === undefined ? !G.pausado : v; if (G.pausado) salvarPartida(); atualizarTopo(); }
 function mostrarInicio() {
-    const lib = lerFase();
-    mostrarTela(`<h2>🗺️ CONQUISTA · CAMPANHA</h2>
+    const lib = lerFase(), sv = lerSalvamento();
+    const continuar = sv ? `<button class="grande" onclick="continuarPartida()">▶ CONTINUAR · FASE ${sv.fase} (${String(Math.floor(sv.t / 60)).padStart(2, '0')}:${String(Math.floor(sv.t % 60)).padStart(2, '0')} jogados)</button>` : '';
+    mostrarTela(`<h2>🗺️ CONQUISTA · CAMPANHA</h2>${continuar}
         <div class="sub">Você comanda um país pequeno no sul do mapa. Em volta, países de bots com personalidades diferentes e terras livres com milícia. Todos lutam contra todos.</div>
         <div class="lista">🪖 <b>Exércitos:</b> toque num exército seu (quadrado verde), depois em <b>Mover / atacar</b> e no destino. Você escolhe quantos soldados vão.<br>
         🏴 Entrar em província sem defesa conquista. Com defesa, tem batalha de até 2 minutos.<br>
@@ -869,11 +906,14 @@ function mostrarInicio() {
         👁 <b>Espião:</b> viaja até a província e só observa: mostra tropas, tesouro e quem o dono está atacando.<br>
         💰 <b>Saque:</b> rouba ${Math.round(C.SAQUE_PARTE * 100)}% das moedas do dono e volta para casa.<br>
         ★ Vence quem tomar todas as capitais inimigas, ou quem tiver mais províncias quando o tempo acabar. Se perder a sua capital, acabou.<br>
-        🖐 Arraste o mapa; use dois dedos (ou ＋ －) para o zoom. ⏩ 2× acelera o mapa.</div>
+        🖐 Arraste o mapa; use dois dedos (ou ＋ －) para o zoom. ⏩ 2× acelera o mapa. ⏸ pausa (dá para dar ordens pausado).<br>
+        💾 A partida salva sozinha neste aparelho: dá para sair e continuar depois.</div>
+        ${sv ? '<div class="sub" style="margin-top:8px">Começar uma fase nova apaga a partida salva.</div>' : ''}
         ${FASES.map(F => `<button class="fase${F.n > lib ? ' trancada' : ''}" ${F.n > lib ? 'disabled' : ''} onclick="comecarFase(${F.n})"><b>Fase ${F.n} · ${F.nome}</b><small>${F.n > lib ? '🔒 vença a fase anterior' : `${F.bots.length} inimigos · ${Math.round(F.tempo / 60)} minutos${F.capitalForte ? ' · capital fortificada' : ''}`}</small></button>`).join('')}
         ${botaoMenu()}`);
 }
 function mostrarFim() {
+    apagarSalvamento();
     const pl = placar(), F = G.fase, mm = Math.floor(G.t / 60), ss = String(Math.floor(G.t % 60)).padStart(2, '0');
     const proxima = F.n < FASES.length && (G.fim === 'vitoria' || G.fim === 'pontos');
     const titulo = { vitoria: `🏆 FASE ${F.n} VENCIDA!`, pontos: '🏆 VITÓRIA POR TERRITÓRIO', tempo: '⏰ O TEMPO ACABOU', derrota: '✝ SUA CAPITAL CAIU' }[G.fim];
@@ -889,11 +929,13 @@ function mostrarFim() {
 }
 
 /* ---------- Laço ---------- */
+document.addEventListener('visibilitychange', () => { if (document.hidden) salvarPartida(); });
+window.addEventListener('pagehide', () => salvarPartida());
 let ultimo = performance.now();
 function laco(agora) {
     const dt = Math.min(0.1, (agora - ultimo) / 1000); ultimo = agora;
     const telaAberta = document.getElementById('tela').style.display === 'flex';
-    if (!telaAberta && G && !G.fim) {
+    if (!telaAberta && G && !G.fim && !G.pausado) {
         if (G.batalha) {
             const b = G.batalha;
             b.passo(dt * (b.rapido ? 2 : 1));
@@ -902,12 +944,16 @@ function laco(agora) {
             if (b.terminou && !b.fechando) { b.fechando = true; setTimeout(fecharBatalha, 1900); }
         } else passoMapa(dt * G.velocidade);
     }
+    if (G && G.batalha && G.pausado) desenharBatalha(); // pausada: a cena fica parada na tela
     if (G) { desenharMapa(); atualizarTopo(); }
+    // salva a cada 5 s de jogo
+    if (G && !G.fim && !G.pausado && G.t - (G.salvoT || 0) >= 5) { if (salvarPartida()) G.salvoT = G.t; }
     if (G && !G.batalha && Math.floor(agora / 500) !== Math.floor((agora - dt * 1000) / 500) && !G.pendente) renderPainel();
     requestAnimationFrame(laco);
 }
 ajustar(cvM);
-novoJogo(Math.min(lerFase(), FASES.length));
+novoJogo(lerSalvamento() ? lerSalvamento().fase : Math.min(lerFase(), FASES.length));
+G.semSalvar = true; // a partida de fundo da tela de início não sobrescreve o salvamento
 renderPainel();
 mostrarInicio();
 requestAnimationFrame(laco);

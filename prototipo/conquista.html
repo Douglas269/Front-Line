@@ -18,8 +18,13 @@
   #topo { padding: 8px 10px 6px; border-bottom: 1px solid var(--borda); }
   #l1 { display: flex; justify-content: space-between; align-items: center; font-weight: 700; }
   #l1 .esq, #l1 .dir { display: flex; align-items: center; gap: 6px; }
+  #bPausa { background: var(--painel); border: 1px solid var(--borda); border-radius: 6px; padding: 1px 8px; font-weight: 700; font-size: 13px; }
+  #bPausa.on { border-color: var(--ambar); background: #2a2214; color: #ffd28a; }
+  #faixaPausa { display: none; position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); padding: 6px 12px; border-radius: 8px; background: rgba(42,34,20,.92); border: 1px solid var(--ambar); color: #ffd28a; font-weight: 700; font-size: 12px; pointer-events: none; white-space: nowrap; }
   #bVelMapa { background: var(--painel); border: 1px solid var(--borda); border-radius: 6px; padding: 1px 6px; font-weight: 700; font-size: 12px; }
-  #fase { color: var(--ambar); letter-spacing: 1px; font-size: 13px; }
+  #fase { color: var(--ambar); letter-spacing: 1px; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  #l1 .esq { min-width: 0; flex: 1; margin-right: 6px; }
+  #l1 .dir { flex: none; }
   #bMenu { background: none; border: 1px solid var(--borda); border-radius: 6px; padding: 0 5px; font-size: 13px; }
   a.voltarMenu { display: block; text-align: center; margin-top: 12px; color: var(--mudo); font-size: 13px; }
   #recs { display: flex; gap: 6px; margin-top: 6px; }
@@ -72,7 +77,7 @@
 <body>
 <div id="app">
   <div id="topo">
-    <div id="l1"><span class="esq"><button id="bMenu" onclick="voltarAoMenu()" title="Modos de jogo">🏠</button><span id="fase">CONQUISTA</span></span><span class="dir"><button id="bVelMapa" onclick="G.velocidade = G.velocidade === 1 ? 2 : 1" title="Velocidade do mapa">1×</button><span id="relogio">00:00</span></span></div>
+    <div id="l1"><span class="esq"><button id="bMenu" onclick="voltarAoMenu()" title="Modos de jogo">🏠</button><span id="fase">CONQUISTA</span></span><span class="dir"><button id="bPausa" onclick="pausar()" title="Pausar">⏸</button><button id="bVelMapa" onclick="G.velocidade = G.velocidade === 1 ? 2 : 1" title="Velocidade do mapa">1×</button><span id="relogio">00:00</span></span></div>
     <div id="recs">
       <div class="rec" id="rCom">🍞 Comida<b>0</b></div>
       <div class="rec" id="rMun">🔫 Munição<b>0</b></div>
@@ -80,13 +85,13 @@
       <div class="rec" id="rProv">🏴 Terra<b>0</b></div>
     </div>
   </div>
-  <div id="mapaBox"><canvas id="mapa"></canvas><div id="aviso"></div>
+  <div id="mapaBox"><canvas id="mapa"></canvas><div id="aviso"></div><div id="faixaPausa">⏸ PAUSADO · dá para dar ordens</div>
     <div id="zoom"><button onclick="zoomEm(1.3, cvM.getBoundingClientRect().width / 2, cvM.getBoundingClientRect().height / 2)" title="Aproximar">＋</button><button onclick="zoomEm(1 / 1.3, cvM.getBoundingClientRect().width / 2, cvM.getBoundingClientRect().height / 2)" title="Afastar">－</button><button onclick="const c = G.prov[G.capitalJogador]; centralizar(c.x, c.y)" title="Ir para a sua capital">★</button></div></div>
   <div id="painel"></div>
 </div>
 <div id="batalha">
   <div class="cab">
-    <div style="display:flex;justify-content:space-between;font-weight:700"><span id="batTitulo">BATALHA</span><span id="batTempo">2:00</span></div>
+    <div style="display:flex;justify-content:space-between;font-weight:700"><span id="batTitulo">BATALHA</span><span><button id="bPausaBat" onclick="pausar()" style="background:var(--painel);border:1px solid var(--borda);border-radius:6px;padding:2px 8px;font-weight:700;font-size:12px;margin-right:8px">⏸ Pausar</button><span id="batTempo">2:00</span></span></div>
     <div class="placar"><span id="batNos"></span><span id="batEles"></span></div>
     <div id="tempoBat"><div></div></div>
   </div>
@@ -102,8 +107,8 @@
 </div>
 <div id="tela"><div class="caixa" id="telaCaixa"></div></div>
 
-<script src="assets/js/conquista-mapa.js?v=20261112.2042"></script>
-<script src="assets/js/conquista.js?v=20261112.2042"></script>
+<script src="assets/js/conquista-mapa.js?v=20261112.2203"></script>
+<script src="assets/js/conquista.js?v=20261112.2203"></script>
 
 </body>
 </html>

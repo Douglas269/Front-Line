@@ -202,6 +202,42 @@ function jogar({ N, FASE, EST }) {
     Object.entries(ck).forEach(([k, v]) => { if (!v) falhas.push('tela: ' + k); });
     info.tela = ck;
 
+    // 3b) Salvamento e pausa: joga, recarrega a página, continua igual; pausa no mapa e na batalha
+    {
+        const q = await ctx.newPage(); const errosS = []; q.on('pageerror', e => errosS.push(e.message));
+        await q.goto(CONQ, { waitUntil: 'load' });
+        await q.evaluate(() => localStorage.clear()); await q.reload({ waitUntil: 'load' });
+        const sv = { semContinuarSemSalvamento: !(await q.$('button:has-text("CONTINUAR")')) };
+        await q.click('button.fase');
+        const antes = await q.evaluate(() => {
+            Object.keys(G.pensar).forEach(k => { G.pensar[k] = 40; });
+            for (let i = 0; i < 360; i++) { passoMapa(0.5); if (G.batalha) { const bt = G.batalha; while (!bt.terminou) bt.passo(0.25); fecharBatalha(); } }
+            salvarPartida();
+            return JSON.stringify({ t: Math.round(G.t), donos: Object.values(G.prov).map(x => x.dono), tropa: tropaDe('jogador'), ex: G.ex.length, moedas: Math.floor(G.fac.jogador.moedas) });
+        });
+        await q.reload({ waitUntil: 'load' });
+        sv.mostraContinuar = !!(await q.$('button:has-text("CONTINUAR")'));
+        await q.click('button:has-text("CONTINUAR")');
+        const depois = await q.evaluate(() => JSON.stringify({ t: Math.round(G.t), donos: Object.values(G.prov).map(x => x.dono), tropa: tropaDe('jogador'), ex: G.ex.length, moedas: Math.floor(G.fac.jogador.moedas) }));
+        sv.voltaIgual = antes === depois;
+        sv.voltaPausado = await q.evaluate(() => G.pausado === true);
+        const t1 = await q.evaluate(() => G.t); await q.waitForTimeout(800);
+        sv.pausaParaOTempo = await q.evaluate((t) => G.t === t, t1);
+        sv.daOrdemPausado = await q.evaluate(() => { const e = exDe('jogador').find(x => parado(x) && x.s.length >= 2); return !e || !!ordem(e.id, G.prov[e.prov].viz[0], 1, 'mover'); });
+        await q.click('#bPausa'); await q.waitForTimeout(800);
+        sv.despausaAnda = await q.evaluate((t) => G.t > t, t1);
+        await q.evaluate(() => { const c = G.prov[G.capitalJogador]; const ex = criarExercito('jogador', c.id, 6); const m = Object.values(G.prov).find(x => x.dono === 'neutro' && exParadosEm(x.id, 'neutro').length); abrirBatalha(criarBatalha(ex, m, exParadosEm(m.id, 'neutro'))); });
+        await q.waitForTimeout(300); await q.click('#bPausaBat');
+        const b1 = await q.evaluate(() => G.batalha.t); await q.waitForTimeout(600);
+        sv.pausaNaBatalha = await q.evaluate((t) => G.batalha.t === t, b1);
+        await q.click('#bPausaBat');
+        sv.fimApagaSalvamento = await q.evaluate(() => { document.getElementById('batalha').style.display = 'none'; G.batalha = null; G.t = G.fase.tempo; passoMapa(0.1); return !!G.fim && !lerSalvamento(); });
+        Object.entries(sv).forEach(([k, v]) => { if (!v) falhas.push('salvar/pausar: ' + k); });
+        if (errosS.length) falhas.push('erros no salvamento: ' + errosS[0]);
+        info.salvarPausar = sv;
+        await q.close();
+    }
+
     // 4) Fases inteiras sem tela
     const rodadas = [[1, 'esperto', 8], [1, 'ingenuo', 6], [2, 'esperto', 2], [3, 'esperto', 2]];
     info.fases = {};
