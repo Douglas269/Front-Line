@@ -68,18 +68,19 @@ Jogo de estratégia tático com foco em realismo de comando, combate blindado e 
 Ao abrir o jogo aparece a escolha do modo (o relógio fica parado enquanto ela está aberta). O botão **🏠 Modos de jogo** no rodapé volta para ela.
 - **🪖 Trincheiras:** o jogo de um jogador de sempre (login ou convidado, depois a trincheira).
 - **⚔️ Trincheiras online:** o duelo 1×1 com um amigo (`/duelo.html`).
-- **🗺️ Conquista:** o modo novo, em mapa de províncias (`/conquista.html`).
+- **🗺️ Conquista:** campanha contra bots num mapa grande de províncias (`/conquista.html`).
 
-### Conquista (fase 1: Fronteira)
-Página própria: `prototipo/conquista.html` com `prototipo/assets/js/conquista.js`. O modo Trincheiras não muda.
-- **Mapa:** você começa em **Alfa** (o seu QG) com 8 soldados. Em volta, três bots com personalidades diferentes: **Bravo** agressivo (ataca mais que os outros e às vezes deixa a casa vazia), **Charlie** ladrão (vive saqueando) e **Delta ★** defensivo (a capital, com 10 soldados). Nos cantos de baixo ficam **Eco** e **Foxtrot**, províncias livres com 5 milicianos que não atacam ninguém: quem chegar primeiro leva. Os bots atacam você e uns aos outros, mas sem pressa: cada um espera pelo menos 45 s entre um ataque e outro e só ataca quando acha que tem bem mais força. Recrutar e defender eles fazem sempre.
-- **Comida:** todo soldado precisa comer. A comida sai sozinha do estoque; soldado com fome luta pior e, com fome demais, perde vida. Os bots também precisam alimentar a tropa e às vezes esquecem.
-- **Espião (15 🪙, 45 s):** sem ele você só vê "fraca/média/forte". Com ele vê a tropa, a fome, o tesouro e quem o bot está atacando, para atacar quem acabou de sair para brigar.
-- **Moedas:** recrutam soldados (cada um acima de 8 fica mais caro), pagam espião e artilharia. O **saque** manda 2 soldados roubarem 40% do tesouro sem conquistar; os bots também saqueiam você.
-- **Conquistar** traz metade do tesouro e da comida do dono, a produção da província e 2 moradores que viram soldados. Alfa produz em dobro e defende melhor.
-- **Batalha:** até 2 minutos na trincheira, com postura (atacar, equilíbrio, abrigar), artilharia (30 🪙) e 2×. O mapa para enquanto você luta. Defender é mais fácil: atacar com o mesmo número quase sempre perde; com artilharia ou com 50% a mais, normalmente ganha.
-- **Fase:** 15 minutos. Vitória: ter as 6 províncias. Derrota: perder Alfa. Na campanha planejada, a fase 2 é a região central e a fase 3 a capital; depois vem o modo online.
-- **Teste:** `node tests/conquista.js` confere a tela de modos e joga dezenas de fases sem tela. Hoje, um jogador automático cuidadoso vence cerca de metade das fases e o descuidado perde quase todas.
+### Conquista (campanha em mapa grande, no estilo Call of War)
+Página própria: `prototipo/conquista.html`, com `assets/js/conquista-mapa.js` (gera e pinta os mapas) e `assets/js/conquista.js` (o jogo). O modo Trincheiras não muda.
+- **Campanha:** fase 1 Fronteira (26 províncias, 3 inimigos, 15 min), fase 2 Região central (36 províncias, 4 inimigos, 18 min) e fase 3 A capital (50 províncias, 4 inimigos, 20 min, com a capital do Delta fortificada). Vencer uma fase libera a próxima (fica salvo no aparelho).
+- **Mapa:** cada fase tem sempre o mesmo mapa (semente fixa): províncias irregulares com fronteiras serrilhadas, mar em volta e terreno pintado (campos, florestas, morros, cidades e estradas). Arraste para andar e use dois dedos, a roda do mouse ou ＋ － para o zoom. Névoa de guerra: você só vê as tropas nas suas províncias e nas vizinhas.
+- **Exércitos:** toque num exército seu, em **Mover / atacar** e no destino (vizinho ou longe; a tropa vai pelas estradas). Antes de confirmar dá para escolher quantos soldados vão, e o resto fica. Entrar em província sem defesa conquista; com defesa, tem batalha de até 2 minutos na trincheira (postura, artilharia, 2× ou resolver na hora). Quem perde recua para de onde veio.
+- **Economia:** campos dão comida, morros e florestas dão munição, cidades e capitais dão moedas e recrutam. Todo soldado come (1 de comida a cada ~15 s): o tamanho do exército depende dos campos. **Fortificar** reforça a trincheira de uma província.
+- **Espião (15 🪙):** sai da sua província mais perto e viaja até o alvo. Ele não luta: ao chegar, revela a província e as vizinhas por 60 s e traz um relatório (tropa, fome, tesouro e quem o dono está atacando).
+- **Saque:** o exército rouba 30% das moedas do dono e volta para casa.
+- **Bots:** Bravo agressivo, Charlie ladrão, Delta defensivo e Echo oportunista (ataca quem saiu para brigar). Recrutam, fortificam e mandam reforço para onde estão ameaçados sempre; atacam com pausa (40 s) e só com vantagem; erram (esquecem a comida, deixam a capital vazia, avaliam mal). Bot que perde a capital se rende e as terras dele viram milícia.
+- **Fim:** vence quem tomar todas as capitais inimigas, ou quem tiver mais províncias quando o tempo acabar. Perder a sua capital é derrota.
+- **Teste:** `node tests/conquista.js` confere a tela de modos, os 3 mapas, o fluxo de toques (exército, destino, quantidade, espião, arrastar e zoom) e joga fases inteiras sem tela. Hoje um jogador automático cuidadoso vence quase todas as fases 1 e cerca de metade das fases 2 e 3; o descuidado perde quase sempre.
 
 ### Trincheiras online (duelo 1×1, melhor de 5)
 Modo a mais: o jogo de um jogador continua igual. Escolha **⚔️ Trincheiras online** na tela inicial, ou abra o endereço `/duelo.html`.

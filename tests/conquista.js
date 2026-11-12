@@ -1,67 +1,75 @@
-// Teste do modo Conquista e da tela inicial de modos
+// Teste do modo Conquista (mapa grande, exércitos, espião) e da tela inicial de modos
 // Uso: node tests/conquista.js
 // 1) a tela inicial do jogo mostra os 3 modos e pausa o relógio até escolher;
-// 2) a página da Conquista abre sem erros;
-// 3) muitas fases jogadas sem tela por um jogador automático: quem joga bem vence uma parte,
-//    quem joga mal perde; os bots atacam você e uns aos outros; nada quebra.
+// 2) os mapas das 3 fases: províncias ligadas, vizinhança dos dois lados, nomes sem repetir, capitais com saída;
+// 3) jogando pela tela, com toques: escolher exército, destino e quantidade, confirmar; espião viaja e não luta;
+//    arrastar e dar zoom;
+// 4) fases inteiras sem tela com um jogador automático cuidadoso e um descuidado.
 const path = require('path');
 const { chromium } = require('playwright');
 const RAIZ = path.resolve(__dirname, '..', 'prototipo');
 const JOGO = 'file://' + path.join(RAIZ, 'ponto-alpha.html');
 const CONQ = 'file://' + path.join(RAIZ, 'conquista.html');
-const N = +(process.argv[2] || 24);
 
-// Jogador automático (roda dentro da página). 'esperto' espiona, guarda a casa, reforça e usa artilharia;
-// 'ingenuo' ataca com quase tudo sem olhar.
-function jogarFases({ N, estrategia }) {
+// Joga N fases sem tela. EST: 'esperto' (espiona, guarda a capital, recruta, avança com vantagem e usa artilharia)
+// ou 'ingenuo' (manda o maior exército inteiro para um vizinho qualquer).
+function jogar({ N, FASE, EST }) {
     esconderTela(); laco = () => {};
-    const res = [];
+    const res = []; let travou = false;
     for (let j = 0; j < N; j++) {
-        novoJogo();
-        let botVsBot = 0, contraVoce = 0, pensa = 0;
-        while (!G.fim) {
-            passoMapa(0.5);
-            if (G.batalha) {
-                const bt = G.batalha;
-                if (bt.souAtq) { bt.postAtq = 'avancar'; if (estrategia === 'esperto') artilhariaNaBatalha(bt, 'atq'); } else bt.postDef = 'equilibrio';
-                while (!bt.terminou) bt.passo(0.25);
-                fecharBatalha();
-            }
-            G.marchas.forEach(m => {
-                if (m.contado) return; m.contado = true;
-                if (m.dono !== 'jogador' && G.prov[m.para].dono === 'jogador') contraVoce++;
-                if (m.dono !== 'jogador' && G.prov[m.para].dono !== 'jogador' && G.prov[m.para].dono !== m.dono) botVsBot++;
-            });
-            if ((pensa -= 0.5) > 0) continue; pensa = 4;
-            const f = G.fac.jogador;
-            minhas().forEach(q => { if (f.moedas >= custoRecrutar('jogador') + (estrategia === 'esperto' ? 15 : 0) && vivosDe(q).length < 12) recrutar(q.id); });
-            if (G.marchas.filter(m => m.dono === 'jogador').length >= 2) continue;
-            const fronteira = Object.values(G.prov).filter(q => q.dono !== 'jogador' && minhas().some(mi => mi.viz.includes(q.id)));
-            if (!fronteira.length) continue;
-            if (estrategia === 'esperto') {
-                const base = G.prov.alfa;
-                const fraca = minhas().filter(q => !q.qg && (vivosDe(q).length < 4 || q.viz.some(v => G.prov[v].dono !== 'jogador')) && vivosDe(q).length < 12)[0];
-                if (fraca && vivosDe(base).length > 6 && base.viz.includes(fraca.id)) { enviar('alfa', fraca.id, vivosDe(base).length - 6, 'ataque'); continue; }
-                const alvo = fronteira.sort((a, c) => forca(vivosDe(a)) - forca(vivosDe(c)))[0];
-                if (!(G.espiado[alvo.dono] > G.t) && f.moedas >= C.ESPIAO) espionar(alvo.id);
-                const origem = minhas().filter(mi => mi.viz.includes(alvo.id) && !G.marchas.some(m => m.de === mi.id)).sort((a, c) => vivosDe(c).length - vivosDe(a).length)[0];
-                if (!origem || G.marchas.some(m => m.para === alvo.id && m.dono === 'jogador')) continue;
-                const brigando = G.marchas.some(m => m.dono === alvo.dono && m.de === alvo.id) || vivosDe(alvo).length <= 4;
-                const meus = vivosDe(origem).slice(0, Math.max(0, vivosDe(origem).length - (origem.qg ? 5 : 3)));
-                const margem = f.moedas >= C.ARTILHARIA ? 0.8 : brigando ? 1.15 : 1.5;
-                if (meus.length >= 3 && G.espiado[alvo.dono] > G.t && forca(meus) > forca(vivosDe(alvo)) * margem) enviar(origem.id, alvo.id, meus.length, 'ataque');
-                else if (f.moedas < 30 && meus.length >= 2 && Math.random() < 0.15) enviar(origem.id, alvo.id, C.SAQUE_TROPA, 'saque');
-            } else {
-                const alvo = fronteira[Math.floor(Math.random() * fronteira.length)];
-                const origem = minhas().filter(mi => mi.viz.includes(alvo.id))[0];
-                if (vivosDe(origem).length >= 6 && Math.random() < 0.5) enviar(origem.id, alvo.id, vivosDe(origem).length - 1, 'ataque');
-            }
-            // nada pode ficar com número quebrado ou negativo
-            Object.values(G.fac).forEach(x => { if (!(x.comida >= 0 && x.mun >= 0 && x.moedas >= 0)) throw new Error('recurso inválido ' + JSON.stringify(x)); });
+      novoJogo(FASE);
+      const est = { ataquesBot: 0, contraMim: 0, minhasMax: 0 };
+      const ord = ordem;
+      ordem = (...a) => { const e = G.ex.find(x => x.id === a[0]); const res = ord(...a); if (res && e.dono !== 'jogador' && G.prov[a[1]].dono !== e.dono) { est.ataquesBot++; if (G.prov[a[1]].dono === 'jogador') est.contraMim++; } return res; };
+      let pensa = 0, passos = 0;
+      while (!G.fim) {
+        passoMapa(0.5); passos++;
+        if (G.batalha) { const bt = G.batalha; if (bt.souAtq && EST === 'esperto' && bt.def.length >= 3) artilhariaNaBatalha(bt, 'atq'); while (!bt.terminou) bt.passo(0.25); fecharBatalha(); }
+        est.minhasMax = Math.max(est.minhasMax, minhas().length);
+        if (passos > 20000) { travou = true; break; }
+        if ((pensa -= 0.5) > 0) continue; pensa = 3;
+        const f = G.fac.jogador, cap = G.prov[G.capitalJogador];
+        if (EST === 'parado') continue;
+        if (EST === 'ingenuo') {
+          const e = exDe('jogador').filter(parado).sort((a, z) => z.s.length - a.s.length)[0];
+          if (e && e.s.length >= 4 && Math.random() < 0.3) { const viz = G.prov[e.prov].viz.filter(v => G.prov[v].dono !== 'jogador'); if (viz.length) ordem(e.id, viz[Math.floor(Math.random() * viz.length)], e.s.length, 'ataque'); }
+          continue;
         }
-        res.push({ fim: G.fim, t: G.t, botVsBot, contraVoce });
+        // ---- esperto ----
+        const amea = ameaca(cap, 'jogador'), defCap = defesaEm(cap);
+        // recruta (capital primeiro se ameaçada)
+        const cidades = minhas().filter(ehCidade).sort((a, z) => (z === cap) - (a === cap));
+        for (let k = 0; k < 3; k++) { if (f.moedas < custoRecrutar('jogador') + 12) break; recrutar((amea > defCap * 0.8 ? cap : cidades[k % cidades.length]).id); }
+        if (amea > defCap && f.moedas >= C.FORTIFICAR && cap.trinch < 100) fortificar(cap.id);
+        // defesa da capital: chama tropa vizinha
+        if (amea > defCap * 0.9) exDe('jogador').filter(e => parado(e) && e.prov !== cap.id && cap.viz.includes(e.prov)).forEach(e => ordem(e.id, cap.id, e.s.length, 'mover'));
+        // ataques
+        exDe('jogador').filter(e => parado(e) && e.s.length >= 3).forEach(e => {
+          const casa = G.prov[e.prov];
+          const maior = Math.max(0, ...G.ex.filter(x => x.dono !== 'jogador' && x.dono !== 'neutro' && (casa.viz.includes(x.prov) || x.rota.includes(casa.id))).map(x => forca(x.s)));
+          const ficar = casa === cap ? Math.max(4, Math.ceil(maior * 0.75)) : Math.max(1, Math.ceil(maior * 0.7 / (1 + casa.trinch / 250)));
+          const manda = e.s.length - ficar; if (manda < 2) return;
+          const env = vivos(e.s).sort((a, z) => eficacia(z) - eficacia(a)).slice(0, manda);
+          const alvos = casa.viz.map(id => G.prov[id]).filter(q => q.dono !== 'jogador' && !G.ex.some(x => x.dono === 'jogador' && x.rota.includes(q.id)));
+          const avaliados = alvos.map(q => ({ q, def: provVisivel(q.id) ? defesaEm(q) : null }));
+          const desconhecido = avaliados.find(a => a.def === null);
+          if (desconhecido && f.moedas >= C.ESPIAO + 10) espionar(desconhecido.q.id);
+          const margem = f.moedas >= C.ARTILHARIA ? 0.9 : 1.3;
+          const boa = avaliados.filter(a => a.def !== null && forca(env) > a.def * margem).sort((a, z) => (z.q.capital - a.q.capital) || (a.def - z.def))[0];
+          if (boa) ordem(e.id, boa.q.id, manda, 'ataque');
+        });
+        // tropas paradas em retaguarda (sem vizinho inimigo) vão para a frente
+        exDe('jogador').filter(e => parado(e) && G.prov[e.prov].viz.every(v => G.prov[v].dono === 'jogador') && e.s.length >= (e.prov === cap.id ? 7 : 2)).forEach(e => {
+          const frente = minhas().filter(q => q.viz.some(v => G.prov[v].dono !== 'jogador')).map(q => ({ q, c: caminho(e.prov, q.id) })).filter(o => o.c).sort((a, z) => a.c.dist - z.c.dist)[0];
+          if (frente) ordem(e.id, frente.q.id, e.prov === cap.id ? e.s.length - 4 : e.s.length, 'mover');
+        });
+      }
+      const pl = placar();
+      Object.values(G.fac).forEach(x => { if (!(x.comida >= 0 && x.mun >= 0 && x.moedas >= 0)) travou = 'recurso inválido'; });
+      res.push({ fim: G.fim, t: Math.round(G.t), minhas: pl.jogador || 0, total: Object.keys(G.prov).length, ataquesBot: est.ataquesBot, contraMim: est.contraMim });
+      ordem = ord;
     }
-    return res;
+    return { res, travou };
 }
 
 (async () => {
@@ -80,7 +88,6 @@ function jogarFases({ N, estrategia }) {
             links: [...document.querySelectorAll('#tela-modos a')].map(a => a.getAttribute('href')),
             menuAberto
         }));
-        // relógio parado com a tela aberta
         const t0 = await p.evaluate(() => { const t = gameState.timeSeconds; for (let i = 0; i < 20; i++) updateGameTick(); return gameState.timeSeconds - t; });
         await p.click('#modo-trincheiras');
         const depois = await p.evaluate(() => ({ menuAberto, escondida: document.getElementById('tela-modos').classList.contains('hidden') }));
@@ -93,36 +100,96 @@ function jogarFases({ N, estrategia }) {
         await p.close();
     }
 
-    // 2) Página da Conquista
-    const p = await b.newPage({ viewport: { width: 360, height: 760 } });
+    const ctx = await b.newContext({ viewport: { width: 360, height: 760 }, hasTouch: true });
+    const p = await ctx.newPage();
     const erros = []; p.on('pageerror', e => erros.push(e.message));
     await p.goto(CONQ, { waitUntil: 'load' });
-    await p.waitForTimeout(500);
-    const abre = await p.evaluate(() => ({ inicio: document.getElementById('tela').style.display === 'flex', texto: document.getElementById('telaCaixa').textContent, prov: Object.keys(G.prov).length, scrollX: document.documentElement.scrollWidth > innerWidth }));
-    if (!abre.inicio || !abre.texto.includes('FASE 1')) falhas.push('a Conquista não mostra a tela de início');
-    if (abre.prov !== 6) falhas.push('o mapa não tem 6 províncias');
-    if (abre.scrollX) falhas.push('a Conquista tem rolagem para o lado no celular');
-    // começa e deixa o tempo correr um pouco na tela de verdade
-    await p.click('#telaCaixa button.grande');
-    await p.waitForTimeout(1500);
-    const anda = await p.evaluate(() => G.t);
-    if (!(anda > 0.5)) falhas.push('o mapa da Conquista não anda depois de começar');
+    await p.waitForTimeout(400);
 
-    // 3) Muitas fases sem tela
-    const esp = await p.evaluate(jogarFases, { N, estrategia: 'esperto' });
-    const ing = await p.evaluate(jogarFases, { N, estrategia: 'ingenuo' });
-    const pct = (l, f) => Math.round(100 * l.filter(x => x.fim === f).length / l.length);
-    const med = (l, k) => Math.round(l.reduce((s, x) => s + x[k], 0) / l.length);
-    const vitEsp = esp.filter(x => x.fim === 'vitoria');
-    info.esperto = { vitorias: pct(esp, 'vitoria') + '%', derrotas: pct(esp, 'derrota') + '%', tempoEsgotado: pct(esp, 'tempo') + '%', minutosParaVencer: vitEsp.length ? +(vitEsp.reduce((s, x) => s + x.t, 0) / vitEsp.length / 60).toFixed(1) : null };
-    info.ingenuo = { vitorias: pct(ing, 'vitoria') + '%', derrotas: pct(ing, 'derrota') + '%' };
-    info.ataquesPorFase = { botContraBot: med(esp.concat(ing), 'botVsBot'), botContraVoce: med(esp.concat(ing), 'contraVoce') };
-    if (pct(esp, 'vitoria') < 15) falhas.push('quem joga bem quase nunca vence: ' + JSON.stringify(info.esperto));
-    if (pct(esp, 'vitoria') > 85) falhas.push('fácil demais para quem joga bem: ' + JSON.stringify(info.esperto));
-    if (pct(ing, 'vitoria') > 20) falhas.push('quem joga mal vence demais: ' + JSON.stringify(info.ingenuo));
-    if (vitEsp.length && vitEsp.some(x => x.t > 900)) falhas.push('vitória depois do limite da fase');
-    if (info.ataquesPorFase.botContraBot < 1) falhas.push('os bots não atacam uns aos outros');
-    if (info.ataquesPorFase.botContraVoce < 1) falhas.push('os bots não atacam você');
+    // 2) Mapas das 3 fases
+    info.mapas = await p.evaluate(() => FASES.map(F => {
+        novoJogo(F.n);
+        const ps = Object.values(G.prov), ids = ps.map(q => q.id);
+        const vis = new Set([ids[0]]), fila = [ids[0]];
+        while (fila.length) { const a = fila.pop(); G.prov[a].viz.forEach(v => { if (!vis.has(v)) { vis.add(v); fila.push(v); } }); }
+        return {
+            fase: F.n, provincias: ps.length, ligado: vis.size === ps.length,
+            vizinhosDosDoisLados: ps.every(q => q.viz.every(v => G.prov[v].viz.includes(q.id))),
+            nomesUnicos: new Set(ps.map(q => q.nome)).size === ps.length,
+            capitais: ps.filter(q => q.capital).length, capitaisComSaida: ps.filter(q => q.capital).every(q => q.viz.length >= 3),
+            dentroDoMundo: ps.every(q => q.poli.every(pt => pt.x >= 0 && pt.y >= 0 && pt.x <= MAPA.W && pt.y <= MAPA.H))
+        };
+    }));
+    info.mapas.forEach((m, k) => {
+        const minimo = [20, 30, 40][k];
+        if (m.provincias < minimo) falhas.push(`fase ${m.fase}: mapa pequeno (${m.provincias} províncias)`);
+        ['ligado', 'vizinhosDosDoisLados', 'nomesUnicos', 'capitaisComSaida', 'dentroDoMundo'].forEach(c => { if (!m[c]) falhas.push(`fase ${m.fase}: ${c}`); });
+        if (m.capitais !== FASES_BOTS[k] + 1) falhas.push(`fase ${m.fase}: ${m.capitais} capitais`);
+    });
+
+    // 3) Jogando pela tela
+    await p.reload({ waitUntil: 'load' });
+    await p.evaluate(() => { try { localStorage.removeItem('frontline-conquista-fase'); } catch (e) {} mostrarInicio(); });
+    const trancadas = await p.$$eval('button.fase', bs => bs.map(x => x.disabled));
+    if (JSON.stringify(trancadas) !== '[false,true,true]') falhas.push('fases 2 e 3 deveriam começar trancadas: ' + trancadas);
+    await p.click('button.fase');
+    await p.waitForTimeout(400);
+    const caixa = await p.$eval('#mapa', el => { const r = el.getBoundingClientRect(); return { x: r.x, y: r.y }; });
+    const naTela = (wx, wy) => p.evaluate(([x, y]) => paraTela(x, y), [wx, wy]);
+    const ck = {};
+    const cap = await p.evaluate(() => { const c = G.prov[G.capitalJogador]; const e = exParadosEm(c.id, 'jogador')[0]; return { x: e.x, y: e.y, n: e.s.length, viz: c.viz }; });
+    let s = await naTela(cap.x, cap.y);
+    await p.mouse.click(caixa.x + s.x, caixa.y + s.y + 6);
+    ck.tocaNoExercito = await p.evaluate(() => !!G.sel && G.sel.tipo === 'ex');
+    await p.click('#painel button:has-text("Mover / atacar")');
+    const alvo = await p.evaluate((viz) => { const q = viz.map(id => G.prov[id]).find(q => q.dono !== 'jogador'); return { id: q.id, x: q.x, y: q.y }; }, cap.viz);
+    s = await naTela(alvo.x, alvo.y + 25);
+    await p.mouse.click(caixa.x + s.x, caixa.y + s.y);
+    ck.escolheDestino = await p.evaluate((id) => !!G.pendente && G.pendente.destId === id, alvo.id);
+    await p.click('#painel .passo >> nth=0'); await p.click('#painel .passo >> nth=0');
+    await p.click('#painel button:has-text("Confirmar")');
+    ck.mandaSoQuemEscolheu = await p.evaluate((n) => { const m = exDe('jogador').find(e => e.rota.length); const fica = exDe('jogador').find(e => !e.rota.length && e.prov === G.capitalJogador); return !!m && !!fica && m.s.length === n - 2 && fica.s.length === 2; }, cap.n);
+    // espião: viaja, revela e nunca abre batalha nem mata ninguém
+    const longe = await p.evaluate(() => { const c = G.prov[G.capitalJogador]; const q = Object.values(G.prov).filter(q => q.dono !== 'jogador').sort((a, b) => Math.hypot(b.x - c.x, b.y - c.y) - Math.hypot(a.x - c.x, a.y - c.y))[0]; G.sel = { tipo: 'prov', id: q.id }; renderPainel(); return q.id; });
+    ck.longeNaNevoa = await p.evaluate((id) => !provVisivel(id), longe);
+    await p.click('#painel button:has-text("Espião")');
+    ck.espiaoSai = await p.evaluate(() => G.espioes.length === 1);
+    ck.espiaoNaoLuta = await p.evaluate((id) => {
+        const vidas = () => G.ex.filter(e => e.prov === id).flatMap(e => e.s).reduce((t, x) => t + x.vida, 0);
+        const antes = vidas(); const cb = criarBatalha; let batalhaDoEspiao = false;
+        criarBatalha = (e, q, d) => { if (q.id === id && e.dono === 'jogador') batalhaDoEspiao = true; return cb(e, q, d); };
+        G.ex.filter(e => e.dono === 'jogador').forEach(e => { e.rota = []; }); // só o espião se mexe
+        Object.keys(G.pensar).forEach(k => { G.pensar[k] = 1e9; });
+        for (let i = 0; i < 600 && G.espioes.length; i++) passoMapa(0.25);
+        criarBatalha = cb;
+        return !batalhaDoEspiao && Math.abs(vidas() - antes) < 1e-6 && G.espioes.length === 0;
+    }, longe);
+    ck.espiaoRevela = await p.evaluate((id) => provVisivel(id) && !!G.ultimoRelatorio, longe);
+    // arrastar e zoom
+    const c0 = await p.evaluate(() => ({ ...cam }));
+    await p.mouse.move(caixa.x + 180, caixa.y + 300); await p.mouse.down(); await p.mouse.move(caixa.x + 100, caixa.y + 220, { steps: 6 }); await p.mouse.up();
+    const c1 = await p.evaluate(() => ({ ...cam }));
+    ck.arrasta = Math.abs(c1.x - c0.x) + Math.abs(c1.y - c0.y) > 20;
+    await p.click('#zoom button >> nth=1');
+    ck.zoom = await p.evaluate((z) => cam.z < z, c1.z);
+    ck.semRolagemLateral = await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
+    Object.entries(ck).forEach(([k, v]) => { if (!v) falhas.push('tela: ' + k); });
+    info.tela = ck;
+
+    // 4) Fases inteiras sem tela
+    const rodadas = [[1, 'esperto', 8], [1, 'ingenuo', 6], [2, 'esperto', 2], [3, 'esperto', 2]];
+    info.fases = {};
+    for (const [FASE, EST, N] of rodadas) {
+        const r = await p.evaluate(jogar, { N, FASE, EST });
+        if (r.travou) falhas.push(`fase ${FASE} ${EST}: ${r.travou === true ? 'travou' : r.travou}`);
+        const cont = {}; r.res.forEach(x => { cont[x.fim] = (cont[x.fim] || 0) + 1; });
+        const venceu = r.res.filter(x => x.fim === 'vitoria' || x.fim === 'pontos').length;
+        info.fases[`fase${FASE}-${EST}`] = { resultados: cont, venceu: `${venceu}/${N}`, provinciasNoFim: +(r.res.reduce((t, x) => t + x.minhas, 0) / N).toFixed(1), ataquesDosBots: +(r.res.reduce((t, x) => t + x.ataquesBot, 0) / N).toFixed(1) };
+        if (FASE === 1 && EST === 'esperto' && venceu < 2) falhas.push('quem joga bem quase nunca vence a fase 1: ' + JSON.stringify(cont));
+        if (FASE === 1 && EST === 'ingenuo' && venceu > N / 2) falhas.push('quem joga mal vence demais: ' + JSON.stringify(cont));
+        if (r.res.some(x => !x.fim)) falhas.push(`fase ${FASE}: partida sem fim`);
+        if (r.res.every(x => x.ataquesBot < 3)) falhas.push(`fase ${FASE}: os bots quase não atacam`);
+    }
     if (erros.length) falhas.push('erros na Conquista: ' + erros[0]);
     await b.close();
 
@@ -130,3 +197,4 @@ function jogarFases({ N, estrategia }) {
     if (falhas.length) { console.log('FALHAS: ' + JSON.stringify(falhas)); process.exit(1); }
     console.log('Conquista e tela de modos: todas as verificações passaram, sem erros de JavaScript.');
 })();
+const FASES_BOTS = [3, 4, 4];
