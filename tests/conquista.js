@@ -238,6 +238,34 @@ function jogar({ N, FASE, EST }) {
         await q.close();
     }
 
+    // 3c) Som: música do mapa e da batalha, tiros, explosão e o botão de desligar (lembrado no aparelho)
+    {
+        const bs = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
+        const q = await bs.newPage({ viewport: { width: 360, height: 760 } }); const errosSom = []; q.on('pageerror', e => errosSom.push(e.message));
+        await q.goto(CONQ, { waitUntil: 'load' }); await q.evaluate(() => localStorage.clear()); await q.reload({ waitUntil: 'load' });
+        await q.click('button.fase'); await q.waitForTimeout(600);
+        const so = {};
+        so.musicaDoMapa = await q.evaluate(() => SOM.ctx && SOM.ctx.state === 'running' && SOM.faixa === 'mapa' && !SOM.mapa.paused);
+        await q.evaluate(() => { window._ef = {}; const o = som; som = (t, f) => { window._ef[t] = (window._ef[t] || 0) + 1; return o(t, f); };
+            const c = G.prov[G.capitalJogador]; const ex = criarExercito('jogador', c.id, 8); const m = Object.values(G.prov).find(x => x.dono === 'neutro' && exParadosEm(x.id, 'neutro').length);
+            G.fac.jogador.moedas = 100; abrirBatalha(criarBatalha(ex, m, exParadosEm(m.id, 'neutro'))); });
+        await q.waitForTimeout(300);
+        so.musicaDaBatalha = await q.evaluate(() => SOM.faixa === 'batalha' && !SOM.batalha.paused && SOM.mapa.paused);
+        await q.click('#bArt'); await q.click('#bVel'); await q.waitForTimeout(4000);
+        so.tirosEExplosao = await q.evaluate(() => (window._ef.tiro || 0) > 3 && window._ef.explosao >= 1);
+        await q.click('#bPausaBat'); await q.evaluate(() => { const bt = G.batalha; G.pausado = false; while (!bt.terminou) bt.passo(0.25); });
+        await q.waitForTimeout(2400);
+        so.voltaMusicaDoMapa = await q.evaluate(() => !G.batalha && SOM.faixa === 'mapa' && !SOM.mapa.paused);
+        await q.click('#bSom');
+        so.desliga = await q.evaluate(() => !SOM.ligado && SOM.mapa.paused && SOM.batalha.paused);
+        await q.reload({ waitUntil: 'load' });
+        so.lembraDesligado = await q.evaluate(() => !SOM.ligado && document.getElementById('bSom').textContent === '🔇');
+        Object.entries(so).forEach(([k, v]) => { if (!v) falhas.push('som: ' + k); });
+        if (errosSom.length) falhas.push('erros no som: ' + errosSom[0]);
+        info.som = so;
+        await bs.close();
+    }
+
     // 4) Fases inteiras sem tela
     const rodadas = [[1, 'esperto', 8], [1, 'ingenuo', 6], [2, 'esperto', 2], [3, 'esperto', 2]];
     info.fases = {};

@@ -75,7 +75,7 @@ const tropaDe = (dono) => exDe(dono).reduce((t, e) => t + e.s.length, 0);
 const custoRecrutar = (dono) => C.RECRUTAR + C.RECRUTAR_EXTRA * Math.max(0, tropaDe(dono) - C.TROPA_BASE);
 const ehCidade = (p) => p.tipo === 'cidade' || p.tipo === 'capital';
 const vivoNoJogo = (dono) => dono === 'jogador' || dono === 'neutro' || !G.eliminados[dono];
-function noticia(txt, alerta) { G.noticias.unshift({ txt, alerta, t: G.t }); G.noticias = G.noticias.slice(0, 30); }
+function noticia(txt, alerta) { if (alerta && typeof som === 'function') som('alerta'); G.noticias.unshift({ txt, alerta, t: G.t }); G.noticias = G.noticias.slice(0, 30); }
 /* ---------- Salvamento (no aparelho) ----------
    A partida é gravada a cada poucos segundos, ao trocar de aba e ao sair. O mapa não vai no
    salvamento: ele sai sempre igual da semente da fase; só vão os donos, as tropas e os recursos. */
@@ -228,6 +228,7 @@ function recrutarEm(provId, dono) {
 }
 function recrutar(id, n = 1) {
     let feitos = 0; while (feitos < n && recrutarEm(id, 'jogador')) feitos++;
+    if (feitos) som('recrutar');
     if (feitos) noticia(`🪖 ${feitos === 1 ? 'Novo soldado' : feitos + ' novos soldados'} em ${G.prov[id].nome}.`);
     return feitos;
 }
@@ -248,7 +249,7 @@ function espionar(id) {
     if (!base) return false;
     f.moedas -= C.ESPIAO;
     G.espioes.push({ para: id, x: base.x, y: base.y });
-    noticia(`👁 Espião saiu de ${base.nome} para ${p.nome}. Ele não luta: só observa.`);
+    noticia(`👁 Espião saiu de ${base.nome} para ${p.nome}. Ele não luta: só observa.`); som('espiao');
     return true;
 }
 
@@ -398,6 +399,7 @@ function conquistar(p, dono, e) {
         ['moedas', 'comida'].forEach(k => { const v = Math.floor(fa[k] * parte); fa[k] -= v; fn[k] += v; });
     }
     if (e) e.s.push(...Array.from({ length: p.tipo === 'cidade' || p.capital ? 2 : 1 }, () => soldado(dono === 'jogador' ? 'Recruta' : 'Inimigo'))); // moradores se juntam
+    if (dono === 'jogador') som('conquista'); else if (antigo === 'jogador') som('perda');
     if (ver) noticia(`🏴 ${FACCOES[dono].nome} conquistou ${p.nome}${antigo === 'neutro' ? '' : ' de ' + FACCOES[antigo].nome}.`, antigo === 'jogador');
     if (p.capital && antigo !== 'neutro') {
         if (antigo === 'jogador') { G.fim = 'derrota'; return mostrarFim(); }
@@ -444,7 +446,7 @@ function passoBatalha(b, dt) {
     const noCampo = atqVivos.filter(a => a.dist > 0 && a.dist < 260);
     if (noCampo.length && defVivos.length) {
         const munD = fd.mun > 0 ? 1 : 0.3, cap = b.alvo.capital ? C.CAPITAL_DEFESA : 1;
-        defVivos.forEach(d => { if (Math.random() < C.TIRO_DEF * eficacia(d.s) * pd.dano * exposicao * munD * cap * dt) noCampo[Math.floor(Math.random() * noCampo.length)].s.vida -= dano(); });
+        defVivos.forEach(d => { if (Math.random() < C.TIRO_DEF * eficacia(d.s) * pd.dano * exposicao * munD * cap * dt) { noCampo[Math.floor(Math.random() * noCampo.length)].s.vida -= dano(); if (b === G.batalha) som('tiro', 0.8); } });
         fd.mun = Math.max(0, fd.mun - defVivos.length * 0.5 * dt);
     }
     if (defVivos.length) {
@@ -453,13 +455,13 @@ function passoBatalha(b, dt) {
             const corpo = a.dist <= 0;
             const chance = corpo ? C.CORPO_A_CORPO * eficacia(a.s) * pd.rec
                 : C.TIRO_ATQ * (b.postAtq === 'cobertura' ? 0.6 : 1) * eficacia(a.s) * munA * (1 - C.TRINCH_PROTEGE * b.alvo.trinch / 100) * pd.rec;
-            if (Math.random() < chance * dt) defVivos[Math.floor(Math.random() * defVivos.length)].s.vida -= dano();
+            if (Math.random() < chance * dt) { defVivos[Math.floor(Math.random() * defVivos.length)].s.vida -= dano(); if (b === G.batalha) som('tiro'); }
         });
         fa.mun = Math.max(0, fa.mun - atqVivos.length * 0.4 * dt);
     }
     const naTrincheira = atqVivos.filter(a => a.dist <= 0);
     if (naTrincheira.length && defVivos.length) defVivos.forEach(d => { if (Math.random() < C.CORPO_A_CORPO * eficacia(d.s) * dt) naTrincheira[Math.floor(Math.random() * naTrincheira.length)].s.vida -= dano(); });
-    b.atq.forEach(a => { if (a.s.vida <= 0 && !a.morto) { a.morto = true; b.efeitos.push({ x: a.x, y: a.dist, vida: 0.6, tipo: 'abate' }); } });
+    b.atq.forEach(a => { if (a.s.vida <= 0 && !a.morto) { a.morto = true; b.efeitos.push({ x: a.x, y: a.dist, vida: 0.6, tipo: 'abate' }); if (b === G.batalha) som('abate'); } });
     b.def.forEach(d => { if (d.s.vida <= 0 && !d.morto) { d.morto = true; b.efeitos.push({ x: d.x, y: -1, vida: 0.6, tipo: 'abate' }); } });
     const sobraA = b.atq.filter(a => a.s.vida > 0), sobraD = b.def.filter(d => d.s.vida > 0);
     if (!sobraD.length && sobraA.length) { b.terminou = true; b.vencedor = 'atq'; }
@@ -472,6 +474,7 @@ function artilhariaNaBatalha(b, lado) {
     if (f.moedas < C.ARTILHARIA || b.usouArt) return;
     f.moedas -= C.ARTILHARIA; b.usouArt = true;
     const alvos = lado === 'atq' ? b.def : b.atq;
+    som('explosao');
     alvos.filter(x => x.s.vida > 0).forEach(x => { x.s.vida -= 35; b.efeitos.push({ x: x.x, y: lado === 'atq' ? -1 : x.dist, vida: 0.8, tipo: 'explosao' }); });
 }
 function concluirBatalha(b) {
@@ -523,7 +526,7 @@ function relatorioEspiao(p) {
         txt += `${FACCOES[p.dono].nome} tem ${tropaDe(p.dono)} soldados${fome ? ` (${fome} com fome)` : ''} e ${Math.floor(f.moedas)} moedas.`;
         txt += marchando.length ? ' Está atacando: ' + marchando.map(e => `${G.prov[e.rota[e.rota.length - 1]].nome} (${e.s.length})`).join(', ') + '.' : ' Ninguém marchando agora.';
     }
-    noticia(txt);
+    noticia(txt); som('espiao');
     G.ultimoRelatorio = txt;
 }
 function fimPorTempo() {
@@ -621,6 +624,7 @@ function prepararOrdem(exId, destId, missao) {
 function confirmarOrdem() {
     const o = G.pendente; if (!o) return;
     const novo = ordem(o.exId, o.destId, o.qtd, o.missao);
+    if (novo) som('ordem');
     G.pendente = null;
     if (novo) G.sel = { tipo: 'ex', id: novo.id };
     renderPainel();
@@ -769,7 +773,7 @@ function renderPainel() {
 /* ---------- Tela de batalha ---------- */
 const cvB = document.getElementById('cvBat'), cxB = cvB.getContext('2d');
 function abrirBatalha(b) {
-    G.batalha = b;
+    G.batalha = b; tocarMusica('batalha');
     const souAtq = b.atqDono === 'jogador';
     b.souAtq = souAtq;
     document.getElementById('batalha').style.display = 'flex';
@@ -800,7 +804,7 @@ function atualizarBatalhaUI() {
 function fecharBatalha() {
     const b = G.batalha;
     document.getElementById('batalha').style.display = 'none';
-    G.batalha = null;
+    G.batalha = null; tocarMusica('mapa');
     concluirBatalha(b);
     renderPainel();
 }
@@ -914,6 +918,7 @@ function mostrarInicio() {
 }
 function mostrarFim() {
     apagarSalvamento();
+    som(G.fim === 'vitoria' || G.fim === 'pontos' ? 'vitoria' : 'derrota');
     const pl = placar(), F = G.fase, mm = Math.floor(G.t / 60), ss = String(Math.floor(G.t % 60)).padStart(2, '0');
     const proxima = F.n < FASES.length && (G.fim === 'vitoria' || G.fim === 'pontos');
     const titulo = { vitoria: `🏆 FASE ${F.n} VENCIDA!`, pontos: '🏆 VITÓRIA POR TERRITÓRIO', tempo: '⏰ O TEMPO ACABOU', derrota: '✝ SUA CAPITAL CAIU' }[G.fim];
@@ -928,6 +933,77 @@ function mostrarFim() {
         <button class="grande secundaria" onclick="mostrarInicio()">ESCOLHER FASE</button>${botaoMenu()}`);
 }
 
+/* ---------- Som: música (as mesmas do modo Trincheiras) e efeitos gerados no navegador ----------
+   A música passa pelo mesmo mixer dos efeitos (no iPhone o volume do <audio> é ignorado).
+   O navegador só libera o som depois do primeiro toque na tela. */
+const SOM = {
+    ligado: (() => { try { return localStorage.getItem('frontline-conquista-som') !== '0'; } catch (e) { return true; } })(),
+    ctx: null, efeitos: null, musica: null, ruido: null, ultimo: {}, faixa: null,
+    mapa: new Audio('assets/music/war_theme.mp3'), batalha: new Audio('assets/music/to_battle.mp3')
+};
+[SOM.mapa, SOM.batalha].forEach(a => { a.loop = true; a.preload = 'auto'; a.volume = 0.35; });
+function iniciarSom() {
+    if (SOM.ctx) { if (SOM.ctx.state !== 'running') SOM.ctx.resume().catch(() => {}); return; }
+    try {
+        SOM.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        SOM.efeitos = SOM.ctx.createGain(); SOM.efeitos.gain.value = 0.55; SOM.efeitos.connect(SOM.ctx.destination);
+        SOM.musica = SOM.ctx.createGain(); SOM.musica.gain.value = 0.35; SOM.musica.connect(SOM.ctx.destination);
+        try { [SOM.mapa, SOM.batalha].forEach(a => { SOM.ctx.createMediaElementSource(a).connect(SOM.musica); a.volume = 1; }); } catch (e) {}
+        // ruído branco guardado (base dos tiros e explosões)
+        const n = SOM.ctx.sampleRate, buf = SOM.ctx.createBuffer(1, n, n), d = buf.getChannelData(0);
+        for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+        SOM.ruido = buf;
+    } catch (e) { SOM.ctx = null; }
+}
+function tocarMusica(qual) {
+    if (SOM.faixa === qual && (!SOM.ligado || !SOM[qual] || !SOM[qual].paused)) return;
+    SOM.faixa = qual;
+    ['mapa', 'batalha'].forEach(k => { if (k !== qual) SOM[k].pause(); });
+    if (!SOM.ligado || !qual || document.hidden) return;
+    const a = SOM[qual]; if (qual === 'batalha') a.currentTime = 0;
+    const p = a.play(); if (p && p.catch) p.catch(() => {});
+}
+function alternarSom() {
+    SOM.ligado = !SOM.ligado;
+    try { localStorage.setItem('frontline-conquista-som', SOM.ligado ? '1' : '0'); } catch (e) {}
+    if (SOM.ligado) { iniciarSom(); const q = SOM.faixa || 'mapa'; SOM.faixa = null; tocarMusica(q); } else { SOM.mapa.pause(); SOM.batalha.pause(); }
+    atualizarBotaoSom();
+}
+function atualizarBotaoSom() { const b = document.getElementById('bSom'); if (b) { b.textContent = SOM.ligado ? '🔊' : '🔇'; b.title = SOM.ligado ? 'Desligar o som' : 'Ligar o som'; } }
+// efeitos: cada um tem um intervalo mínimo para não virar barulho
+function som(tipo, forca = 1) {
+    if (!SOM.ligado || !SOM.ctx || SOM.ctx.state !== 'running' || document.hidden) return;
+    const agora = SOM.ctx.currentTime, minimo = { tiro: 0.07, abate: 0.15, alerta: 1.2, recrutar: 0.08 }[tipo] || 0.05;
+    if (agora - (SOM.ultimo[tipo] || 0) < minimo) return;
+    SOM.ultimo[tipo] = agora;
+    const c = SOM.ctx, saida = SOM.efeitos;
+    const ruido = (dur, filtro, freq, vol, q = 1) => {
+        const src = c.createBufferSource(); src.buffer = SOM.ruido; src.playbackRate.value = 0.8 + Math.random() * 0.4;
+        const f = c.createBiquadFilter(); f.type = filtro; f.frequency.value = freq; f.Q.value = q;
+        const g = c.createGain(); g.gain.setValueAtTime(vol, agora); g.gain.exponentialRampToValueAtTime(0.001, agora + dur);
+        src.connect(f); f.connect(g); g.connect(saida); src.start(agora, Math.random() * 0.5, dur + 0.05);
+    };
+    const nota = (freq, ini, dur, vol, forma = 'triangle') => {
+        const o = c.createOscillator(), g = c.createGain(); o.type = forma; o.frequency.value = freq;
+        g.gain.setValueAtTime(0.0001, agora + ini); g.gain.exponentialRampToValueAtTime(vol, agora + ini + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, agora + ini + dur);
+        o.connect(g); g.connect(saida); o.start(agora + ini); o.stop(agora + ini + dur + 0.05);
+    };
+    if (tipo === 'tiro') { ruido(0.12, 'bandpass', 1400 + Math.random() * 900, 0.35 * forca, 0.8); ruido(0.2, 'lowpass', 300, 0.25 * forca); }
+    else if (tipo === 'abate') { ruido(0.25, 'lowpass', 500, 0.3); nota(140, 0, 0.25, 0.12, 'sine'); }
+    else if (tipo === 'explosao') { ruido(1.2, 'lowpass', 220, 0.9); ruido(0.4, 'bandpass', 900, 0.4); nota(55, 0, 0.9, 0.3, 'sine'); }
+    else if (tipo === 'alerta') { nota(660, 0, 0.16, 0.18, 'square'); nota(520, 0.2, 0.22, 0.18, 'square'); }
+    else if (tipo === 'conquista') { [392, 494, 587, 784].forEach((f, i) => nota(f, i * 0.11, 0.35, 0.2)); }
+    else if (tipo === 'perda') { [330, 262, 196].forEach((f, i) => nota(f, i * 0.16, 0.4, 0.2, 'sawtooth')); }
+    else if (tipo === 'recrutar') { nota(880, 0, 0.08, 0.12, 'square'); nota(1175, 0.06, 0.1, 0.1, 'square'); }
+    else if (tipo === 'ordem') { nota(523, 0, 0.09, 0.12); nota(659, 0.07, 0.12, 0.12); }
+    else if (tipo === 'espiao') { nota(1047, 0, 0.12, 0.08, 'sine'); nota(1319, 0.12, 0.16, 0.08, 'sine'); }
+    else if (tipo === 'vitoria') { [523, 659, 784, 1047, 784, 1047].forEach((f, i) => nota(f, i * 0.15, 0.4, 0.22)); }
+    else if (tipo === 'derrota') { [392, 349, 311, 262].forEach((f, i) => nota(f, i * 0.28, 0.55, 0.2, 'sawtooth')); }
+    else if (tipo === 'toque') nota(740, 0, 0.05, 0.05, 'sine');
+}
+document.addEventListener('pointerdown', () => { if (SOM.ligado) { iniciarSom(); if (!SOM.faixa) tocarMusica('mapa'); else if (SOM[SOM.faixa] && SOM[SOM.faixa].paused) { const q = SOM.faixa; SOM.faixa = null; tocarMusica(q); } } }, { capture: true, passive: true });
+document.addEventListener('visibilitychange', () => { if (document.hidden) { SOM.mapa.pause(); SOM.batalha.pause(); } else if (SOM.faixa) { const q = SOM.faixa; SOM.faixa = null; tocarMusica(q); } });
+
 /* ---------- Laço ---------- */
 document.addEventListener('visibilitychange', () => { if (document.hidden) salvarPartida(); });
 window.addEventListener('pagehide', () => salvarPartida());
@@ -939,6 +1015,7 @@ function laco(agora) {
         if (G.batalha) {
             const b = G.batalha;
             b.passo(dt * (b.rapido ? 2 : 1));
+            if (!b.terminou && Math.random() < dt * 5) som('tiro', 0.35); // tiroteio de fundo
             b.efeitos.forEach(f => f.vida -= dt); b.efeitos = b.efeitos.filter(f => f.vida > 0);
             desenharBatalha(); atualizarBatalhaUI();
             if (b.terminou && !b.fechando) { b.fechando = true; setTimeout(fecharBatalha, 1900); }
@@ -951,6 +1028,7 @@ function laco(agora) {
     if (G && !G.batalha && Math.floor(agora / 500) !== Math.floor((agora - dt * 1000) / 500) && !G.pendente) renderPainel();
     requestAnimationFrame(laco);
 }
+atualizarBotaoSom();
 ajustar(cvM);
 novoJogo(lerSalvamento() ? lerSalvamento().fase : Math.min(lerFase(), FASES.length));
 G.semSalvar = true; // a partida de fundo da tela de início não sobrescreve o salvamento
