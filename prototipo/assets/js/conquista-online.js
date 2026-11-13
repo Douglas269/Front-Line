@@ -71,15 +71,15 @@ function entrarSalaOnline() {
 function mostrarSalaOnline(msg) {
     if (G && G.online && !G.fim) return;
     const lista = ON.jogadores.slice(0, 4).map((j, i) => `<div class="linha-tropa"><div class="txt"><b style="color:${FACCOES[ONLINE_VAGAS[i]].cor}">${i === 0 ? '👑 ' : ''}${escO(j.nome)}</b><small>${j.host ? 'anfitrião' : 'pronto'}${j.id === (ON.eu && ON.eu.id) ? ' · você' : ''}</small></div></div>`).join('');
-    const souHost = ON.papel === 'host', cheia = ON.jogadores.length > 4;
+    const souHost = ON.papel === 'host', cheia = ON.jogadores.length > 4, paises = 1 + FASES[ONLINE_FASE - 1].bots.length, bots = paises - Math.min(4, ON.jogadores.length);
     mostrarTela(`<h2>🌐 SALA ${escO(ON.codigo)}</h2>
         <div class="sub">Mande o código ou o link para os amigos. ${souHost ? 'Quando todos estiverem aqui, toque em Começar.' : 'Esperando o anfitrião começar…'}</div>
         <div class="codigoOn">${escO(ON.codigo)}</div>
         <button class="grande secundaria" onclick="compartilharSala()">📤 COMPARTILHAR O LINK</button><div class="sub" id="onCopiado" style="text-align:center"></div>
-        <div class="lista-tropas">${lista || '<div class="sub">Conectando…</div>'}${[...Array(Math.max(0, 4 - ON.jogadores.length))].map(() => '<div class="linha-tropa trancada"><div class="txt">🤖 vaga para um bot</div></div>').join('')}</div>
+        <div class="lista-tropas">${lista || '<div class="sub">Conectando…</div>'}${[...Array(Math.max(0, bots))].map((_, i) => `<div class="linha-tropa trancada"><div class="txt">🤖 ${i < 4 - Math.min(4, ON.jogadores.length) ? 'vaga livre (fica com um bot)' : 'bot'}</div></div>`).join('')}</div>
         ${cheia ? '<div class="erroOn">A sala já tem 4 comandantes: quem entrou por último vai assistir.</div>' : ''}
         <div class="erroOn">${escO(msg || '')}</div>
-        ${souHost ? `<button class="grande" onclick="comecarOnline()" ${ON.jogadores.length < 2 ? 'disabled' : ''}>⚔️ COMEÇAR (${Math.min(4, ON.jogadores.length)} comandantes + ${Math.max(0, 4 - ON.jogadores.length)} bots)</button>` : '<div class="sub pisca" style="text-align:center;margin-top:10px">📡 aguardando…</div>'}
+        ${souHost ? `<button class="grande" onclick="comecarOnline()" ${ON.jogadores.length < 2 ? 'disabled' : ''}>⚔️ COMEÇAR (${Math.min(4, ON.jogadores.length)} comandantes + ${bots} bot${bots === 1 ? '' : 's'})</button>` : '<div class="sub pisca" style="text-align:center;margin-top:10px">📡 aguardando…</div>'}
         <button class="grande secundaria" onclick="sairDaSala()">SAIR DA SALA</button>`);
 }
 async function compartilharSala() {
@@ -93,6 +93,7 @@ function sairDaSala() {
     if (ON.canal) ON.canal.sair();
     ON.canal = null; ON.papel = null; ON.jogadores = [];
     if (G && G.online) { restaurarFaccoes(); novoJogo(lerFase()); G.semSalvar = true; }
+    document.body.classList.remove('online'); ON.atrasado = false;
     mostrarInicio();
 }
 function aoMudarPresenca() {
@@ -154,6 +155,10 @@ function receberMensagem(m) {
         ON.minha = minha[0];
         iniciarJogoOnline('cliente', m.humanos, m.host);
     } else if (m.tipo === 'estado' && G && G.cliente) aplicarEstado(m);
+    else if (m.tipo === 'estado' && ON.papel === 'cliente' && !(G && G.online) && !ON.atrasado) { // entrou depois do começo
+        ON.atrasado = true;
+        mostrarTela('<h2>🌐 O JOGO JÁ COMEÇOU</h2><div class="sub">Esta sala já está em partida. Peça ao anfitrião para criar uma sala nova quando acabar.</div><button class="grande" onclick="sairDaSala()">VOLTAR</button>');
+    }
     else if (m.tipo === 'acao' && ON.papel === 'host' && G && G.online) aplicarAcao(m);
 }
 const faccaoDoId = (id) => (Object.entries(ON.humanos).find(([, h]) => h.id === id && !h.saiu) || [])[0];

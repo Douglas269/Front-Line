@@ -626,6 +626,7 @@ function limitarCam() {
     cam.x = MAPA.W <= 2 * mx ? MAPA.W / 2 : Math.max(mx, Math.min(MAPA.W - mx, cam.x));
     cam.y = MAPA.H <= 2 * my ? MAPA.H / 2 : Math.max(my, Math.min(MAPA.H - my, cam.y));
 }
+function irParaCapital() { const c = G && G.prov[G.capitalJogador]; if (c) centralizar(c.x, c.y); }
 function centralizar(x, y) { const r = cvM.getBoundingClientRect(); cam.x = x; cam.y = y; cam.z = Math.max(zoomMin(), Math.min(1.4, r.width / 330)); limitarCam(); }
 const paraTela = (x, y) => { const r = cvM.getBoundingClientRect(); return { x: (x - cam.x) * cam.z + r.width / 2, y: (y - cam.y) * cam.z + r.height / 2 }; };
 const paraMundo = (sx, sy) => { const r = cvM.getBoundingClientRect(); return { x: (sx - r.width / 2) / cam.z + cam.x, y: (sy - r.height / 2) / cam.z + cam.y }; };

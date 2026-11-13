@@ -44,11 +44,17 @@ const est = (J) => J.page.evaluate(() => window.__online.estado());
     }
     await H.page.waitForFunction(() => document.querySelectorAll('.lista-tropas .linha-tropa:not(.trancada)').length === 3, null, { timeout: 5000 });
     ck.salaMostraOsTres = true;
+    ck.salaContaOsBotsCerto = /3 comandantes \+ 2 bots/.test(await H.page.textContent('#telaCaixa'));
     if (process.env.PRINTS) await H.page.screenshot({ path: process.env.PRINTS + '/o1-sala.png' });
     await H.page.click('button:has-text("COMEÇAR (")');
     await A.page.waitForFunction(() => window.__online.estado().cliente && G.capitalJogador, null, { timeout: 6000 });
     await B.page.waitForFunction(() => window.__online.estado().cliente && G.capitalJogador, null, { timeout: 6000 });
     const [eh, ea, eb] = [await est(H), await est(A), await est(B)];
+    // quem chega depois que o jogo começou recebe aviso (não fica preso esperando)
+    const D = await abrir(browser, 'Dani');
+    await D.page.click('#bOnline'); await D.page.fill('#onNome', 'Dani'); await D.page.fill('#onCodigo', codigo); await D.page.click('text=ENTRAR NA SALA');
+    await D.page.waitForFunction(() => /JÁ COMEÇOU/.test(document.getElementById('telaCaixa').textContent), null, { timeout: 5000 }).then(() => { ck.atrasadoRecebeAviso = true; }).catch(() => { ck.atrasadoRecebeAviso = false; });
+    await D.page.evaluate(() => sairDaSala());
     ck.papeisCertos = eh.papel === 'host' && ea.cliente && eb.cliente && ea.minha !== eb.minha;
     // cada um se vê como "Você" na própria capital, e as capitais são diferentes
     const capA = await A.page.evaluate(() => ({ id: G.capitalJogador, dono: G.prov[G.capitalJogador].dono, eu: FACCOES.jogador.nome }));
@@ -87,7 +93,8 @@ const est = (J) => J.page.evaluate(() => window.__online.estado());
     if (process.env.PRINTS) await A.page.screenshot({ path: process.env.PRINTS + '/o3-fim.png' });
     ck.fimChegaAoCliente = await A.page.evaluate(() => /ALFA VENCEU/.test(document.getElementById('telaCaixa').textContent));
     ck.anfitriaoVence = await H.page.evaluate(() => G.vencedor === 'jogador' && /VOCÊ VENCEU/.test(document.getElementById('telaCaixa').textContent));
-    ck.semErrosJS = H.erros.length + A.erros.length + B.erros.length === 0;
+    ck.botoesVoltamDepoisDoOnline = await A.page.evaluate(() => { sairDaSala(); comecarFase(1); return getComputedStyle(document.getElementById('bPausa')).display !== 'none' && getComputedStyle(document.getElementById('bVelMapa')).display !== 'none'; });
+    ck.semErrosJS = H.erros.length + A.erros.length + B.erros.length + D.erros.length === 0;
     await browser.close();
     console.log(JSON.stringify(ck, null, 1));
     const erros = [...H.erros, ...A.erros, ...B.erros]; if (erros.length) console.log('ERROS: ' + erros.slice(0, 3).join(' | '));

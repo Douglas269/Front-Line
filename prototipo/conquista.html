@@ -107,7 +107,7 @@
     </div>
   </div>
   <div id="mapaBox"><canvas id="mapa"></canvas><div id="aviso"></div><div id="ferramentas"><button onclick="G.sel={tipo:'pesquisa'};renderPainel()" title="Pesquisa">🔬<small>Pesquisa</small></button><button onclick="G.sel={tipo:'diplo'};renderPainel()" title="Diplomacia">🤝<small>Diplomacia</small></button><button onclick="G.sel={tipo:'generais'};renderPainel()" title="Generais">🎖<small>Generais</small></button></div><div id="faixaPausa">⏸ PAUSADO · dá para dar ordens</div>
-    <div id="zoom"><button onclick="zoomEm(1.3, cvM.getBoundingClientRect().width / 2, cvM.getBoundingClientRect().height / 2)" title="Aproximar">＋</button><button onclick="zoomEm(1 / 1.3, cvM.getBoundingClientRect().width / 2, cvM.getBoundingClientRect().height / 2)" title="Afastar">－</button><button onclick="const c = G.prov[G.capitalJogador]; centralizar(c.x, c.y)" title="Ir para a sua capital">★</button></div></div>
+    <div id="zoom"><button onclick="zoomEm(1.3, cvM.getBoundingClientRect().width / 2, cvM.getBoundingClientRect().height / 2)" title="Aproximar">＋</button><button onclick="zoomEm(1 / 1.3, cvM.getBoundingClientRect().width / 2, cvM.getBoundingClientRect().height / 2)" title="Afastar">－</button><button onclick="irParaCapital()" title="Ir para a sua capital">★</button></div></div>
   <div id="painel"></div>
 </div>
 <div id="batalha">
@@ -129,10 +129,10 @@
 <div id="tela"><div class="caixa" id="telaCaixa"></div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
-<script src="assets/js/conquista-mapa.js?v=20261113.0219"></script>
-<script src="assets/js/conquista-extra.js?v=20261113.0219"></script>
-<script src="assets/js/conquista.js?v=20261113.0219"></script>
-<script src="assets/js/conquista-online.js?v=20261113.0219"></script>
+<script src="assets/js/conquista-mapa.js?v=20261113.0221"></script>
+<script src="assets/js/conquista-extra.js?v=20261113.0221"></script>
+<script src="assets/js/conquista.js?v=20261113.0221"></script>
+<script src="assets/js/conquista-online.js?v=20261113.0221"></script>
 
 </body>
 </html>
