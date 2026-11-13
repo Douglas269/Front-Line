@@ -52,17 +52,48 @@ const servidor = {
     cancelar: (u, id) => { const d = db.duelos.find(x => x.id === id); if (d && d.estado === 'aguardando') d.estado = 'cancelado'; },
     trofeus: (u) => { const uid = usuarios[u].id; const fim = db.duelos.filter(d => d.estado === 'fim' && participa(d, uid)); const v = fim.filter(d => d.vencedor === uid).length; return { trofeus: 3 * v, vitorias: v, derrotas: fim.length - v }; },
     meusDuelos: (u) => db.duelos.filter(d => participa(d, usuarios[u].id) && ['aguardando', 'jogando'].includes(d.estado)).map(d => ({ ...d })),
-    sair: () => {}, entrar: (u) => usuarios[u], criarConta: (u) => usuarios[u]
+    sair: () => {}, entrar: (u) => usuarios[u], criarConta: (u) => usuarios[u],
+    // fila, temporada, ranking e replay público (mesmas regras das funções novas do banco)
+    procurar: (u, nome) => {
+        const uid = usuarios[u].id;
+        let d = db.duelos.find(x => x.publico && x.estado === 'aguardando' && x.jogador_a === uid);
+        if (d) return { ...d };
+        d = db.duelos.find(x => x.publico && x.estado === 'aguardando' && !x.jogador_b && x.jogador_a !== uid);
+        if (d) { d.jogador_b = uid; d.nome_b = nome; d.estado = 'jogando'; return { ...d }; }
+        const novo = servidor.criar(u, nome), dd = db.duelos.find(x => x.id === novo.id); dd.publico = true; return { ...dd };
+    },
+    temporada: (u) => { const t = servidor.trofeus(u); return { pontos: Math.max(0, 3 * t.vitorias - t.derrotas), vitorias: t.vitorias, derrotas: t.derrotas, posicao: 1, jogadores: 2 }; },
+    ranking: (u) => ['a', 'b'].map(k => ({ nome: k === 'a' ? 'Alfa' : 'Bravo', pontos: servidor.temporada(k).pontos, eu: k === u })).sort((x, y) => y.pontos - x.pontos).map((x, i) => ({ posicao: i + 1, ...x })),
+    temporadas: () => [{ mes: '2026-10-01', pontos: 42 }],
+    replay: (u, id) => {
+        const d = db.duelos.find(x => x.id === id); if (!d || d.estado !== 'fim') return null;
+        return { id, semente: d.semente, nome_a: d.nome_a, nome_b: d.nome_b, wo: d.wo, vencedor: d.vencedor === d.jogador_a ? 'A' : 'B',
+            planos: db.planos.filter(p => p.duelo_id === id).map(p => ({ rodada: p.rodada, lado: p.jogador === d.jogador_a ? 'A' : 'B', plano: p.plano })) };
+    }
 };
+usuarios.v = null; // visitante sem conta (só assiste ao replay)
 
+async function jogarAteOFim(jogadores) {
+    for (let passo = 0; passo < 120; passo++) {
+        const telas = await Promise.all(jogadores.map(J => telaDe(J.p)));
+        if (telas.every(t => t === 'fim')) return true;
+        for (let k = 0; k < jogadores.length; k++) {
+            const J = jogadores[k], t = telas[k];
+            if (t === 'replay') { if (await J.p.$('#bPular')) await J.p.click('#bPular').catch(() => {}); if (await J.p.$('#bProx')) await J.p.click('#bProx').catch(() => {}); }
+            else if (t === 'plano' && await J.p.$('#bOk')) await J.p.click('#bOk').catch(() => {});
+        }
+        await jogadores[0].p.waitForTimeout(250);
+    }
+    return false;
+}
 async function abrir(browser, quem) {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
     const p = await ctx.newPage();
     const erros = []; p.on('pageerror', e => erros.push(e.message));
     await p.exposeFunction('apiFalsa', (op, args) => servidor[op](quem, ...args));
     await p.addInitScript(() => {
-        window.DUELO_PRAZO = 3; window.DUELO_POLL = 250;
-        const ops = ['usuario', 'entrar', 'criarConta', 'sair', 'criar', 'entrarCodigo', 'buscar', 'enviar', 'status', 'informar', 'wo', 'cancelar', 'trofeus', 'meusDuelos'];
+        window.DUELO_PRAZO = 3; window.DUELO_POLL = 250; window.DUELO_FILA_BOT = 2;
+        const ops = ['usuario', 'entrar', 'criarConta', 'sair', 'criar', 'entrarCodigo', 'buscar', 'enviar', 'status', 'informar', 'wo', 'cancelar', 'trofeus', 'meusDuelos', 'procurar', 'temporada', 'ranking', 'temporadas', 'replay'];
         window.DUELO_API = Object.fromEntries(ops.map(op => [op, (...args) => window.apiFalsa(op, args)]));
     });
     await p.goto(PAGINA, { waitUntil: 'load' });
@@ -126,8 +157,47 @@ const telaDe = (p) => p.evaluate(() => window.__duelo && window.__duelo.estado()
     const textoFimA = await A.p.textContent('#app');
     checks.telaFinalMostraVencedor = /VENCEU/.test(textoFimA);
     if (process.env.PRINTS) await A.p.screenshot({ path: process.env.PRINTS + '/d4-fim.png', fullPage: true });
-    checks.semErrosJS = A.erros.length === 0 && B.erros.length === 0;
-    console.log(JSON.stringify({ placar: pa, rodadas: db.planos.length / 2, vencedor: d.vencedor, errosA: A.erros, errosB: B.erros }));
+    // ---- Liga e temporada no lobby, ranking ----
+    await A.p.click('#bLobby'); await A.p.waitForSelector('#bFila');
+    const lobbyTxt = await A.p.textContent('#app');
+    checks.lobbyMostraLigaETemporada = /Liga (Bronze|Prata|Ouro|Platina|Diamante)/.test(lobbyTxt) && /Temporada de/.test(lobbyTxt) && /🥇 out/.test(lobbyTxt);
+    if (process.env.PRINTS) await A.p.screenshot({ path: process.env.PRINTS + '/d5-lobby-liga.png', fullPage: true });
+    await A.p.click('#bRanking'); await A.p.waitForSelector('.euRank');
+    checks.rankingMostraVoce = /Alfa|Bravo/.test(await A.p.textContent('#app'));
+    await A.p.click('#bVoltarR'); await A.p.waitForSelector('#bFila');
+    // ---- Fila: os dois entram, se encontram, escolhem doutrinas diferentes e jogam até o fim ----
+    await B.p.click('#bLobby').catch(() => {}); await B.p.waitForSelector('#bFila');
+    await A.p.click('#bFila'); await A.p.waitForTimeout(400); await B.p.click('#bFila');
+    await A.p.waitForFunction(() => window.__duelo.estado().tela === 'plano', null, { timeout: 8000 });
+    await B.p.waitForFunction(() => window.__duelo.estado().tela === 'plano', null, { timeout: 8000 });
+    checks.filaJuntaOsDois = true;
+    await A.p.click('[data-dout="fortaleza"]'); await B.p.click('[data-dout="artilharia"]');
+    if (process.env.PRINTS) await A.p.screenshot({ path: process.env.PRINTS + '/d6-doutrina.png', fullPage: true });
+    await A.p.click('#bOk'); await B.p.click('#bOk');
+    checks.duelDaFilaChegaAoFim = await jogarAteOFim([A, B]);
+    const dFila = db.duelos.find(x => x.publico && x.estado === 'fim');
+    const p1 = db.planos.filter(x => x.duelo_id === dFila.id && x.rodada === 1);
+    checks.doutrinasGravadas = p1.some(x => x.plano.doutrina === 'fortaleza') && p1.some(x => x.plano.doutrina === 'artilharia');
+    // ---- Replay público: um visitante sem conta abre o link e assiste até o fim ----
+    const V = await abrir(browser, 'v');
+    await V.p.goto(PAGINA + '?replay=' + dFila.id, { waitUntil: 'load' });
+    await V.p.waitForSelector('#cvA');
+    checks.replayAbreSemConta = true;
+    for (let k = 0; k < 8 && !(await V.p.$('#bDeNovo')); k++) { if (await V.p.$('#bPularR')) await V.p.click('#bPularR').catch(() => {}); if (await V.p.$('#bProxR')) await V.p.click('#bProxR').catch(() => {}); await V.p.waitForTimeout(200); }
+    checks.replayMostraOVencedor = /venceu/.test(await V.p.textContent('#app'));
+    if (process.env.PRINTS) await V.p.screenshot({ path: process.env.PRINTS + '/d7-replay-publico.png', fullPage: true });
+    // ---- Treino contra o bot: joga até o fim e não mexe nos troféus ----
+    const trofeusAntes = servidor.trofeus('a').trofeus;
+    await A.p.click('#bLobby'); await A.p.waitForSelector('#bTreino'); await A.p.click('#bTreino');
+    await A.p.waitForFunction(() => window.__duelo.estado().tela === 'plano', null, { timeout: 8000 });
+    checks.treinoContraBotTermina = await jogarAteOFim([A]);
+    checks.treinoNaoValeTrofeus = servidor.trofeus('a').trofeus === trofeusAntes && /não vale/.test(await A.p.textContent('#app'));
+    // ---- Ninguém na fila: cai no bot sozinho ----
+    await A.p.click('#bLobby'); await A.p.waitForSelector('#bFila'); await A.p.click('#bFila');
+    await A.p.waitForFunction(() => window.__duelo.estado().tela === 'plano' && /🤖/.test(document.body.textContent), null, { timeout: 10000 });
+    checks.filaVaziaViraBot = true;
+    checks.semErrosJS = A.erros.length === 0 && B.erros.length === 0 && V.erros.length === 0;
+    console.log(JSON.stringify({ placar: pa, rodadas: db.planos.filter(x => x.duelo_id === d.id).length / 2, vencedor: d.vencedor, errosA: A.erros, errosB: B.erros, errosV: V.erros }));
     const falhas = Object.entries(checks).filter(([, v]) => !v).map(([k]) => k);
     console.log(falhas.length ? 'FALHAS: ' + JSON.stringify(falhas) : 'Duelo de ponta a ponta: todas as verificações passaram.');
     await browser.close();

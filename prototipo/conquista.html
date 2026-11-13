@@ -34,6 +34,26 @@
   .rec.baixo b { color: var(--verm); }
   #mapaBox { position: relative; flex: 1; min-height: 0; }
   #mapa { width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+  #ferramentas { position: absolute; left: 8px; bottom: 8px; display: flex; flex-direction: column; gap: 6px; }
+  #ferramentas button { width: 52px; padding: 4px 0 3px; border-radius: 8px; border: 1px solid var(--borda); background: rgba(19,24,21,.9); font-size: 17px; line-height: 1.1; }
+  #ferramentas small { display: block; font-size: 8.5px; color: var(--mudo); }
+  .lista-tropas { display: flex; flex-direction: column; gap: 5px; margin: 6px 0; }
+  .linha-tropa { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border: 1px solid var(--borda); border-radius: 8px; background: var(--painel); }
+  .linha-tropa.trancada { opacity: .55; }
+  .linha-tropa .txt { flex: 1; font-size: 13px; min-width: 0; }
+  .linha-tropa .txt small { display: block; font-size: 10.5px; color: var(--mudo); margin-top: 1px; }
+  button.mini { flex: none; min-width: 56px; padding: 6px 6px; border-radius: 8px; border: 1px solid var(--ambar); background: #2a2214; color: #ffd28a; font-weight: 700; font-size: 12px; }
+  button.mini small { display: block; font-weight: 400; font-size: 10px; color: var(--mudo); }
+  .capitulo { margin: 14px 0 2px; color: var(--ambar); font-weight: 700; font-size: 13px; letter-spacing: 1px; text-transform: uppercase; }
+  button.fase .estrelas { float: right; color: #ffd28a; letter-spacing: 2px; }
+  .estrelas-grandes { font-size: 34px; color: #ffd28a; letter-spacing: 6px; margin: 4px 0; }
+  .campoOn { width: 100%; padding: 11px; border-radius: 8px; border: 1px solid var(--borda); background: #0f1411; color: var(--texto); font-family: inherit; font-size: 16px; margin-top: 10px; box-sizing: border-box; }
+  .erroOn { color: var(--verm); font-size: 13px; min-height: 16px; margin-top: 6px; }
+  .codigoOn { font-size: 40px; letter-spacing: 8px; text-align: center; color: #ffd28a; font-weight: 700; margin: 10px 0; }
+  .pisca { animation: pisca 1s infinite alternate; } @keyframes pisca { to { opacity: .4; } }
+  body.online #bPausa, body.online #bVelMapa, body.online #ferramentas button:nth-child(2), body.online #ferramentas button:nth-child(3) { display: none; }
+  details.regras { margin-top: 8px; border: 1px solid var(--borda); border-radius: 8px; padding: 6px 10px; }
+  details.regras summary { cursor: pointer; font-weight: 700; color: var(--ambar); }
   #zoom { position: absolute; right: 8px; bottom: 8px; display: flex; flex-direction: column; gap: 6px; }
   #zoom button { width: 38px; height: 38px; border-radius: 8px; border: 1px solid var(--borda); background: rgba(19,24,21,.9); font-size: 18px; font-weight: 700; }
   #aviso { display: none; pointer-events: none; position: absolute; left: 8px; right: 8px; top: 8px; padding: 5px 8px; border-radius: 8px; font-size: 11px; font-weight: 700; text-align: center; background: rgba(19,24,21,.88); border: 1px solid var(--borda); color: var(--mudo); }
@@ -86,7 +106,7 @@
       <div class="rec" id="rProv">🏴 Terra<b>0</b></div>
     </div>
   </div>
-  <div id="mapaBox"><canvas id="mapa"></canvas><div id="aviso"></div><div id="faixaPausa">⏸ PAUSADO · dá para dar ordens</div>
+  <div id="mapaBox"><canvas id="mapa"></canvas><div id="aviso"></div><div id="ferramentas"><button onclick="G.sel={tipo:'pesquisa'};renderPainel()" title="Pesquisa">🔬<small>Pesquisa</small></button><button onclick="G.sel={tipo:'diplo'};renderPainel()" title="Diplomacia">🤝<small>Diplomacia</small></button><button onclick="G.sel={tipo:'generais'};renderPainel()" title="Generais">🎖<small>Generais</small></button></div><div id="faixaPausa">⏸ PAUSADO · dá para dar ordens</div>
     <div id="zoom"><button onclick="zoomEm(1.3, cvM.getBoundingClientRect().width / 2, cvM.getBoundingClientRect().height / 2)" title="Aproximar">＋</button><button onclick="zoomEm(1 / 1.3, cvM.getBoundingClientRect().width / 2, cvM.getBoundingClientRect().height / 2)" title="Afastar">－</button><button onclick="const c = G.prov[G.capitalJogador]; centralizar(c.x, c.y)" title="Ir para a sua capital">★</button></div></div>
   <div id="painel"></div>
 </div>
@@ -108,8 +128,11 @@
 </div>
 <div id="tela"><div class="caixa" id="telaCaixa"></div></div>
 
-<script src="assets/js/conquista-mapa.js?v=20261112.2224"></script>
-<script src="assets/js/conquista.js?v=20261112.2224"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
+<script src="assets/js/conquista-mapa.js?v=20261113.0219"></script>
+<script src="assets/js/conquista-extra.js?v=20261113.0219"></script>
+<script src="assets/js/conquista.js?v=20261113.0219"></script>
+<script src="assets/js/conquista-online.js?v=20261113.0219"></script>
 
 </body>
 </html>

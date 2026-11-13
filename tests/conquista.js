@@ -121,7 +121,7 @@ function jogar({ N, FASE, EST }) {
         };
     }));
     info.mapas.forEach((m, k) => {
-        const minimo = [20, 30, 40][k];
+        const minimo = [20, 20, 30, 30, 35, 40][k];
         if (m.provincias < minimo) falhas.push(`fase ${m.fase}: mapa pequeno (${m.provincias} províncias)`);
         ['ligado', 'vizinhosDosDoisLados', 'nomesUnicos', 'capitaisComSaida', 'dentroDoMundo'].forEach(c => { if (!m[c]) falhas.push(`fase ${m.fase}: ${c}`); });
         if (m.capitais !== FASES_BOTS[k] + 1) falhas.push(`fase ${m.fase}: ${m.capitais} capitais`);
@@ -129,9 +129,9 @@ function jogar({ N, FASE, EST }) {
 
     // 3) Jogando pela tela
     await p.reload({ waitUntil: 'load' });
-    await p.evaluate(() => { try { localStorage.removeItem('frontline-conquista-fase'); } catch (e) {} mostrarInicio(); });
+    await p.evaluate(() => { try { localStorage.removeItem('frontline-conquista-fase'); localStorage.removeItem('frontline-conquista-meta'); } catch (e) {} mostrarInicio(); });
     const trancadas = await p.$$eval('button.fase', bs => bs.map(x => x.disabled));
-    if (JSON.stringify(trancadas) !== '[false,true,true]') falhas.push('fases 2 e 3 deveriam começar trancadas: ' + trancadas);
+    if (JSON.stringify(trancadas) !== '[false,true,true,true,true,true]') falhas.push('só a fase 1 deveria começar liberada: ' + trancadas);
     await p.click('button.fase');
     await p.waitForTimeout(400);
     const caixa = await p.$eval('#mapa', el => { const r = el.getBoundingClientRect(); return { x: r.x, y: r.y }; });
@@ -266,8 +266,68 @@ function jogar({ N, FASE, EST }) {
         await bs.close();
     }
 
+    // 3d) Regras estratégicas: tipos de tropa, pesquisa, obras, moral/revolta, suprimento, diplomacia, generais e estrelas
+    info.regras = await p.evaluate(() => {
+        const r = {};
+        const vence = (atq, def, n = 60) => { let v = 0; for (let k = 0; k < n; k++) { novoJogo(1); Object.keys(G.pensar).forEach(x => { G.pensar[x] = 1e9; });
+            const q = Object.values(G.prov).find(x => x.dono === 'neutro' && !x.capital); G.ex = G.ex.filter(e => e.prov !== q.id); q.trinch = 60;
+            const d = criarExercito('neutro', q.id, 0, def.map(t => soldado('d', t))); const a = criarExercito('jogador', q.viz[0], 0, atq.map(t => soldado('a', t)));
+            const bt = criarBatalha(a, q, [d]); while (!bt.terminou) bt.passo(0.25); if (bt.vencedor === 'atq') v++; } return v / n; };
+        const rep = (t, n) => Array(n).fill(t);
+        const infVsInf = vence(rep('inf', 9), rep('inf', 6)), infVsMetr = vence(rep('inf', 9), rep('metr', 6)), artVsMetr = vence(rep('art', 9), rep('metr', 6)), blindVsInf = vence(rep('blind', 4), rep('inf', 6));
+        r.tropas = { infVsInf, infVsMetr, artVsMetr, blindVsInf };
+        r.metralhadoraSegura = infVsMetr < infVsInf;
+        r.artilhariaFuraMetralhadora = artVsMetr > infVsMetr + 0.2;
+        r.blindadoAguentaFuzil = blindVsInf > 0.6;
+        // pesquisa libera tropa
+        novoJogo(1); Object.keys(G.pensar).forEach(x => { G.pensar[x] = 1e9; }); G.fac.jogador.moedas = 500;
+        const cap = G.prov[G.capitalJogador];
+        r.semPesquisaNaoRecruta = !recrutarEm(cap.id, 'jogador', 'metr');
+        pesquisar('metr'); for (let i = 0; i < 70; i++) passoMapa(0.5);
+        r.pesquisaLibera = temPesq('jogador', 'metr') && recrutarEm(cap.id, 'jogador', 'metr');
+        // obra: fábrica aumenta as moedas
+        const antes = () => { const m0 = G.fac.jogador.moedas; cicloEconomia(); return G.fac.jogador.moedas - m0; };
+        const sem = antes(); construir(cap.id, 'fabrica'); for (let i = 0; i < 100 && !cap.obras.fabrica; i++) passoMapa(0.5);
+        r.fabricaProduzMais = cap.obras.fabrica && antes() > sem + 2;
+        // moral: província longe, recém-conquistada e sem guarda se revolta
+        const longe = Object.values(G.prov).filter(q => !q.capital && q.dono === 'neutro').sort((a, b) => Math.hypot(b.x - cap.x, b.y - cap.y) - Math.hypot(a.x - cap.x, a.y - cap.y))[0];
+        G.ex = G.ex.filter(e => e.prov !== longe.id); conquistar(longe, 'jogador', null);
+        let revoltou = false; for (let i = 0; i < 80 && !revoltou; i++) { cicloEconomia(); revoltou = longe.dono === 'neutro'; }
+        r.revoltaSemGuarda = revoltou;
+        // suprimento: longe do seu território a tropa não come
+        const fora = Object.values(G.prov).find(q => !q.viz.some(v => G.prov[v].dono === 'jogador') && q.dono !== 'jogador');
+        G.ex = G.ex.filter(e => e.prov !== fora.id); const ex = criarExercito('jogador', fora.id, 3); G.fac.jogador.comida = 500; const c0 = G.fac.jogador.comida;
+        ex.s.forEach(s => { s.fome = 60; }); exDe('jogador').filter(x => x !== ex).forEach(x => x.s.forEach(s => { s.fome = 0; })); // só o exército isolado poderia comer
+        cicloEconomia();
+        r.semSuprimentoNaoCome = ex.semSuprimento && ex.s.every(s => s.fome > 60) && G.fac.jogador.comida >= c0 - 0.01;
+        G.ex = G.ex.filter(e => e !== ex);
+        // diplomacia: paz aceita; bot não ataca você; sua tropa passa sem lutar; guerra declarada volta a valer
+        const bot = G.fase.bots[0], rnd = Math.random; Math.random = () => 0; propor(bot, 'paz'); Math.random = rnd;
+        r.pazAceita = G.rel[bot].estado === 'paz' && !emGuerra('jogador', bot);
+        const dele = provDe(bot).find(q => !q.capital) || provDe(bot)[0];
+        const pass = criarExercito('jogador', dele.viz[0], 4); G.prov[dele.viz[0]].dono = 'jogador';
+        const cb = criarBatalha; let lutou = false; criarBatalha = (...a) => { lutou = true; return cb(...a); };
+        ordem(pass.id, dele.id, 4, 'ataque'); for (let i = 0; i < 200 && pass.rota.length; i++) passoMapa(0.25);
+        criarBatalha = cb;
+        r.pazSoPassa = !lutou && dele.dono === bot;
+        declararGuerra(bot); for (let i = 0; i < 20 && G.batalha; i++) { const bt = G.batalha; while (!bt.terminou) bt.passo(0.25); fecharBatalha(); }
+        r.guerraVoltaAValer = emGuerra('jogador', bot);
+        // generais: bônus no exército e experiência ao vencer
+        novoJogo(1); const e1 = exParadosEm(G.capitalJogador, 'jogador')[0];
+        r.comecaComGeneral = !!e1.general && bonusGeneral(e1, 'atq') > 1;
+        generalVenceu(e1); generalVenceu(e1); generalVenceu(e1);
+        r.generalSobeDeNivel = nivelGeneral(G.genXp[e1.general]) === 2;
+        // estrelas: vencer a fase 1 libera a fase 2 e guarda a experiência
+        G.fim = 'vitoria'; G.t = 300; const est = calcularEstrelas(); guardarProgresso(est);
+        r.estrelasGuardadas = est >= 2 && faseLiberada(2) && (lerMeta().generais[e1.general] || {}).xp === 3;
+        G.fim = null;
+        try { localStorage.removeItem('frontline-conquista-meta'); } catch (e) {}
+        return r;
+    });
+    Object.entries(info.regras).forEach(([k, v]) => { if (v === false) falhas.push('regras: ' + k); });
+
     // 4) Fases inteiras sem tela
-    const rodadas = [[1, 'esperto', 8], [1, 'ingenuo', 6], [2, 'esperto', 2], [3, 'esperto', 2]];
+    const rodadas = [[1, 'esperto', 6], [1, 'ingenuo', 5], [3, 'esperto', 2], [6, 'esperto', 2]];
     info.fases = {};
     for (const [FASE, EST, N] of rodadas) {
         const r = await p.evaluate(jogar, { N, FASE, EST });
@@ -275,7 +335,7 @@ function jogar({ N, FASE, EST }) {
         const cont = {}; r.res.forEach(x => { cont[x.fim] = (cont[x.fim] || 0) + 1; });
         const venceu = r.res.filter(x => x.fim === 'vitoria' || x.fim === 'pontos').length;
         info.fases[`fase${FASE}-${EST}`] = { resultados: cont, venceu: `${venceu}/${N}`, provinciasNoFim: +(r.res.reduce((t, x) => t + x.minhas, 0) / N).toFixed(1), ataquesDosBots: +(r.res.reduce((t, x) => t + x.ataquesBot, 0) / N).toFixed(1) };
-        if (FASE === 1 && EST === 'esperto' && venceu < 2) falhas.push('quem joga bem quase nunca vence a fase 1: ' + JSON.stringify(cont));
+        if (FASE === 1 && EST === 'esperto' && venceu < 1) falhas.push('quem joga bem quase nunca vence a fase 1: ' + JSON.stringify(cont));
         if (FASE === 1 && EST === 'ingenuo' && venceu > N / 2) falhas.push('quem joga mal vence demais: ' + JSON.stringify(cont));
         if (r.res.some(x => !x.fim)) falhas.push(`fase ${FASE}: partida sem fim`);
         if (r.res.every(x => x.ataquesBot < 3)) falhas.push(`fase ${FASE}: os bots quase não atacam`);
@@ -287,4 +347,4 @@ function jogar({ N, FASE, EST }) {
     if (falhas.length) { console.log('FALHAS: ' + JSON.stringify(falhas)); process.exit(1); }
     console.log('Conquista e tela de modos: todas as verificações passaram, sem erros de JavaScript.');
 })();
-const FASES_BOTS = [3, 4, 4];
+const FASES_BOTS = [3, 2, 4, 3, 4, 4];

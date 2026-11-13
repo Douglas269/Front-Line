@@ -36,10 +36,14 @@ const C = {
     BOT_PAUSA_ATAQUE: 40,     // depois de atacar, o bot espera pelo menos isto para atacar de novo
     BOT_MARGEM: 1.35          // só ataca quando acha que tem 35% a mais de força
 };
+const CAPITULOS = ['Capítulo 1 · A Fronteira', 'Capítulo 2 · O Coração do País'];
 const FASES = [
-    { n: 1, nome: 'Fronteira', semente: 1101, celulas: 52, mar: 0.05, W: 860, H: 1120, bots: ['bravo', 'charlie', 'delta'], tempo: 900, extra: 1, milicia: 0 },
-    { n: 2, nome: 'Região central', semente: 2207, celulas: 66, mar: 0.05, W: 980, H: 1280, bots: ['bravo', 'charlie', 'delta', 'echo'], tempo: 1080, extra: 2, milicia: 1 },
-    { n: 3, nome: 'A capital', semente: 3301, celulas: 86, mar: 0.05, W: 1100, H: 1440, bots: ['bravo', 'charlie', 'delta', 'echo'], tempo: 1200, extra: 2, milicia: 1, capitalForte: 'delta' }
+    { n: 1, cap: 0, nome: 'Fronteira', semente: 1101, celulas: 52, mar: 0.05, W: 860, H: 1120, bots: ['bravo', 'charlie', 'delta'], tempo: 900, extra: 1, milicia: 0, objetivo: 'semPerder' },
+    { n: 2, cap: 0, nome: 'O Rio', semente: 4409, celulas: 56, mar: 0.12, W: 900, H: 1160, bots: ['bravo', 'charlie'], tempo: 840, extra: 1, milicia: 1, objetivo: 'pesquisa', regra: 'industria', regraTxt: 'região industrial: obras custam metade' },
+    { n: 3, cap: 0, nome: 'Região central', semente: 2207, celulas: 66, mar: 0.05, W: 980, H: 1280, bots: ['bravo', 'charlie', 'delta', 'echo'], tempo: 1080, extra: 2, milicia: 1, objetivo: 'capitais' },
+    { n: 4, cap: 1, nome: 'Inverno', semente: 5521, celulas: 70, mar: 0.06, W: 1000, H: 1300, bots: ['bravo', 'delta', 'echo'], tempo: 1140, extra: 2, milicia: 0, objetivo: 'baixas', regra: 'inverno', regraTxt: 'inverno: campos produzem 40% menos comida' },
+    { n: 5, cap: 1, nome: 'Aliança frágil', semente: 6637, celulas: 76, mar: 0.05, W: 1040, H: 1360, bots: ['bravo', 'charlie', 'delta', 'echo'], tempo: 1260, extra: 3, milicia: 0, objetivo: 'rebeldes', regra: 'paz', regraTxt: 'começa em paz com Charlie (que pode virar aliado… ou não)' },
+    { n: 6, cap: 1, nome: 'A capital', semente: 3301, celulas: 86, mar: 0.05, W: 1100, H: 1440, bots: ['bravo', 'charlie', 'delta', 'echo'], tempo: 1200, extra: 2, milicia: 1, capitalForte: 'delta', objetivo: 'capitais' }
 ];
 const NOMES_JOG = ['Silva', 'Santos', 'Ferreira', 'Costa', 'Oliveira', 'Mendes', 'Rocha', 'Lima', 'Souza', 'Alves', 'Pereira', 'Nunes', 'Barros', 'Dias'];
 const FACCOES = {
@@ -61,7 +65,7 @@ const TIPO_TXT = { capital: '★ Capital', cidade: '🏘 Cidade', campo: '🌾 C
 
 let G, MAPA, TERRENO;
 let proxId = 1;
-function soldado(nome) { return { nome, vida: 100, fome: 10, cansaco: 0 }; }
+function soldado(nome, tipo = 'inf') { return { nome, tipo, vida: TROPAS[tipo].vida, fome: 10, cansaco: 0 }; }
 const vivos = (l) => l.filter(s => s.vida > 0);
 const eficacia = (s) => (s.vida / 100) * (1 - 0.55 * Math.max(0, s.fome - 40) / 60) * (1 - 0.3 * s.cansaco / 100);
 const forca = (lista) => lista.reduce((t, s) => t + (s.vida > 0 ? eficacia(s) : 0), 0);
@@ -72,7 +76,18 @@ const exDe = (dono) => G.ex.filter(e => e.dono === dono);
 const parado = (e) => !e.rota.length && !e.emBatalha;
 const exParadosEm = (id, dono) => G.ex.filter(e => e.prov === id && parado(e) && (!dono || e.dono === dono));
 const tropaDe = (dono) => exDe(dono).reduce((t, e) => t + e.s.length, 0);
-const custoRecrutar = (dono) => C.RECRUTAR + C.RECRUTAR_EXTRA * Math.max(0, tropaDe(dono) - C.TROPA_BASE);
+const custoRecrutarTipo = (dono, tipo) => TROPAS[tipo].custo + C.RECRUTAR_EXTRA * Math.max(0, tropaDe(dono) - C.TROPA_BASE);
+const custoRecrutar = (dono) => custoRecrutarTipo(dono, 'inf');
+function custoVariosTipo(dono, tipo, n) { let t = 0; const tropa = tropaDe(dono); for (let k = 0; k < n; k++) t += TROPAS[tipo].custo + C.RECRUTAR_EXTRA * Math.max(0, tropa + k - C.TROPA_BASE); return t; }
+// velocidade do exército: o mais lento manda; estradas, general e ferrovia no destino ajudam
+function velEx(e) {
+    let v = C.VEL * Math.min(...e.s.map(s => TROPAS[s.tipo || 'inf'].vel), 1.6);
+    if (temPesq(e.dono, 'estradas')) v *= 1.2;
+    v *= bonusGeneral(e, 'vel');
+    const prox = e.rota.length ? G.prov[e.rota[0]] : null;
+    if (prox && prox.obras.ferrovia && prox.dono === e.dono) v *= 2;
+    return v;
+}
 const ehCidade = (p) => p.tipo === 'cidade' || p.tipo === 'capital';
 const vivoNoJogo = (dono) => dono === 'jogador' || dono === 'neutro' || !G.eliminados[dono];
 function noticia(txt, alerta) { if (alerta && typeof som === 'function') som('alerta'); G.noticias.unshift({ txt, alerta, t: G.t }); G.noticias = G.noticias.slice(0, 30); }
@@ -81,25 +96,26 @@ function noticia(txt, alerta) { if (alerta && typeof som === 'function') som('al
    salvamento: ele sai sempre igual da semente da fase; só vão os donos, as tropas e os recursos. */
 const SAVE_CONQ = 'frontline-conquista-partida';
 function salvarPartida() {
-    if (!G || G.fim || G.batalha || G.semSalvar) return false; // batalha aberta: guarda o salvamento anterior
+    if (!G || G.fim || G.batalha || G.semSalvar || G.online) return false; // batalha aberta: guarda o salvamento anterior; online não salva
     const dados = {
-        v: 1, fase: G.fase.n, t: G.t, fac: G.fac, ciclo: G.ciclo, velocidade: G.velocidade, proxId,
+        v: 2, fase: G.fase.n, t: G.t, fac: G.fac, ciclo: G.ciclo, velocidade: G.velocidade, proxId, pesq: G.pesq, rel: G.rel, genFerido: G.genFerido, genXp: G.genXp, stats: G.stats,
         capitalJogador: G.capitalJogador, espiado: G.espiado, revelado: G.revelado, espioes: G.espioes,
         ultimoAtaque: G.ultimoAtaque, eliminados: G.eliminados, pensar: G.pensar, noticias: G.noticias.slice(0, 10), ultimoRelatorio: G.ultimoRelatorio,
-        prov: Object.fromEntries(Object.values(G.prov).map(p => [p.id, { dono: p.dono, tipo: p.tipo, trinch: p.trinch, capital: p.capital }])),
-        ex: G.ex.map(e => ({ id: e.id, dono: e.dono, s: e.s, prov: e.prov, de: e.de, rota: e.rota, x: e.x, y: e.y, missao: e.missao, origem: e.origem, alertado: e.alertado })),
+        prov: Object.fromEntries(Object.values(G.prov).map(p => [p.id, { dono: p.dono, tipo: p.tipo, trinch: p.trinch, capital: p.capital, moral: p.moral, obras: p.obras, obra: p.obra, conquistadaEm: p.conquistadaEm }])),
+        ex: G.ex.map(e => ({ id: e.id, dono: e.dono, s: e.s, prov: e.prov, de: e.de, rota: e.rota, x: e.x, y: e.y, missao: e.missao, origem: e.origem, alertado: e.alertado, general: e.general })),
         salvoEm: Date.now()
     };
     try { localStorage.setItem(SAVE_CONQ, JSON.stringify(dados)); return true; } catch (e) { return false; }
 }
-function lerSalvamento() { try { const d = JSON.parse(localStorage.getItem(SAVE_CONQ) || 'null'); return d && d.v === 1 && FASES[d.fase - 1] ? d : null; } catch (e) { return null; } }
+function lerSalvamento() { try { const d = JSON.parse(localStorage.getItem(SAVE_CONQ) || 'null'); return d && d.v === 2 && FASES[d.fase - 1] ? d : null; } catch (e) { return null; } }
 function apagarSalvamento() { try { localStorage.removeItem(SAVE_CONQ); } catch (e) {} }
 function carregarPartida() {
     const d = lerSalvamento(); if (!d) return false;
     novoJogo(d.fase);
     Object.entries(d.prov).forEach(([id, q]) => { if (G.prov[id]) Object.assign(G.prov[id], q); });
     Object.assign(G, { t: d.t, fac: d.fac, ciclo: d.ciclo, velocidade: d.velocidade || 1, capitalJogador: d.capitalJogador, espiado: d.espiado || {}, revelado: d.revelado || {},
-        espioes: d.espioes || [], ultimoAtaque: d.ultimoAtaque || {}, eliminados: d.eliminados || {}, pensar: d.pensar || G.pensar, noticias: d.noticias || [], ultimoRelatorio: d.ultimoRelatorio });
+        espioes: d.espioes || [], ultimoAtaque: d.ultimoAtaque || {}, eliminados: d.eliminados || {}, pensar: d.pensar || G.pensar, noticias: d.noticias || [], ultimoRelatorio: d.ultimoRelatorio,
+        pesq: d.pesq || G.pesq, rel: d.rel || G.rel, genFerido: d.genFerido || {}, genXp: d.genXp || {}, stats: d.stats || {} });
     G.ex = d.ex.filter(e => G.prov[e.prov]).map(e => ({ ...e, rota: (e.rota || []).filter(id => G.prov[id]), emBatalha: false }));
     proxId = Math.max(proxId, d.proxId || 0);
     G.sel = { tipo: 'prov', id: G.capitalJogador }; G.pausado = true;
@@ -107,8 +123,7 @@ function carregarPartida() {
     const c = G.prov[G.capitalJogador]; centralizar(c.x, c.y);
     return true;
 }
-function lerFase() { try { return Math.max(1, +(localStorage.getItem('frontline-conquista-fase') || 1)); } catch (e) { return 1; } }
-function liberarFase(n) { try { if (n > lerFase()) localStorage.setItem('frontline-conquista-fase', String(n)); } catch (e) {} }
+function lerFase() { let n = 1; FASES.forEach(F => { if (faseLiberada(F.n)) n = F.n; }); return n; } // a última fase liberada
 
 /* ---------- Começo de uma fase ---------- */
 function novoJogo(numFase) {
@@ -119,12 +134,14 @@ function novoJogo(numFase) {
         fase: F, t: 0, fim: null, sel: null, modo: null, pendente: null, noticias: [], espiado: {}, revelado: {}, espioes: [],
         ultimoAtaque: {}, eliminados: {}, batalha: null, ciclo: 0, ex: [], velocidade: 1,
         fac: { jogador: { comida: 40, mun: 150, moedas: 50 }, neutro: { comida: 0, mun: 100, moedas: 0 } },
-        prov: {}, pensar: {}, pausado: false
+        prov: {}, pensar: {}, pausado: false,
+        pesq: { jogador: { feitas: {}, atual: null } }, rel: {}, genFerido: {}, genXp: {}, stats: {}
     };
-    F.bots.forEach((b, i) => { G.fac[b] = { comida: 40, mun: 150, moedas: b === 'delta' ? 70 : 50 }; G.pensar[b] = 60 + i * 12 + r() * 10; });
+    F.bots.forEach((b, i) => { G.fac[b] = { comida: 40, mun: 150, moedas: b === 'delta' ? 70 : 50 }; G.pensar[b] = 60 + i * 12 + r() * 10; G.pesq[b] = { feitas: {}, atual: null }; G.rel[b] = novaRelacao(); });
+    if (F.regra === 'paz' && G.rel.charlie) { G.rel.charlie.estado = 'paz'; G.rel.charlie.ate = 300; }
     MAPA.prov.forEach(pm => {
         const t = r(), tipo = t < 0.38 ? 'campo' : t < 0.58 ? 'floresta' : t < 0.74 ? 'morro' : 'cidade';
-        G.prov[pm.id] = { id: pm.id, nome: pm.nome, x: pm.x, y: pm.y, viz: pm.viz, poli: pm.poli, path: caminhoDe(pm.poli), dono: 'neutro', tipo, trinch: C.TRINCH_BASE, capital: false };
+        G.prov[pm.id] = { id: pm.id, nome: pm.nome, x: pm.x, y: pm.y, viz: pm.viz, poli: pm.poli, path: caminhoDe(pm.poli), dono: 'neutro', tipo, trinch: C.TRINCH_BASE, capital: false, moral: 60, obras: {}, obra: null };
     });
     const lista = Object.values(G.prov);
     // capitais: a sua embaixo, no meio; as dos bots o mais longe possível umas das outras
@@ -142,16 +159,20 @@ function novoJogo(numFase) {
         Object.assign(c, { dono, tipo: 'capital', capital: true, trinch: C.TRINCH_CAPITAL });
         // províncias iniciais em volta: a primeira é sempre um campo (comida)
         const livres = c.viz.map(id => G.prov[id]).filter(p => p.dono === 'neutro' && !p.capital).sort((a, b) => Math.hypot(a.x - c.x, a.y - c.y) - Math.hypot(b.x - c.x, b.y - c.y));
-        livres.slice(0, F.extra).forEach((p, k) => { p.dono = dono; if (k === 0) p.tipo = 'campo'; criarExercito(dono, p.id, 2); });
-        criarExercito(dono, c.id, dono === F.capitalForte ? 14 : dono === 'delta' ? 10 : 8);
-        if (dono === F.capitalForte) c.trinch = 100;
+        livres.slice(0, F.extra).forEach((p, k) => { p.dono = dono; p.moral = 85; if (k === 0) p.tipo = 'campo'; criarExercito(dono, p.id, 2); });
+        const ex = criarExercito(dono, c.id, dono === F.capitalForte ? 14 : dono === 'delta' ? 10 : 8);
+        if (dono === 'delta') ex.s.slice(0, 2).forEach(s => { s.tipo = 'metr'; }); // Delta começa com 2 metralhadoras na capital
+        c.moral = 100;
+        if (dono === F.capitalForte) { c.trinch = 100; c.obras.forte = true; }
     });
     // milícias nas províncias livres
     lista.filter(p => p.dono === 'neutro').forEach(p => criarExercito('neutro', p.id, (p.tipo === 'cidade' ? 4 : p.tipo === 'campo' ? 2 : 3) + F.milicia));
     TERRENO = pintarTerreno(MAPA, lista, F.semente, Math.min(2, Math.sqrt(4.2e6 / (MAPA.W * MAPA.H)))); // até ~4 milhões de pixels (leve no celular)
     G.capitalJogador = capJ.id;
     G.sel = { tipo: 'prov', id: capJ.id };
-    noticia(`Fase ${F.n}: ${F.nome}. Tome as capitais inimigas (★). Toque num exército seu e escolha o destino.`);
+    generalDosBots();
+    if (generaisLiberados().length) G.ex.find(e => e.dono === 'jogador' && e.prov === capJ.id).general = generaisLiberados()[0].id; // seu primeiro general começa no exército da capital
+    noticia(`Fase ${F.n}: ${F.nome}. Tome as capitais inimigas (★).${F.regraTxt ? ' Atenção: ' + F.regraTxt + '.' : ''}`);
     centralizar(capJ.x, capJ.y);
 }
 function criarExercito(dono, provId, qtd, soldados) {
@@ -218,18 +239,18 @@ function avisarSeVisivel(e) {
         noticia(`🚨 ${FACCOES[e.dono].nome} marcha com ${e.s.length} soldados sobre ${destino.nome}!`, true);
     }
 }
-function recrutarEm(provId, dono) {
-    const p = G.prov[provId], f = G.fac[dono], custo = custoRecrutar(dono);
-    if (!p || p.dono !== dono || f.moedas < custo) return false;
+function recrutarEm(provId, dono, tipo = 'inf') {
+    const p = G.prov[provId], f = G.fac[dono], custo = custoRecrutarTipo(dono, tipo);
+    if (!p || p.dono !== dono || f.moedas < custo || !tropaLiberada(dono, tipo)) return false;
     f.moedas -= custo;
     const e = exParadosEm(provId, dono)[0] || criarExercito(dono, provId, 0);
-    e.s.push(soldado(dono === 'jogador' ? NOMES_JOG[Math.floor(Math.random() * NOMES_JOG.length)] : 'Inimigo'));
+    e.s.push(soldado(dono === 'jogador' ? NOMES_JOG[Math.floor(Math.random() * NOMES_JOG.length)] : 'Inimigo', tipo));
     return true;
 }
-function recrutar(id, n = 1) {
-    let feitos = 0; while (feitos < n && recrutarEm(id, 'jogador')) feitos++;
+function recrutar(id, n = 1, tipo = 'inf') {
+    let feitos = 0; while (feitos < n && recrutarEm(id, 'jogador', tipo)) feitos++;
     if (feitos) som('recrutar');
-    if (feitos) noticia(`🪖 ${feitos === 1 ? 'Novo soldado' : feitos + ' novos soldados'} em ${G.prov[id].nome}.`);
+    if (feitos) noticia(`${TROPAS[tipo].icone} ${feitos === 1 ? 'Novo' : feitos + ' novos'} (${TROPAS[tipo].nome}) em ${G.prov[id].nome}.`);
     return feitos;
 }
 function custoVarios(dono, n) { let t = 0; const tropa = tropaDe(dono); for (let k = 0; k < n; k++) t += C.RECRUTAR + C.RECRUTAR_EXTRA * Math.max(0, tropa + k - C.TROPA_BASE); return t; }
@@ -244,10 +265,11 @@ function fortificar(id, dono = 'jogador') {
 // e mostra os planos do dono (quem ele está atacando) por um tempo.
 function espionar(id) {
     const p = G.prov[id], f = G.fac.jogador;
-    if (!p || p.dono === 'jogador' || f.moedas < C.ESPIAO || G.espioes.length >= C.ESPIAO_MAX) return false;
+    const custoEsp = custoEspiao();
+    if (!p || p.dono === 'jogador' || f.moedas < custoEsp || G.espioes.length >= C.ESPIAO_MAX) return false;
     const base = minhas().sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y))[0];
     if (!base) return false;
-    f.moedas -= C.ESPIAO;
+    f.moedas -= custoEsp;
     G.espioes.push({ para: id, x: base.x, y: base.y });
     noticia(`👁 Espião saiu de ${base.nome} para ${p.nome}. Ele não luta: só observa.`); som('espiao');
     return true;
@@ -257,7 +279,8 @@ function espionar(id) {
 function provVisivel(id) {
     const p = G.prov[id];
     if (p.dono === 'jogador' || G.revelado[id] > G.t) return true;
-    return p.viz.some(v => G.prov[v].dono === 'jogador');
+    const meu = (q) => q.dono === 'jogador' || (G.rel[q.dono] && G.rel[q.dono].estado === 'alianca');
+    return meu(p) || p.viz.some(v => meu(G.prov[v]));
 }
 function exVisivel(e) {
     if (e.dono === 'jogador' || G.espiado[e.dono] > G.t) return true;
@@ -265,29 +288,40 @@ function exVisivel(e) {
     return e.rota.length > 0 && provVisivel(e.rota[0]);
 }
 const espiado = (dono) => G.espiado[dono] > G.t;
+const custoEspiao = () => temPesq('jogador', 'radio') ? 10 : C.ESPIAO;
 
 /* ---------- Economia ---------- */
 function cicloEconomia() {
     G.ciclo++;
     Object.values(G.prov).forEach(p => {
         if (p.dono === 'neutro') return;
-        const f = G.fac[p.dono], pr = C.PROD[p.tipo];
-        f.comida += pr.comida; f.mun += pr.mun; f.moedas += pr.moedas;
+        const f = G.fac[p.dono], pr = C.PROD[p.tipo], k = fatorMoral(p);
+        const inverno = G.fase.regra === 'inverno' && p.tipo === 'campo' ? 0.6 : 1;
+        f.comida += pr.comida * k * inverno; f.mun += (pr.mun + (p.obras.fabrica ? 3 : 0)) * k; f.moedas += (pr.moedas + (p.obras.fabrica ? 3 : 0)) * k;
         const base = p.capital ? C.TRINCH_CAPITAL : C.TRINCH_BASE;
         if (p.trinch < base) p.trinch = Math.min(base, p.trinch + 2);
     });
     Object.keys(G.fac).filter(d => d !== 'neutro').forEach(dono => {
         const f = G.fac[dono], FX = FACCOES[dono];
         const esquece = dono !== 'jogador' && Math.random() < FX.esquece; // bot erra: esquece de alimentar a tropa
-        exDe(dono).forEach(e => e.s.forEach(s => {
-            s.fome = Math.min(100, s.fome + C.FOME_CICLO);
-            if (!esquece && s.fome >= C.COME_SE && f.comida >= 1) { f.comida -= 1; s.fome = Math.max(0, s.fome - C.COME_ALIVIA); }
-            if (s.fome >= 90) s.vida -= 4;
-            else if (s.fome < 50) s.vida = Math.min(100, s.vida + 3);
-            s.cansaco = Math.max(0, s.cansaco - 6);
-        }));
+        const porcao = (temPesq(dono, 'racoes') ? 0.7 : 1);
+        exDe(dono).forEach(e => {
+            const sup = abastecido(e), log = bonusGeneral(e, 'log') > 1;
+            const cura = (parado(e) && G.prov[e.prov].obras.hospital && G.prov[e.prov].dono === dono ? 12 : 3) * (temPesq(dono, 'medicina') ? 2 : 1);
+            e.semSuprimento = !sup;
+            e.s.forEach(s => {
+                s.fome = Math.min(100, s.fome + C.FOME_CICLO * (log ? 0.5 : 1) + (sup || log ? 0 : 5));
+                const come = porcao * (log ? 0.5 : 1);
+                if (!esquece && (sup || log) && s.fome >= C.COME_SE && f.comida >= come) { f.comida -= come; s.fome = Math.max(0, s.fome - C.COME_ALIVIA); }
+                if (s.fome >= 90) s.vida -= 4;
+                else if (s.fome < 50) s.vida = Math.min(vidaMax(s), s.vida + cura);
+                s.cansaco = Math.max(0, s.cansaco - 6);
+            });
+        });
         if (esquece && espiado(dono)) noticia(`👁 Espião: ${FX.nome} esqueceu de alimentar a tropa.`);
     });
+    atualizarMoral();
+    G.fase.bots.forEach(b => pensarDiplomacia(b));
     limparMortos();
 }
 function limparMortos() {
@@ -297,19 +331,35 @@ function limparMortos() {
 
 /* ---------- Bots ---------- */
 function ameaca(p, dono) { // força inimiga parada ao lado ou marchando para cá
-    return G.ex.filter(e => e.dono !== dono && e.dono !== 'neutro' && (e.prov === p.id || p.viz.includes(e.prov) || e.rota.includes(p.id))).reduce((t, e) => t + forca(e.s), 0);
+    return G.ex.filter(e => e.dono !== dono && e.dono !== 'neutro' && emGuerra(e.dono, dono) && (e.prov === p.id || p.viz.includes(e.prov) || e.rota.includes(p.id))).reduce((t, e) => t + forca(e.s), 0);
 }
 function defesaEm(p) { // força que defende a província (com trincheira e capital)
-    const def = exParadosEm(p.id, p.dono).reduce((t, e) => t + forca(e.s), 0);
-    return def * (1 + p.trinch / 250) * (p.capital ? C.CAPITAL_DEFESA : 1);
+    const def = exParadosEm(p.id, p.dono).reduce((t, e) => t + e.s.reduce((u, s) => u + eficacia(s) * Math.sqrt(TROPAS[s.tipo || 'inf'].def), 0), 0);
+    return def * (1 + p.trinch / 250) * (p.capital ? C.CAPITAL_DEFESA : 1) * (p.obras && p.obras.forte ? 1.25 : 1);
 }
 function pensarBot(dono) {
     const FX = FACCOES[dono], f = G.fac[dono], provs = provDe(dono);
     if (!provs.length || G.eliminados[dono]) return;
     const capital = provs.find(p => p.capital && p.dono === dono);
-    // 1) recrutar (sempre que sobra dinheiro), primeiro onde está mais ameaçado
+    // 0) pesquisa e obras (com o dinheiro que sobra)
+    if (!G.pesq[dono].atual && f.moedas > FX.reserva + 50 && Math.random() < 0.5) {
+        const pref = { agressivo: ['cav', 'estradas', 'metr', 'art', 'blind'], 'ladrão': ['cav', 'radio', 'estradas', 'metr'], defensivo: ['metr', 'concreto', 'art', 'propaganda', 'blind'], oportunista: ['art', 'cav', 'metr', 'racoes', 'blind'] }[FX.perso] || [];
+        const id = pref.concat(Object.keys(PESQUISAS)).find(x => pesquisaDisponivel(dono, x) && PESQUISAS[x].custo <= f.moedas - FX.reserva);
+        if (id) pesquisar(id, dono);
+    }
+    if (capital && f.moedas > FX.reserva + 60 && Math.random() < 0.3) {
+        const obra = FX.perso === 'defensivo' ? ['forte', 'hospital', 'fabrica'] : ['fabrica', 'forte', 'ferrovia'];
+        const alvoObra = [capital, ...provs.filter(q => q.viz.some(v => G.prov[v].dono !== dono))].find(q => !q.obra && obra.some(o => !q.obras[o]));
+        if (alvoObra) construir(alvoObra.id, obra.find(o => !alvoObra.obras[o]), dono);
+    }
+    // 1) recrutar (sempre que sobra dinheiro), primeiro onde está mais ameaçado, com o tipo de tropa do seu jeito
     const cidades = provs.slice().sort((a, b) => (ameaca(b, dono) - forca(exParadosEm(b.id, dono).flatMap(e => e.s))) - (ameaca(a, dono) - forca(exParadosEm(a.id, dono).flatMap(e => e.s))));
-    for (let k = 0; k < 3 && cidades.length; k++) { if (f.moedas < custoRecrutar(dono) + FX.reserva || Math.random() < 0.2) break; recrutarEm(cidades[0].id, dono); }
+    const gosto = { agressivo: ['inf', 'cav', 'cav', 'blind', 'art'], 'ladrão': ['inf', 'cav', 'cav', 'inf'], defensivo: ['inf', 'metr', 'metr', 'art', 'blind'], oportunista: ['inf', 'art', 'cav', 'metr', 'blind'] }[FX.perso] || ['inf'];
+    for (let k = 0; k < 3 && cidades.length; k++) {
+        const tipos = gosto.filter(t => tropaLiberada(dono, t)), tipo = tipos[Math.floor(Math.random() * tipos.length)] || 'inf';
+        if (f.moedas < custoRecrutarTipo(dono, tipo) + FX.reserva || Math.random() < 0.2) break;
+        recrutarEm(cidades[0].id, dono, tipo);
+    }
     // 2) fortificar a capital (o defensivo mais)
     if (capital && capital.trinch < 95 && f.moedas > (FX.perso === 'defensivo' ? 45 : 90) && Math.random() < 0.5) fortificar(capital.id, dono);
     // 3) defender: manda reforço para província ameaçada (sempre)
@@ -328,12 +378,13 @@ function pensarBot(dono) {
         const deixar = casa.capital ? (FX.perso === 'agressivo' && Math.random() < 0.25 ? 1 : 4) : (ameaca(casa, dono) > 0 ? 2 : 1);
         const manda = e.s.length - deixar; if (manda < 2) return;
         const enviados = vivos(e.s).sort((a, b) => eficacia(b) - eficacia(a)).slice(0, manda);
-        casa.viz.map(id => G.prov[id]).filter(q => q.dono !== dono).forEach(q => {
+        casa.viz.map(id => G.prov[id]).filter(q => q.dono !== dono && emGuerra(dono, q.dono)).forEach(q => {
             let est = defesaEm(q) * (1 + (Math.random() - 0.5) * 0.6);
             const fora = G.ex.filter(x => x.dono === q.dono && x.rota.length && x.origem === q.id).length; // oportunista: dono saiu para brigar
             let pref = q.dono === 'neutro' ? 1.3 : q.capital ? 1.4 : 1;
             if (FX.perso === 'oportunista' && fora) pref *= 1.6;
             if (FX.perso === 'agressivo' && q.dono === 'jogador') pref *= 1.2;
+            if (q.dono !== 'neutro' && (placar()[q.dono] || 0) >= Math.max(...Object.entries(placar()).filter(([d]) => d !== 'neutro').map(([, n]) => n))) pref *= 1.25; // todos de olho no líder
             opcoes.push({ e, q, manda, est, pref, forcaEnv: forca(enviados) });
         });
     });
@@ -342,10 +393,13 @@ function pensarBot(dono) {
     if (!esc && FX.perso === 'agressivo' && opcoes.length && Math.random() < 0.08) esc = opcoes[Math.floor(Math.random() * opcoes.length)]; // erro: ataca sem vantagem
     // ladrão: prefere saquear quem tem dinheiro
     if (FX.perso === 'ladrão' && Math.random() < 0.55) {
-        const s = opcoes.filter(o => o.q.dono !== 'neutro' && G.fac[o.q.dono].moedas > 30 && o.forcaEnv > o.est * 0.9).sort((a, b) => G.fac[b.q.dono].moedas - G.fac[a.q.dono].moedas)[0];
+        const s = opcoes.filter(o => o.q.dono !== 'neutro' && emGuerra(dono, o.q.dono) && G.fac[o.q.dono].moedas > 30 && o.forcaEnv > o.est * 0.9).sort((a, b) => G.fac[b.q.dono].moedas - G.fac[a.q.dono].moedas)[0];
         if (s && ordem(s.e.id, s.q.id, Math.min(4, s.manda), 'saque')) { G.ultimoAtaque[dono] = G.t; return; }
     }
     if (esc && ordem(esc.e.id, esc.q.id, esc.manda, 'ataque')) G.ultimoAtaque[dono] = G.t;
+}
+function generalDosBots() { // cada bot tem um general no seu maior exército (+12%)
+    G.fase.bots.filter(b => G.pensar[b] !== undefined).forEach(b => { const ex = exDe(b); ex.forEach(e => { e.general = null; }); /* só os países dos bots */ const maior = ex.sort((a, z) => z.s.length - a.s.length)[0]; if (maior) maior.general = 'bot'; });
 }
 
 /* ---------- Movimento e chegada ---------- */
@@ -353,7 +407,7 @@ function moverExercitos(dt) {
     G.ex.slice().forEach(e => {
         if (!e.rota.length || e.emBatalha) return;
         const alvo = G.prov[e.rota[0]];
-        const dx = alvo.x - e.x, dy = alvo.y - e.y, d = Math.hypot(dx, dy), passo = C.VEL * dt;
+        const dx = alvo.x - e.x, dy = alvo.y - e.y, d = Math.hypot(dx, dy), passo = velEx(e) * dt;
         if (d <= passo) { e.x = alvo.x; e.y = alvo.y; chegar(e, alvo); }
         else { e.x += dx / d * passo; e.y += dy / d * passo; }
         if (e.dono !== 'jogador' && e.rota.length) avisarSeVisivel(e);
@@ -361,12 +415,17 @@ function moverExercitos(dt) {
 }
 function chegar(e, p) {
     e.de = e.prov; e.prov = p.id; e.rota.shift();
+    chegarAqui(e, p);
+}
+function chegarAqui(e, p) {
+    if (p.dono !== e.dono && !emGuerra(e.dono, p.dono)) { if (!e.rota.length) parar(e); return; } // em paz: só passa
     if (p.dono !== e.dono) {
+        if (e.dono === 'jogador' && G.rel[p.dono]) G.rel[p.dono].atacadoEm = G.t;
         const defensores = exParadosEm(p.id, p.dono);
         if (defensores.some(d => d.s.length)) {
             const b = criarBatalha(e, p, defensores);
             e.emBatalha = true;
-            if (e.dono === 'jogador' || p.dono === 'jogador') {
+            if (!G.online && (e.dono === 'jogador' || p.dono === 'jogador')) {
                 if (G.batalha) { while (!b.terminou) b.passo(0.25); concluirBatalha(b); if (e.dono === 'jogador' || p.dono === 'jogador') noticia('⚙️ Batalha resolvida sozinha (você estava em outra).'); }
                 else abrirBatalha(b);
             } else { while (!b.terminou) b.passo(0.25); concluirBatalha(b); }
@@ -392,7 +451,8 @@ function saquear(e, p) {
 }
 function conquistar(p, dono, e) {
     const antigo = p.dono;
-    p.dono = dono; p.trinch = 20;
+    p.dono = dono; p.trinch = 20; p.moral = 30; p.conquistadaEm = G.t; p.obra = null; p.obras.forte = false;
+    if (antigo === 'jogador') G.stats.perdidas = (G.stats.perdidas || 0) + 1;
     const ver = dono === 'jogador' || antigo === 'jogador' || provVisivel(p.id) || espiado(dono);
     if (antigo !== 'neutro') { // leva parte do tesouro e da comida
         const fa = G.fac[antigo], fn = G.fac[dono], parte = p.capital ? 0.5 : 0.15;
@@ -402,7 +462,7 @@ function conquistar(p, dono, e) {
     if (dono === 'jogador') som('conquista'); else if (antigo === 'jogador') som('perda');
     if (ver) noticia(`🏴 ${FACCOES[dono].nome} conquistou ${p.nome}${antigo === 'neutro' ? '' : ' de ' + FACCOES[antigo].nome}.`, antigo === 'jogador');
     if (p.capital && antigo !== 'neutro') {
-        if (antigo === 'jogador') { G.fim = 'derrota'; return mostrarFim(); }
+        if (antigo === 'jogador' && !G.online) { G.fim = 'derrota'; return mostrarFim(); }
         eliminar(antigo, dono);
     }
     verificarFim();
@@ -415,8 +475,9 @@ function eliminar(bot, por) {
 }
 function verificarFim() {
     if (G.fim) return;
+    if (G.online && typeof verificarFimOnline === 'function') return verificarFimOnline();
     if (G.prov[G.capitalJogador].dono !== 'jogador') { G.fim = 'derrota'; return mostrarFim(); }
-    if (G.fase.bots.every(b => G.eliminados[b])) { G.fim = 'vitoria'; liberarFase(G.fase.n + 1); return mostrarFim(); }
+    if (G.fase.bots.every(b => G.eliminados[b])) { G.fim = 'vitoria'; return mostrarFim(); }
 }
 function placar() { // províncias por facção
     const r = {}; Object.values(G.prov).forEach(p => { r[p.dono] = (r[p.dono] || 0) + 1; }); return r;
@@ -429,9 +490,13 @@ function criarBatalha(e, alvo, defensores) {
         ex: e, atqDono: e.dono, defDono: alvo.dono, alvo, saque: e.missao === 'saque', defensores, t: 0, terminou: false, vencedor: null,
         atq: e.s.map((s, i, l) => ({ s, dist: C.DIST + Math.random() * 25, x: 30 + (i + 0.5) * (340 / l.length) + (Math.random() - 0.5) * Math.min(14, 300 / l.length) })), // espalhados pela frente
         def: defS.map((s, i) => ({ s, x: 50 + i * (300 / Math.max(1, defS.length - 1 || 1)) })),
-        postAtq: 'avancar', postDef: 'equilibrio', efeitos: [], rapido: false
+        postAtq: 'avancar', postDef: 'equilibrio', efeitos: [], rapido: false,
+        genAtq: bonusGeneral(e, 'atq'), genDef: Math.max(...defensores.map(d => bonusGeneral(d, 'def')), 1),
+        forte: alvo.obras && alvo.obras.forte ? 1.25 * (temPesq(alvo.dono, 'concreto') ? 1.15 : 1) : 1
     };
     b.passo = (dt) => passoBatalha(b, dt);
+    // Ten. Barros: barragem de artilharia de graça no começo
+    [e, ...defensores].forEach(x => { if (bonusGeneral(x, 'art') > 1) { const alvos = x === e ? b.def : b.atq; alvos.forEach(a => { a.s.vida -= 25; b.efeitos.push({ x: a.x, y: x === e ? -1 : a.dist, vida: 0.8, tipo: 'explosao' }); }); } });
     return b;
 }
 function passoBatalha(b, dt) {
@@ -446,21 +511,27 @@ function passoBatalha(b, dt) {
     const noCampo = atqVivos.filter(a => a.dist > 0 && a.dist < 260);
     if (noCampo.length && defVivos.length) {
         const munD = fd.mun > 0 ? 1 : 0.3, cap = b.alvo.capital ? C.CAPITAL_DEFESA : 1;
-        defVivos.forEach(d => { if (Math.random() < C.TIRO_DEF * eficacia(d.s) * pd.dano * exposicao * munD * cap * dt) { noCampo[Math.floor(Math.random() * noCampo.length)].s.vida -= dano(); if (b === G.batalha) som('tiro', 0.8); } });
+        defVivos.forEach(d => {
+            const T = TROPAS[d.s.tipo || 'inf'];
+            if (Math.random() < C.TIRO_DEF * T.def * eficacia(d.s) * pd.dano * exposicao * munD * cap * b.genDef * b.forte * dt) {
+                const alvo = noCampo[Math.floor(Math.random() * noCampo.length)]; alvo.s.vida -= dano() * danoContra(d.s.tipo || 'inf', alvo.s.tipo || 'inf'); if (b === G.batalha) som('tiro', 0.8);
+            }
+        });
         fd.mun = Math.max(0, fd.mun - defVivos.length * 0.5 * dt);
     }
     if (defVivos.length) {
         const munA = fa.mun > 0 ? 1 : 0.3;
-        atqVivos.filter(a => a.dist < 220).forEach(a => {
-            const corpo = a.dist <= 0;
-            const chance = corpo ? C.CORPO_A_CORPO * eficacia(a.s) * pd.rec
-                : C.TIRO_ATQ * (b.postAtq === 'cobertura' ? 0.6 : 1) * eficacia(a.s) * munA * (1 - C.TRINCH_PROTEGE * b.alvo.trinch / 100) * pd.rec;
-            if (Math.random() < chance * dt) { defVivos[Math.floor(Math.random() * defVivos.length)].s.vida -= dano(); if (b === G.batalha) som('tiro'); }
+        atqVivos.filter(a => a.dist < (TROPAS[a.s.tipo || 'inf'].longe ? C.DIST + 30 : 220)).forEach(a => { // artilharia atira de longe
+            const T = TROPAS[a.s.tipo || 'inf'], corpo = a.dist <= 0;
+            const protege = 1 - C.TRINCH_PROTEGE * (T.longe ? 0.4 : 1) * b.alvo.trinch / 100; // artilharia fura a trincheira
+            const chance = corpo ? C.CORPO_A_CORPO * T.corpo * eficacia(a.s) * pd.rec * b.genAtq
+                : C.TIRO_ATQ * T.atq * (b.postAtq === 'cobertura' ? 0.6 : 1) * eficacia(a.s) * munA * protege * pd.rec * b.genAtq;
+            if (Math.random() < chance * dt) { const alvo = defVivos[Math.floor(Math.random() * defVivos.length)]; alvo.s.vida -= dano() * danoContra(a.s.tipo || 'inf', alvo.s.tipo || 'inf'); if (b === G.batalha) som('tiro'); }
         });
         fa.mun = Math.max(0, fa.mun - atqVivos.length * 0.4 * dt);
     }
     const naTrincheira = atqVivos.filter(a => a.dist <= 0);
-    if (naTrincheira.length && defVivos.length) defVivos.forEach(d => { if (Math.random() < C.CORPO_A_CORPO * eficacia(d.s) * dt) naTrincheira[Math.floor(Math.random() * naTrincheira.length)].s.vida -= dano(); });
+    if (naTrincheira.length && defVivos.length) defVivos.forEach(d => { if (Math.random() < C.CORPO_A_CORPO * TROPAS[d.s.tipo || 'inf'].corpo * eficacia(d.s) * b.genDef * dt) { const alvo = naTrincheira[Math.floor(Math.random() * naTrincheira.length)]; alvo.s.vida -= dano() * danoContra(d.s.tipo || 'inf', alvo.s.tipo || 'inf'); } });
     b.atq.forEach(a => { if (a.s.vida <= 0 && !a.morto) { a.morto = true; b.efeitos.push({ x: a.x, y: a.dist, vida: 0.6, tipo: 'abate' }); if (b === G.batalha) som('abate'); } });
     b.def.forEach(d => { if (d.s.vida <= 0 && !d.morto) { d.morto = true; b.efeitos.push({ x: d.x, y: -1, vida: 0.6, tipo: 'abate' }); } });
     const sobraA = b.atq.filter(a => a.s.vida > 0), sobraD = b.def.filter(d => d.s.vida > 0);
@@ -480,6 +551,10 @@ function artilhariaNaBatalha(b, lado) {
 function concluirBatalha(b) {
     const e = b.ex, p = b.alvo;
     e.emBatalha = false;
+    if (b.atqDono === 'jogador') G.stats.baixas = (G.stats.baixas || 0) + b.atq.filter(a => a.s.vida <= 0).length;
+    if (b.defDono === 'jogador') G.stats.baixas = (G.stats.baixas || 0) + b.def.filter(d => d.s.vida <= 0).length;
+    if (b.vencedor === 'atq') { generalVenceu(e); b.defensores.forEach(d => { if (!d.s.some(s => s.vida > 0)) generalCaiu(d); }); }
+    else { b.defensores.forEach(generalVenceu); if (!e.s.some(s => s.vida > 0)) generalCaiu(e); }
     e.s = e.s.filter(s => s.vida > 0); e.s.forEach(s => { s.cansaco = Math.min(100, s.cansaco + 30); });
     b.defensores.forEach(d => { d.s = d.s.filter(s => s.vida > 0); d.s.forEach(s => { s.cansaco = Math.min(100, s.cansaco + 20); }); });
     G.ex = G.ex.filter(x => x.s.length || x === e);
@@ -503,7 +578,8 @@ function passoMapa(dt) {
     if (G.fim || G.batalha) return;
     G.t += dt;
     if (G.t >= G.fase.tempo) return fimPorTempo();
-    if (Math.floor(G.t / C.CICLO) > G.ciclo) cicloEconomia();
+    if (Math.floor(G.t / C.CICLO) > G.ciclo) { cicloEconomia(); if (G.ciclo % 4 === 0) generalDosBots(); }
+    avancarObras(dt); avancarPesquisas(dt);
     Object.keys(G.pensar).forEach(dono => { G.pensar[dono] -= dt; if (G.pensar[dono] <= 0) { G.pensar[dono] = C.BOT_PENSA + Math.random() * C.BOT_PENSA_VAR; pensarBot(dono); } });
     moverExercitos(dt);
     // espiões viajando
@@ -530,9 +606,9 @@ function relatorioEspiao(p) {
     G.ultimoRelatorio = txt;
 }
 function fimPorTempo() {
+    if (G.online && typeof fimPorTempoOnline === 'function') return fimPorTempoOnline();
     const pl = placar(), meu = pl.jogador || 0, melhorBot = Math.max(0, ...G.fase.bots.map(b => pl[b] || 0));
     G.fim = meu > melhorBot ? 'pontos' : 'tempo';
-    if (G.fim === 'pontos') liberarFase(G.fase.n + 1);
     mostrarFim();
 }
 
@@ -617,7 +693,7 @@ function prepararOrdem(exId, destId, missao) {
     if (!e || (!e.rota.length && destId === e.prov)) { renderPainel(); return; }
     const c = rotaPara(e, destId);
     if (!c) return renderPainel();
-    G.pendente = { exId, destId, missao, qtd: e.s.length, rota: c.rota, seg: Math.ceil(c.dist / C.VEL) };
+    G.pendente = { exId, destId, missao, qtd: e.s.length, rota: c.rota, seg: Math.ceil(c.dist / velEx(e)) };
     G.sel = { tipo: 'ex', id: exId };
     renderPainel();
 }
@@ -681,7 +757,11 @@ function desenharMapa() {
         ocupado.push(caixa);
         cxM.fillStyle = 'rgba(0,0,0,.65)'; cxM.fillText(txt, s.x + 1, s.y - 13);
         cxM.fillStyle = p.capital ? '#ffe2a8' : '#efe6cf'; cxM.fillText(txt, s.x, s.y - 14);
-        if (p.trinch >= 80 && provVisivel(p.id)) { cxM.font = '10px sans-serif'; cxM.fillText('🛡', s.x + cxM.measureText(txt).width / 2 + 8, s.y - 14); }
+        if (provVisivel(p.id)) { // forte, obra em andamento e risco de revolta
+            const icones = (p.obras.forte ? '🏰' : p.trinch >= 80 ? '🛡' : '') + (p.dono === 'jogador' && p.obra ? '🏗' : '') + (p.dono === 'jogador' && !p.capital && p.moral < 35 ? '⚠' : '');
+            if (icones) { const w0 = cxM.measureText(txt).width; cxM.font = '10px sans-serif'; cxM.textAlign = 'left'; cxM.fillText(icones, s.x + w0 / 2 + 3, s.y - 14); cxM.textAlign = 'center'; }
+        }
+        if (p.dono !== 'jogador' && G.rel[p.dono] && G.rel[p.dono].estado !== 'guerra') { cxM.font = '10px sans-serif'; cxM.fillText(G.rel[p.dono].estado === 'paz' ? '🕊' : '🤝', s.x, s.y - 28); }
     });
     // exércitos
     const selEx = G.sel && G.sel.tipo === 'ex' ? G.sel.id : (G.modo ? G.modo.exId : null);
@@ -698,7 +778,8 @@ function desenharMapa() {
         const w = 30, h = 18;
         cxM.fillStyle = 'rgba(0,0,0,.5)'; cxM.fillRect(x - w / 2 + 2, y - h / 2 + 2, w, h);
         cxM.fillStyle = e.dono === 'neutro' ? '#55554a' : cor; cxM.fillRect(x - w / 2, y - h / 2, w, h);
-        cxM.strokeStyle = e.id === selEx ? '#ffffff' : 'rgba(0,0,0,.6)'; cxM.lineWidth = e.id === selEx ? 2.5 : 1; cxM.strokeRect(x - w / 2, y - h / 2, w, h);
+        cxM.strokeStyle = e.id === selEx ? '#ffffff' : e.semSuprimento ? '#ff9f43' : 'rgba(0,0,0,.6)'; cxM.lineWidth = e.id === selEx || e.semSuprimento ? 2.5 : 1; cxM.strokeRect(x - w / 2, y - h / 2, w, h);
+        if (e.general && e.dono === 'jogador') { cxM.fillStyle = '#ffd28a'; cxM.font = 'bold 11px sans-serif'; cxM.textAlign = 'center'; cxM.fillText('★', x - w / 2 - 1, y - h / 2 + 4); }
         cxM.fillStyle = '#0d0f0c'; cxM.font = 'bold 11px "Courier New", monospace'; cxM.textAlign = 'center';
         cxM.fillText((mexendo ? '➤' : '') + n, x, y + 4);
         if (e.missao === 'saque' && mexendo) { cxM.font = '11px sans-serif'; cxM.fillText('💰', x + 18, y - 6); }
@@ -712,7 +793,14 @@ function botao(txt, sub, acao, opts = {}) { return `<button class="acao${opts.fo
 function renderPainel() {
     const el = document.getElementById('painel'); if (!G || !el) return;
     let html = '';
-    if (G.modo) {
+    const t = G.sel && G.sel.tipo;
+    if (!G.modo && !G.pendente && t === 'recrutar') html = painelRecrutar(G.sel.id);
+    else if (!G.modo && !G.pendente && t === 'obras') html = painelObras(G.sel.id);
+    else if (!G.modo && !G.pendente && t === 'pesquisa') html = painelPesquisa();
+    else if (!G.modo && !G.pendente && t === 'diplo') html = painelDiplomacia();
+    else if (!G.modo && !G.pendente && t === 'generais') html = painelGenerais();
+    else if (!G.modo && !G.pendente && t === 'escolherGeneral') html = painelEscolherGeneral(G.sel.id);
+    else if (G.modo) {
         const e = G.ex.find(x => x.id === G.modo.exId);
         html = `<div class="titulo"><span>${G.modo.missao === 'saque' ? '💰 Saquear' : '⚔️ Mover / atacar'}</span><span class="dono">${e ? e.s.length + ' soldados' : ''}</span></div>
             <div class="info">Toque no mapa na província de destino. Pode ser sua (a tropa vai por dentro do seu território) ou inimiga, vizinha ou longe.</div>
@@ -722,8 +810,9 @@ function renderPainel() {
         if (!e) { G.pendente = null; return renderPainel(); }
         const defVis = provVisivel(p.id) ? exParadosEm(p.id, p.dono).reduce((t, x) => t + x.s.length, 0) : null;
         const quem = p.dono === 'jogador' ? 'sua' : p.dono === 'neutro' ? 'milícia' : FACCOES[p.dono].nome;
-        html = `<div class="titulo"><span>${o.missao === 'saque' ? '💰 Saquear' : p.dono === 'jogador' ? '🚶 Mover para' : '⚔️ Atacar'} ${p.nome}</span><span class="dono" style="color:${FACCOES[p.dono].cor}">${quem}</span></div>
-            <div class="info">${p.dono === 'jogador' ? 'Província sua.' : defVis === null ? 'Defesa: <b>desconhecida</b> (mande um espião).' : `Defesa: <b>${defVis}</b> soldados · trincheira ${Math.round(p.trinch)}%${p.capital ? ' · capital (+25%)' : ''}.`}
+        const emPaz = p.dono !== 'jogador' && !emGuerra('jogador', p.dono);
+        html = `<div class="titulo"><span>${o.missao === 'saque' ? '💰 Saquear' : p.dono === 'jogador' || emPaz ? '🚶 Mover para' : '⚔️ Atacar'} ${p.nome}</span><span class="dono" style="color:${FACCOES[p.dono].cor}">${quem}</span></div>
+            <div class="info">${p.dono === 'jogador' ? 'Província sua.' : emPaz ? `Território de ${quem}, com quem você está em ${G.rel[p.dono].estado === 'paz' ? 'paz' : 'aliança'}: a tropa só passa, sem lutar.` : defVis === null ? 'Defesa: <b>desconhecida</b> (mande um espião).' : `Defesa: <b>${defVis}</b> soldados (${composicao(exParadosEm(p.id, p.dono).flatMap(x => x.s)) || 'ninguém'}) · trincheira ${Math.round(p.trinch)}%${p.obras.forte ? ' · forte (+25%)' : ''}${p.capital ? ' · capital (+25%)' : ''}.`}
             Chega em ~${o.seg}s${o.rota.length > 1 ? ', passando por ' + o.rota.slice(0, -1).map(id => G.prov[id].nome).join(', ') : ''}.</div>
             ${e.rota.length ? `<div class="info">Vão os ${e.s.length} soldados (a tropa já está em marcha).</div>` : `<div class="seletor">Soldados: <button class="passo" onclick="G.pendente.qtd=Math.max(1,G.pendente.qtd-1);renderPainel()">−</button><b>${o.qtd}</b><button class="passo" onclick="G.pendente.qtd=Math.min(${e.s.length},G.pendente.qtd+1);renderPainel()">+</button><button class="passo" style="width:auto;padding:0 8px;font-size:12px" onclick="G.pendente.qtd=${e.s.length};renderPainel()">todos</button><span class="info">ficam ${e.s.length - o.qtd}</span></div>`}
             <div class="acoes">${botao('✔ Confirmar', '', 'confirmarOrdem()', { forte: true })}${botao('✖ Cancelar', '', 'G.pendente=null;renderPainel()')}</div>`;
@@ -733,14 +822,18 @@ function renderPainel() {
         const p = G.prov[e.prov], fome = e.s.filter(s => s.fome >= 50).length, cans = e.s.filter(s => s.cansaco >= 40).length;
         html = `<div class="titulo"><span>🪖 Exército · ${e.s.length} soldados</span><span class="dono" style="color:${FACCOES.jogador.cor}">${e.rota.length ? (e.missao === 'saque' ? 'saqueando' : e.missao === 'voltar' ? 'voltando' : 'em marcha') : 'em ' + p.nome}</span></div>
             <div class="soldados">${e.s.map(s => `<span class="sd" title="${s.nome}" style="background:${corFome(s)}"></span>`).join('')}</div>
-            <div class="info">${fome ? `<b style="color:#e3b04b">${fome} com fome</b>` : 'tropa alimentada'}${cans ? ` · ${cans} cansados` : ''} · força ${forca(e.s).toFixed(1)}${e.rota.length ? ` · indo para ${G.prov[e.rota[e.rota.length - 1]].nome}` : ''}</div>`;
+            <div class="info">${composicao(e.s)} · ${fome ? `<b style="color:#e3b04b">${fome} com fome</b>` : 'tropa alimentada'}${cans ? ` · ${cans} cansados` : ''} · força ${forca(e.s).toFixed(1)}${e.rota.length ? ` · indo para ${G.prov[e.rota[e.rota.length - 1]].nome}` : ''}
+            ${e.semSuprimento ? '<br><b style="color:#ff9f43">⚠ Sem suprimento: longe do seu território a tropa não come.</b>' : ''}
+            <br>🎖 ${e.general && GENERAIS.find(g => g.id === e.general) ? `${GENERAIS.find(g => g.id === e.general).nome} (${GENERAIS.find(g => g.id === e.general).txt})` : e.general ? 'general do país (+12%)' : 'sem general'}</div>`;
         html += e.rota.length ? `<div class="acoes">${botao('↪ Mudar destino', 'depois toque no novo destino', `escolherDestino('${e.id}','ataque')`, { forte: true })}${botao('✋ Parar', 'na próxima província', `cancelarMarcha('${e.id}')`)}</div>`
-            : `<div class="acoes">${botao('🚶 Mover / ⚔️ Atacar', 'toque no destino: sua província ou inimiga', `escolherDestino('${e.id}','ataque')`, { forte: true })}${botao('💰 Saquear', `rouba ${Math.round(C.SAQUE_PARTE * 100)}% das moedas e volta`, `escolherDestino('${e.id}','saque')`)}</div>`;
+            : `<div class="acoes">${botao('🚶 Mover / ⚔️ Atacar', 'toque no destino: sua província ou inimiga', `escolherDestino('${e.id}','ataque')`, { forte: true })}${botao('💰 Saquear', `rouba ${Math.round(C.SAQUE_PARTE * 100)}% das moedas e volta`, `escolherDestino('${e.id}','saque')`)}${botao('🎖 General', e.general ? 'trocar' : 'designar', `G.sel={tipo:'escolherGeneral',id:'${e.id}'};renderPainel()`)}</div>`;
     } else if (G.sel && G.sel.tipo === 'prov') {
         const p = G.prov[G.sel.id], f = G.fac.jogador, vis = provVisivel(p.id), cor = FACCOES[p.dono].cor;
         const pr = C.PROD[p.tipo];
         html = `<div class="titulo"><span>${p.nome}</span><span class="dono" style="color:${cor}">${p.dono === 'jogador' ? 'SUA' : FACCOES[p.dono].nome.toUpperCase()}${p.dono !== 'jogador' && p.dono !== 'neutro' ? ' · ' + FACCOES[p.dono].perso : ''}</span></div>
-            <div class="info">${TIPO_TXT[p.tipo]} · produz ${pr.comida ? pr.comida + '🍞 ' : ''}${pr.mun ? pr.mun + '🔫 ' : ''}${pr.moedas ? pr.moedas + '🪙' : ''} a cada ${C.CICLO}s${vis ? ` · trincheira ${Math.round(p.trinch)}%` : ''}<br>`;
+            <div class="info">${TIPO_TXT[p.tipo]} · produz ${pr.comida ? pr.comida + '🍞 ' : ''}${pr.mun ? pr.mun + '🔫 ' : ''}${pr.moedas ? pr.moedas + '🪙' : ''} a cada ${C.CICLO}s${vis ? ` · trincheira ${Math.round(p.trinch)}%` : ''}
+            ${p.dono !== 'neutro' && (p.dono === 'jogador' || vis) ? `<br>Moral <b style="color:${p.moral < 35 ? '#ff8a7a' : p.moral < 60 ? '#e3b04b' : '#9fd08f'}">${Math.round(p.moral)}%</b>${p.dono === 'jogador' && p.moral < 35 && !p.capital ? ' ⚠ risco de revolta: deixe 3 soldados aqui ou construa um forte' : ''} · produz ${Math.round(fatorMoral(p) * 100)}%` : ''}
+            ${Object.keys(p.obras).filter(o => p.obras[o]).length || p.obra ? `<br>${Object.keys(p.obras).filter(o => p.obras[o]).map(o => OBRAS[o].icone + ' ' + OBRAS[o].nome).join(' · ')}${p.obra ? ` · 🏗 ${OBRAS[p.obra.id].nome} (${Math.ceil(p.obra.resta)}s)` : ''}` : ''}<br>`;
         if (vis) {
             const aqui = G.ex.filter(e => e.prov === p.id && !e.rota.length);
             html += aqui.length ? aqui.map(e => `<span style="color:${FACCOES[e.dono].cor}">${FACCOES[e.dono].nome}: ${e.s.length} soldados</span>`).join(' · ') : 'Ninguém defendendo.';
@@ -751,19 +844,20 @@ function renderPainel() {
         html += '</div><div class="acoes">';
         if (p.dono === 'jogador') {
             const meu = exParadosEm(p.id, 'jogador')[0];
-            const c5 = custoVarios('jogador', 5);
-            html += botao('🪖 Recrutar 1', `${custoRecrutar('jogador')} 🪙`, `recrutar('${p.id}');renderPainel()`, { off: f.moedas < custoRecrutar('jogador') });
-            html += botao('🪖 Recrutar 5', `${c5} 🪙 (cada um fica mais caro)`, `recrutar('${p.id}',5);renderPainel()`, { off: f.moedas < c5 });
+            html += botao('🪖 Recrutar 1', `infantaria · ${custoRecrutar('jogador')} 🪙`, `recrutar('${p.id}');renderPainel()`, { off: f.moedas < custoRecrutar('jogador') });
+            html += botao('🪖 Recrutar…', 'escolher tipo e quantidade', `G.sel={tipo:'recrutar',id:'${p.id}'};renderPainel()`);
+            html += botao('🏗 Obras', p.obra ? `${OBRAS[p.obra.id].nome}: ${Math.ceil(p.obra.resta)}s` : 'forte, ferrovia, fábrica, hospital', `G.sel={tipo:'obras',id:'${p.id}'};renderPainel()`);
             html += botao('🛡 Fortificar', `${C.FORTIFICAR} 🪙 · +${C.FORT_GANHO}% de trincheira`, `fortificar('${p.id}');renderPainel()`, { off: f.moedas < C.FORTIFICAR || p.trinch >= 100 });
             if (meu) html += botao('🪖 Exército daqui', `${meu.s.length} soldados · mover`, `G.sel={tipo:'ex',id:'${meu.id}'};renderPainel()`);
             // trazer tropa de outra província sua (as mais perto primeiro)
             exDe('jogador').filter(e => parado(e) && e.prov !== p.id).map(e => ({ e, c: rotaPara(e, p.id) })).filter(o => o.c).sort((a, b) => a.c.dist - b.c.dist).slice(0, 2)
-                .forEach(o => { html += botao(`🚶 Trazer ${o.e.s.length}`, `de ${G.prov[o.e.prov].nome} · ~${Math.ceil(o.c.dist / C.VEL)}s`, `prepararOrdem('${o.e.id}','${p.id}','mover')`); });
+                .forEach(o => { html += botao(`🚶 Trazer ${o.e.s.length}`, `de ${G.prov[o.e.prov].nome} · ~${Math.ceil(o.c.dist / velEx(o.e))}s`, `prepararOrdem('${o.e.id}','${p.id}','mover')`); });
         } else {
-            html += botao('👁 Espião', `${C.ESPIAO} 🪙 · viaja e só observa`, `espionar('${p.id}');renderPainel()`, { off: f.moedas < C.ESPIAO || G.espioes.length >= C.ESPIAO_MAX });
+            html += botao('👁 Espião', `${custoEspiao()} 🪙 · viaja e só observa`, `espionar('${p.id}');renderPainel()`, { off: f.moedas < custoEspiao() || G.espioes.length >= C.ESPIAO_MAX });
+            if (p.dono !== 'neutro') html += botao('🤝 Diplomacia', DIPLO_TXT[G.rel[p.dono].estado], `G.sel={tipo:'diplo'};renderPainel()`);
             // atalho: atacar com um dos seus exércitos parados (o mais perto primeiro)
             exDe('jogador').filter(parado).map(e => ({ e, c: rotaPara(e, p.id) })).filter(o => o.c).sort((a, b) => a.c.dist - b.c.dist).slice(0, 3)
-                .forEach(o => { html += botao(`⚔️ Atacar com ${o.e.s.length}`, `de ${G.prov[o.e.prov].nome} · ~${Math.ceil(o.c.dist / C.VEL)}s`, `prepararOrdem('${o.e.id}','${p.id}','ataque')`, { forte: true }); });
+                .forEach(o => { html += botao(`${emGuerra('jogador', p.dono) ? '⚔️ Atacar' : '🚶 Mover'} com ${o.e.s.length}`, `de ${G.prov[o.e.prov].nome} · ~${Math.ceil(o.c.dist / velEx(o.e))}s`, `prepararOrdem('${o.e.id}','${p.id}','ataque')`, { forte: emGuerra('jogador', p.dono) }); });
         }
         html += '</div>';
     }
@@ -861,6 +955,29 @@ function desenharBatalha() {
     });
 }
 function desenharGente(x, y, amigo, s, cor, andando) {
+    const tipo = s.tipo || 'inf', tinta = amigo ? '#9fd08f' : cor;
+    if (tipo === 'art' || tipo === 'cav' || tipo === 'blind') { // canhão, cavalo e blindado em desenho simples
+        cxB.save(); cxB.translate(x, y); cxB.lineWidth = 1.4; cxB.strokeStyle = tinta; cxB.fillStyle = amigo ? '#25331f' : '#2a0f10';
+        if (tipo === 'art') {
+            cxB.beginPath(); cxB.arc(-5, -6, 6, 0, Math.PI * 2); cxB.fill(); cxB.stroke();
+            cxB.beginPath(); cxB.moveTo(-5, -8); cxB.lineTo(14, amigo ? -22 : -2); cxB.lineWidth = 4; cxB.stroke(); cxB.lineWidth = 1.4;
+            cxB.beginPath(); cxB.moveTo(-10, -2); cxB.lineTo(-18, 2); cxB.stroke();
+        } else if (tipo === 'cav') {
+            cxB.beginPath(); cxB.ellipse(0, -10, 10, 5, 0, 0, Math.PI * 2); cxB.fill(); cxB.stroke();
+            [-7, -3, 4, 8].forEach(k => { cxB.beginPath(); cxB.moveTo(k, -6); cxB.lineTo(k + (andando ? Math.sin(Date.now() / 90 + k) * 2 : 0), 0); cxB.stroke(); });
+            cxB.beginPath(); cxB.moveTo(9, -12); cxB.lineTo(14, -18); cxB.lineTo(16, -15); cxB.stroke();
+            cxB.beginPath(); cxB.arc(0, -21, 3, 0, Math.PI * 2); cxB.fill(); cxB.stroke(); cxB.beginPath(); cxB.moveTo(0, -18); cxB.lineTo(0, -13); cxB.stroke();
+        } else {
+            cxB.fillRect(-13, -14, 26, 10); cxB.strokeRect(-13, -14, 26, 10);
+            cxB.fillRect(-6, -20, 12, 6); cxB.strokeRect(-6, -20, 12, 6);
+            cxB.beginPath(); cxB.moveTo(6, -17); cxB.lineTo(16, amigo ? -24 : -12); cxB.lineWidth = 2.5; cxB.stroke(); cxB.lineWidth = 1.4;
+            [-9, -3, 3, 9].forEach(k => { cxB.beginPath(); cxB.arc(k, -2, 2.6, 0, Math.PI * 2); cxB.stroke(); });
+        }
+        cxB.restore();
+        cxB.fillStyle = corFome(s); cxB.beginPath(); cxB.arc(x, y - 30, 2.5, 0, Math.PI * 2); cxB.fill();
+        return;
+    }
+    if (tipo === 'metr') { cxB.strokeStyle = tinta; cxB.lineWidth = 2; cxB.beginPath(); cxB.moveTo(x - 9, y - 1); cxB.lineTo(x - 3, y - 8); cxB.lineTo(x + 3, y - 1); cxB.stroke(); cxB.lineWidth = 3; cxB.beginPath(); cxB.moveTo(x - 3, y - 9); cxB.lineTo(x + 12, y - 11); cxB.stroke(); }
     if (amigo) {
         const spr = andando ? 'andando' : 'mira', d = SPRITES[spr], im = IMG[spr], F = 0.16;
         if (im.complete && im.naturalWidth) cxB.drawImage(im, x - d.ax * F, y - d.ay * F, d.w * F, d.h * F);
@@ -880,7 +997,7 @@ function atualizarTopo() {
     const pl = placar(); document.getElementById('rProv').querySelector('b').textContent = `${pl.jogador || 0}/${Object.keys(G.prov).length}`;
     const resta = Math.max(0, G.fase.tempo - G.t);
     document.getElementById('relogio').textContent = `⏰ ${String(Math.floor(resta / 60)).padStart(2, '0')}:${String(Math.floor(resta % 60)).padStart(2, '0')}`;
-    document.getElementById('fase').textContent = `FASE ${G.fase.n} · ${G.fase.nome.toUpperCase()}`;
+    document.getElementById('fase').textContent = `${G.fase.n}· ${G.fase.nome.toUpperCase()}`;
     document.getElementById('bVelMapa').textContent = G.velocidade === 1 ? '1×' : '2×';
     const bp = document.getElementById('bPausa'); bp.textContent = G.pausado ? '▶' : '⏸'; bp.classList.toggle('on', !!G.pausado);
     document.getElementById('faixaPausa').style.display = G.pausado && !G.fim ? 'block' : 'none';
@@ -898,37 +1015,55 @@ function comecarFase(n) { apagarSalvamento(); novoJogo(n); G.semSalvar = false; 
 function continuarPartida() { if (carregarPartida()) { esconderTela(); renderPainel(); } else mostrarInicio(); }
 function pausar(v) { if (!G || G.fim) return; G.pausado = v === undefined ? !G.pausado : v; if (G.pausado) salvarPartida(); atualizarTopo(); }
 function mostrarInicio() {
-    const lib = lerFase(), sv = lerSalvamento();
+    const sv = lerSalvamento(), m = lerMeta(), tot = totalEstrelas(m);
     const continuar = sv ? `<button class="grande" onclick="continuarPartida()">▶ CONTINUAR · FASE ${sv.fase} (${String(Math.floor(sv.t / 60)).padStart(2, '0')}:${String(Math.floor(sv.t % 60)).padStart(2, '0')} jogados)</button>` : '';
+    const estrelas = (n) => '★'.repeat(n) + '☆'.repeat(3 - n);
+    const fases = CAPITULOS.map((nome, c) => `<div class="capitulo">${nome}</div>` + FASES.filter(F => F.cap === c).map(F => {
+        const lib = faseLiberada(F.n), est = m.estrelas[F.n] || 0;
+        return `<button class="fase${lib ? '' : ' trancada'}" ${lib ? '' : 'disabled'} onclick="comecarFase(${F.n})"><b>Fase ${F.n} · ${F.nome}</b><span class="estrelas">${lib ? estrelas(est) : '🔒'}</span>
+            <small>${lib ? `${F.bots.length} inimigos · ${Math.round(F.tempo / 60)} min${F.regraTxt ? ' · ' + F.regraTxt : ''}<br>★★★ ${OBJETIVOS[F.objetivo].txt}` : 'vença a fase anterior'}</small></button>`;
+    }).join('')).join('');
     mostrarTela(`<h2>🗺️ CONQUISTA · CAMPANHA</h2>${continuar}
-        <div class="sub">Você comanda um país pequeno no sul do mapa. Em volta, países de bots com personalidades diferentes e terras livres com milícia. Todos lutam contra todos.</div>
-        <div class="lista">🪖 <b>Exércitos:</b> toque num exército seu (quadrado verde), depois em <b>Mover / atacar</b> e no destino. Você escolhe quantos soldados vão.<br>
+        <div class="sub">Você comanda um país pequeno. Em volta, países de bots com personalidades diferentes e terras livres com milícia. Os bots brigam entre si; com você, dá para negociar.</div>
+        <details class="regras"><summary>Como jogar</summary><div class="lista">🪖 <b>Exércitos:</b> toque num exército seu, em <b>Mover / Atacar</b> e no destino. Você escolhe quantos vão.<br>
+        🐎 <b>Tropas:</b> infantaria, metralhadora (segura a trincheira), artilharia (fura trincheira), cavalaria (rápida) e blindado. As 4 últimas saem da 🔬 pesquisa.<br>
         🏴 Entrar em província sem defesa conquista. Com defesa, tem batalha de até 2 minutos.<br>
-        🍞 Todo soldado come. Sem comida, luta pior e adoece.<br>
-        🪖 Recrute em qualquer província sua (1 ou 5 de uma vez) e mova a tropa livremente pelo seu território.<br>
-        🏘 Cidades e a capital dão moedas. Campos dão comida, morros e florestas dão munição.<br>
-        👁 <b>Espião:</b> viaja até a província e só observa: mostra tropas, tesouro e quem o dono está atacando.<br>
-        💰 <b>Saque:</b> rouba ${Math.round(C.SAQUE_PARTE * 100)}% das moedas do dono e volta para casa.<br>
-        ★ Vence quem tomar todas as capitais inimigas, ou quem tiver mais províncias quando o tempo acabar. Se perder a sua capital, acabou.<br>
-        🖐 Arraste o mapa; use dois dedos (ou ＋ －) para o zoom. ⏩ 2× acelera o mapa. ⏸ pausa (dá para dar ordens pausado).<br>
-        💾 A partida salva sozinha neste aparelho: dá para sair e continuar depois.</div>
+        🍞 Todo soldado come. Longe do seu território a tropa fica <b>sem suprimento</b> e passa fome.<br>
+        😠 <b>Moral:</b> província longe da capital, recém-conquistada ou com inimigo perto produz menos e pode se revoltar. Deixe tropa lá ou construa um forte.<br>
+        🏗 <b>Obras:</b> forte, ferrovia, fábrica e hospital, em qualquer província sua.<br>
+        🤝 <b>Diplomacia:</b> paz com tributo e aliança com os bots. Cuidado: alguns traem.<br>
+        🎖 <b>Generais:</b> dão bônus ao exército, sobem de nível e ficam com você entre as fases. Novos generais saem com as estrelas.<br>
+        👁 <b>Espião:</b> viaja e só observa. 💰 <b>Saque:</b> rouba ${Math.round(C.SAQUE_PARTE * 100)}% das moedas e volta.<br>
+        ★ Vence quem tomar todas as capitais, ou quem tiver mais províncias quando o tempo acabar. Perder a sua capital é derrota.<br>
+        ⭐ Estrelas: ★ vencer · ★★ tomar as capitais usando até 70% do tempo · ★★★ objetivo da fase.<br>
+        🖐 Arraste o mapa; dois dedos (ou ＋ －) dão zoom. ⏸ pausa (dá para dar ordens pausado). 💾 Salva sozinho.</div></details>
         ${sv ? '<div class="sub" style="margin-top:8px">Começar uma fase nova apaga a partida salva.</div>' : ''}
-        ${FASES.map(F => `<button class="fase${F.n > lib ? ' trancada' : ''}" ${F.n > lib ? 'disabled' : ''} onclick="comecarFase(${F.n})"><b>Fase ${F.n} · ${F.nome}</b><small>${F.n > lib ? '🔒 vença a fase anterior' : `${F.bots.length} inimigos · ${Math.round(F.tempo / 60)} minutos${F.capitalForte ? ' · capital fortificada' : ''}`}</small></button>`).join('')}
+        <div class="sub" style="margin-top:8px">⭐ ${tot} estrelas · 🎖 ${generaisLiberados().length} de ${GENERAIS.length} generais</div>
+        ${fases}
         ${botaoMenu()}`);
 }
 function mostrarFim() {
     apagarSalvamento();
-    som(G.fim === 'vitoria' || G.fim === 'pontos' ? 'vitoria' : 'derrota');
+    const venceu = G.fim === 'vitoria' || G.fim === 'pontos';
+    som(venceu ? 'vitoria' : 'derrota');
+    const est = calcularEstrelas(), antes = lerMeta(), totAntes = totalEstrelas(antes), genAntes = generaisLiberados().length;
+    guardarProgresso(est);
+    const novosGen = generaisLiberados().slice(genAntes);
     const pl = placar(), F = G.fase, mm = Math.floor(G.t / 60), ss = String(Math.floor(G.t % 60)).padStart(2, '0');
-    const proxima = F.n < FASES.length && (G.fim === 'vitoria' || G.fim === 'pontos');
+    const proxima = F.n < FASES.length && venceu;
     const titulo = { vitoria: `🏆 FASE ${F.n} VENCIDA!`, pontos: '🏆 VITÓRIA POR TERRITÓRIO', tempo: '⏰ O TEMPO ACABOU', derrota: '✝ SUA CAPITAL CAIU' }[G.fim];
     const texto = G.fim === 'vitoria' ? `Todas as capitais inimigas tomadas em ${mm}:${ss}.`
         : G.fim === 'pontos' ? `O tempo acabou e você tem mais províncias que qualquer inimigo (${pl.jogador || 0}).`
         : G.fim === 'tempo' ? `Você terminou com ${pl.jogador || 0} províncias, menos que o maior inimigo. Para vencer: tome as capitais, ou tenha mais terra quando o tempo acabar.`
         : `Você resistiu ${mm}:${ss} e chegou a ter ${pl.jogador || 0} províncias.`;
-    mostrarTela(`<h2>${titulo}</h2><div class="sub">${texto}</div>
+    const linhas = venceu ? `<div class="lista">${est >= 1 ? '★' : '☆'} vencer<br>${est >= 2 && G.fim === 'vitoria' && G.t <= F.tempo * 0.7 ? '★' : '☆'} tomar as capitais em até ${Math.round(F.tempo * 0.7 / 60)} min<br>${OBJETIVOS[F.objetivo].ok() ? '★' : '☆'} ${OBJETIVOS[F.objetivo].txt}</div>` : '';
+    const xp = Object.entries(G.genXp || {}).filter(([, v]) => v).map(([id, v]) => `${GENERAIS.find(g => g.id === id).nome} +${v}`).join(' · ');
+    mostrarTela(`<h2>${titulo}</h2><div class="estrelas-grandes">${venceu ? '★'.repeat(est) + '☆'.repeat(3 - est) : ''}</div><div class="sub">${texto}</div>${linhas}
+        ${xp ? `<div class="sub" style="margin-top:6px">🎖 Experiência: ${xp}</div>` : ''}
+        ${novosGen.map(g => `<div class="sub" style="margin-top:6px;color:#ffd28a">🎖 Novo general liberado: <b>${g.nome}</b> (${g.txt}).</div>`).join('')}
+        ${totalEstrelas(lerMeta()) > totAntes ? `<div class="sub" style="margin-top:6px">⭐ Total na campanha: ${totalEstrelas(lerMeta())} estrelas.</div>` : ''}
         ${proxima ? `<button class="grande" onclick="comecarFase(${F.n + 1})">FASE ${F.n + 1}: ${FASES[F.n].nome.toUpperCase()} ▶</button>` : ''}
-        ${F.n === FASES.length && G.fim !== 'derrota' && G.fim !== 'tempo' ? '<div class="sub" style="margin-top:10px">🎖 Campanha completa! Em breve: Conquista online.</div>' : ''}
+        ${F.n === FASES.length && venceu ? '<div class="sub" style="margin-top:10px">🎖 Campanha completa!</div>' : ''}
         <button class="grande${proxima ? ' secundaria' : ''}" onclick="comecarFase(${F.n})">JOGAR A FASE ${F.n} DE NOVO</button>
         <button class="grande secundaria" onclick="mostrarInicio()">ESCOLHER FASE</button>${botaoMenu()}`);
 }
@@ -1019,7 +1154,7 @@ function laco(agora) {
             b.efeitos.forEach(f => f.vida -= dt); b.efeitos = b.efeitos.filter(f => f.vida > 0);
             desenharBatalha(); atualizarBatalhaUI();
             if (b.terminou && !b.fechando) { b.fechando = true; setTimeout(fecharBatalha, 1900); }
-        } else passoMapa(dt * G.velocidade);
+        } else if (G.cliente) { if (typeof passoCliente === 'function') passoCliente(dt); } else passoMapa(dt * G.velocidade);
     }
     if (G && G.batalha && G.pausado) desenharBatalha(); // pausada: a cena fica parada na tela
     if (G) { desenharMapa(); atualizarTopo(); }

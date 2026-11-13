@@ -52,15 +52,47 @@
             wo: (id) => rpc('reivindicar_wo', { p_duelo: id }),
             cancelar: (id) => rpc('cancelar_duelo', { p_duelo: id }),
             async trofeus() { const r = await rpc('meus_trofeus'); return (r && r[0]) || { trofeus: 0, vitorias: 0, derrotas: 0 }; },
+            procurar: (nome) => rpc('procurar_partida', { p_nome: nome }),
+            async temporada() { const r = await rpc('minha_temporada'); return (r && r[0]) || { pontos: 0, vitorias: 0, derrotas: 0, posicao: null, jogadores: 0 }; },
+            ranking: () => rpc('ranking_temporada'),
+            temporadas: () => rpc('minhas_temporadas'),
+            replay: (id) => rpc('replay_publico', { p_duelo: id }),
             async meusDuelos() {
-                const { data, error } = await sb.from('duelos').select('*').in('estado', ['aguardando', 'jogando']).order('atualizado_em', { ascending: false }).limit(5);
+                const { data, error } = await sb.from('duelos').select('*').in('estado', ['aguardando', 'jogando']).order('atualizado_em', { ascending: false }).limit(6);
                 if (error) throw new Error(traduzir(error.message));
-                return data || [];
+                return (data || []).filter(d => !(d.publico && d.estado === 'aguardando')); // a fila não aparece como duelo
             }
         };
     }
-    let API;
-    try { API = window.DUELO_API || criarApiSupabase(); } catch (e) { $app.innerHTML = `<div class="espera"><div class="icone">📡</div><div class="sub">${esc(e.message)}</div></div>`; return; }
+    let API, API_REAL;
+    try { API = API_REAL = window.DUELO_API || criarApiSupabase(); } catch (e) { $app.innerHTML = `<div class="espera"><div class="icone">📡</div><div class="sub">${esc(e.message)}</div></div>`; return; }
+    const FILA_BOT = window.DUELO_FILA_BOT || 40;   // segundos na fila até cair no bot de treino
+    // Ligas pela pontuação da temporada (mês): +3 por vitória, -1 por derrota
+    const LIGAS = [{ nome: 'Bronze', min: 0, icone: '🥉' }, { nome: 'Prata', min: 15, icone: '🥈' }, { nome: 'Ouro', min: 40, icone: '🥇' }, { nome: 'Platina', min: 90, icone: '💠' }, { nome: 'Diamante', min: 160, icone: '💎' }];
+    const ligaDe = (pts) => LIGAS.filter(l => pts >= l.min).pop();
+    const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+
+    // ---------- Bot de treino: um "servidor" só no aparelho, sem troféus ----------
+    function apiDoBot() {
+        const sem = Math.floor(Math.random() * 2000000000), nomes = ['Sgt. Ferro', 'Cabo Prado', 'Ten. Duarte', 'Cap. Viana', 'Sgt. Moura'];
+        const d = { id: 'bot-' + Date.now(), codigo: 'TREINO', semente: sem, jogador_a: eu.id, nome_a: meuNome, jogador_b: 'bot', nome_b: '🤖 ' + nomes[sem % nomes.length], rodada: 1, estado: 'jogando', vencedor: null, wo: false, bot: true };
+        const planos = [];
+        const completas = () => { const l = []; for (let r = 1; ; r++) { const a = planos.find(p => p.rodada === r && p.jogador === eu.id), b = planos.find(p => p.rodada === r && p.jogador === 'bot'); if (!a || !b) break; l.push({ A: a.plano, B: b.plano }); } return l; };
+        return Object.assign(Object.create(API_REAL), {
+            bot: true,
+            async buscar() { return { duelo: { ...d }, planos: planos.map(p => ({ ...p })) }; },
+            async enviar(id, rodada, plano) {
+                if (planos.some(p => p.rodada === rodada && p.jogador === eu.id)) return;
+                const antes = M.estadoDoDuelo(sem, completas()), ultA = antes.rodadas.length ? antes.rodadas[antes.rodadas.length - 1].planoA : null;
+                planos.push({ rodada, jogador: 'bot', plano: M.planoDoBot(antes.B, rodada, ultA, sem) }); // o bot decide sem ver o seu plano
+                planos.push({ rodada, jogador: eu.id, plano }); d.rodada = rodada + 1;
+            },
+            async status() { return { eu: true, adversario: true }; },
+            async informar(id, venc) { d.estado = 'fim'; d.vencedor = venc; return { ...d }; },
+            async wo() { return { ...d }; },
+            async cancelar() { d.estado = 'cancelado'; }
+        });
+    }
 
     // ---------- Estado da página ----------
     let eu = null;            // usuário logado
@@ -89,6 +121,8 @@
 
     // ---------- Início ----------
     async function iniciar() {
+        const replay = new URLSearchParams(location.search).get('replay');
+        if (replay) return telaReplayPublico(replay);
         try { eu = await API.usuario(); } catch (e) { eu = null; }
         if (!eu) return telaLogin();
         meuNome = nomeDoUsuario(eu);
@@ -122,18 +156,30 @@
 
     // ---------- Lobby ----------
     async function telaLobby(msg) {
-        pararTudo(); tela = 'lobby'; duelo = null;
-        let t = { trofeus: 0, vitorias: 0, derrotas: 0 }, ativos = [];
+        pararTudo(); tela = 'lobby'; duelo = null; API = API_REAL;
+        let t = { trofeus: 0, vitorias: 0, derrotas: 0 }, ativos = [], temp = { pontos: 0, vitorias: 0, derrotas: 0, posicao: null, jogadores: 0 }, passadas = [];
         try { [t, ativos] = await Promise.all([API.trofeus(), API.meusDuelos()]); } catch (e) { msg = msg || e.message; }
+        try { [temp, passadas] = await Promise.all([API.temporada ? API.temporada() : temp, API.temporadas ? API.temporadas() : []]); } catch (e) {}
+        const liga = ligaDe(temp.pontos || 0), prox = LIGAS[LIGAS.indexOf(liga) + 1];
+        const agora = new Date(), fimMes = new Date(agora.getFullYear(), agora.getMonth() + 1, 1), dias = Math.max(1, Math.ceil((fimMes - agora) / 86400000));
+        const medalhas = (passadas || []).filter(x => x.pontos > 0).map(x => { const l = ligaDe(x.pontos), m = new Date(x.mes + 'T12:00:00'); return `<span class="medalha" title="${l.nome}">${l.icone} ${MESES[m.getMonth()].slice(0, 3)}</span>`; }).join('');
         const lista = ativos.map(d => {
             const adv = d.jogador_a === eu.id ? (d.nome_b || 'esperando amigo') : d.nome_a;
             return `<button class="secundario" data-id="${esc(d.id)}">${d.estado === 'aguardando' ? '⏳' : '⚔️'} ${esc(d.codigo)} · contra ${esc(adv)} · rodada ${d.rodada}</button>`;
         }).join('');
         mostrar(`<div class="topoLinha"><h1>⚔️ TRINCHEIRAS ONLINE</h1><a class="voltar" href="${linkDoJogo()}">← modos</a></div>
-            <div class="sub">Você contra um amigo, melhor de 5. A cada rodada, 1 minuto para montar a defesa e o ataque em segredo. Quando os dois dão OK, a batalha acontece. Quem vencer o duelo ganha <b>3 troféus</b>.</div>
-            <div class="caixa topoLinha"><div><div class="sub">Comandante</div><b>${esc(meuNome)}</b></div><div style="text-align:right"><div class="trofeus">🏆 ${t.trofeus}</div><div class="sub">${t.vitorias} vitórias · ${t.derrotas} derrotas</div></div></div>
+            <div class="sub">Duelo 1×1, melhor de 5: contra alguém da fila, um amigo ou o bot. A cada rodada, 1 minuto para montar a defesa e o ataque em segredo; quando os dois dão OK, a batalha acontece. Vitória: <b>3 troféus</b> e +3 pontos na temporada.</div>
+            <div class="caixa topoLinha"><div><div class="sub">Comandante</div><b>${esc(meuNome)}</b></div><div style="text-align:right"><div class="trofeus">🏆 ${t.trofeus}</div><div class="sub">${t.vitorias} vitória${t.vitorias === 1 ? '' : 's'} · ${t.derrotas} derrota${t.derrotas === 1 ? '' : 's'}</div></div></div>
+            <div class="caixa liga"><div class="topoLinha"><div><div class="sub">Temporada de ${MESES[agora.getMonth()]} · acaba em ${dias} dia${dias > 1 ? 's' : ''}</div><b class="nomeLiga">${liga.icone} Liga ${liga.nome}</b></div>
+                <div style="text-align:right"><div class="trofeus">${temp.pontos || 0}</div><div class="sub">pontos${temp.posicao ? ` · ${temp.posicao}º de ${temp.jogadores}` : ''}</div></div></div>
+                <div class="tempo"><div style="width:${prox ? Math.min(100, 100 * ((temp.pontos || 0) - liga.min) / (prox.min - liga.min)) : 100}%"></div></div>
+                <div class="sub" style="font-size:11px;margin-top:4px">${prox ? `Faltam ${prox.min - (temp.pontos || 0)} pontos para ${prox.icone} ${prox.nome}.` : 'Liga máxima!'} Vitória +3, derrota −1. No fim do mês você ganha a medalha da liga em que ficou.</div>
+                ${medalhas ? `<div class="medalhas">${medalhas}</div>` : ''}
+                <button class="secundario" id="bRanking">🏆 Ranking da temporada</button></div>
             <div class="erro">${esc(msg || '')}</div>
-            <button class="grande" id="bNovo">DESAFIAR UM AMIGO</button>
+            <button class="grande" id="bFila">⚔️ JOGAR AGORA<small style="display:block;font-size:11px;font-weight:400;margin-top:2px">contra um adversário de qualquer lugar</small></button>
+            <button class="secundario" id="bNovo">👥 Desafiar um amigo (código)</button>
+            <button class="secundario" id="bTreino">🤖 Treinar contra o bot (não vale pontos)</button>
             <div class="caixa"><div class="sub">Recebeu um código?</div>
                 <input id="cod" class="campo" maxlength="5" placeholder="Código (ex.: K7Q2X)" style="text-transform:uppercase;letter-spacing:4px">
                 <button class="secundario" id="bEntrarCod">Entrar no duelo</button></div>
@@ -144,8 +190,49 @@
             try { duelo = await API.criar(meuNome); telaSala(); } catch (e) { telaLobby(e.message); }
         };
         document.getElementById('bEntrarCod').onclick = () => { const c = document.getElementById('cod').value.trim(); if (c) entrarComCodigo(c); };
+        document.getElementById('bFila').onclick = () => telaFila();
+        document.getElementById('bTreino').onclick = () => iniciarBot();
+        document.getElementById('bRanking').onclick = () => telaRanking();
         document.getElementById('bSair').onclick = async () => { await API.sair(); eu = null; telaLogin(); };
         $app.querySelectorAll('button[data-id]').forEach(b => b.onclick = async () => { try { await abrirDuelo(b.dataset.id); } catch (e) { telaLobby(e.message); } });
+    }
+    // ---------- Fila: adversário de qualquer lugar; ninguém apareceu → bot de treino ----------
+    async function telaFila() {
+        pararTudo(); tela = 'fila';
+        mostrar(`<h1>📡 PROCURANDO ADVERSÁRIO…</h1><div class="espera"><div class="icone pisca">⚔️</div><div class="sub">Assim que alguém entrar na fila, o duelo começa.</div><div class="trofeus" id="filaSeg">0s</div>
+            <div class="sub" id="filaBot" style="margin-top:6px">Se ninguém aparecer em ${FILA_BOT}s, você treina contra o bot.</div></div>
+            <button class="secundario" id="bBotJa">🤖 Jogar contra o bot agora</button><button class="secundario" id="bSairFila">Sair da fila</button>`);
+        let d;
+        try { d = await API.procurar(meuNome); } catch (e) { return telaLobby(e.message); }
+        duelo = d;
+        if (d.estado === 'jogando') return abrirDuelo(d.id);
+        const ini = Date.now();
+        const sair = async (paraBot) => { clearInterval(timerPoll); timerPoll = null; try { await API.cancelar(d.id); } catch (e) {} paraBot ? iniciarBot() : telaLobby(); };
+        document.getElementById('bSairFila').onclick = () => sair(false);
+        document.getElementById('bBotJa').onclick = () => sair(true);
+        timerPoll = setInterval(async () => {
+            if (tela !== 'fila') return;
+            const seg = Math.floor((Date.now() - ini) / 1000), el = document.getElementById('filaSeg');
+            if (el) el.textContent = seg + 's';
+            try { const r = await API.buscar(d.id); if (r.duelo.estado === 'jogando') { clearInterval(timerPoll); timerPoll = null; duelo = r.duelo; return abrirDuelo(d.id); } } catch (e) {}
+            if (seg >= FILA_BOT) sair(true);
+        }, Math.min(POLL, 1000));
+    }
+    async function iniciarBot() {
+        pararTudo();
+        API = apiDoBot();
+        const r = await API.buscar(); duelo = r.duelo;
+        await abrirDuelo(duelo.id);
+    }
+    async function telaRanking() {
+        pararTudo(); tela = 'ranking';
+        let lista = [];
+        try { lista = await API.ranking(); } catch (e) {}
+        const linhas = (lista || []).map(x => `<div class="item${x.eu ? ' euRank' : ''}"><div class="txt"><b>${x.posicao}º</b> ${esc(x.nome)}<small>${ligaDe(x.pontos).icone} ${ligaDe(x.pontos).nome}</small></div><b>${x.pontos}</b></div>`).join('');
+        mostrar(`<div class="topoLinha"><h1>🏆 RANKING</h1><a class="voltar" href="#" id="bVoltarR">← voltar</a></div>
+            <div class="sub">Os 20 melhores da temporada deste mês (vitória +3, derrota −1).</div>
+            <div class="caixa">${linhas || '<div class="sub">Ninguém pontuou ainda neste mês. Seja o primeiro!</div>'}</div>`);
+        document.getElementById('bVoltarR').onclick = (ev) => { ev.preventDefault(); telaLobby(); };
     }
     async function entrarComCodigo(codigo) {
         try {
@@ -205,7 +292,7 @@
     }
     function decidirTela() {
         if (duelo.estado === 'cancelado') { pararTudo(); return telaLobby('Este duelo foi cancelado.'); }
-        if (duelo.estado === 'aguardando') return souA() ? telaSala() : null;
+        if (duelo.estado === 'aguardando') return souA() && !duelo.publico ? telaSala() : null;
         jogo = M.estadoDoDuelo(duelo.semente, rodadasCompletas());
         const m = mem(duelo.id);
         if (m.vistas < jogo.rodadas.length) return telaReplay(m.vistas);         // tem resultado novo para ver
@@ -223,7 +310,7 @@
         tela = 'plano'; enviando = false;
         const ultimo = jogo.rodadas[jogo.rodadas.length - 1];
         const base = ultimo ? (lado() === 'A' ? ultimo.planoA : ultimo.planoB) : M.planoPadrao();
-        plano = { rodada, escala: base.escala.slice(), postura: base.postura, compras: [], contra: false, ataque: { ...(ultimo ? base.ataque : M.planoPadrao().ataque) } };
+        plano = { rodada, escala: base.escala.slice(), postura: base.postura, compras: [], contra: false, ataque: { ...(ultimo ? base.ataque : M.planoPadrao().ataque) }, doutrina: rodada === 1 ? (mem(duelo.id).doutrina || 'assalto') : undefined };
         // o relógio de 1 minuto conta a partir da primeira vez que esta rodada apareceu (sobrevive a recarregar a página)
         const m = mem(duelo.id);
         if (!m.prazo || m.prazo.rodada !== rodada) { m.prazo = { rodada, inicio: Date.now() }; gravarMem(duelo.id, m); }
@@ -240,13 +327,14 @@
     function desenharPlano() {
         const est = minhaInfo(), r = plano.rodada;
         const okPlano = M.sanitizar(plano, est, r);
-        const cmdUsado = M.custoDefesa(okPlano), orc = M.D.ORCAMENTO(r), gastoAtq = M.custoAtaque(okPlano.ataque);
+        const dout = okPlano.doutrina, cmdUsado = M.custoDefesa(okPlano), orc = M.orcamento(r, dout), gastoAtq = M.custoAtaque(okPlano.ataque, dout);
+        const infoDele = lado() === 'A' ? jogo.B : jogo.A;
         const ultimo = jogo.rodadas[jogo.rodadas.length - 1];
         let intel = '';
         if (ultimo) {
             const ele = lado() === 'A' ? ultimo.planoB : ultimo.planoA;
             const vig = ele.escala.filter(f => f === 'vigia').length;
-            intel = `<div class="intel">🔎 Na rodada passada, ${esc(nomeAdv())} atacou com <b>${ele.ataque.infantaria} infantaria, ${ele.ataque.artilharia} artilharia e ${ele.ataque.blindado} blindado</b>, e defendeu com ${vig} vigias, postura ${({ atacar: 'Atacar', equilibrado: 'Equilíbrio', abrigar: 'Abrigar' })[ele.postura]}${ele.contra ? ' e contra-bateria' : ''}.</div>`;
+            intel = `<div class="intel">${infoDele.doutrina ? `${M.D.DOUTRINAS[infoDele.doutrina].icone} ${esc(nomeAdv())} usa a doutrina <b>${M.D.DOUTRINAS[infoDele.doutrina].nome}</b>. ` : ''}🔎 Na rodada passada, ${esc(nomeAdv())} atacou com <b>${ele.ataque.infantaria} infantaria, ${ele.ataque.artilharia} artilharia e ${ele.ataque.blindado} blindado</b>, e defendeu com ${vig} vigias, postura ${({ atacar: 'Atacar', equilibrado: 'Equilíbrio', abrigar: 'Abrigar' })[ele.postura]}${ele.contra ? ' e contra-bateria' : ''}.</div>`;
         }
         const sold = est.soldados.map((s, i) => `<button class="sold" data-s="${i}" ${s.cond <= 0 ? 'disabled' : ''}>
             <span class="ponto" style="background:${corCond(s.cond)}"></span>
@@ -257,13 +345,16 @@
             return `<div class="item"><div class="txt">${m.nome} ${tem + aqui ? `<b>${tem + aqui}/${m.max}</b>` : ''}<small>${m.desc}</small></div>
                 ${aqui ? `<button class="comprar on" data-desfaz="${id}">✔ ${m.custo}★ (desfazer)</button>` : `<button class="comprar" data-compra="${id}" ${cheio || est.cmd - cmdUsado < m.custo ? 'disabled' : ''}>${cheio ? 'máximo' : m.custo + '★'}</button>`}</div>`;
         }).join('');
-        const atq = Object.entries(M.D.ATAQUE).map(([id, a]) => `<div class="item"><div class="txt">${a.nome} · ${a.custo} pts<small>${a.desc}</small></div>
-            <button class="passo" data-menos="${id}">−</button><span class="qtd">${okPlano.ataque[id]}</span><button class="passo" data-mais="${id}" ${gastoAtq + a.custo > orc || okPlano.ataque[id] >= a.max ? 'disabled' : ''}>+</button></div>`).join('');
+        const atq = Object.entries(M.D.ATAQUE).map(([id, a]) => `<div class="item"><div class="txt">${a.nome} · ${M.custoDe(id, dout)} pts<small>${a.desc}</small></div>
+            <button class="passo" data-menos="${id}">−</button><span class="qtd">${okPlano.ataque[id]}</span><button class="passo" data-mais="${id}" ${gastoAtq + M.custoDe(id, dout) > orc || okPlano.ataque[id] >= M.maxDe(id, dout) ? 'disabled' : ''}>+</button></div>`).join('');
+        const doutrinas = r === 1 ? `<h2>🎖 SUA DOUTRINA <span class="sub">· vale o duelo inteiro</span></h2><div class="linhaBtns">${Object.entries(M.D.DOUTRINAS).map(([id, d]) => `<button class="opc ${dout === id ? 'on' : ''}" data-dout="${id}">${d.icone} ${d.nome}</button>`).join('')}</div>
+            <div class="sub" style="font-size:11px;margin-top:4px">${M.D.DOUTRINAS[dout].desc}. Assalto vence Artilharia, Artilharia vence Fortaleza, Fortaleza vence Assalto.</div>`
+            : (dout ? `<div class="sub" style="margin-top:6px">${M.D.DOUTRINAS[dout].icone} Sua doutrina: <b>${M.D.DOUTRINAS[dout].nome}</b> · ${M.D.DOUTRINAS[dout].desc}</div>` : '');
         mostrar(`<div class="placar"><span>${esc(meuNome)}</span><span><span class="num">${jogo.placar[lado()]}</span>×<span class="num">${jogo.placar[outro()]}</span></span><span>${esc(nomeAdv())}</span></div>
             <div class="topoLinha" style="margin-top:6px"><b>RODADA ${r}/${M.D.RODADAS} · PREPARAR</b><b id="seg">${PRAZO}s</b></div>
             <div class="tempo"><div id="barraTempo" style="width:100%"></div></div>
             <div class="recs"><div class="rec">Munição<b>${Math.round(est.mun)}</b></div><div class="rec">Comando<b>★${est.cmd - cmdUsado}</b></div><div class="rec">Trincheira<b>${Math.round(est.trinch)}%</b></div></div>
-            ${intel}
+            ${intel}${doutrinas}
             <h2>🛡️ SUA DEFESA</h2>
             <div class="esq">${sold}</div>
             <div class="sub" style="font-size:11px;margin-top:4px">Toque para trocar. 🔭 atira e cansa · 🔨 conserta a trincheira · 💤 recupera, protegido.</div>
@@ -282,6 +373,7 @@
         $app.querySelectorAll('[data-mais]').forEach(b => b.onclick = () => { plano.ataque[b.dataset.mais] = (okPlano.ataque[b.dataset.mais] || 0) + 1; desenharPlano(); });
         $app.querySelectorAll('[data-menos]').forEach(b => b.onclick = () => { plano.ataque[b.dataset.menos] = Math.max(0, (okPlano.ataque[b.dataset.menos] || 0) - 1); desenharPlano(); });
         document.getElementById('bContra').onclick = () => { plano.contra = !okPlano.contra; desenharPlano(); };
+        $app.querySelectorAll('[data-dout]').forEach(b => b.onclick = () => { plano.doutrina = b.dataset.dout; const m = mem(duelo.id); m.doutrina = plano.doutrina; gravarMem(duelo.id, m); desenharPlano(); });
         document.getElementById('bOk').onclick = () => enviarPlano(false);
         // mantém o relógio certo logo após redesenhar
         const resta = PRAZO - (Date.now() - mem(duelo.id).prazo.inicio) / 1000;
@@ -427,22 +519,30 @@
             const m = mem(duelo.id);
             if (!m.informado && duelo.estado !== 'fim') { try { duelo = await API.informar(duelo.id, vencedorUid); m.informado = true; gravarMem(duelo.id, m); } catch (e) {} }
         }
-        const venci = vencedorUid === eu.id;
-        let t = null; try { t = await API.trofeus(); } catch (e) {}
+        const venci = vencedorUid === eu.id, treino = !!API.bot;
+        let t = null; if (!treino) try { t = await API.trofeus(); } catch (e) {}
         const pl = jogo ? jogo.placar : { A: 0, B: 0 };
         mostrar(`<div class="espera"><div class="icone">${venci ? '🏆' : '🎖️'}</div>
             <h1 style="text-align:center">${venci ? 'VOCÊ VENCEU O DUELO!' : esc(nomeAdv()).toUpperCase() + ' VENCEU'}</h1>
             <div class="sub">${duelo.wo ? 'Vitória por W.O.: o adversário não deu OK a tempo.' : `Placar final: ${pl[lado()]} × ${pl[outro()]}`}</div>
-            ${venci ? '<div class="trofeus" style="margin-top:10px">+3 troféus</div>' : ''}
+            ${treino ? '<div class="sub" style="margin-top:10px">🤖 Treino contra o bot: não vale troféus nem pontos.</div>' : venci ? '<div class="trofeus" style="margin-top:10px">+3 troféus · +3 pontos na temporada</div>' : '<div class="sub" style="margin-top:10px">−1 ponto na temporada</div>'}
             <div class="sub" id="totalTrofeus" style="margin-top:6px">${t && duelo.estado === 'fim' ? `Você tem 🏆 ${t.trofeus} troféus (${t.vitorias} vitórias)` : ''}</div>
             <div class="sub pisca" id="confirmando" style="margin-top:6px">${duelo.estado !== 'fim' ? 'Confirmando o resultado com o outro celular…' : ''}</div></div>
-            <button class="grande" id="bRevanche">⚔️ REVANCHE</button>
+            <button class="grande" id="bRevanche">${treino ? '🤖 TREINAR DE NOVO' : '⚔️ REVANCHE'}</button>
+            ${treino ? '' : '<button class="secundario" id="bShare">📤 Compartilhar o replay</button><div class="sub" id="shareInfo" style="text-align:center"></div>'}
             <button class="secundario" id="bLobby">Voltar ao lobby</button>
             <a class="voltar" href="${linkDoJogo()}" style="display:block;text-align:center;margin-top:14px">← modos de jogo</a>`);
-        document.getElementById('bRevanche').onclick = async () => { try { duelo = await API.criar(meuNome); tela = ''; telaSala(); } catch (e) { telaLobby(e.message); } };
+        document.getElementById('bRevanche').onclick = async () => { if (treino) return iniciarBot(); try { duelo = await API.criar(meuNome); tela = ''; telaSala(); } catch (e) { telaLobby(e.message); } };
+        const bShare = document.getElementById('bShare');
+        if (bShare) bShare.onclick = async () => {
+            const base = location.protocol.startsWith('http') ? location.origin + '/duelo.html' : location.href.split('?')[0];
+            const url = `${base}?replay=${duelo.id}`, texto = `Veja o meu duelo no FrontLine: ${duelo.nome_a} × ${duelo.nome_b}`;
+            try { if (navigator.share) { await navigator.share({ title: 'Replay do duelo', text: texto, url }); return; } } catch (e) { return; }
+            try { await navigator.clipboard.writeText(url); document.getElementById('shareInfo').textContent = 'Link do replay copiado!'; } catch (e) { document.getElementById('shareInfo').textContent = url; }
+        };
         document.getElementById('bLobby').onclick = () => telaLobby();
         // espera o outro celular confirmar e então mostra o total de troféus já atualizado
-        if (duelo.estado !== 'fim') {
+        if (duelo.estado !== 'fim' && !treino) {
             const id = duelo.id;
             timerPoll = setInterval(async () => {
                 if (tela !== 'fim' || !duelo || duelo.id !== id) return clearInterval(timerPoll);
@@ -457,6 +557,61 @@
                 } catch (e) {}
             }, POLL);
         }
+    }
+
+    // ---------- Replay público: qualquer um com o link assiste ao duelo, rodada por rodada ----------
+    async function telaReplayPublico(id) {
+        pararTudo(); tela = 'replayPublico';
+        let r = null;
+        try { r = await API.replay(id); } catch (e) {}
+        if (!r) { mostrar(`<div class="topoLinha"><h1>🎬 REPLAY</h1><a class="voltar" href="${linkDoJogo()}">← modos</a></div><div class="espera"><div class="icone">🔎</div><div class="sub">Replay não encontrado. O duelo pode ainda não ter terminado.</div></div>`); return; }
+        const lista = [];
+        for (let k = 1; k <= M.D.RODADAS; k++) { const a = r.planos.find(p => p.rodada === k && p.lado === 'A'), b = r.planos.find(p => p.rodada === k && p.lado === 'B'); if (!a || !b) break; lista.push({ A: a.plano, B: b.plano }); }
+        const est = M.estadoDoDuelo(r.semente, lista);
+        const nome = { A: r.nome_a || 'Comandante A', B: r.nome_b || 'Comandante B' };
+        const mostrarRodada = (i) => {
+            if (i >= est.rodadas.length) {
+                const v = r.vencedor || est.vencedor;
+                mostrar(`<div class="topoLinha"><h1>🎬 REPLAY</h1><a class="voltar" href="${linkDoJogo()}">← modos</a></div>
+                    <div class="espera"><div class="icone">🏆</div><h2 style="text-align:center">${esc(nome[v] || '')} venceu</h2><div class="sub">${r.wo ? 'Por W.O.' : `Placar: ${esc(nome.A)} ${est.placar.A} × ${est.placar.B} ${esc(nome.B)}`}</div></div>
+                    <button class="grande" id="bDeNovo">▶ VER DE NOVO</button><a class="grande" style="display:block;text-align:center;text-decoration:none;box-sizing:border-box" href="${location.pathname}">⚔️ JOGAR TRINCHEIRAS ONLINE</a>`);
+                document.getElementById('bDeNovo').onclick = () => mostrarRodada(0);
+                return;
+            }
+            const x = est.rodadas[i];
+            const dA = M.D.DOUTRINAS[est.A.doutrina], dB = M.D.DOUTRINAS[est.B.doutrina];
+            mostrar(`<div class="placar"><span>${esc(nome.A)}${dA ? ' ' + dA.icone : ''}</span><span>RODADA ${x.rodada}</span><span>${dB ? dB.icone + ' ' : ''}${esc(nome.B)}</span></div>
+                <div class="rotCampo"><span>🛡️ TRINCHEIRA DE ${esc(nome.A).toUpperCase()}</span><span id="iA"></span></div><canvas id="cvA" width="800" height="340"></canvas>
+                <div class="rotCampo"><span>🛡️ TRINCHEIRA DE ${esc(nome.B).toUpperCase()}</span><span id="iB"></span></div><canvas id="cvB" width="800" height="340"></canvas>
+                <div id="fimR"></div><button class="secundario" id="bPularR">Pular ⏭</button>`);
+            const prep = M.prepararRodada(x.antesA, x.antesB, x.planoA, x.planoB, x.rodada, r.semente);
+            const ca = document.getElementById('cvA').getContext('2d'), cb = document.getElementById('cvB').getContext('2d');
+            let ult = performance.now(), acc = 0, acabou = false;
+            const fim = () => {
+                if (acabou) return; acabou = true;
+                while (!prep.campoA.terminou || !prep.campoB.terminou) { prep.campoA.passo(); prep.campoB.passo(); }
+                desenharCampo(ca, prep.campoA); desenharCampo(cb, prep.campoB);
+                const pl = { A: 0, B: 0 }; est.rodadas.slice(0, i + 1).forEach(y => { if (y.vencedor) pl[y.vencedor]++; });
+                document.getElementById('bPularR').remove();
+                document.getElementById('fimR').innerHTML = `<div class="caixa"><div class="resultado">${x.vencedor ? 'Rodada de ' + esc(nome[x.vencedor]) : 'Empate na rodada'}</div>
+                    <div class="placar" style="margin-top:6px"><span>${esc(nome.A)}</span><span><span class="num">${pl.A}</span>×<span class="num">${pl.B}</span></span><span>${esc(nome.B)}</span></div></div>
+                    <button class="grande" id="bProxR">${i + 1 < est.rodadas.length ? 'PRÓXIMA RODADA ▶' : 'RESULTADO ▶'}</button>`;
+                document.getElementById('bProxR').onclick = () => mostrarRodada(i + 1);
+            };
+            document.getElementById('bPularR').onclick = fim;
+            const q = (agora) => {
+                if (acabou) return;
+                acc += Math.min(0.25, (agora - ult) / 1000) * 4; ult = agora;
+                while (acc >= M.D.DT && !(prep.campoA.terminou && prep.campoB.terminou)) { prep.campoA.passo(); prep.campoB.passo(); acc -= M.D.DT; }
+                desenharCampo(ca, prep.campoA); desenharCampo(cb, prep.campoB);
+                document.getElementById('iA').textContent = `trincheira ${Math.round(prep.campoA.est.trinch)}%`;
+                document.getElementById('iB').textContent = `trincheira ${Math.round(prep.campoB.est.trinch)}%`;
+                if (prep.campoA.terminou && prep.campoB.terminou) return fim();
+                animacao = requestAnimationFrame(q);
+            };
+            animacao = requestAnimationFrame(q);
+        };
+        mostrarRodada(0);
     }
 
     // exposto para os testes

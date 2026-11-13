@@ -37,6 +37,7 @@
                     ofensiva: gameState.ofensiva,
                     nextWaveBoost: gameState.nextWaveBoost,
                     general: gameState.general,
+                    op: gameState.op, obrasT: gameState.obrasT, ordens: gameState.ordens, cartas: gameState.cartas, // operações, obras, ordens e cartas (07-operacoes.js)
                     feed: document.getElementById('feed-log').innerHTML,
                     diary: document.getElementById('diary-entries').innerHTML
                 }));
@@ -80,7 +81,8 @@
                 recargaContra: data.recargaContra || 0,
                 ofensiva: data.ofensiva || null,
                 nextWaveBoost: data.nextWaveBoost || 0,
-                general: data.general || newGeneral()
+                general: data.general || newGeneral(),
+                op: data.op, obrasT: data.obrasT, ordens: data.ordens, cartas: data.cartas // 07-operacoes.js
             });
             document.getElementById('feed-log').innerHTML = data.feed;
             document.getElementById('diary-entries').innerHTML = data.diary;

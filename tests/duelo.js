@@ -71,7 +71,35 @@ ok('espelhoParelho', aVence / N > 0.3 && aVence / N < 0.7);
 ok('rodadasRaramenteEmpatam', empatesRodada / rodadasN < 0.35); // no espelho (os dois com a mesma estratégia) é o pior caso
 ok('duelosNaoAcabamNaPrimeira', rodadasTot / N >= 3);
 
+// 4) Doutrinas: pedra-papel-tesoura (cada uma vence uma e perde para outra), só valem se escolhidas na 1ª rodada
+function espertoD(est, rodada, ult, dout) {
+    const p = esperto(est, rodada, ult), d = rodada === 1 ? dout : est.doutrina;
+    let orc = M.orcamento(rodada, d); const blind = orc >= 12 ? 1 : 0; orc -= blind * 5;
+    const art = d === 'artilharia' ? Math.min(M.maxDe('artilharia', d), Math.floor(orc * 0.5 / 2)) : 1; orc -= art * M.custoDe('artilharia', d);
+    return { ...p, ataque: { infantaria: Math.min(8, Math.floor(orc / 2)), artilharia: art, blindado: blind }, doutrina: d };
+}
+function jogarD(sem, dA, dB, botB) {
+    const planos = []; let e = M.estadoDoDuelo(sem, planos);
+    while (!e.vencedor) {
+        const r = e.proximaRodada, uA = e.rodadas.length ? e.rodadas[e.rodadas.length - 1].planoA : null, uB = e.rodadas.length ? e.rodadas[e.rodadas.length - 1].planoB : null;
+        planos.push({ A: espertoD(e.A, r, uB, dA), B: botB ? M.planoDoBot(e.B, r, uA, sem) : espertoD(e.B, r, uA, dB) }); e = M.estadoDoDuelo(sem, planos);
+    }
+    return e.vencedor;
+}
+const taxa = (dA, dB, bot) => { let w = 0; for (let k = 0; k < 100; k++) if (jogarD(3000 + k * 13, dA, dB, bot) === 'A') w++; return w / 100; };
+const ciclo = { assaltoVenceArtilharia: taxa('assalto', 'artilharia'), artilhariaVenceFortaleza: taxa('artilharia', 'fortaleza'), fortalezaVenceAssalto: taxa('fortaleza', 'assalto') };
+ok('doutrinasEmCiclo', Object.values(ciclo).every(v => v >= 0.6));
+{
+    const est = M.estadoInicial(); est.doutrina = 'fortaleza';
+    ok('doutrinaSoNaPrimeiraRodada', M.sanitizar({ doutrina: 'assalto' }, est, 2).doutrina === 'fortaleza' && M.sanitizar({ doutrina: 'trapaca' }, M.estadoInicial(), 1).doutrina === null);
+    const p = M.sanitizar({ doutrina: 'artilharia', ataque: { artilharia: 9 } }, M.estadoInicial(), 1);
+    ok('doutrinaRespeitaLimite', p.ataque.artilharia === M.maxDe('artilharia', 'artilharia') && M.custoAtaque(p.ataque, 'artilharia') <= M.orcamento(1, 'artilharia'));
+}
+const botPerdeParaEsperto = taxa('assalto', null, true);
+ok('botDeTreinoNoPonto', botPerdeParaEsperto >= 0.5 && botPerdeParaEsperto <= 0.9);
+
 console.log(JSON.stringify({
+    doutrinas: ciclo, espertoContraBotDeTreino: botPerdeParaEsperto,
     espertoContraAleatorio: `${espVence}/${N}`, espertoContraEsperto_vitoriasA: `${aVence}/${N}`,
     rodadasPorDuelo: +(rodadasTot / N).toFixed(2), empatesDeRodada: Math.round(100 * empatesRodada / rodadasN) + '%', trincheiraCaiu: Math.round(100 * quedas / rodadasN) + '%'
 }, null, 1));
