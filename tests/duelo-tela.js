@@ -79,7 +79,7 @@ async function jogarAteOFim(jogadores) {
         if (telas.every(t => t === 'fim')) return true;
         for (let k = 0; k < jogadores.length; k++) {
             const J = jogadores[k], t = telas[k];
-            if (t === 'replay') { if (await J.p.$('#bPular')) await J.p.click('#bPular').catch(() => {}); if (await J.p.$('#bProx')) await J.p.click('#bProx').catch(() => {}); }
+            if (t === 'replay') { if (await J.p.$('#bPular:visible')) await J.p.click('#bPular').catch(() => {}); if (await J.p.$('#bProx')) await J.p.click('#bProx').catch(() => {}); }
             else if (t === 'plano' && await J.p.$('#bOk')) await J.p.click('#bOk').catch(() => {});
         }
         await jogadores[0].p.waitForTimeout(250);
@@ -128,14 +128,21 @@ const telaDe = (p) => p.evaluate(() => window.__duelo && window.__duelo.estado()
     await B.p.waitForFunction(() => window.__duelo.estado().tela === 'replay', null, { timeout: 12000 });
     checks.tempoAcabaEnviaSozinho = true;
     await A.p.waitForFunction(() => window.__duelo.estado().tela === 'replay', null, { timeout: 8000 });
-    if (process.env.PRINTS) { await A.p.waitForTimeout(1500); await A.p.screenshot({ path: process.env.PRINTS + '/d3-replay.png', fullPage: true }); }
+    if (process.env.PRINTS) { await A.p.waitForTimeout(2500); await A.p.screenshot({ path: process.env.PRINTS + '/d3-replay.png' }); }
+    // o replay mostra uma trincheira por vez e termina com o resumo do que decidiu a rodada
+    checks.replayUmaTrincheiraPorVez = await A.p.evaluate(() => document.querySelectorAll('canvas#cvReplay').length === 1 && !!document.querySelector('.abas [data-aba="1"]'));
+    await A.p.click('#bPular');
+    await A.p.waitForSelector('.decidiu li');
+    checks.replayTemResumo = (await A.p.$$('.decidiu li')).length >= 1;
+    checks.semMenuDuplicado = await B.p.evaluate(() => document.querySelectorAll('a[href]').length <= 1);
+    if (process.env.PRINTS) await A.p.screenshot({ path: process.env.PRINTS + '/d3b-resumo.png' });
     // joga o resto do duelo: pula os replays, OK nos planos
     for (let passo = 0; passo < 80; passo++) {
         const [ta, tb] = [await telaDe(A.p), await telaDe(B.p)];
         if (ta === 'fim' && tb === 'fim') break;
         for (const [J, t] of [[A, ta], [B, tb]]) {
             if (t === 'replay') {
-                if (await J.p.$('#bPular')) await J.p.click('#bPular').catch(() => {});
+                if (await J.p.$('#bPular:visible')) await J.p.click('#bPular').catch(() => {});
                 if (await J.p.$('#bProx')) await J.p.click('#bProx').catch(() => {});
             } else if (t === 'plano' && await J.p.$('#bOk')) {
                 await J.p.click('[data-s="0"]').catch(() => {});
@@ -160,6 +167,7 @@ const telaDe = (p) => p.evaluate(() => window.__duelo && window.__duelo.estado()
     // ---- Liga e temporada no lobby, ranking ----
     await A.p.click('#bLobby'); await A.p.waitForSelector('#bFila');
     const lobbyTxt = await A.p.textContent('#app');
+    checks.lobbyTemUmSoLinkDeMenu = await A.p.evaluate(() => document.querySelectorAll('#app a[href]').length === 1 && /Menu principal/.test(document.querySelector('#app a[href]').textContent));
     checks.lobbyMostraLigaETemporada = /Liga (Bronze|Prata|Ouro|Platina|Diamante)/.test(lobbyTxt) && /Temporada de/.test(lobbyTxt) && /🥇 out/.test(lobbyTxt);
     if (process.env.PRINTS) await A.p.screenshot({ path: process.env.PRINTS + '/d5-lobby-liga.png', fullPage: true });
     await A.p.click('#bRanking'); await A.p.waitForSelector('.euRank');
@@ -181,9 +189,9 @@ const telaDe = (p) => p.evaluate(() => window.__duelo && window.__duelo.estado()
     // ---- Replay público: um visitante sem conta abre o link e assiste até o fim ----
     const V = await abrir(browser, 'v');
     await V.p.goto(PAGINA + '?replay=' + dFila.id, { waitUntil: 'load' });
-    await V.p.waitForSelector('#cvA');
+    await V.p.waitForSelector('#cvReplay');
     checks.replayAbreSemConta = true;
-    for (let k = 0; k < 8 && !(await V.p.$('#bDeNovo')); k++) { if (await V.p.$('#bPularR')) await V.p.click('#bPularR').catch(() => {}); if (await V.p.$('#bProxR')) await V.p.click('#bProxR').catch(() => {}); await V.p.waitForTimeout(200); }
+    for (let k = 0; k < 8 && !(await V.p.$('#bDeNovo')); k++) { if (await V.p.$('#bPular:visible')) await V.p.click('#bPular').catch(() => {}); if (await V.p.$('#bProx')) await V.p.click('#bProx').catch(() => {}); await V.p.waitForTimeout(200); }
     checks.replayMostraOVencedor = /venceu/.test(await V.p.textContent('#app'));
     if (process.env.PRINTS) await V.p.screenshot({ path: process.env.PRINTS + '/d7-replay-publico.png', fullPage: true });
     // ---- Treino contra o bot: joga até o fim e não mexe nos troféus ----

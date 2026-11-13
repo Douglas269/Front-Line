@@ -11,6 +11,7 @@
    ========================================================================== */
 const SPRITES = { mira: { w: 170, h: 211, ax: 62, ay: 208 }, andando: { w: 142, h: 197, ax: 87, ay: 193 } };
 const IMG = {};
+const TIPO_COR = [['inf', 'I', '#e8e4d0', 'Inf'], ['metr', 'M', '#f4d03f', 'Metr'], ['art', 'A', '#ff7f50', 'Art'], ['cav', 'C', '#5dade2', 'Cav'], ['blind', 'B', '#c39bd3', 'Blind']]; // cor de cada tropa no mapa
 Object.keys(SPRITES).forEach(k => { const im = new Image(); im.src = 'assets/soldados/' + k + '.png'; IMG[k] = im; });
 
 // ---------- Equilíbrio ----------
@@ -24,7 +25,7 @@ const C = {
         morro:    { comida: 0, mun: 5, moedas: 1 }
     },
     FOME_CICLO: 10, COME_SE: 30, COME_ALIVIA: 30, // cada soldado come 1 de comida a cada ~15 s: o tamanho do exército depende dos campos
-    RECRUTAR: 20, RECRUTAR_EXTRA: 2, TROPA_BASE: 12, // cada soldado acima de 12 encarece o próximo em 2 moedas
+    RECRUTAR: 20, RECRUTAR_EXTRA: 1, TROPA_BASE: 16, // cada soldado acima de 12 encarece o próximo em 2 moedas
     FORTIFICAR: 25, FORT_GANHO: 30, TRINCH_BASE: 40, TRINCH_CAPITAL: 70,
     ESPIAO: 15, ESPIAO_DURA: 60, ESPIAO_VEL: 45, ESPIAO_MAX: 2,
     ARTILHARIA: 30, SAQUE_PARTE: 0.3,
@@ -40,7 +41,7 @@ const C = {
 const CAPITULOS = ['Capítulo 1 · A Fronteira', 'Capítulo 2 · O Coração do País'];
 const FASES = [
     { n: 1, cap: 0, nome: 'Fronteira', semente: 1101, celulas: 52, mar: 0.05, W: 860, H: 1120, bots: ['bravo', 'charlie', 'delta'], tempo: 900, extra: 1, milicia: 0, objetivo: 'semPerder' },
-    { n: 2, cap: 0, nome: 'O Rio', semente: 4409, celulas: 56, mar: 0.12, W: 900, H: 1160, bots: ['bravo', 'charlie'], tempo: 840, extra: 1, milicia: 1, objetivo: 'pesquisa', regra: 'industria', regraTxt: 'região industrial: obras custam metade' },
+    { n: 2, cap: 0, nome: 'O Rio', semente: 4409, celulas: 56, mar: 0.12, W: 900, H: 1160, bots: ['bravo', 'charlie'], tempo: 840, extra: 1, milicia: 0, botFacil: 0.75, objetivo: 'pesquisa', regra: 'industria', regraTxt: 'região industrial: obras custam metade' },
     { n: 3, cap: 0, nome: 'Região central', semente: 2207, celulas: 66, mar: 0.05, W: 980, H: 1280, bots: ['bravo', 'charlie', 'delta', 'echo'], tempo: 1080, extra: 2, milicia: 1, objetivo: 'capitais' },
     { n: 4, cap: 1, nome: 'Inverno', semente: 5521, celulas: 70, mar: 0.06, W: 1000, H: 1300, bots: ['bravo', 'delta', 'echo'], tempo: 1140, extra: 2, milicia: 0, objetivo: 'baixas', regra: 'inverno', regraTxt: 'inverno: campos produzem 40% menos comida' },
     { n: 5, cap: 1, nome: 'Aliança frágil', semente: 6637, celulas: 76, mar: 0.05, W: 1040, H: 1360, bots: ['bravo', 'charlie', 'delta', 'echo'], tempo: 1260, extra: 3, milicia: 0, objetivo: 'rebeldes', regra: 'paz', regraTxt: 'começa em paz com Charlie (que pode virar aliado… ou não)' },
@@ -824,9 +825,10 @@ function desenharMapa() {
     G.ex.forEach(e => {
         if (!exVisivel(e) || e.emBatalha) return; // quem está lutando aparece na batalha
         const k = e.rota.length ? e.id : e.prov + '|' + e.dono; // parados na mesma província juntam no desenho
-        if (!agrup[k]) agrup[k] = { e, n: 0 }; agrup[k].n += e.s.length;
+        if (!agrup[k]) agrup[k] = { e, n: 0, tipos: {} }; agrup[k].n += e.s.length; e.s.forEach(x => { const t = x.tipo || 'inf'; agrup[k].tipos[t] = (agrup[k].tipos[t] || 0) + 1; });
     });
-    Object.values(agrup).forEach(({ e, n }) => {
+    let tiposVistos = false; // há tropa além da infantaria no mapa? então mostra a legenda
+    Object.values(agrup).forEach(({ e, n, tipos }) => {
         const s = T(e.x, e.y), mexendo = e.rota.length > 0, cor = e.dono === 'neutro' ? '#8a8a78' : FACCOES[e.dono].cor;
         const x = s.x, y = s.y + 18; // abaixo do nome da província
         if (e.id === selEx) { cxM.strokeStyle = '#ffffff'; cxM.lineWidth = 2; cxM.beginPath(); cxM.ellipse(x, y + 1, 17, 6, 0, 0, Math.PI * 2); cxM.stroke(); }
@@ -837,11 +839,22 @@ function desenharMapa() {
         cxM.fillStyle = cor; cxM.fillRect(x + 7, y - 22, w0, 13);
         cxM.strokeStyle = e.semSuprimento ? '#ff9f43' : 'rgba(0,0,0,.6)'; cxM.lineWidth = e.semSuprimento ? 2 : 1; cxM.strokeRect(x + 7, y - 22, w0, 13);
         cxM.fillStyle = '#0d0f0c'; cxM.textAlign = 'center'; cxM.fillText(txt, x + 7 + w0 / 2, y - 12);
+        // etiqueta de cada tipo de tropa no grupo (cor própria por tipo, legível de longe)
+        let px = x + 7 + w0 + 3; cxM.font = 'bold 10px "Courier New", monospace';
+        TIPO_COR.forEach(([id, letra, corT]) => { if (!tipos[id]) return; if (id !== 'inf') tiposVistos = true; cxM.fillStyle = corT; cxM.fillRect(px, y - 22, 13, 13); cxM.strokeStyle = 'rgba(0,0,0,.7)'; cxM.lineWidth = 1; cxM.strokeRect(px, y - 22, 13, 13); cxM.fillStyle = '#111'; cxM.fillText(letra, px + 6.5, y - 12); px += 15; });
         if (e.general && e.dono === 'jogador') { cxM.fillStyle = '#ffd28a'; cxM.font = 'bold 11px sans-serif'; cxM.fillText('★', x - 12, y - 16); }
         if (e.missao === 'saque' && mexendo) { cxM.font = '11px sans-serif'; cxM.fillText('💰', x - 13, y - 2); }
     });
     // espiões
     G.espioes.forEach(sp => { const s = T(sp.x, sp.y); cxM.font = '15px sans-serif'; cxM.textAlign = 'center'; cxM.fillText('👁', s.x, s.y + 5); });
+    if (tiposVistos) { // legenda das cores das tropas, fixa embaixo do mapa
+        cxM.setTransform(d, 0, 0, d, 0, 0); cxM.font = 'bold 10px "Courier New", monospace'; cxM.textAlign = 'left';
+        const itens = TIPO_COR.map(([, letra, corT, nome]) => ({ letra, corT, nome, w: 17 + cxM.measureText(nome).width }));
+        const total = itens.reduce((t, it) => t + it.w, 0) + 6 * (itens.length - 1) + 12;
+        let lx = Math.max(4, (r.width - total) / 2) + 6; const ly = r.height - 26;
+        cxM.fillStyle = 'rgba(12,15,13,.78)'; cxM.fillRect(lx - 6, ly - 4, total, 20); cxM.strokeStyle = 'rgba(211,154,69,.5)'; cxM.strokeRect(lx - 6, ly - 4, total, 20);
+        itens.forEach(it => { cxM.fillStyle = it.corT; cxM.fillRect(lx, ly, 12, 12); cxM.fillStyle = '#111'; cxM.textAlign = 'center'; cxM.fillText(it.letra, lx + 6, ly + 10); cxM.textAlign = 'left'; cxM.fillStyle = '#d6e3d1'; cxM.fillText(it.nome, lx + 15, ly + 10); lx += it.w + 6; });
+    }
 }
 
 // Boneco de soldado no mapa: um a três, conforme o tamanho do exército; andando, as pernas mexem

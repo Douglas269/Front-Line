@@ -78,5 +78,5 @@ function renderConfigConq() {
         <a class="voltarMenu" href="${linkMenu()}" onclick="salvarPartida()">🏠 Menu principal</a></div>`;
 }
 // dificuldade dos bots: a campanha e o anfitrião leem daqui
-function DIFC() { return ({ recruta: { vontade: 0.75, margem: 1.15, prod: 0.9 }, veterano: { vontade: 1.2, margem: 0.9, prod: 1.1 } })[CONFIG_CONQ.dificuldade] || { vontade: 1, margem: 1, prod: 1 }; }
+function DIFC() { const d = ({ recruta: { vontade: 0.75, margem: 1.15, prod: 0.9 }, veterano: { vontade: 1.2, margem: 0.9, prod: 1.1 } })[CONFIG_CONQ.dificuldade] || { vontade: 1, margem: 1, prod: 1 }; const f = (typeof G !== 'undefined' && G && G.fase && G.fase.botFacil) || 1; return { vontade: d.vontade * f, margem: d.margem, prod: d.prod * f }; } // botFacil: a fase pode deixar os bots mais calmos
 aplicarConfigConq();
