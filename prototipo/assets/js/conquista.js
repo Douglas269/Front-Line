@@ -857,6 +857,16 @@ function desenharMapa() {
     }
 }
 
+// Sprite pintado com a cor do país (feito uma vez por cor e guardado)
+const TINTA = {};
+function spriteTingido(chave, cor) {
+    const k = chave + cor; if (TINTA[k]) return TINTA[k];
+    const im = IMG[chave]; if (!im.complete || !im.naturalWidth) return null;
+    const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight;
+    const x = c.getContext('2d'); x.drawImage(im, 0, 0);
+    x.globalCompositeOperation = 'source-atop'; x.globalAlpha = 0.6; x.fillStyle = cor; x.fillRect(0, 0, c.width, c.height);
+    return (TINTA[k] = c);
+}
 // Boneco de soldado no mapa: um a três, conforme o tamanho do exército; andando, as pernas mexem
 function desenharBoneco(x, y, cor, andando, n, agora, dir = 1) {
     const quantos = n >= 10 ? 3 : n >= 4 ? 2 : 1, im = IMG[andando ? 'andando' : 'mira'], d = SPRITES[andando ? 'andando' : 'mira'];
@@ -864,8 +874,8 @@ function desenharBoneco(x, y, cor, andando, n, agora, dir = 1) {
         const bx = x + (k - (quantos - 1) / 2) * 9 * dir - (quantos > 1 ? 0 : 0), by = y - k * 2 + (andando ? Math.abs(Math.sin(agora * 8 + k)) * -2 : 0);
         cxM.fillStyle = 'rgba(0,0,0,.35)'; cxM.beginPath(); cxM.ellipse(bx, by + 1, 6, 2.2, 0, 0, Math.PI * 2); cxM.fill();
         if (im.complete && im.naturalWidth) {
-            const F = 0.13;
-            cxM.save(); cxM.translate(bx, by); cxM.scale(dir, 1); cxM.drawImage(im, -d.ax * F, -d.ay * F, d.w * F, d.h * F); cxM.restore();
+            const F = 0.13, img = cor === FACCOES.jogador.cor ? im : (spriteTingido(andando ? 'andando' : 'mira', cor) || im); // inimigo: pintado da cor do país
+            cxM.save(); cxM.translate(bx, by); cxM.scale(dir, 1); cxM.drawImage(img, -d.ax * F, -d.ay * F, d.w * F, d.h * F); cxM.restore();
         } else { cxM.fillStyle = '#3a3324'; cxM.fillRect(bx - 2, by - 22, 4, 22); }
         cxM.fillStyle = cor; cxM.beginPath(); cxM.arc(bx, by - 29, 3, 0, Math.PI * 2); cxM.fill(); // a cor do país em cima do boneco
         cxM.strokeStyle = 'rgba(0,0,0,.6)'; cxM.lineWidth = 1; cxM.stroke();
