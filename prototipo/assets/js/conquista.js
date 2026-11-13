@@ -159,7 +159,7 @@ function novoJogo(numFase) {
     function dmin(p) { return Math.min(...capitais.map(q => Math.hypot(q.x - p.x, q.y - p.y))); }
     capitais.forEach(c => {
         const dono = donoCap[c.id];
-        Object.assign(c, { dono, tipo: 'capital', capital: true, trinch: C.TRINCH_CAPITAL });
+        Object.assign(c, { dono, tipo: 'capital', capital: true, capitalDe: dono, trinch: C.TRINCH_CAPITAL }); // capitalDe: de quem é a capital de verdade (não muda quando ela é conquistada)
         // províncias iniciais em volta: a primeira é sempre um campo (comida)
         const livres = c.viz.map(id => G.prov[id]).filter(p => p.dono === 'neutro' && !p.capital).sort((a, b) => Math.hypot(a.x - c.x, a.y - c.y) - Math.hypot(b.x - c.x, b.y - c.y));
         livres.slice(0, F.extra).forEach((p, k) => { p.dono = dono; p.moral = 85; if (k === 0) p.tipo = 'campo'; criarExercito(dono, p.id, 2); });
@@ -489,7 +489,7 @@ function conquistar(p, dono, e) {
     if (e) e.s.push(...Array.from({ length: p.tipo === 'cidade' || p.capital ? 2 : 1 }, () => soldado(dono === 'jogador' ? 'Recruta' : 'Inimigo'))); // moradores se juntam
     if (dono === 'jogador') som('conquista'); else if (antigo === 'jogador') som('perda');
     if (ver) noticia(`🏴 ${FACCOES[dono].nome} conquistou ${p.nome}${antigo === 'neutro' ? '' : ' de ' + FACCOES[antigo].nome}.`, antigo === 'jogador');
-    if (p.capital && antigo !== 'neutro') {
+    if (p.capital && antigo !== 'neutro' && p.capitalDe === antigo) { // só cai quem perde a PRÓPRIA capital (perder uma capital conquistada não elimina ninguém)
         if (antigo === 'jogador' && !G.online) { G.fim = 'derrota'; return mostrarFim(); }
         eliminar(antigo, dono);
     }

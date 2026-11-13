@@ -391,6 +391,22 @@ function jogar({ N, FASE, EST }) {
         await t.close();
     }
 
+    // 3b) perder uma capital CONQUISTADA não é perder a sua (nem elimina o bot que a tinha tomado)
+    const capConq = await p.evaluate(() => {
+        comecarFase(1);
+        const capDe = (b) => Object.values(G.prov).find(q => q.capital && q.capitalDe === b);
+        const cb = capDe('bravo'); conquistar(cb, 'jogador');   // você toma a capital do Bravo (Bravo cai)
+        conquistar(cb, 'charlie');                               // Charlie toma ela de você
+        const r1 = { fim: G.fim || null, minhaCapital: G.prov[G.capitalJogador].dono };
+        const cd = capDe('delta'); conquistar(cd, 'charlie');     // Charlie toma a capital do Delta (Delta cai)
+        conquistar(cd, 'jogador');                               // você toma ela de Charlie
+        const r2 = { fim: G.fim || null, charlieVivo: !G.eliminados.charlie, deltaCaiu: !!G.eliminados.delta };
+        return { r1, r2 };
+    });
+    info.capitalConquistada = capConq;
+    if (capConq.r1.fim === 'derrota' || capConq.r1.minhaCapital !== 'jogador') falhas.push('perder uma capital conquistada contou como perder a sua: ' + JSON.stringify(capConq));
+    if (!capConq.r2.charlieVivo || !capConq.r2.deltaCaiu || capConq.r2.fim) falhas.push('bot eliminado por perder uma capital conquistada: ' + JSON.stringify(capConq));
+
     // 4) Fases inteiras sem tela
     const rodadas = [[1, 'esperto', 6], [1, 'ingenuo', 5], [3, 'esperto', 2], [6, 'esperto', 2]];
     info.fases = {};
