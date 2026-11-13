@@ -54,7 +54,7 @@ function telaOnline(msg) {
         <div class="sub" style="margin-top:12px">Recebeu um código?</div>
         <input id="onCodigo" class="campoOn" maxlength="5" placeholder="CÓDIGO" style="text-transform:uppercase;letter-spacing:4px" value="${escO(sala)}">
         <button class="grande secundaria" onclick="entrarSalaOnline()">ENTRAR NA SALA</button>
-        <button class="grande secundaria" onclick="mostrarInicio()">← VOLTAR</button>`);
+        <button class="grande secundaria" onclick="mostrarInicio()">← VOLTAR</button>${botaoMenu()}`);
 }
 function criarSalaOnline() {
     const letras = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -171,6 +171,13 @@ function aplicarAcao(m) {
     else if (a.tipo === 'pesquisar') pesquisarOriginal(a.id, dono);
     else if (a.tipo === 'fortificar') fortificarOriginal(a.prov, dono);
     else if (a.tipo === 'espionar') espionarPor(dono, a.prov);
+    else if (a.tipo === 'batalha') { // artilharia e postura dentro de uma batalha
+        const b = batalhaEm(a.prov); if (!b) return;
+        const lado = b.atqDono === dono ? 'atq' : b.defDono === dono ? 'def' : null; if (!lado) return;
+        if (a.acao === 'art') { const f = G.fac[dono]; if (f.moedas >= C.ARTILHARIA && !b.usouArt) { f.moedas -= C.ARTILHARIA; b.usouArt = true; (lado === 'atq' ? b.def : b.atq).filter(x => x.s.vida > 0).forEach(x => { x.s.vida -= 35; }); } }
+        else if (lado === 'atq' && ['avancar', 'cobertura', 'recuar'].includes(a.acao)) b.postAtq = a.acao;
+        else if (lado === 'def' && ['atacar', 'equilibrio', 'abrigar'].includes(a.acao)) b.postDef = a.acao;
+    }
     else if (a.tipo === 'parar') { const e = G.ex.find(x => x.id === a.exId); if (e && e.dono === dono && e.rota.length) { e.rota = e.rota.slice(0, 1); e.missao = 'mover'; } }
 }
 // espião dos outros comandantes (o do anfitrião é o da campanha)
@@ -187,7 +194,8 @@ function transmitirEstado() {
     const snap = {
         tipo: 'estado', t: Math.round(G.t * 10) / 10, fim: G.fim, vencedor: G.vencedor || null, motivoFim: G.motivoFim || '', eliminados: G.eliminados,
         prov: ids.map(id => { const p = G.prov[id]; return [p.dono, TIPOS_PROV.indexOf(p.tipo), Math.round(p.trinch), Math.round(p.moral), OBRAS_IDX.reduce((m, o, i) => m | (p.obras[o] ? 1 << i : 0), 0), p.obra ? [OBRAS_IDX.indexOf(p.obra.id), Math.ceil(p.obra.resta)] : 0, p.capital ? 1 : 0]; }),
-        ex: G.ex.map(e => [e.id, e.dono, e.prov, Math.round(e.x), Math.round(e.y), e.rota, e.missao, e.semSuprimento ? 1 : 0, e.general ? 1 : 0, e.s.flatMap(s => [TIPOS_S.indexOf(s.tipo || 'inf'), Math.round(s.vida), Math.round(s.fome), Math.round(s.cansaco)])]),
+        bat: batalhasParaDesenho(),
+        ex: G.ex.map(e => [e.id, e.dono, e.prov, Math.round(e.x), Math.round(e.y), e.rota, e.missao, e.semSuprimento ? 1 : 0, e.general ? 1 : 0, e.s.flatMap(s => [TIPOS_S.indexOf(s.tipo || 'inf'), Math.round(s.vida), Math.round(s.fome), Math.round(s.cansaco)]), e.emBatalha ? 1 : 0, e.aguarda || null]),
         fac: Object.fromEntries(Object.entries(G.fac).map(([d, f]) => [d, [Math.floor(f.comida), Math.floor(f.mun), Math.floor(f.moedas)]])),
         pesq: Object.fromEntries(Object.entries(G.pesq).map(([d, st]) => [d, [Object.keys(st.feitas), st.atual ? st.atual.id : null, st.atual ? Math.ceil(st.atual.resta) : 0]])),
         intel: Object.fromEntries(Object.entries(G.intel || {}).map(([d, I]) => [d, { e: I.espiado, r: I.revelado, s: I.espioes.map(s => [s.para, Math.round(s.x), Math.round(s.y)]) }])),
@@ -215,9 +223,10 @@ function aplicarEstado(m) {
     const selAntes = G.sel && G.sel.tipo === 'ex' ? G.sel.id : null;
     G.ex = m.ex.map(v => {
         const s = []; for (let k = 0; k < v[9].length; k += 4) s.push({ nome: 'Soldado', tipo: TIPOS_S[v[9][k]], vida: v[9][k + 1], fome: v[9][k + 2], cansaco: v[9][k + 3] });
-        return { id: v[0], dono: L(v[1]), prov: v[2], de: v[2], x: v[3], y: v[4], rota: v[5], missao: v[6], semSuprimento: !!v[7], general: v[8] ? 'bot' : null, s, origem: v[2] };
+        return { id: v[0], dono: L(v[1]), prov: v[2], de: v[2], x: v[3], y: v[4], rota: v[5], missao: v[6], semSuprimento: !!v[7], general: v[8] ? 'bot' : null, s, origem: v[2], emBatalha: !!v[10], aguarda: v[11] || null };
     });
     if (selAntes && !G.ex.some(e => e.id === selAntes)) G.sel = { tipo: 'prov', id: G.capitalJogador };
+    G.batalhasVis = (m.bat || []).map(b => ({ ...b, atq: L(b.atq), def: L(b.def) }));
     G.fac = Object.fromEntries(Object.entries(m.fac).map(([d, f]) => [L(d), { comida: f[0], mun: f[1], moedas: f[2] }]));
     G.pesq = Object.fromEntries(Object.entries(m.pesq).map(([d, st]) => [L(d), { feitas: Object.fromEntries(st[0].map(x => [x, true])), atual: st[1] ? { id: st[1], resta: st[2] } : null }]));
     G.eliminados = Object.fromEntries(Object.entries(m.eliminados || {}).map(([d, v]) => [L(d), v]));
@@ -288,6 +297,8 @@ cancelarMarcha = function (exId) {
     if (G && G.cliente) { enviarAcao({ tipo: 'parar', exId }); noticia('✋ Ordem de parar enviada.'); return; }
     return pararOriginal(exId);
 };
+const acaoBatalhaOriginal = acaoBatalha;
+acaoBatalha = function (provId, acao) { if (G && G.cliente) { enviarAcao({ tipo: 'batalha', prov: provId, acao }); noticia(acao === 'art' ? '📡 Artilharia pedida.' : '📡 Ordem de batalha enviada.'); return; } return acaoBatalhaOriginal(provId, acao); };
 const designarGeneralOriginal = designarGeneral, proporOriginal = propor, pausarOriginal = pausar, painelDiplomaciaOriginal = painelDiplomacia, painelGeneraisOriginal = painelGenerais, painelEscolherGeneralOriginal = painelEscolherGeneral;
 designarGeneral = function (...a) { if (G && G.online) return noticia('🎖 No online não há generais.'); return designarGeneralOriginal(...a); };
 propor = function (...a) { if (G && G.online) return false; return proporOriginal(...a); };

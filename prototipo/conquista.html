@@ -18,6 +18,27 @@
   #topo { padding: 8px 10px 6px; border-bottom: 1px solid var(--borda); }
   #l1 { display: flex; justify-content: space-between; align-items: center; font-weight: 700; }
   #l1 .esq, #l1 .dir { display: flex; align-items: center; gap: 6px; }
+  #bConfig { background: var(--painel); border: 1px solid var(--borda); border-radius: 6px; padding: 1px 6px; font-size: 13px; }
+  #configConq { position: fixed; inset: 0; background: rgba(5,7,6,.92); display: none; justify-content: center; align-items: flex-start; overflow-y: auto; z-index: 40; }
+  .cfgCaixa { width: 100%; max-width: 480px; padding: 14px; }
+  .cfgTitulo { display: flex; justify-content: space-between; align-items: center; color: var(--ambar); letter-spacing: 1px; margin-bottom: 8px; }
+  .cfgAbas { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 10px; }
+  .cfgAbas button { padding: 8px 2px; border-radius: 8px; border: 1px solid var(--borda); background: var(--painel); color: var(--mudo); font-size: 12px; font-weight: 700; }
+  .cfgAbas button.on { border-color: var(--ambar); color: #ffd28a; background: #2a2214; }
+  .cfgLinha { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 9px 10px; margin-bottom: 6px; border: 1px solid var(--borda); border-radius: 8px; background: var(--painel); font-size: 13px; }
+  .cfgLinha.col { flex-direction: column; align-items: stretch; }
+  .cfgLinha small { display: block; color: var(--mudo); font-size: 11px; margin-top: 2px; }
+  .cfgTopo { display: flex; justify-content: space-between; }
+  .cfgLinha input[type=range] { width: 100%; accent-color: var(--ambar); }
+  .cfgOpcao { display: block; width: 100%; text-align: left; padding: 9px 10px; margin-bottom: 6px; border-radius: 8px; border: 1px solid var(--borda); background: var(--painel); color: var(--texto); font-size: 13px; }
+  .cfgOpcao small { display: block; color: var(--mudo); font-size: 11px; margin-top: 2px; }
+  .cfgOpcao.on { border-color: var(--ambar); background: #2a2214; color: #ffd28a; }
+  .cfgGrade { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 8px; }
+  .cfgGrade div { border: 1px solid var(--borda); border-radius: 8px; padding: 6px; text-align: center; background: var(--painel); }
+  .cfgGrade small { display: block; color: var(--mudo); font-size: 10px; } .cfgGrade b { color: #ffd28a; font-size: 16px; }
+  button.mini.perigo { border-color: #8a2b2b; color: #ff8a7a; background: #2a1212; }
+  body.textoGrande .info, body.textoGrande .acao, body.textoGrande .sub, body.textoGrande .lista, body.textoGrande .linha-tropa .txt { font-size: 15px; }
+  body.textoGrande .acao small, body.textoGrande .linha-tropa .txt small { font-size: 12.5px; }
   #bSom { background: var(--painel); border: 1px solid var(--borda); border-radius: 6px; padding: 1px 6px; font-size: 13px; }
   #bPausa { background: var(--painel); border: 1px solid var(--borda); border-radius: 6px; padding: 1px 8px; font-weight: 700; font-size: 13px; }
   #bPausa.on { border-color: var(--ambar); background: #2a2214; color: #ffd28a; }
@@ -98,7 +119,7 @@
 <body>
 <div id="app">
   <div id="topo">
-    <div id="l1"><span class="esq"><button id="bMenu" onclick="voltarAoMenu()" title="Modos de jogo">🏠</button><span id="fase">CONQUISTA</span></span><span class="dir"><button id="bSom" onclick="alternarSom()" title="Som">🔊</button><button id="bPausa" onclick="pausar()" title="Pausar">⏸</button><button id="bVelMapa" onclick="G.velocidade = G.velocidade === 1 ? 2 : 1" title="Velocidade do mapa">1×</button><span id="relogio">00:00</span></span></div>
+    <div id="l1"><span class="esq"><button id="bMenu" onclick="voltarAoMenu()" title="Modos de jogo">🏠</button><span id="fase">CONQUISTA</span></span><span class="dir"><button id="bConfig" onclick="abrirConfigConq()" title="Configurações">⚙️</button><button id="bSom" onclick="alternarSom()" title="Som">🔊</button><button id="bPausa" onclick="pausar()" title="Pausar">⏸</button><button id="bVelMapa" onclick="G.velocidade = G.velocidade === 1 ? 2 : 1" title="Velocidade do mapa">1×</button><span id="relogio">00:00</span></span></div>
     <div id="recs">
       <div class="rec" id="rCom">🍞 Comida<b>0</b></div>
       <div class="rec" id="rMun">🔫 Munição<b>0</b></div>
@@ -129,10 +150,11 @@
 <div id="tela"><div class="caixa" id="telaCaixa"></div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
-<script src="assets/js/conquista-mapa.js?v=20261113.0221"></script>
-<script src="assets/js/conquista-extra.js?v=20261113.0221"></script>
-<script src="assets/js/conquista.js?v=20261113.0221"></script>
-<script src="assets/js/conquista-online.js?v=20261113.0221"></script>
+<script src="assets/js/conquista-mapa.js?v=20261113.1039"></script>
+<script src="assets/js/conquista-extra.js?v=20261113.1039"></script>
+<script src="assets/js/conquista.js?v=20261113.1039"></script>
+<script src="assets/js/conquista-online.js?v=20261113.1039"></script>
+<script src="assets/js/conquista-config.js?v=20261113.1039"></script>
 
 </body>
 </html>

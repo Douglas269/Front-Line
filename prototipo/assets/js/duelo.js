@@ -111,7 +111,9 @@
     const outro = () => (souA() ? 'B' : 'A');
     const nomeAdv = () => (duelo ? (souA() ? duelo.nome_b : duelo.nome_a) || 'Adversário' : 'Adversário');
     function pararTudo() { clearInterval(timerPoll); clearInterval(timerPrazo); if (animacao) cancelAnimationFrame(animacao); timerPoll = timerPrazo = animacao = null; }
-    function mostrar(html) { $app.innerHTML = html; window.scrollTo(0, 0); }
+    function mostrar(html) { $app.innerHTML = html + `<a class="voltar menuRodape" href="${linkDoJogo()}" onclick="return confirmarSaida()">🏠 Menu principal</a>`; window.scrollTo(0, 0); }
+    // sair no meio de um duelo: o duelo continua no servidor (dá para voltar pelo lobby)
+    window.confirmarSaida = () => !(duelo && duelo.id && !String(duelo.id).startsWith('bot-') && duelo.estado === 'jogando' && tela !== 'fim') || confirm('Sair para o menu? O duelo continua: volte pelo lobby antes do tempo acabar.');
     function nomeDoUsuario(u) {
         let apelido = '';
         try { apelido = (JSON.parse(localStorage.getItem('frontline-config')) || {}).apelido || ''; } catch (e) {}

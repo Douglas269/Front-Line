@@ -326,6 +326,71 @@ function jogar({ N, FASE, EST }) {
     });
     Object.entries(info.regras).forEach(([k, v]) => { if (v === false) falhas.push('regras: ' + k); });
 
+    // 3e) Batalha no próprio mapa, configurações e menu principal
+    {
+        const q = await ctx.newPage(); const errosB = []; q.on('pageerror', e => errosB.push(e.message));
+        await q.goto(CONQ, { waitUntil: 'load' }); await q.evaluate(() => localStorage.clear()); await q.reload({ waitUntil: 'load' });
+        await q.click('button.fase');
+        const bt = await q.evaluate(() => {
+            const r = {}; Object.keys(G.pensar).forEach(k => { G.pensar[k] = 1e9; });
+            const c = G.prov[G.capitalJogador], e = exParadosEm(c.id, 'jogador')[0], alvo = c.viz.map(id => G.prov[id]).find(x => x.dono === 'neutro');
+            ordem(e.id, alvo.id, 6, 'ataque');
+            for (let i = 0; i < 400 && !G.batalhas.length; i++) passoMapa(0.25);
+            const b = G.batalhas[0];
+            r.batalhaNoMapa = !!b && !G.batalha && document.getElementById('batalha').style.display !== 'flex';
+            const t0 = G.t; passoMapa(1); r.mapaNaoPara = G.t > t0;
+            G.sel = { tipo: 'prov', id: alvo.id }; renderPainel();
+            r.painelMostraBatalha = /Batalha em/.test(document.getElementById('painel').textContent);
+            G.fac.jogador.moedas = 100; acaoBatalha(alvo.id, 'cobertura'); acaoBatalha(alvo.id, 'art');
+            r.ordensNaBatalha = b.postAtq === 'cobertura' && b.usouArt && G.fac.jogador.moedas === 100 - C.ARTILHARIA;
+            G.pausado = true; const bt0 = b.t; r.pausaParaABatalha = (() => { /* com o mapa pausado o laço não chama passoMapa */ return true; })();
+            G.pausado = false; acaoBatalha(alvo.id, 'avancar');
+            for (let i = 0; i < 2000 && G.batalhas.length; i++) passoMapa(0.25);
+            r.batalhaTerminaSozinha = !G.batalhas.length;
+            r.exercitoNaoFicaPreso = !G.ex.some(x => x.emBatalha && !batalhaEm(x.prov) && !x.aguarda);
+            return r;
+        });
+        // pausa de verdade: com o mapa pausado o laço não anda a batalha
+        bt.pausaParaABatalha = await q.evaluate(async () => {
+            Object.keys(G.pensar).forEach(k => { G.pensar[k] = 1e9; });
+            const c = G.prov[G.capitalJogador], e = exParadosEm(c.id, 'jogador')[0];
+            const alvo = Object.values(G.prov).find(x => x.dono === 'neutro' && exParadosEm(x.id, 'neutro').length);
+            G.ex = G.ex.filter(x => x !== e); const ex = criarExercito('jogador', alvo.viz[0], 6); ex.x = alvo.x; ex.y = alvo.y; ex.prov = alvo.viz[0]; chegarAqui(Object.assign(ex, { prov: alvo.id }), alvo);
+            const b = batalhaEm(alvo.id); if (!b) return false;
+            G.pausado = true; const t0 = b.t; await new Promise(r => setTimeout(r, 600)); const parada = b.t === t0;
+            G.pausado = false; await new Promise(r => setTimeout(r, 600)); return parada && b.t > t0;
+        });
+        // configurações
+        await q.click('#bConfig');
+        bt.configAbre = await q.evaluate(() => document.getElementById('configConq').style.display === 'flex' && G.pausado === true);
+        await q.evaluate(() => { configConqAba = 'som'; renderConfigConq(); });
+        await q.$eval('#configConq input[type=range]', el => { el.value = 20; el.dispatchEvent(new Event('input')); });
+        bt.volumeSalvo = await q.evaluate(() => JSON.parse(localStorage.getItem('frontline-config')).volMusica === 20);
+        await q.evaluate(() => { configConqAba = 'jogo'; renderConfigConq(); });
+        await q.click('.cfgOpcao:has-text("Veterano")');
+        bt.dificuldadeMudaOsBots = await q.evaluate(() => DIFC().vontade > 1 && JSON.parse(localStorage.getItem('frontline-config')).dificuldade === 'veterano');
+        await q.click('.cfgLinha:has-text("Texto maior") button');
+        bt.textoMaior = await q.evaluate(() => document.body.classList.contains('textoGrande'));
+        bt.menuNasConfiguracoes = !!(await q.$('#configConq a.voltarMenu'));
+        await q.evaluate(() => fecharConfigConq());
+        bt.fecharVoltaOMapa = await q.evaluate(() => document.getElementById('configConq').style.display === 'none' && G.pausado === false);
+        await q.evaluate(() => { localStorage.removeItem('frontline-config'); });
+        Object.entries(bt).forEach(([k, v]) => { if (!v) falhas.push('mapa/config: ' + k); });
+        if (errosB.length) falhas.push('erros na batalha/config: ' + errosB[0]);
+        info.batalhaEConfig = bt;
+        await q.close();
+        // menu principal no Trincheiras e no duelo
+        const t = await ctx.newPage();
+        await t.goto(JOGO, { waitUntil: 'load' });
+        const menuTrinch = await t.evaluate(() => { fecharMenuModos(); document.getElementById('btn-menu-topo').click(); return menuAberto && !document.getElementById('tela-modos').classList.contains('hidden'); });
+        await t.goto('file://' + require('path').join(RAIZ, 'duelo.html'), { waitUntil: 'load' }); await t.waitForTimeout(1200);
+        const menuDuelo = !!(await t.$('a.menuRodape'));
+        if (!menuTrinch) falhas.push('menu: botão 🏠 do Trincheiras não abre os modos');
+        if (!menuDuelo) falhas.push('menu: duelo sem botão de menu principal');
+        info.menuPrincipal = { trincheiras: menuTrinch, duelo: menuDuelo };
+        await t.close();
+    }
+
     // 4) Fases inteiras sem tela
     const rodadas = [[1, 'esperto', 6], [1, 'ingenuo', 5], [3, 'esperto', 2], [6, 'esperto', 2]];
     info.fases = {};
