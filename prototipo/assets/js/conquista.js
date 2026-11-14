@@ -98,7 +98,7 @@ function noticia(txt, alerta) { if (alerta && typeof som === 'function') som('al
    salvamento: ele sai sempre igual da semente da fase; só vão os donos, as tropas e os recursos. */
 const SAVE_CONQ = 'frontline-conquista-partida';
 function salvarPartida() {
-    if (!G || G.fim || G.batalha || G.semSalvar || G.online) return false; // batalha aberta: guarda o salvamento anterior; online não salva
+    if (!G || G.fim || G.semSalvar || G.online) return false; // online não salva
     const dados = {
         v: 2, fase: G.fase.n, t: G.t, fac: G.fac, ciclo: G.ciclo, velocidade: G.velocidade, proxId, pesq: G.pesq, rel: G.rel, genFerido: G.genFerido, genXp: G.genXp, stats: G.stats,
         capitalJogador: G.capitalJogador, espiado: G.espiado, revelado: G.revelado, espioes: G.espioes,
@@ -135,7 +135,7 @@ function novoJogo(numFase) {
     const r = rngSemente(F.semente + 7);
     G = {
         fase: F, t: 0, fim: null, sel: null, modo: null, pendente: null, noticias: [], espiado: {}, revelado: {}, espioes: [],
-        ultimoAtaque: {}, eliminados: {}, batalha: null, batalhas: [], ciclo: 0, ex: [], velocidade: 1,
+        ultimoAtaque: {}, eliminados: {}, batalhas: [], ciclo: 0, ex: [], velocidade: 1,
         fac: { jogador: { comida: 40, mun: 150, moedas: 50 }, neutro: { comida: 0, mun: 100, moedas: 0 } },
         prov: {}, pensar: {}, pausado: false,
         pesq: { jogador: { feitas: {}, atual: null } }, rel: {}, genFerido: {}, genXp: {}, stats: {}
@@ -603,7 +603,7 @@ function concluirBatalha(b) {
 
 /* ---------- O tempo anda ---------- */
 function passoMapa(dt) {
-    if (G.fim || G.batalha) return;
+    if (G.fim) return;
     G.t += dt;
     if (G.t >= G.fase.tempo) return fimPorTempo();
     if (Math.floor(G.t / C.CICLO) > G.ciclo) { cicloEconomia(); if (G.ciclo % 4 === 0) generalDosBots(); }
@@ -703,7 +703,7 @@ function soltar(ev) {
 cvM.addEventListener('pointerup', soltar);
 cvM.addEventListener('pointercancel', ev => { toques.delete(ev.pointerId); arrasto = null; pinca = null; });
 cvM.addEventListener('wheel', ev => { ev.preventDefault(); const r = cvM.getBoundingClientRect(); zoomEm(ev.deltaY < 0 ? 1.15 : 1 / 1.15, ev.clientX - r.left, ev.clientY - r.top); }, { passive: false });
-window.addEventListener('resize', () => { ajustar(cvM); ajustar(cvB); limitarCam(); });
+window.addEventListener('resize', () => { ajustar(cvM); limitarCam(); });
 // a área do mapa muda de altura quando o painel de baixo muda: acompanha o tamanho de verdade
 if (window.ResizeObserver) new ResizeObserver(() => { ajustar(cvM); limitarCam(); }).observe(cvM);
 
@@ -813,8 +813,8 @@ function desenharMapa() {
         const ang = Math.atan2(de.y - s.y, de.x - s.x), ax = s.x + Math.cos(ang) * 26, ay = s.y + 14 + Math.sin(ang) * 20;
         for (let k = 0; k < 4; k++) { const t = Math.random(); cxM.strokeStyle = 'rgba(255,224,138,.8)'; cxM.lineWidth = 1; cxM.beginPath(); const x0 = ax + (Math.random() - 0.5) * 16, y0 = ay + (Math.random() - 0.5) * 16; cxM.moveTo(x0, y0); cxM.lineTo(x0 + (s.x - x0) * t, y0 + (s.y + 4 - y0) * t); cxM.stroke(); }
         if (Math.random() < 0.3) { cxM.fillStyle = 'rgba(255,170,70,.85)'; cxM.beginPath(); cxM.arc(s.x + (Math.random() - 0.5) * 30, s.y + (Math.random() - 0.5) * 20, 3 + Math.random() * 4, 0, Math.PI * 2); cxM.fill(); }
-        desenharBoneco(ax, ay, FACCOES[bt.atq].cor, true, Math.max(1, bt.nA), agora);
-        desenharBoneco(s.x, s.y + 14, FACCOES[bt.def].cor, false, Math.max(1, bt.nD), agora);
+        desenharBoneco(ax, ay, FACCOES[bt.atq].cor, true, Math.max(1, bt.nA), agora, 1, bt.tA);
+        desenharBoneco(s.x, s.y + 14, FACCOES[bt.def].cor, false, Math.max(1, bt.nD), agora, 1, bt.tD);
         cxM.font = 'bold 11px "Courier New", monospace'; cxM.textAlign = 'center';
         const txt = `⚔ ${bt.nA} × ${bt.nD}`, w0 = cxM.measureText(txt).width + 10;
         cxM.fillStyle = 'rgba(40,10,6,.85)'; cxM.fillRect(s.x - w0 / 2, s.y + 20, w0, 15); cxM.fillStyle = '#ffd2a8'; cxM.fillText(txt, s.x, s.y + 31);
@@ -833,25 +833,25 @@ function desenharMapa() {
         const x = s.x, y = s.y + 18; // abaixo do nome da província
         if (e.id === selEx) { cxM.strokeStyle = '#ffffff'; cxM.lineWidth = 2; cxM.beginPath(); cxM.ellipse(x, y + 1, 17, 6, 0, 0, Math.PI * 2); cxM.stroke(); }
         let dir = 1; if (mexendo) { const prox = G.prov[e.rota[0]]; if (prox) dir = prox.x >= e.x ? 1 : -1; }
-        desenharBoneco(x, y, cor, mexendo, n, agora, dir);
+        const px0 = 7 + desenharBoneco(x, y, cor, mexendo, n, agora, dir, tipos);
         // número de soldados numa plaquinha da cor do país
         const txt = String(n); cxM.font = 'bold 10px "Courier New", monospace'; const w0 = Math.max(16, cxM.measureText(txt).width + 8);
-        cxM.fillStyle = cor; cxM.fillRect(x + 7, y - 22, w0, 13);
-        cxM.strokeStyle = e.semSuprimento ? '#ff9f43' : 'rgba(0,0,0,.6)'; cxM.lineWidth = e.semSuprimento ? 2 : 1; cxM.strokeRect(x + 7, y - 22, w0, 13);
-        cxM.fillStyle = '#0d0f0c'; cxM.textAlign = 'center'; cxM.fillText(txt, x + 7 + w0 / 2, y - 12);
+        cxM.fillStyle = cor; cxM.fillRect(x + px0, y - 22, w0, 13);
+        cxM.strokeStyle = e.semSuprimento ? '#ff9f43' : 'rgba(0,0,0,.6)'; cxM.lineWidth = e.semSuprimento ? 2 : 1; cxM.strokeRect(x + px0, y - 22, w0, 13);
+        cxM.fillStyle = '#0d0f0c'; cxM.textAlign = 'center'; cxM.fillText(txt, x + px0 + w0 / 2, y - 12);
         // etiqueta de cada tipo de tropa no grupo (cor própria por tipo, legível de longe)
-        let px = x + 7 + w0 + 3; cxM.font = 'bold 10px "Courier New", monospace';
+        let px = x + px0 + w0 + 3; cxM.font = 'bold 10px "Courier New", monospace';
         TIPO_COR.forEach(([id, letra, corT]) => { if (!tipos[id]) return; if (id !== 'inf') tiposVistos = true; cxM.fillStyle = corT; cxM.fillRect(px, y - 22, 13, 13); cxM.strokeStyle = 'rgba(0,0,0,.7)'; cxM.lineWidth = 1; cxM.strokeRect(px, y - 22, 13, 13); cxM.fillStyle = '#111'; cxM.fillText(letra, px + 6.5, y - 12); px += 15; });
         if (e.general && e.dono === 'jogador') { cxM.fillStyle = '#ffd28a'; cxM.font = 'bold 11px sans-serif'; cxM.fillText('★', x - 12, y - 16); }
         if (e.missao === 'saque' && mexendo) { cxM.font = '11px sans-serif'; cxM.fillText('💰', x - 13, y - 2); }
     });
     // espiões
     G.espioes.forEach(sp => { const s = T(sp.x, sp.y); cxM.font = '15px sans-serif'; cxM.textAlign = 'center'; cxM.fillText('👁', s.x, s.y + 5); });
-    if (tiposVistos) { // legenda das cores das tropas, fixa embaixo do mapa
+    if (tiposVistos) { // legenda das cores das tropas, fixa no topo do mapa
         cxM.setTransform(d, 0, 0, d, 0, 0); cxM.font = 'bold 10px "Courier New", monospace'; cxM.textAlign = 'left';
         const itens = TIPO_COR.map(([, letra, corT, nome]) => ({ letra, corT, nome, w: 17 + cxM.measureText(nome).width }));
         const total = itens.reduce((t, it) => t + it.w, 0) + 6 * (itens.length - 1) + 12;
-        let lx = Math.max(4, (r.width - total) / 2) + 6; const ly = r.height - 26;
+        let lx = Math.max(4, (r.width - total) / 2) + 6; const ly = 8;
         cxM.fillStyle = 'rgba(12,15,13,.78)'; cxM.fillRect(lx - 6, ly - 4, total, 20); cxM.strokeStyle = 'rgba(211,154,69,.5)'; cxM.strokeRect(lx - 6, ly - 4, total, 20);
         itens.forEach(it => { cxM.fillStyle = it.corT; cxM.fillRect(lx, ly, 12, 12); cxM.fillStyle = '#111'; cxM.textAlign = 'center'; cxM.fillText(it.letra, lx + 6, ly + 10); cxM.textAlign = 'left'; cxM.fillStyle = '#d6e3d1'; cxM.fillText(it.nome, lx + 15, ly + 10); lx += it.w + 6; });
     }
@@ -867,19 +867,36 @@ function spriteTingido(chave, cor) {
     x.globalCompositeOperation = 'source-atop'; x.globalAlpha = 0.6; x.fillStyle = cor; x.fillRect(0, 0, c.width, c.height);
     return (TINTA[k] = c);
 }
-// Boneco de soldado no mapa: um a três, conforme o tamanho do exército; andando, as pernas mexem
-function desenharBoneco(x, y, cor, andando, n, agora, dir = 1) {
-    const quantos = n >= 10 ? 3 : n >= 4 ? 2 : 1, im = IMG[andando ? 'andando' : 'mira'], d = SPRITES[andando ? 'andando' : 'mira'];
+// Quais bonecos desenhar num grupo: cada tipo presente aparece (os mais numerosos primeiro); sobrando lugar, repete o mais numeroso
+function figurasDoGrupo(tipos, quantos) {
+    const lista = Object.entries(tipos || {}).filter(([, c]) => c > 0).sort((a, b) => b[1] - a[1]).map(([t]) => t);
+    if (!lista.length) lista.push('inf');
+    const fig = lista.slice(0, quantos);
+    while (fig.length < quantos) fig.push(lista[0]);
+    return fig;
+}
+const TIPO_ESPECIAL = { art: 1, cav: 1, blind: 1 };
+// Boneco de soldado no mapa: um a três, conforme o tamanho do exército; cada um mostra um tipo de tropa; andando, as pernas mexem
+function desenharBoneco(x, y, cor, andando, n, agora, dir = 1, tipos) {
+    const quantos = n >= 10 ? 3 : n >= 4 ? 2 : 1, amigo = cor === FACCOES.jogador.cor, fig = figurasDoGrupo(tipos, quantos);
+    const folga = fig.some(t => TIPO_ESPECIAL[t]) ? 13 : 9;
     for (let k = quantos - 1; k >= 0; k--) {
-        const bx = x + (k - (quantos - 1) / 2) * 9 * dir - (quantos > 1 ? 0 : 0), by = y - k * 2 + (andando ? Math.abs(Math.sin(agora * 8 + k)) * -2 : 0);
-        cxM.fillStyle = 'rgba(0,0,0,.35)'; cxM.beginPath(); cxM.ellipse(bx, by + 1, 6, 2.2, 0, 0, Math.PI * 2); cxM.fill();
-        if (im.complete && im.naturalWidth) {
-            const F = 0.13, img = cor === FACCOES.jogador.cor ? im : (spriteTingido(andando ? 'andando' : 'mira', cor) || im); // inimigo: pintado da cor do país
-            cxM.save(); cxM.translate(bx, by); cxM.scale(dir, 1); cxM.drawImage(img, -d.ax * F, -d.ay * F, d.w * F, d.h * F); cxM.restore();
-        } else { cxM.fillStyle = '#3a3324'; cxM.fillRect(bx - 2, by - 22, 4, 22); }
-        cxM.fillStyle = cor; cxM.beginPath(); cxM.arc(bx, by - 29, 3, 0, Math.PI * 2); cxM.fill(); // a cor do país em cima do boneco
+        const t = fig[k], bx = x + (k - (quantos - 1) / 2) * folga * dir, by = y - k * 2 + (andando ? Math.abs(Math.sin(agora * 8 + k)) * -2 : 0);
+        cxM.fillStyle = 'rgba(0,0,0,.35)'; cxM.beginPath(); cxM.ellipse(bx, by + 1, TIPO_ESPECIAL[t] ? 9 : 6, 2.2, 0, 0, Math.PI * 2); cxM.fill();
+        let topo = 29;
+        if (TIPO_ESPECIAL[t]) { desenharTropaEspecial(cxM, t, bx, by, cor, amigo, andando, 0.9, dir, true); topo = t === 'art' ? 22 : t === 'cav' ? 25 : 21; }
+        else {
+            if (t === 'metr') desenharTropaEspecial(cxM, 'metr', bx, by, cor, amigo, andando, 0.9, dir, true);
+            const chave = andando ? 'andando' : 'mira', im = IMG[chave], d = SPRITES[chave];
+            if (im.complete && im.naturalWidth) {
+                const F = 0.13, img = amigo ? im : (spriteTingido(chave, cor) || im); // inimigo: pintado da cor do país
+                cxM.save(); cxM.translate(bx, by); cxM.scale(dir, 1); cxM.drawImage(img, -d.ax * F, -d.ay * F, d.w * F, d.h * F); cxM.restore();
+            } else { cxM.fillStyle = '#3a3324'; cxM.fillRect(bx - 2, by - 22, 4, 22); }
+        }
+        cxM.fillStyle = cor; cxM.beginPath(); cxM.arc(bx, by - topo, 3, 0, Math.PI * 2); cxM.fill(); // a cor do país em cima do boneco
         cxM.strokeStyle = 'rgba(0,0,0,.6)'; cxM.lineWidth = 1; cxM.stroke();
     }
+    return (quantos - 1) / 2 * folga; // meio-vão do grupo: a plaquinha do número fica depois dele
 }
 // Ordens dentro de uma batalha no mapa (artilharia e postura), para o atacante ou o defensor
 function acaoBatalha(provId, acao) {
@@ -900,9 +917,10 @@ function painelBatalha(b) {
         <div class="acoes">${posts.map(([id, t, d]) => botao(t, d, `acaoBatalha('${b.alvo.id}','${id}')`, { forte: atual === id })).join('')}
         ${botao('💥 Artilharia', b.usouArt ? 'já usada' : `${C.ARTILHARIA} 🪙 · fere todos do outro lado`, `acaoBatalha('${b.alvo.id}','art')`, { off: b.usouArt || f.moedas < C.ARTILHARIA })}</div>`;
 }
+const contarTipos = (lista) => { const r = {}; lista.forEach(x => { if (x.s.vida > 0) { const t = x.s.tipo || 'inf'; r[t] = (r[t] || 0) + 1; } }); return r; };
 function batalhasParaDesenho() {
     if (G.cliente) return G.batalhasVis || [];
-    return (G.batalhas || []).filter(b => !b.terminou).map(b => ({ prov: b.alvo.id, atq: b.atqDono, def: b.defDono, de: b.ex.de, nA: b.atq.filter(a => a.s.vida > 0).length, nD: b.def.filter(x => x.s.vida > 0).length, t: Math.round(b.t), pa: b.postAtq, pd: b.postDef, art: b.usouArt ? 1 : 0 }));
+    return (G.batalhas || []).filter(b => !b.terminou).map(b => ({ prov: b.alvo.id, atq: b.atqDono, def: b.defDono, de: b.ex.de, nA: b.atq.filter(a => a.s.vida > 0).length, nD: b.def.filter(x => x.s.vida > 0).length, tA: contarTipos(b.atq), tD: contarTipos(b.def), t: Math.round(b.t), pa: b.postAtq, pd: b.postDef, art: b.usouArt ? 1 : 0 }));
 }
 
 /* ---------- Painel de baixo ---------- */
@@ -988,129 +1006,30 @@ function renderPainel() {
     if (el._html !== html) { el.innerHTML = html; el._html = html; } // só troca quando mudou (não engole toques)
 }
 
-/* ---------- Tela de batalha ---------- */
-const cvB = document.getElementById('cvBat'), cxB = cvB.getContext('2d');
-function abrirBatalha(b) {
-    G.batalha = b; tocarMusica('batalha');
-    const souAtq = b.atqDono === 'jogador';
-    b.souAtq = souAtq;
-    document.getElementById('batalha').style.display = 'flex';
-    ajustar(cvB);
-    document.getElementById('batTitulo').textContent = souAtq ? `${b.saque ? '💰 SAQUE EM' : '⚔️ ATAQUE A'} ${b.alvo.nome.toUpperCase()}` : `🛡️ DEFESA DE ${b.alvo.nome.toUpperCase()}`;
-    const post = souAtq ? [['avancar', 'AVANÇAR', 'rápido, exposto'], ['cobertura', 'COBERTURA', 'lento, protegido'], ['recuar', 'RECUAR', 'volta para casa']]
-                        : [['atacar', 'ATACAR', '+dano, +risco'], ['equilibrio', 'EQUILÍBRIO', 'padrão'], ['abrigar', 'ABRIGAR', '−dano recebido']];
-    document.getElementById('batPost').innerHTML = post.map(([id, t, d]) => `<button class="opc" data-p="${id}">${t}<small>${d}</small></button>`).join('');
-    document.querySelectorAll('#batPost .opc').forEach(bt => bt.onclick = () => { if (souAtq) b.postAtq = bt.dataset.p; else b.postDef = bt.dataset.p; atualizarBatalhaUI(); });
-    document.getElementById('bArt').onclick = () => { artilhariaNaBatalha(b, souAtq ? 'atq' : 'def'); atualizarBatalhaUI(); };
-    document.getElementById('bVel').onclick = () => { b.rapido = !b.rapido; atualizarBatalhaUI(); };
-    document.getElementById('bAuto').onclick = () => { while (!b.terminou) b.passo(0.25); };
-    atualizarBatalhaUI();
-}
-function atualizarBatalhaUI() {
-    const b = G.batalha; if (!b) return;
-    const nos = b.souAtq ? b.atq : b.def, eles = b.souAtq ? b.def : b.atq, outro = b.souAtq ? b.defDono : b.atqDono;
-    document.getElementById('batNos').innerHTML = `<span style="color:${FACCOES.jogador.cor}">Você: ${nos.filter(x => x.s.vida > 0).length}</span>`;
-    document.getElementById('batEles').innerHTML = `<span style="color:${FACCOES[outro].cor}">${FACCOES[outro].nome}: ${eles.filter(x => x.s.vida > 0).length}</span>`;
-    const resta = Math.max(0, C.BAT_DURACAO - b.t);
-    document.getElementById('batTempo').textContent = `${Math.floor(resta / 60)}:${String(Math.floor(resta % 60)).padStart(2, '0')}`;
-    document.querySelector('#tempoBat div').style.width = (100 * resta / C.BAT_DURACAO) + '%';
-    const atual = b.souAtq ? b.postAtq : b.postDef;
-    document.querySelectorAll('#batPost .opc').forEach(bt => bt.classList.toggle('on', bt.dataset.p === atual));
-    document.getElementById('bArt').disabled = b.usouArt || G.fac.jogador.moedas < C.ARTILHARIA;
-    document.getElementById('bVel').classList.toggle('on', b.rapido);
-}
-function fecharBatalha() {
-    const b = G.batalha;
-    document.getElementById('batalha').style.display = 'none';
-    G.batalha = null; tocarMusica('mapa');
-    concluirBatalha(b);
-    renderPainel();
-}
-function desenharBatalha() {
-    const b = G.batalha; if (!b) return;
-    // o campo ocupa a tela inteira (a altura acompanha o formato do celular)
-    const BW = 400, BH = Math.max(360, Math.min(720, BW * cvB.height / Math.max(1, cvB.width))), e = Math.min(cvB.width / BW, cvB.height / BH), ox = (cvB.width - BW * e) / 2, oy = (cvB.height - BH * e) / 2;
-    cxB.setTransform(1, 0, 0, 1, 0, 0); cxB.fillStyle = '#10140f'; cxB.fillRect(0, 0, cvB.width, cvB.height);
-    cxB.setTransform(e, 0, 0, e, ox, oy);
-    const defEmbaixo = !b.souAtq;
-    const yTrinch = defEmbaixo ? BH - 70 : 70, yInicio = defEmbaixo ? 26 : BH - 26;
-    const chao = cxB.createLinearGradient(0, 0, 0, BH); chao.addColorStop(0, '#3b4535'); chao.addColorStop(0.5, '#454734'); chao.addColorStop(1, '#353a2c');
-    cxB.fillStyle = chao; cxB.fillRect(0, 0, BW, BH);
-    if (!b.cenario) { // crateras e arame, sorteados uma vez por batalha
-        b.cenario = { crateras: Array.from({ length: 14 }, () => ({ x: Math.random() * BW, y: 0.15 + Math.random() * 0.7, r: 6 + Math.random() * 14 })), arame: 0.25 + Math.random() * 0.1 };
+/* ---------- Desenho das tropas no mapa ---------- */
+// Tropas especiais em traços (canhão, cavalo, blindado e a arma da metralhadora), para qualquer canvas
+function desenharTropaEspecial(cx, tipo, x, y, cor, amigo, andando, esc = 1, dir = 1, subir = amigo) {
+    cx.save(); cx.translate(x, y); cx.scale(esc * dir, esc);
+    cx.lineWidth = 1.4; cx.strokeStyle = amigo ? '#9fd08f' : cor; cx.fillStyle = amigo ? '#25331f' : '#2a0f10';
+    if (tipo === 'art') {
+        cx.beginPath(); cx.arc(-5, -6, 6, 0, Math.PI * 2); cx.fill(); cx.stroke();
+        cx.beginPath(); cx.moveTo(-5, -8); cx.lineTo(14, subir ? -22 : -2); cx.lineWidth = 4; cx.stroke(); cx.lineWidth = 1.4;
+        cx.beginPath(); cx.moveTo(-10, -2); cx.lineTo(-18, 2); cx.stroke();
+    } else if (tipo === 'cav') {
+        cx.beginPath(); cx.ellipse(0, -10, 10, 5, 0, 0, Math.PI * 2); cx.fill(); cx.stroke();
+        [-7, -3, 4, 8].forEach(k => { cx.beginPath(); cx.moveTo(k, -6); cx.lineTo(k + (andando ? Math.sin(Date.now() / 90 + k) * 2 : 0), 0); cx.stroke(); });
+        cx.beginPath(); cx.moveTo(9, -12); cx.lineTo(14, -18); cx.lineTo(16, -15); cx.stroke();
+        cx.beginPath(); cx.arc(0, -21, 3, 0, Math.PI * 2); cx.fill(); cx.stroke(); cx.beginPath(); cx.moveTo(0, -18); cx.lineTo(0, -13); cx.stroke();
+    } else if (tipo === 'blind') {
+        cx.fillRect(-13, -14, 26, 10); cx.strokeRect(-13, -14, 26, 10);
+        cx.fillRect(-6, -20, 12, 6); cx.strokeRect(-6, -20, 12, 6);
+        cx.beginPath(); cx.moveTo(6, -17); cx.lineTo(16, subir ? -24 : -12); cx.lineWidth = 2.5; cx.stroke(); cx.lineWidth = 1.4;
+        [-9, -3, 3, 9].forEach(k => { cx.beginPath(); cx.arc(k, -2, 2.6, 0, Math.PI * 2); cx.stroke(); });
+    } else if (tipo === 'metr') { // a arma no chão, ao lado do soldado
+        cx.lineWidth = 2; cx.beginPath(); cx.moveTo(-9, -1); cx.lineTo(-3, -8); cx.lineTo(3, -1); cx.stroke();
+        cx.lineWidth = 3; cx.beginPath(); cx.moveTo(-3, -9); cx.lineTo(12, -11); cx.stroke();
     }
-    b.cenario.crateras.forEach(c => { const y = yTrinch + (yInicio - yTrinch) * c.y; cxB.fillStyle = 'rgba(20,18,12,.45)'; cxB.beginPath(); cxB.ellipse(c.x, y, c.r, c.r * 0.45, 0, 0, Math.PI * 2); cxB.fill(); cxB.strokeStyle = 'rgba(150,130,95,.25)'; cxB.lineWidth = 1.5; cxB.stroke(); });
-    { const ya = yTrinch + (yInicio - yTrinch) * b.cenario.arame; cxB.strokeStyle = 'rgba(170,165,150,.5)'; cxB.lineWidth = 1; // arame farpado
-      for (let x = 0; x < BW; x += 14) { cxB.beginPath(); cxB.arc(x + 7, ya, 6, 0, Math.PI * 2); cxB.stroke(); cxB.beginPath(); cxB.moveTo(x, ya - 9); cxB.lineTo(x, ya + 7); cxB.stroke(); } }
-    cxB.fillStyle = '#4a3b28'; cxB.fillRect(0, yTrinch - 8, BW, 16);
-    cxB.fillStyle = '#7a6646'; for (let x = 0; x < BW; x += 15) { cxB.beginPath(); cxB.ellipse(x + 7.5, yTrinch + (defEmbaixo ? -8 : 8), 8, 4.5, 0, 0, Math.PI * 2); cxB.fill(); cxB.strokeStyle = 'rgba(40,30,18,.6)'; cxB.lineWidth = 0.8; cxB.stroke(); }
-    const corDef = FACCOES[b.defDono].cor, corAtq = FACCOES[b.atqDono].cor;
-    // posição na tela: o atacante para na beira da trincheira (nunca passa dos sacos de areia)
-    const yDef = yTrinch + (defEmbaixo ? 18 : -2);              // onde ficam os defensores
-    const yBeira = yTrinch + (yInicio - yTrinch) * 0.09;        // beira da trincheira, do lado do atacante
-    const yDoAtq = (dist) => yBeira + (yInicio - yBeira) * (dist / (C.DIST + 25));
-    // fim da batalha: quem venceu o ataque pula para dentro da trincheira e finca a bandeira
-    let pulo = 0;
-    if (b.terminou) { if (!b.fimEm) b.fimEm = performance.now(); pulo = Math.min(1, (performance.now() - b.fimEm) / 900); }
-    const venceuAtq = b.terminou && b.vencedor === 'atq';
-    b.def.forEach(d => { if (d.s.vida > 0) desenharGente(d.x, yDef, b.defDono === 'jogador', d.s, corDef, false); });
-    b.atq.filter(a => a.s.vida > 0).sort((a, z) => (defEmbaixo ? 1 : -1) * (yDoAtq(a.dist) - yDoAtq(z.dist))).forEach(a => {
-        let y = yDoAtq(a.dist);
-        if (venceuAtq) y = y + (yDef - y) * pulo;
-        const andando = !b.terminou && (a.dist > 0 || b.postAtq === 'recuar'); // na beira, para e mira
-        desenharGente(a.x, y, b.atqDono === 'jogador', a.s, corAtq, andando);
-        if (!b.terminou && a.dist < 220 && Math.random() < 0.05) { cxB.strokeStyle = 'rgba(255,224,138,.6)'; cxB.beginPath(); cxB.moveTo(a.x, y - 8); cxB.lineTo(a.x + (Math.random() - 0.5) * 60, yDef - 10); cxB.stroke(); }
-    });
-    if (b.terminou) { // bandeira e aviso do resultado
-        const cx = BW / 2, venceu = venceuAtq ? corAtq : corDef;
-        if (venceuAtq && pulo >= 1) {
-            cxB.strokeStyle = '#d8d0b8'; cxB.lineWidth = 2; cxB.beginPath(); cxB.moveTo(cx, yTrinch + 4); cxB.lineTo(cx, yTrinch - 40); cxB.stroke();
-            cxB.fillStyle = venceu; cxB.beginPath(); cxB.moveTo(cx, yTrinch - 40); cxB.lineTo(cx + 26, yTrinch - 33); cxB.lineTo(cx, yTrinch - 26); cxB.fill();
-        }
-        const txt = venceuAtq ? (b.saque ? '💰 SAQUEADA' : '🏴 CONQUISTADA') : b.recuou ? '↩ RECUARAM' : '🛡 TRINCHEIRA MANTIDA';
-        cxB.font = 'bold 20px "Courier New", monospace'; cxB.textAlign = 'center';
-        const yt = BH / 2; cxB.fillStyle = 'rgba(0,0,0,.6)'; cxB.fillRect(40, yt - 22, BW - 80, 34);
-        cxB.fillStyle = venceu; cxB.fillText(txt, cx, yt + 2); cxB.textAlign = 'left';
-    }
-    b.efeitos.forEach(f => {
-        const y = f.y < 0 ? yDef - 10 : yDoAtq(f.y);
-        if (f.tipo === 'explosao') { cxB.fillStyle = `rgba(255,160,60,${f.vida})`; cxB.beginPath(); cxB.arc(f.x, y, 18 * (1.3 - f.vida), 0, Math.PI * 2); cxB.fill(); }
-        else { cxB.fillStyle = `rgba(255,90,70,${f.vida})`; cxB.font = 'bold 12px monospace'; cxB.fillText('✖', f.x - 4, y - 14); }
-    });
-}
-function desenharGente(x, y, amigo, s, cor, andando) {
-    const tipo = s.tipo || 'inf', tinta = amigo ? '#9fd08f' : cor;
-    if (tipo === 'art' || tipo === 'cav' || tipo === 'blind') { // canhão, cavalo e blindado em desenho simples
-        cxB.save(); cxB.translate(x, y); cxB.lineWidth = 1.4; cxB.strokeStyle = tinta; cxB.fillStyle = amigo ? '#25331f' : '#2a0f10';
-        if (tipo === 'art') {
-            cxB.beginPath(); cxB.arc(-5, -6, 6, 0, Math.PI * 2); cxB.fill(); cxB.stroke();
-            cxB.beginPath(); cxB.moveTo(-5, -8); cxB.lineTo(14, amigo ? -22 : -2); cxB.lineWidth = 4; cxB.stroke(); cxB.lineWidth = 1.4;
-            cxB.beginPath(); cxB.moveTo(-10, -2); cxB.lineTo(-18, 2); cxB.stroke();
-        } else if (tipo === 'cav') {
-            cxB.beginPath(); cxB.ellipse(0, -10, 10, 5, 0, 0, Math.PI * 2); cxB.fill(); cxB.stroke();
-            [-7, -3, 4, 8].forEach(k => { cxB.beginPath(); cxB.moveTo(k, -6); cxB.lineTo(k + (andando ? Math.sin(Date.now() / 90 + k) * 2 : 0), 0); cxB.stroke(); });
-            cxB.beginPath(); cxB.moveTo(9, -12); cxB.lineTo(14, -18); cxB.lineTo(16, -15); cxB.stroke();
-            cxB.beginPath(); cxB.arc(0, -21, 3, 0, Math.PI * 2); cxB.fill(); cxB.stroke(); cxB.beginPath(); cxB.moveTo(0, -18); cxB.lineTo(0, -13); cxB.stroke();
-        } else {
-            cxB.fillRect(-13, -14, 26, 10); cxB.strokeRect(-13, -14, 26, 10);
-            cxB.fillRect(-6, -20, 12, 6); cxB.strokeRect(-6, -20, 12, 6);
-            cxB.beginPath(); cxB.moveTo(6, -17); cxB.lineTo(16, amigo ? -24 : -12); cxB.lineWidth = 2.5; cxB.stroke(); cxB.lineWidth = 1.4;
-            [-9, -3, 3, 9].forEach(k => { cxB.beginPath(); cxB.arc(k, -2, 2.6, 0, Math.PI * 2); cxB.stroke(); });
-        }
-        cxB.restore();
-        cxB.fillStyle = corFome(s); cxB.beginPath(); cxB.arc(x, y - 30, 2.5, 0, Math.PI * 2); cxB.fill();
-        return;
-    }
-    if (tipo === 'metr') { cxB.strokeStyle = tinta; cxB.lineWidth = 2; cxB.beginPath(); cxB.moveTo(x - 9, y - 1); cxB.lineTo(x - 3, y - 8); cxB.lineTo(x + 3, y - 1); cxB.stroke(); cxB.lineWidth = 3; cxB.beginPath(); cxB.moveTo(x - 3, y - 9); cxB.lineTo(x + 12, y - 11); cxB.stroke(); }
-    if (amigo) {
-        const spr = andando ? 'andando' : 'mira', d = SPRITES[spr], im = IMG[spr], F = 0.16;
-        if (im.complete && im.naturalWidth) cxB.drawImage(im, x - d.ax * F, y - d.ay * F, d.w * F, d.h * F);
-    } else {
-        cxB.fillStyle = '#2a0f10'; cxB.strokeStyle = cor; cxB.lineWidth = 1.2;
-        cxB.beginPath(); cxB.arc(x, y - 22, 4.5, 0, Math.PI * 2); cxB.fill(); cxB.stroke();
-        cxB.beginPath(); cxB.moveTo(x - 5, y - 17); cxB.lineTo(x + 5, y - 17); cxB.lineTo(x + 4, y); cxB.lineTo(x - 4, y); cxB.closePath(); cxB.fill(); cxB.stroke();
-    }
-    cxB.fillStyle = corFome(s); cxB.beginPath(); cxB.arc(x, y - 33, 2.5, 0, Math.PI * 2); cxB.fill();
+    cx.restore();
 }
 
 /* ---------- Topo, telas de início e fim ---------- */
@@ -1125,7 +1044,6 @@ function atualizarTopo() {
     document.getElementById('bVelMapa').textContent = G.velocidade === 1 ? '1×' : '2×';
     const bp = document.getElementById('bPausa'); bp.textContent = G.pausado ? '▶' : '⏸'; bp.classList.toggle('on', !!G.pausado);
     document.getElementById('faixaPausa').style.display = G.pausado && !G.fim ? 'block' : 'none';
-    const bpb = document.getElementById('bPausaBat'); if (bpb) bpb.textContent = G.pausado ? '▶ Continuar' : '⏸ Pausar';
     const av = document.getElementById('aviso'), n = G.noticias[0];
     if (n && G.t - n.t < (n.alerta ? 7 : 4.5)) { av.textContent = n.txt; av.className = n.alerta ? 'alerta' : ''; av.style.display = 'block'; }
     else av.style.display = 'none';
@@ -1200,7 +1118,7 @@ const SOM = {
     ctx: null, efeitos: null, musica: null, ruido: null, ultimo: {}, faixa: null,
     mapa: new Audio('assets/music/war_theme.mp3'), batalha: new Audio('assets/music/to_battle.mp3')
 };
-[SOM.mapa, SOM.batalha].forEach(a => { a.loop = true; a.preload = 'auto'; a.volume = 0.35; });
+[SOM.mapa, SOM.batalha].forEach(a => { a.loop = true; a.preload = 'none'; a.volume = 0.35; }); // só baixa quando for tocar
 function iniciarSom() {
     if (SOM.ctx) { if (SOM.ctx.state !== 'running') SOM.ctx.resume().catch(() => {}); return; }
     try {
@@ -1270,21 +1188,17 @@ let ultimo = performance.now();
 function laco(agora) {
     const dt = Math.min(0.1, (agora - ultimo) / 1000); ultimo = agora;
     const telaAberta = document.getElementById('tela').style.display === 'flex';
+    // batalhas do mapa em que você está: música de batalha e tiroteio de fundo
+    const lutando = (G && G.batalhas || []).some(b => !b.terminou && (b.atqDono === 'jogador' || b.defDono === 'jogador'));
+    if (G && !G.fim && !G.pausado && !telaAberta && lutando && Math.random() < dt * 5) som('tiro', 0.35);
+    if (G && SOM.faixa && SOM.faixa !== (lutando && !G.fim ? 'batalha' : 'mapa')) tocarMusica(lutando && !G.fim ? 'batalha' : 'mapa');
     if (!telaAberta && G && !G.fim && !G.pausado) {
-        if (G.batalha) {
-            const b = G.batalha;
-            b.passo(dt * (b.rapido ? 2 : 1));
-            if (!b.terminou && Math.random() < dt * 5) som('tiro', 0.35); // tiroteio de fundo
-            b.efeitos.forEach(f => f.vida -= dt); b.efeitos = b.efeitos.filter(f => f.vida > 0);
-            desenharBatalha(); atualizarBatalhaUI();
-            if (b.terminou && !b.fechando) { b.fechando = true; setTimeout(fecharBatalha, 1900); }
-        } else if (G.cliente) { if (typeof passoCliente === 'function') passoCliente(dt); } else passoMapa(dt * G.velocidade);
+        if (G.cliente) { if (typeof passoCliente === 'function') passoCliente(dt); } else passoMapa(dt * G.velocidade);
     }
-    if (G && G.batalha && G.pausado) desenharBatalha(); // pausada: a cena fica parada na tela
     if (G) { desenharMapa(); atualizarTopo(); }
     // salva a cada 5 s de jogo
     if (G && !G.fim && !G.pausado && G.t - (G.salvoT || 0) >= 5) { if (salvarPartida()) G.salvoT = G.t; }
-    if (G && !G.batalha && Math.floor(agora / 500) !== Math.floor((agora - dt * 1000) / 500) && !G.pendente) renderPainel();
+    if (G && Math.floor(agora / 500) !== Math.floor((agora - dt * 1000) / 500) && !G.pendente) renderPainel();
     requestAnimationFrame(laco);
 }
 atualizarBotaoSom();

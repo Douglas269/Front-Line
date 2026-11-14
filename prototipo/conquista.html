@@ -91,14 +91,6 @@
   .acao.forte { border-color: var(--ambar); background: #2a2214; color: #ffd28a; }
   .seletor { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 13px; }
   .passo { width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--borda); background: var(--painel); font-size: 18px; font-weight: 700; }
-  /* Batalha */
-  #batalha { position: fixed; inset: 0; background: var(--bg); display: none; flex-direction: column; z-index: 20; }
-  #batalha .cab { padding: 10px; border-bottom: 1px solid var(--borda); }
-  #batalha .placar { display: flex; justify-content: space-between; font-weight: 700; margin-top: 4px; }
-  #tempoBat { height: 6px; background: #1b221d; border-radius: 3px; overflow: hidden; margin-top: 6px; }
-  #tempoBat div { height: 100%; background: var(--ambarEsc); }
-  #cvBat { flex: 1; width: 100%; min-height: 0; display: block; }
-  #batalha .ctrl { padding: 8px 10px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--borda); }
   .linha { display: flex; gap: 6px; }
   .opc { flex: 1; padding: 11px 4px; border-radius: 8px; border: 1px solid var(--borda); background: var(--painel); font-weight: 700; font-size: 12px; }
   .opc small { display: block; font-weight: 400; font-size: 10px; color: var(--mudo); }
@@ -131,30 +123,14 @@
     <div id="zoom"><button onclick="zoomEm(1.3, cvM.getBoundingClientRect().width / 2, cvM.getBoundingClientRect().height / 2)" title="Aproximar">＋</button><button onclick="zoomEm(1 / 1.3, cvM.getBoundingClientRect().width / 2, cvM.getBoundingClientRect().height / 2)" title="Afastar">－</button><button onclick="irParaCapital()" title="Ir para a sua capital">★</button></div></div>
   <div id="painel"></div>
 </div>
-<div id="batalha">
-  <div class="cab">
-    <div style="display:flex;justify-content:space-between;font-weight:700"><span id="batTitulo">BATALHA</span><span><button id="bPausaBat" onclick="pausar()" style="background:var(--painel);border:1px solid var(--borda);border-radius:6px;padding:2px 8px;font-weight:700;font-size:12px;margin-right:8px">⏸ Pausar</button><span id="batTempo">2:00</span></span></div>
-    <div class="placar"><span id="batNos"></span><span id="batEles"></span></div>
-    <div id="tempoBat"><div></div></div>
-  </div>
-  <canvas id="cvBat"></canvas>
-  <div class="ctrl">
-    <div class="linha" id="batPost"></div>
-    <div class="linha" style="margin-top:6px">
-      <button class="opc" id="bArt">💥 Artilharia<small>30 🪙</small></button>
-      <button class="opc" id="bVel">⏩ 2×<small>acelerar</small></button>
-      <button class="opc" id="bAuto">⚡ Resolver<small>na hora</small></button>
-    </div>
-  </div>
-</div>
 <div id="tela"><div class="caixa" id="telaCaixa"></div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
-<script src="assets/js/conquista-mapa.js?v=20261113.2113"></script>
-<script src="assets/js/conquista-extra.js?v=20261113.2113"></script>
-<script src="assets/js/conquista.js?v=20261113.2113"></script>
-<script src="assets/js/conquista-online.js?v=20261113.2113"></script>
-<script src="assets/js/conquista-config.js?v=20261113.2113"></script>
+<script src="assets/js/conquista-mapa.js?v=20261114.0812"></script>
+<script src="assets/js/conquista-extra.js?v=20261114.0812"></script>
+<script src="assets/js/conquista.js?v=20261114.0812"></script>
+<script src="assets/js/conquista-online.js?v=20261114.0812"></script>
+<script src="assets/js/conquista-config.js?v=20261114.0812"></script>
 
 </body>
 </html>

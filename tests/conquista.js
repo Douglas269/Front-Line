@@ -24,7 +24,6 @@ function jogar({ N, FASE, EST }) {
       let pensa = 0, passos = 0;
       while (!G.fim) {
         passoMapa(0.5); passos++;
-        if (G.batalha) { const bt = G.batalha; if (bt.souAtq && EST === 'esperto' && bt.def.length >= 3) artilhariaNaBatalha(bt, 'atq'); while (!bt.terminou) bt.passo(0.25); fecharBatalha(); }
         est.minhasMax = Math.max(est.minhasMax, minhas().length);
         if (passos > 20000) { travou = true; break; }
         if ((pensa -= 0.5) > 0) continue; pensa = 3;
@@ -211,7 +210,7 @@ function jogar({ N, FASE, EST }) {
         await q.click('button.fase');
         const antes = await q.evaluate(() => {
             Object.keys(G.pensar).forEach(k => { G.pensar[k] = 40; });
-            for (let i = 0; i < 360; i++) { passoMapa(0.5); if (G.batalha) { const bt = G.batalha; while (!bt.terminou) bt.passo(0.25); fecharBatalha(); } }
+            for (let i = 0; i < 360; i++) passoMapa(0.5);
             salvarPartida();
             return JSON.stringify({ t: Math.round(G.t), donos: Object.values(G.prov).map(x => x.dono), tropa: tropaDe('jogador'), ex: G.ex.length, moedas: Math.floor(G.fac.jogador.moedas) });
         });
@@ -226,12 +225,7 @@ function jogar({ N, FASE, EST }) {
         sv.daOrdemPausado = await q.evaluate(() => { const e = exDe('jogador').find(x => parado(x) && x.s.length >= 2); return !e || !!ordem(e.id, G.prov[e.prov].viz[0], 1, 'mover'); });
         await q.click('#bPausa'); await q.waitForTimeout(800);
         sv.despausaAnda = await q.evaluate((t) => G.t > t, t1);
-        await q.evaluate(() => { const c = G.prov[G.capitalJogador]; const ex = criarExercito('jogador', c.id, 6); const m = Object.values(G.prov).find(x => x.dono === 'neutro' && exParadosEm(x.id, 'neutro').length); abrirBatalha(criarBatalha(ex, m, exParadosEm(m.id, 'neutro'))); });
-        await q.waitForTimeout(300); await q.click('#bPausaBat');
-        const b1 = await q.evaluate(() => G.batalha.t); await q.waitForTimeout(600);
-        sv.pausaNaBatalha = await q.evaluate((t) => G.batalha.t === t, b1);
-        await q.click('#bPausaBat');
-        sv.fimApagaSalvamento = await q.evaluate(() => { document.getElementById('batalha').style.display = 'none'; G.batalha = null; G.t = G.fase.tempo; passoMapa(0.1); return !!G.fim && !lerSalvamento(); });
+        sv.fimApagaSalvamento = await q.evaluate(() => { G.t = G.fase.tempo; passoMapa(0.1); return !!G.fim && !lerSalvamento(); });
         Object.entries(sv).forEach(([k, v]) => { if (!v) falhas.push('salvar/pausar: ' + k); });
         if (errosS.length) falhas.push('erros no salvamento: ' + errosS[0]);
         info.salvarPausar = sv;
@@ -247,15 +241,17 @@ function jogar({ N, FASE, EST }) {
         const so = {};
         so.musicaDoMapa = await q.evaluate(() => SOM.ctx && SOM.ctx.state === 'running' && SOM.faixa === 'mapa' && !SOM.mapa.paused);
         await q.evaluate(() => { window._ef = {}; const o = som; som = (t, f) => { window._ef[t] = (window._ef[t] || 0) + 1; return o(t, f); };
-            const c = G.prov[G.capitalJogador]; const ex = criarExercito('jogador', c.id, 8); const m = Object.values(G.prov).find(x => x.dono === 'neutro' && exParadosEm(x.id, 'neutro').length);
-            G.fac.jogador.moedas = 100; abrirBatalha(criarBatalha(ex, m, exParadosEm(m.id, 'neutro'))); });
-        await q.waitForTimeout(300);
-        so.musicaDaBatalha = await q.evaluate(() => SOM.faixa === 'batalha' && !SOM.batalha.paused && SOM.mapa.paused);
-        await q.click('#bArt'); await q.click('#bVel'); await q.waitForTimeout(4000);
+            Object.keys(G.pensar).forEach(k => { G.pensar[k] = 1e9; });
+            const c = G.prov[G.capitalJogador], e = exParadosEm(c.id, 'jogador')[0], alvo = c.viz.map(id => G.prov[id]).find(x => x.dono === 'neutro' && exParadosEm(x.id, 'neutro').length);
+            G.fac.jogador.moedas = 100; ordem(e.id, alvo.id, 6, 'ataque'); window._alvo = alvo.id;
+            for (let i = 0; i < 400 && !G.batalhas.length; i++) passoMapa(0.25); });
+        await q.waitForTimeout(400);
+        so.musicaDaBatalha = await q.evaluate(() => G.batalhas.length > 0 && SOM.faixa === 'batalha' && !SOM.batalha.paused && SOM.mapa.paused);
+        await q.evaluate(() => { acaoBatalha(window._alvo, 'art'); }); await q.waitForTimeout(3000);
         so.tirosEExplosao = await q.evaluate(() => (window._ef.tiro || 0) > 3 && window._ef.explosao >= 1);
-        await q.click('#bPausaBat'); await q.evaluate(() => { const bt = G.batalha; G.pausado = false; while (!bt.terminou) bt.passo(0.25); });
-        await q.waitForTimeout(2400);
-        so.voltaMusicaDoMapa = await q.evaluate(() => !G.batalha && SOM.faixa === 'mapa' && !SOM.mapa.paused);
+        await q.evaluate(() => { for (let i = 0; i < 3000 && G.batalhas.length; i++) passoMapa(0.25); });
+        await q.waitForTimeout(500);
+        so.voltaMusicaDoMapa = await q.evaluate(() => !G.batalhas.length && SOM.faixa === 'mapa' && !SOM.mapa.paused);
         await q.click('#bSom');
         so.desliga = await q.evaluate(() => !SOM.ligado && SOM.mapa.paused && SOM.batalha.paused);
         await q.reload({ waitUntil: 'load' });
@@ -263,6 +259,37 @@ function jogar({ N, FASE, EST }) {
         Object.entries(so).forEach(([k, v]) => { if (!v) falhas.push('som: ' + k); });
         if (errosSom.length) falhas.push('erros no som: ' + errosSom[0]);
         info.som = so;
+        await bs.close();
+    }
+
+    // 3d0) Tropas no mapa: cada tipo tem figura e cor; inimigo pintado com a cor do país; etiquetas e legenda aparecem
+    {
+        const bs = await chromium.launch({ args: ['--allow-file-access-from-files'] }); // deixa ler os pixels dos desenhos
+        const q = await bs.newPage({ viewport: { width: 390, height: 844 } }); const errosT = []; q.on('pageerror', e => errosT.push(e.message));
+        await q.goto(CONQ, { waitUntil: 'load' }); await q.evaluate(() => localStorage.clear()); await q.reload({ waitUntil: 'load' });
+        await q.click('button.fase'); await q.waitForFunction(() => IMG.mira.complete && IMG.mira.naturalWidth && IMG.andando.complete && IMG.andando.naturalWidth);
+        const tp = await q.evaluate(() => {
+            const r = {}; G.pausado = true;
+            r.todosOsTiposTemDesenho = ['art', 'cav', 'blind', 'metr'].every(t => { const c = document.createElement('canvas'); c.width = 60; c.height = 60; const x = c.getContext('2d'); desenharTropaEspecial(x, t, 30, 45, '#e0533f', false, false); return x.getImageData(0, 0, 60, 60).data.some((v, i) => i % 4 === 3 && v > 0); });
+            const f1 = figurasDoGrupo({ inf: 20, art: 1, cav: 1 }, 3), f2 = figurasDoGrupo({ inf: 5 }, 2), f3 = figurasDoGrupo(undefined, 1), f4 = figurasDoGrupo({ inf: 9, art: 1 }, 3);
+            r.figurasMostramCadaTipo = f1.includes('inf') && f1.includes('art') && f1.includes('cav') && f4.includes('art') && JSON.stringify(f2) === '["inf","inf"]' && JSON.stringify(f3) === '["inf"]';
+            const T = spriteTingido('mira', '#2060ff'), o = document.createElement('canvas'); o.width = T.width; o.height = T.height; o.getContext('2d').drawImage(IMG.mira, 0, 0);
+            const azul = (cv) => { const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data; let b = 0, n = 0; for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 200) { b += d[i + 2]; n++; } return b / Math.max(1, n); };
+            r.inimigoPintadoDaCorDoPais = azul(T) > azul(o) + 10;
+            // um exército com os 5 tipos na capital: as 5 cores aparecem no mapa (etiquetas + legenda)
+            G.fac.jogador.moedas = 900; ['metr', 'art', 'cav', 'blind'].forEach(id => { G.pesq.jogador.feitas[id] = 1; });
+            const c = G.capitalJogador; ['inf', 'metr', 'art', 'cav', 'blind'].forEach(t => recrutarEm(c, 'jogador', t));
+            G.sel = { tipo: 'prov', id: c }; centralizar(G.prov[c].x, G.prov[c].y); desenharMapa();
+            const cv = document.getElementById('mapa'), d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+            // legenda (topo, 12×12 por tipo) e etiquetas dos grupos (resto do mapa, 13×13 por tipo) contadas separadas
+            const corte = 36 * (cv.width / cv.getBoundingClientRect().width), leg = {}, tag = {};
+            TIPO_COR.forEach(([id, , hex]) => { const rr = parseInt(hex.slice(1, 3), 16), gg = parseInt(hex.slice(3, 5), 16), bb = parseInt(hex.slice(5, 7), 16); let a = 0, b = 0; for (let i = 0; i < d.length; i += 4) if (d[i] === rr && d[i + 1] === gg && d[i + 2] === bb) { if (Math.floor(i / 4 / cv.width) < corte) a++; else b++; } leg[id] = a; tag[id] = b; });
+            r.legendaDosTiposNoTopo = Object.values(leg).every(n => n >= 60); r.etiquetasDosTiposNosGrupos = Object.entries(tag).every(([id, n]) => n >= (id === 'inf' ? 60 : 60)); r.contagemCores = { leg, tag };
+            return r;
+        });
+        info.tropasNoMapa = tp;
+        Object.entries(tp).forEach(([k, v]) => { if (v === false) falhas.push('tropas no mapa: ' + k); });
+        if (errosT.length) falhas.push('erros nas tropas do mapa: ' + errosT[0]);
         await bs.close();
     }
 
@@ -310,7 +337,7 @@ function jogar({ N, FASE, EST }) {
         ordem(pass.id, dele.id, 4, 'ataque'); for (let i = 0; i < 200 && pass.rota.length; i++) passoMapa(0.25);
         criarBatalha = cb;
         r.pazSoPassa = !lutou && dele.dono === bot;
-        declararGuerra(bot); for (let i = 0; i < 20 && G.batalha; i++) { const bt = G.batalha; while (!bt.terminou) bt.passo(0.25); fecharBatalha(); }
+        declararGuerra(bot);
         r.guerraVoltaAValer = emGuerra('jogador', bot);
         // generais: bônus no exército e experiência ao vencer
         novoJogo(1); const e1 = exParadosEm(G.capitalJogador, 'jogador')[0];
@@ -337,7 +364,7 @@ function jogar({ N, FASE, EST }) {
             ordem(e.id, alvo.id, 6, 'ataque');
             for (let i = 0; i < 400 && !G.batalhas.length; i++) passoMapa(0.25);
             const b = G.batalhas[0];
-            r.batalhaNoMapa = !!b && !G.batalha && document.getElementById('batalha').style.display !== 'flex';
+            r.batalhaNoMapa = !!b && !document.getElementById('batalha'); // a tela de batalha separada não existe mais
             const t0 = G.t; passoMapa(1); r.mapaNaoPara = G.t > t0;
             G.sel = { tipo: 'prov', id: alvo.id }; renderPainel();
             r.painelMostraBatalha = /Batalha em/.test(document.getElementById('painel').textContent);

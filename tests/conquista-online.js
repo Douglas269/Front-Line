@@ -82,7 +82,7 @@ const est = (J) => J.page.evaluate(() => window.__online.estado());
     await H.page.evaluate(() => { for (let i = 0; i < 120; i++) passoMapa(0.5); });
     await A.page.waitForTimeout(900);
     ck.conquistaApareceParaOCliente = await A.page.evaluate((o) => G.prov[o.destino].dono === 'jogador' || G.noticias.some(n => /segurou|conquistou/.test(n.txt)), ordem);
-    ck.clienteNaoSimula = await A.page.evaluate(() => Object.keys(G.pensar).length > 0 && !G.batalha); // não roda bots nem batalhas
+    ck.clienteNaoSimula = await A.page.evaluate(() => Object.keys(G.pensar).length > 0 && !(G.batalhas && G.batalhas.length)); // não roda bots nem batalhas
     // quem sai vira bot no anfitrião
     await B.page.evaluate(() => sairDaSala());
     await H.page.waitForFunction((m) => G.pensar[m] !== undefined && /bot/.test(FACCOES[m].nome), eb.minha, { timeout: 5000 });

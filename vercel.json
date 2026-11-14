@@ -47,6 +47,15 @@
   ],
   "headers": [
     {
+      "source": "/(prototipo/)?assets/music/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=604800"
+        }
+      ]
+    },
+    {
       "source": "/(versao.json|prototipo/versao.json)",
       "headers": [
         {
