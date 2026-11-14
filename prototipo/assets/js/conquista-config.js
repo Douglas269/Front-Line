@@ -59,6 +59,7 @@ function renderConfigConq() {
     } else if (a === 'jogo') {
         corpo = `<div class="sub" style="margin-bottom:6px">Dificuldade dos bots (vale na campanha; no online, a do anfitrião):</div>` +
             Object.entries(DIF_TXT).map(([id, d]) => `<button class="cfgOpcao${c.dificuldade === id ? ' on' : ''}" onclick="gravarConfigConq({ dificuldade: '${id}' });renderConfigConq()"><b>${d.nome}</b><small>${d.desc}</small></button>`).join('')
+            + linhaTog('Visual pixel art (teste)', 'mapa e terreno em blocos de pixel; vale também no modo Trincheiras', c.pixel === true, `gravarConfigConq({ pixel: ${!(c.pixel === true)} });renderConfigConq()`)
             + linhaTog('Texto maior', 'letras maiores no painel e nas telas', c.textoGrande, `gravarConfigConq({ textoGrande: ${!c.textoGrande} });renderConfigConq()`);
     } else if (a === 'conta') {
         const email = emailDaConta(), vencidas = Object.values(meta.estrelas).filter(v => v > 0).length;
@@ -80,3 +81,53 @@ function renderConfigConq() {
 // dificuldade dos bots: a campanha e o anfitrião leem daqui
 function DIFC() { const d = ({ recruta: { vontade: 0.75, margem: 1.15, prod: 0.9 }, veterano: { vontade: 1.2, margem: 0.9, prod: 1.1 } })[CONFIG_CONQ.dificuldade] || { vontade: 1, margem: 1, prod: 1 }; const f = (typeof G !== 'undefined' && G && G.fase && G.fase.botFacil) || 1; return { vontade: d.vontade * f, margem: d.margem, prod: d.prod * f }; } // botFacil: a fase pode deixar os bots mais calmos
 aplicarConfigConq();
+
+// ---------- Visual pixel art do mapa (teste): o desenho vetorial já pintado vira blocos de 3 px, com poucas cores ----------
+const pixelNoMapa = () => CONFIG_CONQ.pixel === true || /[?&]pixel=1/.test(location.search);
+let pxPequeno = null;
+function pixelarMapa() {
+    if (!pixelNoMapa()) return;
+    const S = 3 * DPR(), w = Math.ceil(cvM.width / S), h = Math.ceil(cvM.height / S);
+    if (!pxPequeno) pxPequeno = document.createElement('canvas');
+    if (pxPequeno.width !== w || pxPequeno.height !== h) { pxPequeno.width = w; pxPequeno.height = h; }
+    const g = pxPequeno.getContext('2d', { willReadFrequently: true });
+    g.setTransform(1, 0, 0, 1, 0, 0); g.imageSmoothingEnabled = true; g.clearRect(0, 0, w, h);
+    g.drawImage(cvM, 0, 0, cvM.width, cvM.height, 0, 0, w, h);
+    let im = null; try { im = g.getImageData(0, 0, w, h); } catch (e) { im = null; } // (aberto como arquivo, a imagem é 'de outra origem': fica só o efeito de blocos)
+    const d = im ? im.data : [];
+    for (let i = 0; i < d.length; i += 4) { // poucas cores (paleta reduzida) com uma trama leve para não achatar o relevo
+        const px = (i >> 2) % w, py = ((i >> 2) / w) | 0, tr = ((px & 1) ^ (py & 1)) ? 6 : -6;
+        d[i] = Math.min(255, Math.max(0, Math.round((d[i] + tr) / 36) * 36)); d[i + 1] = Math.min(255, Math.max(0, Math.round((d[i + 1] + tr) / 36) * 36)); d[i + 2] = Math.min(255, Math.max(0, Math.round((d[i + 2] + tr) / 40) * 40));
+    }
+    if (im) g.putImageData(im, 0, 0);
+    cxM.setTransform(1, 0, 0, 1, 0, 0); cxM.imageSmoothingEnabled = false;
+    cxM.drawImage(pxPequeno, 0, 0, w, h, 0, 0, w * S, h * S);
+    cxM.setTransform(DPR(), 0, 0, DPR(), 0, 0);
+}
+// Soldados do mapa em sprite pixel (grupos só de infantaria/metralhadora; artilharia, cavalaria e blindados seguem como antes)
+const PX_SOLD = { img: new Image(), q: { 265: [737, 632, 29, 33], 290: [268, 755, 22, 33], 291: [301, 755, 22, 33], 292: [334, 754, 22, 34], 293: [367, 755, 22, 33] }, tinta: {}, ok: false };
+PX_SOLD.img.onload = () => { PX_SOLD.ok = true; };
+PX_SOLD.img.src = 'assets/pixel/soldados.png';
+const desenharBonecoClassico = desenharBoneco;
+desenharBoneco = function (x, y, cor, andando, n, agora, dir = 1, tipos) {
+    const quantos = n >= 10 ? 3 : n >= 4 ? 2 : 1, fig = figurasDoGrupo(tipos, quantos);
+    if (!pixelNoMapa() || !PX_SOLD.ok || fig.some(t => TIPO_ESPECIAL[t])) return desenharBonecoClassico(x, y, cor, andando, n, agora, dir, tipos);
+    const amigo = cor === FACCOES.jogador.cor, folga = 10;
+    for (let k = quantos - 1; k >= 0; k--) {
+        const bx = x + (k - (quantos - 1) / 2) * folga * dir, by = y - k * 2;
+        const id = andando ? [290, 291, 292, 293][Math.floor(agora * 8 + k) % 4] : 265;
+        const q = PX_SOLD.q[id], chave = id + cor + amigo;
+        let c = PX_SOLD.tinta[chave];
+        if (!c) {
+            c = PX_SOLD.tinta[chave] = document.createElement('canvas'); c.width = q[2]; c.height = q[3];
+            const g = c.getContext('2d'); g.imageSmoothingEnabled = false; g.drawImage(PX_SOLD.img, q[0], q[1], q[2], q[3], 0, 0, q[2], q[3]);
+            g.globalCompositeOperation = 'source-atop'; g.globalAlpha = amigo ? 0.0 : 0.55; g.fillStyle = cor; g.fillRect(0, 0, q[2], q[3]);
+            if (!amigo) { g.globalAlpha = 1; g.fillRect(0, 3, q[2], 1); }
+        }
+        cxM.fillStyle = 'rgba(0,0,0,.35)'; cxM.fillRect(Math.round(bx - 7), Math.round(by), 14, 2);
+        cxM.save(); cxM.imageSmoothingEnabled = false; cxM.translate(Math.round(bx), Math.round(by)); cxM.scale(dir, 1);
+        const F = 1.1; cxM.drawImage(c, Math.round(-11 * F), Math.round(-q[3] * F), Math.round(q[2] * F), Math.round(q[3] * F)); cxM.restore();
+        cxM.fillStyle = cor; cxM.fillRect(Math.round(bx - 2), Math.round(by - q[3] * F - 6), 5, 5); cxM.strokeStyle = 'rgba(0,0,0,.7)'; cxM.lineWidth = 1; cxM.strokeRect(Math.round(bx - 2) + 0.5, Math.round(by - q[3] * F - 6) + 0.5, 4, 4);
+    }
+    return (quantos - 1) / 2 * folga;
+};

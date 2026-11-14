@@ -34,6 +34,12 @@ Jogo de estratégia tático com foco em realismo de comando, combate blindado e 
 - O jogo continua salvando no aparelho e espelha na nuvem a cada 30 s de jogo e na hora ao virar o dia, pausar, subir de nível, terminar a partida ou fechar o tutorial. Ao entrar, fica com o salvamento mais recente entre aparelho e nuvem; o progresso de convidado passa para a conta no primeiro login. Sem internet, segue como convidado.
 - O navegador usa só a chave pública (publishable) do Supabase; a proteção dos dados vem das políticas RLS.
 
+### Visual pixel art (teste, desligado por padrão)
+Ligue em Configurações > "Visual pixel art (teste)" (vale para Trincheiras e Conquista) ou abra o jogo com `?pixel=1`.
+- `prototipo/assets/js/05b-cena-pixel.js`: Trincheiras com campo visto de lado (parapeito à esquerda, inimigos vindo da direita), soldados e inimigos em sprites, cômodos em tábuas; cada soldado tem lenço/faixa de uma cor, braçadeira de médico, pá de engenheiro, luneta de atirador e divisas de sargento.
+- `conquista-config.js`: o mapa da Conquista vira blocos de pixel com paleta reduzida e os soldados usam os mesmos sprites.
+- Arte: "Tiny Soldiers of The Old World Wars" (OpenGameArt, CC0), ver `prototipo/assets/pixel/LICENCA.txt`. Teste: `node tests/pixel.js`.
+
 ### Visual: trincheira em corte lateral (padrão)
 - A trincheira aparece vista de lado, desenhada ao vivo: no alto, o céu (muda com manhã, tarde, noite e madrugada) e a terra de ninguém com os inimigos (silhuetas e distância), a linha de alcance de 140 m, o arame e o clima (chuva, neve, névoa); embaixo, os cômodos: **posto de vigília**, **ninhos** (armas pesadas), **cozinha**, **depósito** (caixas e barris conforme o estoque), **abrigo** (descanso) e **oficina** (manutenção e obras).
 - Soldados em tamanho grande (escala `CORTE.ESC` = 1,3), com o céu um pouco menor e os cômodos mais altos.

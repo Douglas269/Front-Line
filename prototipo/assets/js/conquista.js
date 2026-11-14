@@ -791,6 +791,7 @@ function desenharMapa() {
     }
     // a partir daqui, em pixels da tela (tamanho fixo)
     cxM.setTransform(d, 0, 0, d, 0, 0);
+    if (typeof pixelarMapa === 'function') pixelarMapa(); // visual pixel art (teste): terreno, cores e rotas viram blocos
     // nomes: capitais e as suas primeiro; um nome que encostaria em outro já escrito fica de fora (aparece com zoom)
     const ocupado = [];
     Object.values(G.prov).sort((a, b) => (b.capital - a.capital) || ((b.dono === 'jogador') - (a.dono === 'jogador'))).forEach(p => {

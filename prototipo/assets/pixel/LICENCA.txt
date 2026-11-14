@@ -1,0 +1,3 @@
+Arte pixel do modo Trincheiras (estilo "pixel")
+- soldados.png: "Tiny Soldiers of The Old World Wars" (OpenGameArt.org) - CC0 / domínio público.
+- Todo o resto (cenário, mapa, efeitos) é desenhado por código neste repositório.
