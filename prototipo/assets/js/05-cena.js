@@ -846,6 +846,7 @@
                 const pe = posInimigoCena(e);
                 disparosCena[id] = t;
                 const ox = p.x + 19 * CORTE.ESC, oy = p.y - 25 * CORTE.ESC;
+                if (typeof emiteDisparo === 'function') emiteDisparo(ox, oy); // clarão e faíscas no cano (08b-particulas.js)
                 if (!atlasPronto) { cctx.fillStyle = '#ffd27a'; cctx.beginPath(); cctx.arc(ox, oy, 2.5, 0, Math.PI * 2); cctx.fill(); }
                 if (CONFIG.rastros) { cctx.strokeStyle = p.comodo === 'ninhos' ? 'rgba(255,179,71,0.7)' : 'rgba(255,224,138,0.55)'; cctx.lineWidth = 1; cctx.beginPath(); cctx.moveTo(ox, oy); cctx.lineTo(pe.x, pe.y); cctx.stroke(); }
             });

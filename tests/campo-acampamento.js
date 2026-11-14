@@ -41,7 +41,7 @@ const PAGINA = 'file://' + path.resolve(__dirname, '..', 'prototipo', 'ponto-alp
         r.blindadoDeixaCascoECratera = cenaCorpos.some(c => c.tipo === 'blindado') && (campoDe().crateras.length >= c0 || campoDe().crateras.length === CAMPO.MAX_CRATERAS);
         // faíscas no acerto
         const rnd = Math.random; Math.random = () => 0; cenaEfeitos.length = 0; efeitoAcerto({ type: 'infantaria', distance: 100, offsetX: 0 }); Math.random = rnd;
-        r.faiscaNoAcerto = cenaEfeitos.some(x => x.tipo === 'faisca');
+        r.faiscaNoAcerto = PARTICULAS.some(q => q.t === 'faisca') || cenaEfeitos.some(x => x.tipo === 'faisca');
         r.efeitosNaoVazam = (() => { for (let i = 0; i < 300; i++) cenaEfeito('faisca', { pos: { x: 100, y: 100 } }, 12); return cenaEfeitos.length <= 60; })();
         gameState.barrage = null; cenaEfeitos.length = 0;
         return r;
@@ -54,6 +54,40 @@ const PAGINA = 'file://' + path.resolve(__dirname, '..', 'prototipo', 'ponto-alp
     // o campo é desenhado sem erro com tudo isso
     ck.desenhaSemErro = await p.evaluate(() => { try { gameState.day = 6; registrarCratera(90); spawnEnemy('infantaria', 120); abaterInimigo(gameState, { type: 'blindado', distance: 80, offsetX: 0, hp: 0, maxHp: 1 }); for (let i = 0; i < 5; i++) renderCorte(true); gameState.enemies = []; return true; } catch (e) { return String(e); } }) === true;
     await shot('x1-campo');
+
+    // ---------- 1b) Partículas ----------
+    Object.assign(ck, await p.evaluate(() => {
+        const r = {}; PARTICULAS.length = 0; cenaEfeitos.length = 0; CONFIG.particulas = true; particulasLeve = false;
+        emiteExplosao(150, 100, 1, true);
+        const tipos = new Set(PARTICULAS.map(q => q.t));
+        r.explosaoTemTerraBrasaFumacaEClarao = ['terra', 'brasa', 'fumaca', 'clarao'].every(t => tipos.has(t));
+        PARTICULAS.length = 0; cenaEfeito('explosao', { comodo: 'posto' }); r.explosaoDaCenaGeraParticulas = PARTICULAS.length > 10;
+        PARTICULAS.length = 0; cenaEfeito('explosao', { pos: { x: 200, y: CORTE.SOLO - 8 } }); r.explosaoNoCampoGeraMais = PARTICULAS.length > 30;
+        PARTICULAS.length = 0; emiteDisparo(100, 150); r.disparoTemClaraoEFaiscas = PARTICULAS.some(q => q.t === 'clarao') && PARTICULAS.some(q => q.t === 'faisca');
+        PARTICULAS.length = 0; emiteMorte(100, 100); emiteAcerto(100, 100); emiteChama(100, 100); r.acertoEMorteGeramPoeira = PARTICULAS.some(q => q.t === 'fumaca');
+        // têm limite e acabam sozinhas
+        PARTICULAS.length = 0; for (let i = 0; i < 80; i++) emiteExplosao(100 + i, 100, 1.4, true);
+        r.particulasTemLimite = PARTICULAS.length <= PART.MAX;
+        for (let i = 0; i < 400; i++) renderCorte(true);
+        r.particulasAcabam = PARTICULAS.length === 0;
+        // terra quica e para no chão
+        PARTICULAS.length = 0; emiteExplosao(150, 100, 1, true); for (let i = 0; i < 12; i++) renderCorte(true);
+        r.terraNaoAfunda = PARTICULAS.filter(q => q.t === 'terra').every(q => q.y <= q.chao + 0.001);
+        // desligadas em Configurações: não nascem e as que existem somem
+        CONFIG.particulas = false; PARTICULAS.length = 0; emiteExplosao(150, 100, 1, true); emiteDisparo(10, 10); r.desligarNaoGera = PARTICULAS.length === 0;
+        cenaEfeito('explosao', { comodo: 'posto' }); renderCorte(true); r.desligarNaoGeraNaCena = PARTICULAS.length === 0;
+        CONFIG.particulas = true;
+        // aparelho lento: usa metade
+        particulasLeve = true; PARTICULAS.length = 0; emiteExplosao(150, 100, 1, true); const leve = PARTICULAS.length; particulasLeve = false; PARTICULAS.length = 0; emiteExplosao(150, 100, 1, true);
+        r.aparelhoLentoUsaMenos = leve < PARTICULAS.length; particulasLeve = false;
+        // custo de desenhar 500 partículas
+        PARTICULAS.length = 0; for (let i = 0; i < 40; i++) emiteExplosao(100 + i * 5, 100, 1.4, true);
+        const t0 = performance.now(); for (let i = 0; i < 20; i++) { renderCorte(true); if (PARTICULAS.length < 300) for (let k = 0; k < 10; k++) emiteExplosao(60 + k * 30, 100, 1.4, true); } r.desenhaRapido = (performance.now() - t0) / 20 < 40;
+        PARTICULAS.length = 0; cenaEfeitos.length = 0;
+        r.configTemChave = typeof CONFIG_PADRAO !== 'undefined' && CONFIG_PADRAO.particulas === true;
+        return r;
+    }));
+    await shot('x1b-particulas');
 
     // ---------- 2) Ameaças novas ----------
     Object.assign(ck, await p.evaluate(() => {

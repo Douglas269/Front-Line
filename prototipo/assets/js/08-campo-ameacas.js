@@ -53,6 +53,7 @@ desenharInimigosCena = function (t) {
 /* ---------- Impacto: faíscas, poeira e fumaça que demora ---------- */
 function efeitoAcerto(inimigo) {
     if (!inimigo || document.hidden || jogoPausado || Math.random() > 0.45) return;
+    if (typeof emiteAcerto === 'function' && CONFIG.particulas !== false) { const q = posInimigoCena(inimigo); emiteAcerto(q.x, q.y - 8); return; } // partículas (08b)
     cenaEfeito('faisca', { inimigo }, 12);
     if (Math.random() < 0.3) cenaEfeito('poeira', { inimigo }, 30);
 }
@@ -63,6 +64,7 @@ const _o8_abaterInimigo = abaterInimigo;
 abaterInimigo = function (estado, enemy) {
     const p = posInimigoCena(enemy);
     cenaCorpos.push({ x: p.x, y: p.y, tipo: enemy.type === 'blindado' ? 'blindado' : 'soldado', t: tempoDeJogo() });
+    if (typeof emiteMorte === 'function') emiteMorte(p.x, p.y);
     while (cenaCorpos.length > CAMPO.MAX_CORPOS) cenaCorpos.shift();
     if (enemy.type === 'blindado' || enemy.type === 'sapador') { registrarCratera(p.x, 11 + Math.random() * 6); fumacaNoCampo(p.x, 1.4); }
     return _o8_abaterInimigo(estado, enemy);
@@ -73,7 +75,7 @@ processBarrage = function () {
     const havia = gameState.barrage && gameState.barrage.ticks <= 1;
     _o8_processBarrage();
     if (havia && !gameState.barrage) {
-        for (let i = 0; i < 2; i++) { const x = 30 + Math.random() * 340; registrarCratera(x); fumacaNoCampo(x, 1); }
+        for (let i = 0; i < 2; i++) { const x = 30 + Math.random() * 340; registrarCratera(x); fumacaNoCampo(x, 1); cenaEfeito('explosao', { pos: { x, y: CORTE.SOLO - 8 } }); } // o projétil cai no campo
     }
 };
 // Novos tipos de efeito na cena (chamado por 05-cena.js para tipos que ela não conhece)
@@ -152,6 +154,7 @@ function desenharExtraInimigo(e, p, esc, t) {
     g.addColorStop(0, 'rgba(255,230,140,0.95)'); g.addColorStop(0.5, 'rgba(240,120,40,0.7)'); g.addColorStop(1, 'rgba(120,40,10,0)');
     cctx.fillStyle = g; cctx.beginPath(); cctx.moveTo(p.x + 6, ya - 1.5); cctx.quadraticCurveTo(p.x + 6 + comp * 0.6, ya - 4 - Math.random() * 2, p.x + 6 + comp, ya); cctx.quadraticCurveTo(p.x + 6 + comp * 0.6, ya + 4, p.x + 6, ya + 1.5); cctx.fill();
     cctx.fillStyle = '#e06a2a'; cctx.fillRect(p.x - 5 * esc, ya - 3, 3, 6); // tanque de combustível
+    if (typeof emiteChama === 'function' && !jogoPausado) emiteChama(p.x + 6 + comp * 0.8, ya);
 }
 const _o8_resolverChegadaNaTrincheira = resolverChegadaNaTrincheira;
 resolverChegadaNaTrincheira = function (estado, enemy, alive) {
