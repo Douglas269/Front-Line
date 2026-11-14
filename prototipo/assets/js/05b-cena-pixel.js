@@ -1,11 +1,9 @@
-// FrontLine · Trincheiras: visual PIXEL ART (teste, ligado em Configurações > "Visual pixel art" ou com ?pixel=1)
+// FrontLine · Trincheiras: visual PIXEL ART (o visual do jogo; a versão antiga está no ramo visual-classico do GitHub)
 // Carregado depois de 05-cena.js e antes de 06/07/08, que se encaixam por cima.
-// O estilo clássico continua intacto: cada função abaixo só muda o desenho quando o modo pixel está ligado.
 // Arte dos soldados: "Tiny Soldiers of The Old World Wars" (OpenGameArt, CC0), ver assets/pixel/LICENCA.txt.
 // Cenário e cômodos são desenhados por código, em blocos.
 
 const PX_QUADROS = {"5":[213,3,39,33],"6":[268,3,39,33],"7":[317,3,43,33],"8":[368,4,42,32],"9":[419,3,30,33],"10":[470,3,33,33],"11":[521,4,34,32],"21":[7,53,25,33],"22":[60,57,31,34],"35":[105,72,45,21],"36":[156,74,45,19],"50":[291,97,24,35],"51":[330,98,25,34],"52":[365,99,25,33],"53":[400,98,25,34],"54":[435,97,25,35],"55":[470,97,25,35],"56":[501,98,24,34],"57":[540,99,22,33],"58":[571,98,24,34],"59":[614,98,20,35],"60":[656,99,20,34],"61":[698,100,20,33],"64":[11,142,20,33],"65":[53,141,20,34],"66":[87,139,24,35],"67":[142,140,23,34],"68":[193,141,29,33],"69":[244,141,41,33],"70":[295,143,26,31],"71":[346,141,29,33],"72":[397,140,23,34],"73":[449,140,25,32],"74":[499,139,14,33],"75":[535,140,23,32],"76":[583,139,14,33],"88":[16,192,35,35],"89":[68,192,35,35],"90":[113,212,35,21],"91":[166,209,36,24],"92":[221,203,35,30],"93":[275,212,35,21],"94":[339,192,35,35],"104":[3,239,45,35],"105":[58,239,45,35],"106":[113,239,49,35],"107":[168,239,35,35],"108":[455,239,35,35],"109":[496,239,29,32],"110":[761,223,41,15],"111":[209,240,35,34],"112":[250,241,35,33],"113":[291,241,35,33],"114":[332,240,35,34],"115":[373,240,35,34],"116":[414,240,35,34],"117":[553,241,27,30],"118":[606,241,28,28],"119":[658,242,36,28],"120":[709,242,36,28],"124":[3,287,41,15],"125":[65,287,41,15],"126":[127,287,41,15],"127":[189,287,56,15],"128":[251,287,40,15],"129":[313,287,41,15],"130":[375,287,41,15],"138":[751,288,35,15],"211":[344,477,63,35],"212":[419,477,53,35],"213":[496,479,51,32],"214":[571,479,51,32],"215":[646,479,51,32],"216":[719,479,41,15],"217":[747,456,41,15],"218":[49,480,53,31],"219":[108,480,53,31],"220":[167,480,53,31],"221":[226,480,53,33],"222":[285,480,53,33],"223":[467,498,15,11],"224":[470,486,15,14],"255":[283,605,53,34],"256":[352,610,54,29],"257":[426,614,50,25],"258":[482,614,64,25],"259":[552,614,64,25],"260":[622,603,49,35],"265":[737,632,29,33],"266":[789,632,22,34],"269":[143,685,49,35],"270":[211,686,51,34],"275":[737,674,41,32],"281":[765,715,41,32],"282":[548,724,34,34],"283":[602,725,39,33],"284":[656,725,39,33],"285":[709,724,45,34],"290":[268,755,22,33],"291":[301,755,22,33],"292":[334,754,22,34],"293":[367,755,22,33],"294":[400,755,22,33],"295":[433,755,22,33],"296":[466,755,22,33],"297":[499,755,22,34]};
-const pixelAtivo = () => (typeof CONFIG !== 'undefined' && CONFIG.pixel === true) || /[?&]pixel=1/.test(location.search);
 const pxImg = new Image(), pxTanque = new Image();
 let pxPronto = false;
 pxImg.onload = () => { pxPronto = true; assinaturaFundo = ''; };
@@ -49,21 +47,17 @@ function pxDesenha(id, x, y, esc, flip, s, vermelho, ancora) {
 
 // ---------- campo de batalha na vista lateral: nossa trincheira à esquerda, o inimigo vem da direita ----------
 const PX_X0 = 118, PX_X1 = 388;
-const _px_posInimigoCena = posInimigoCena;
-posInimigoCena = function (e) {
-    if (!pixelAtivo()) return _px_posInimigoCena(e);
+function posInimigoCena(e) {
     const d = Math.max(0, Math.min(300, e.distance)), faixa = Math.round((((e.offsetX || 0) + 200) / 400) * 2);
     return { x: PX_X0 + (d / 300) * (PX_X1 - PX_X0), y: CORTE.SOLO - 3 - faixa * 4 };
 };
 const _px_assinaturaDoFundo = assinaturaDoFundo;
-assinaturaDoFundo = function () { return _px_assinaturaDoFundo() + (pixelAtivo() ? '|px' + (pxPronto ? 1 : 0) : ''); };
+assinaturaDoFundo = function () { return _px_assinaturaDoFundo() + '|px' + (pxPronto ? 1 : 0); };
 
 const PX_CEU = [['#7f9a96', '#b8c0a4'], ['#5b6f66', '#a98f6c'], ['#0b1222', '#1d2a3c'], ['#070b14', '#111a28']];
 const pxRuido = (i) => ((i * 2654435761) >>> 0) % 1000 / 1000;
 function pxMix(a, b, k) { const p = (h) => [1, 3, 5].map(i => parseInt(h.substr(i, 2), 16)); const A = p(a), B = p(b); return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * k).toString(16).padStart(2, '0')).join(''); }
-const _px_desenharCeuFundo = desenharCeuFundo;
-desenharCeuFundo = function () {
-    if (!pixelAtivo()) return _px_desenharCeuFundo();
+function desenharCeuFundo() {
     const per = periodoDoDia(), S = CORTE.SOLO, [a, b] = PX_CEU[per];
     for (let i = 0; i < 6; i++) { cctx.fillStyle = i < 3 ? a : (i < 5 ? pxMix(a, b, 0.5) : b); cctx.fillRect(0, i * 18, CORTE.W, 19); } // céu em faixas
     if (per >= 2) { cctx.fillStyle = '#dfe6ee'; for (let i = 0; i < 30; i++) cctx.fillRect(Math.floor(pxRuido(i) * 396), Math.floor(pxRuido(i + 50) * 70), i % 5 ? 1 : 2, i % 5 ? 1 : 2); cctx.fillStyle = '#efe8c8'; cctx.fillRect(326, 20, 12, 12); cctx.fillStyle = a; cctx.fillRect(331, 19, 9, 9); }
@@ -94,9 +88,7 @@ desenharCeuFundo = function () {
     }
 };
 
-const _px_desenharNuvens = desenharNuvens;
-desenharNuvens = function (t) {
-    if (!pixelAtivo()) return _px_desenharNuvens(t);
+function desenharNuvens(t) {
     const noite = periodoDoDia() >= 2;
     cctx.fillStyle = noite ? 'rgba(120,140,160,0.10)' : 'rgba(230,230,215,0.16)';
     const off = (t / 120) % 440;
@@ -107,9 +99,8 @@ desenharNuvens = function (t) {
 
 // ---------- inimigos como sprites ----------
 const PX_INIM = { infantaria: [50, 51], patrulha: [64, 50], infiltrado: [5, 6], sapador: [88, 89] };
-const _px_desenharInimigosCena = desenharInimigosCena;
-desenharInimigosCena = function (t) {
-    if (!pixelAtivo() || !pxPronto) return _px_desenharInimigosCena(t);
+function desenharInimigosCena(t) {
+    if (!pxPronto) return;
     if (!temVisao()) {
         cctx.fillStyle = 'rgba(5,7,6,0.88)'; cctx.fillRect(0, 0, CORTE.W, CORTE.SOLO - 2);
         txtC(200, 60, 'NENHUM SOLDADO EM VIGÍLIA', '#c0392b', 10, 700, 'center', 11);
@@ -149,9 +140,7 @@ desenharInimigosCena = function (t) {
 };
 
 // ---------- tiros: saem do parapeito, não dos cômodos ----------
-const _px_desenharTirosCena = desenharTirosCena;
-desenharTirosCena = function (pos, t) {
-    if (!pixelAtivo()) return _px_desenharTirosCena(pos, t);
+function desenharTirosCena(pos, t) {
     if (!temVisao() || jogoPausado) return;
     const alvos = gameState.enemies.filter(e => e.distance <= TIRO.ALCANCE && e.hp > 0);
     if (!alvos.length) return;
@@ -167,9 +156,7 @@ desenharTirosCena = function (pos, t) {
 };
 
 // ---------- cômodos em tábuas e vigas ----------
-const _px_desenharComodoBase = desenharComodoBase;
-desenharComodoBase = function (chave) {
-    if (!pixelAtivo()) return _px_desenharComodoBase(chave);
+function desenharComodoBase(chave) {
     const c = CORTE.comodos[chave], noite = periodoDoDia() >= 2;
     cctx.fillStyle = '#2a2016'; cctx.fillRect(c.x, c.y, c.w, c.h);
     for (let y = c.y + 2; y < c.y + c.h - 4; y += 8) { cctx.fillStyle = (y / 8 | 0) % 2 ? '#3a2c1e' : '#33271a'; cctx.fillRect(c.x + 2, y, c.w - 4, 7); } // tábuas
@@ -185,9 +172,8 @@ desenharComodoBase = function (chave) {
 
 // ---------- soldado: sprite; o resto (nome, vida, avisos, seleção) continua sendo desenhado pelo 05-cena ----------
 const PX_ESC_SOLDADO = 1.5;
-const _px_desenharSilhueta = desenharSilhueta;
-desenharSilhueta = function (s, x, y, pose, t) {
-    if (!pixelAtivo() || !pxPronto) return _px_desenharSilhueta(s, x, y, pose, t);
+function desenharSilhueta(s, x, y, pose, t) {
+    if (!pxPronto) return false;
     const ferido = (feridosRecentes.get(s.id) || 0) > 0 && Math.floor(t / 80) % 2 === 0;
     const atirou = t - (disparosCena[s.id] || -9999) < 130, bob = Math.round(Math.sin(t / 400 + s.id) * 0.8);
     let id = 265, ax = 18, yy = y + 2;
@@ -206,9 +192,7 @@ desenharSilhueta = function (s, x, y, pose, t) {
 };
 
 // ---------- fundo completo: céu/campo/parapeito, terra por baixo, cômodos e móveis (sem degradês nem vinheta) ----------
-const _px_desenharFundoCompleto = desenharFundoCompleto;
-desenharFundoCompleto = function () {
-    if (!pixelAtivo()) return _px_desenharFundoCompleto();
+function desenharFundoCompleto() {
     desenharCeuFundo();
     const S = CORTE.SOLO;
     cctx.fillStyle = '#2b2118'; cctx.fillRect(0, S + 14, CORTE.W, CORTE.H - S);

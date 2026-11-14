@@ -392,7 +392,7 @@
            As preferências ficam no aparelho e, com conta, também na conta (vão junto para outro aparelho). */
         const CONFIG_KEY = 'frontline-config';
         const CARREIRA_KEY = 'frontline-carreira';
-        const CONFIG_PADRAO = { volMusica: 45, volEfeitos: 80, volAmbiente: 50, tremor: true, vibracao: true, rastros: true, particulas: true, pixel: false, textoGrande: false, apelido: '', escalaAuto: true, pausaArtilharia: false, dificuldade: 'soldado', numeros: true };
+        const CONFIG_PADRAO = { volMusica: 45, volEfeitos: 80, volAmbiente: 50, tremor: true, vibracao: true, rastros: true, particulas: true, textoGrande: false, apelido: '', escalaAuto: true, pausaArtilharia: false, dificuldade: 'soldado', numeros: true };
         // Quem pediu "reduzir movimento" no aparelho começa sem tremor da tela e sem vibração (dá para ligar nas Configurações)
         if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) { CONFIG_PADRAO.tremor = false; CONFIG_PADRAO.vibracao = false; }
         let CONFIG = Object.assign({}, CONFIG_PADRAO, (() => { try { return JSON.parse(localStorage.getItem(CONFIG_KEY)) || {}; } catch (e) { return {}; } })());
@@ -587,7 +587,6 @@
                 chave('tremor', 'Tremor da tela', 'O mapa treme com explosões e impactos') +
                 chave('vibracao', 'Vibração do celular', 'Vibra nos impactos fortes (só em aparelhos compatíveis)') +
                 chave('rastros', 'Rastros dos tiros', 'Linhas dos tiros do esquadrão no mapa') +
-                chave('pixel', 'Visual pixel art (teste)', 'Troca o Trincheiras para um visual em pixel art: campo visto de lado e soldados em sprites. Pode voltar ao clássico quando quiser') +
                 chave('particulas', 'Partículas e fumaça', 'Terra, brasas, faíscas, clarões e fumaça nas explosões e nos tiros (desligue se o celular engasgar)') +
                 chave('textoGrande', 'Texto maior', 'Aumenta as letras para ler melhor') +
                 `<button onclick="fecharConfig(); abrirTutorial();" class="w-full py-2 btn-tactical rounded font-bold"><i class="fa-solid fa-book-open"></i> Rever o tutorial</button>
