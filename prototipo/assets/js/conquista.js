@@ -26,13 +26,14 @@ const C = {
     },
     FOME_CICLO: 10, COME_SE: 30, COME_ALIVIA: 30, // cada soldado come 1 de comida a cada ~15 s: o tamanho do exército depende dos campos
     RECRUTAR: 20, RECRUTAR_EXTRA: 1, TROPA_BASE: 16, // cada soldado acima de 12 encarece o próximo em 2 moedas
-    FORTIFICAR: 25, FORT_GANHO: 30, TRINCH_BASE: 40, TRINCH_CAPITAL: 70,
+    FORTIFICAR: 25, FORT_GANHO: 15, TRINCH_BASE: 40, TRINCH_CAPITAL: 70,
     ESPIAO: 15, ESPIAO_DURA: 60, ESPIAO_VEL: 45, ESPIAO_MAX: 2,
     ARTILHARIA: 30, SAQUE_PARTE: 0.3,
     VEL: 12,                  // velocidade dos exércitos (unidades do mapa por segundo)
     BAT_RITMO: 4,             // a batalha corre no próprio mapa, 4× mais rápido que o relógio de 2 minutos
     BAT_DURACAO: 120, DIST: 300, VELBAT: { avancar: 14, cobertura: 6, recuar: -12 },
-    TIRO_DEF: 0.18, TIRO_ATQ: 0.16, DANO_TIRO: 30, TRINCH_PROTEGE: 0.35, CORPO_A_CORPO: 0.45,
+    TIRO_DEF: 0.18, TIRO_ATQ: 0.16, DANO_TIRO: 30, TRINCH_PROTEGE: 0.5, TRINCH_PROTEGE_CORPO: 0.2, CORPO_A_CORPO: 0.45, // a trincheira reduz o tiro de quem ataca (e, com o 2º número, o corpo a corpo)
+    BLINDADO_RECEBE: 0.35,  // fração do dano que o blindado leva de tiros que não são de artilharia
     CAPITAL_DEFESA: 1.25,     // capital defende 25% melhor
     BOT_PENSA: 8, BOT_PENSA_VAR: 6,
     BOT_PAUSA_ATAQUE: 40,     // depois de atacar, o bot espera pelo menos isto para atacar de novo
@@ -557,7 +558,7 @@ function passoBatalha(b, dt) {
         atqVivos.filter(a => a.dist < (TROPAS[a.s.tipo || 'inf'].longe ? C.DIST + 30 : 220)).forEach(a => { // artilharia atira de longe
             const T = TROPAS[a.s.tipo || 'inf'], corpo = a.dist <= 0;
             const protege = 1 - C.TRINCH_PROTEGE * (T.longe ? 0.4 : 1) * b.alvo.trinch / 100; // artilharia fura a trincheira
-            const chance = corpo ? C.CORPO_A_CORPO * T.corpo * eficacia(a.s) * pd.rec * b.genAtq
+            const chance = corpo ? C.CORPO_A_CORPO * T.corpo * eficacia(a.s) * pd.rec * b.genAtq * (1 - C.TRINCH_PROTEGE_CORPO * b.alvo.trinch / 100)
                 : C.TIRO_ATQ * T.atq * (b.postAtq === 'cobertura' ? 0.6 : 1) * eficacia(a.s) * munA * protege * pd.rec * b.genAtq;
             if (Math.random() < chance * dt) { const alvo = defVivos[Math.floor(Math.random() * defVivos.length)]; alvo.s.vida -= dano() * danoContra(a.s.tipo || 'inf', alvo.s.tipo || 'inf'); if (b.audivel) som('tiro', 0.45); }
         });

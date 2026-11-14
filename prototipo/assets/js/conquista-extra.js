@@ -10,13 +10,13 @@ const TROPAS = {
     metr:  { nome: 'Metralhadora', icone: '🔫', custo: 30, vel: 0.8, vida: 100, atq: 0.6, def: 2.0, corpo: 0.7, pesquisa: 'metr',  txt: 'segura a trincheira; ataca pouco; mata cavalaria' },
     art:   { nome: 'Artilharia', icone: '💣', custo: 40, vel: 0.7, vida: 90,  atq: 1.6, def: 0.8, corpo: 0.3, pesquisa: 'art',   txt: 'atira de longe e fura trincheira; fraca de perto', longe: true },
     cav:   { nome: 'Cavalaria', icone: '🐎', custo: 30, vel: 1.6, vida: 110, atq: 0.9, def: 0.7, corpo: 1.6, pesquisa: 'cav',   txt: 'rápida e forte no corpo a corpo; morre para metralhadora' },
-    blind: { nome: 'Blindado', icone: '🚜', custo: 65, vel: 1.1, vida: 240, atq: 1.3, def: 1.2, corpo: 1.3, pesquisa: 'blind', txt: 'aguenta tiro de fuzil; só a artilharia fura', blindado: true }
+    blind: { nome: 'Blindado', icone: '🚜', custo: 65, vel: 1.1, vida: 240, atq: 0.9, def: 1.0, corpo: 1.1, pesquisa: 'blind', txt: 'aguenta tiro de fuzil; só a artilharia fura', blindado: true }
 };
 const vidaMax = (s) => (TROPAS[s.tipo || 'inf'] || TROPAS.inf).vida;
 // multiplicador de dano de quem atira (tipo a) em quem leva (tipo b)
 function danoContra(a, b) {
     let k = 1;
-    if (TROPAS[b] && TROPAS[b].blindado) k *= a === 'art' ? 1.5 : 0.25;
+    if (TROPAS[b] && TROPAS[b].blindado) k *= a === 'art' ? 1.5 : C.BLINDADO_RECEBE; // fuzil quase não fere blindado; artilharia fura
     if (a === 'metr' && b === 'cav') k *= 1.7;
     if (a === 'cav' && b === 'art') k *= 1.6;
     return k;

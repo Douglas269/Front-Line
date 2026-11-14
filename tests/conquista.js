@@ -310,6 +310,28 @@ function jogar({ N, FASE, EST }) {
         await bs.close();
     }
 
+    // 3d1) Dano e fortificação nas batalhas (números medidos em simulação; folgas grandes para não falhar por sorte)
+    {
+        const eq = await p.evaluate(() => {
+            const r = {};
+            r.tabelaDeDano = danoContra('metr', 'cav') === 1.7 && danoContra('cav', 'art') === 1.6 && danoContra('art', 'blind') === 1.5 && danoContra('inf', 'blind') === C.BLINDADO_RECEBE && danoContra('inf', 'inf') === 1;
+            const mk = (atq, def, trinch, forte) => { novoJogo(1); Object.keys(G.pensar).forEach(x => { G.pensar[x] = 1e9; });
+                const q = Object.values(G.prov).find(x => x.dono === 'neutro' && !x.capital); G.ex = G.ex.filter(e => e.prov !== q.id); q.trinch = trinch; q.obras = forte ? { forte: true } : {};
+                const d = criarExercito('neutro', q.id, 0, def.map(t => soldado('d', t))), a = criarExercito('jogador', q.viz[0], 0, atq.map(t => soldado('a', t))); return criarBatalha(a, q, [d]); };
+            const taxa = (atq, def, trinch, forte, N = 200) => { let v = 0; for (let k = 0; k < N; k++) { const bt = mk(atq, def, trinch, forte); while (!bt.terminou) bt.passo(0.25); if (bt.vencedor === 'atq') v++; } return 100 * v / N; };
+            const rep = (t, n) => Array(n).fill(t), A = rep('inf', 10), D = rep('inf', 6);
+            const t0 = taxa(A, D, 0), t40 = taxa(A, D, 40), t100 = taxa(A, D, 100), tForte = taxa(A, D, 40, true);
+            r.trincheiraAjuda = t0 - t100 >= 25 && t40 - t100 >= 15; r.forteAjuda = t40 - tForte >= 8;
+            const b13 = taxa(['blind'], rep('inf', 3), 40);
+            r.blindadoNemFracoNemInvencivel = b13 >= 35 && b13 <= 85; // 1 blindado (65) contra 3 infantarias (60)
+            r.blindadoNaoVenceDefendendoDeGraca = taxa(rep('inf', 3), ['blind'], 40) <= 20;
+            r.numeros = { t0, t40, t100, tForte, b13 };
+            return r;
+        });
+        info.equilibrioBatalha = eq;
+        Object.entries(eq).forEach(([k, v]) => { if (v === false) falhas.push('batalha: ' + k + ' ' + JSON.stringify(eq.numeros)); });
+    }
+
     // 3d) Regras estratégicas: tipos de tropa, pesquisa, obras, moral/revolta, suprimento, diplomacia, generais e estrelas
     info.regras = await p.evaluate(() => {
         const r = {};
