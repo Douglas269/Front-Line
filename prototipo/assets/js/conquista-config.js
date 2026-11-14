@@ -59,6 +59,7 @@ function renderConfigConq() {
     } else if (a === 'jogo') {
         corpo = `<div class="sub" style="margin-bottom:6px">Dificuldade dos bots (vale na campanha; no online, a do anfitrião):</div>` +
             Object.entries(DIF_TXT).map(([id, d]) => `<button class="cfgOpcao${c.dificuldade === id ? ' on' : ''}" onclick="gravarConfigConq({ dificuldade: '${id}' });renderConfigConq()"><b>${d.nome}</b><small>${d.desc}</small></button>`).join('')
+            + `<div class="cfgLinha"><div><b>Tutorial da Fase 1</b><small>mostra de novo as dicas ao começar a Fase 1</small></div><button class="mini" onclick="guiaReiniciar();this.textContent='Feito'">Rever</button></div>`
             + linhaTog('Texto maior', 'letras maiores no painel e nas telas', c.textoGrande, `gravarConfigConq({ textoGrande: ${!c.textoGrande} });renderConfigConq()`);
     } else if (a === 'conta') {
         const email = emailDaConta(), vencidas = Object.values(meta.estrelas).filter(v => v > 0).length;

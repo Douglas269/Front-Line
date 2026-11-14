@@ -34,6 +34,12 @@ Jogo de estratégia tático com foco em realismo de comando, combate blindado e 
 - O jogo continua salvando no aparelho e espelha na nuvem a cada 30 s de jogo e na hora ao virar o dia, pausar, subir de nível, terminar a partida ou fechar o tutorial. Ao entrar, fica com o salvamento mais recente entre aparelho e nuvem; o progresso de convidado passa para a conta no primeiro login. Sem internet, segue como convidado.
 - O navegador usa só a chave pública (publishable) do Supabase; a proteção dos dados vem das políticas RLS.
 
+### Conquista: guia, previsão, alerta, reunir e mini mapa
+`prototipo/assets/js/conquista-guia.js` (teste: `node tests/conquista-guia.js`).
+- Tutorial da Fase 1 que avança conforme a pessoa joga (selecionar exército, mover/atacar, confirmar, recrutar); dá para pular; "Rever" em Configurações > Jogo.
+- Previsão de ataque no painel de confirmação: força × defesa estimada (calibrada por simulação: relação ≥1,5 vence quase sempre, <0,95 quase sempre perde).
+- Fases 4 em diante (campanha): alerta "⚠ X → província em ~Ns" que leva até lá ao tocar, botão "Reunir tropas aqui" e mini mapa.
+
 ### Visual pixel art (padrão)
 O jogo inteiro usa um só estilo: pixel art. A versão antiga (visual clássico em corte, sem sprites) está guardada no ramo `visual-classico` do GitHub.
 - `prototipo/assets/js/05b-cena-pixel.js`: Trincheiras com campo visto de lado (parapeito à esquerda, inimigos vindo da direita), soldados e inimigos em sprites, cômodos em tábuas; cada soldado tem lenço/faixa de uma cor, braçadeira de médico, pá de engenheiro, luneta de atirador e divisas de sargento.
