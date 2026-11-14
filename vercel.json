@@ -47,7 +47,16 @@
   ],
   "headers": [
     {
-      "source": "/(prototipo/)?assets/music/(.*)",
+      "source": "/prototipo/assets/music/:path*",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=604800"
+        }
+      ]
+    },
+    {
+      "source": "/assets/music/:path*",
       "headers": [
         {
           "key": "Cache-Control",
