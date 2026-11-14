@@ -467,12 +467,25 @@ function jogar({ N, FASE, EST }) {
         const r1 = { fim: G.fim || null, minhaCapital: G.prov[G.capitalJogador].dono };
         const cd = capDe('delta'); conquistar(cd, 'charlie');     // Charlie toma a capital do Delta (Delta cai)
         conquistar(cd, 'jogador');                               // você toma ela de Charlie
-        const r2 = { fim: G.fim || null, charlieVivo: !G.eliminados.charlie, deltaCaiu: !!G.eliminados.delta };
+        const r2 = { fim: G.fim || null, charlieVivo: !G.eliminados.charlie, deltaCaiu: !!(G.eliminados.delta || (G.semCapital && G.semCapital.delta)) };
         return { r1, r2 };
     });
     info.capitalConquistada = capConq;
     if (capConq.r1.fim === 'derrota' || capConq.r1.minhaCapital !== 'jogador') falhas.push('perder uma capital conquistada contou como perder a sua: ' + JSON.stringify(capConq));
     if (!capConq.r2.charlieVivo || !capConq.r2.deltaCaiu || capConq.r2.fim) falhas.push('bot eliminado por perder uma capital conquistada: ' + JSON.stringify(capConq));
+    // 3c) capital caída: o bot não some na hora; perde 40% da tropa, não recruta, e só cai sem soldados ou sem províncias
+    const semCap = await p.evaluate(() => {
+        comecarFase(1);
+        const cb = Object.values(G.prov).find(q => q.capital && q.capitalDe === 'bravo');
+        const antes = tropaDe('bravo'); G.fac.bravo.moedas = 999;
+        conquistar(cb, 'jogador');
+        const depois = tropaDe('bravo'), vivo = !G.eliminados.bravo, marcado = !!G.semCapital.bravo;
+        const outra = Object.values(G.prov).find(q => q.dono === 'bravo');
+        const recruta = outra ? recrutarEm(outra.id, 'bravo', 'inf') : null;
+        G.ex.filter(e => e.dono === 'bravo').forEach(e => { e.s.length = 0; }); limparMortos(); verificarSemCapital();
+        return { antes, depois, vivo, marcado, recruta, caiuSemTropa: !!G.eliminados.bravo };
+    });
+    if (!(semCap.antes > semCap.depois && semCap.vivo && semCap.marcado && semCap.recruta === false && semCap.caiuSemTropa)) falhas.push('capital caída: bot enfraquece e só cai sem tropa: ' + JSON.stringify(semCap));
 
     // 4) Fases inteiras sem tela
     const rodadas = [[1, 'esperto', 6], [1, 'ingenuo', 5], [3, 'esperto', 2], [6, 'esperto', 2]];

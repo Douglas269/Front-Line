@@ -103,7 +103,7 @@ function salvarPartida() {
     const dados = {
         v: 2, fase: G.fase.n, t: G.t, fac: G.fac, ciclo: G.ciclo, velocidade: G.velocidade, proxId, pesq: G.pesq, rel: G.rel, genFerido: G.genFerido, genXp: G.genXp, stats: G.stats,
         capitalJogador: G.capitalJogador, espiado: G.espiado, revelado: G.revelado, espioes: G.espioes,
-        ultimoAtaque: G.ultimoAtaque, eliminados: G.eliminados, pensar: G.pensar, noticias: G.noticias.slice(0, 10), ultimoRelatorio: G.ultimoRelatorio,
+        ultimoAtaque: G.ultimoAtaque, eliminados: G.eliminados, semCapital: G.semCapital || {}, pensar: G.pensar, noticias: G.noticias.slice(0, 10), ultimoRelatorio: G.ultimoRelatorio,
         prov: Object.fromEntries(Object.values(G.prov).map(p => [p.id, { dono: p.dono, tipo: p.tipo, trinch: p.trinch, capital: p.capital, moral: p.moral, obras: p.obras, obra: p.obra, conquistadaEm: p.conquistadaEm }])),
         ex: G.ex.map(e => ({ id: e.id, dono: e.dono, s: e.s, prov: e.prov, de: e.de, rota: e.rota, x: e.x, y: e.y, missao: e.missao, origem: e.origem, alertado: e.alertado, general: e.general })),
         salvoEm: Date.now()
@@ -117,7 +117,7 @@ function carregarPartida() {
     novoJogo(d.fase);
     Object.entries(d.prov).forEach(([id, q]) => { if (G.prov[id]) Object.assign(G.prov[id], q); });
     Object.assign(G, { t: d.t, fac: d.fac, ciclo: d.ciclo, velocidade: d.velocidade || 1, capitalJogador: d.capitalJogador, espiado: d.espiado || {}, revelado: d.revelado || {},
-        espioes: d.espioes || [], ultimoAtaque: d.ultimoAtaque || {}, eliminados: d.eliminados || {}, pensar: d.pensar || G.pensar, noticias: d.noticias || [], ultimoRelatorio: d.ultimoRelatorio,
+        espioes: d.espioes || [], ultimoAtaque: d.ultimoAtaque || {}, eliminados: d.eliminados || {}, semCapital: d.semCapital || {}, pensar: d.pensar || G.pensar, noticias: d.noticias || [], ultimoRelatorio: d.ultimoRelatorio,
         pesq: d.pesq || G.pesq, rel: d.rel || G.rel, genFerido: d.genFerido || {}, genXp: d.genXp || {}, stats: d.stats || {} });
     G.ex = d.ex.filter(e => G.prov[e.prov]).map(e => ({ ...e, rota: (e.rota || []).filter(id => G.prov[id]), emBatalha: false, aguarda: null }));
     proxId = Math.max(proxId, d.proxId || 0);
@@ -136,7 +136,7 @@ function novoJogo(numFase) {
     const r = rngSemente(F.semente + 7);
     G = {
         fase: F, t: 0, fim: null, sel: null, modo: null, pendente: null, noticias: [], espiado: {}, revelado: {}, espioes: [],
-        ultimoAtaque: {}, eliminados: {}, batalhas: [], ciclo: 0, ex: [], velocidade: 1,
+        ultimoAtaque: {}, eliminados: {}, semCapital: {}, batalhas: [], ciclo: 0, ex: [], velocidade: 1,
         fac: { jogador: { comida: 40, mun: 150, moedas: 50 }, neutro: { comida: 0, mun: 100, moedas: 0 } },
         prov: {}, pensar: {}, pausado: false,
         pesq: { jogador: { feitas: {}, atual: null } }, rel: {}, genFerido: {}, genXp: {}, stats: {}
@@ -244,6 +244,7 @@ function avisarSeVisivel(e) {
     }
 }
 function recrutarEm(provId, dono, tipo = 'inf') {
+    if (G.semCapital && G.semCapital[dono]) return false;
     const p = G.prov[provId], f = G.fac[dono], custo = custoRecrutarTipo(dono, tipo);
     if (!p || p.dono !== dono || f.moedas < custo || !tropaLiberada(dono, tipo)) return false;
     f.moedas -= custo;
@@ -304,7 +305,7 @@ function cicloEconomia() {
     G.ciclo++;
     Object.values(G.prov).forEach(p => {
         if (p.dono === 'neutro') return;
-        const f = G.fac[p.dono], pd = producaoDe(p);
+        const f = G.fac[p.dono], pd = Object.assign({}, producaoDe(p)); if (G.semCapital && G.semCapital[p.dono]) { pd.comida *= 0.5; pd.mun *= 0.5; pd.moedas *= 0.5; }
         const bot = p.dono !== 'jogador' && G.pensar[p.dono] !== undefined ? (typeof DIFC === 'function' ? DIFC() : { vontade: 1, margem: 1, prod: 1 }).prod : 1; // dificuldade dos bots (só na comida)
         f.comida += pd.comida * bot; f.mun += pd.mun; f.moedas += pd.moedas;
         const base = p.capital ? C.TRINCH_CAPITAL : C.TRINCH_BASE;
@@ -332,6 +333,7 @@ function cicloEconomia() {
     atualizarMoral();
     G.fase.bots.forEach(b => pensarDiplomacia(b));
     limparMortos();
+    verificarSemCapital(); verificarFim();
 }
 function limparMortos() {
     G.ex.forEach(e => { e.s = e.s.filter(s => s.vida > 0); });
@@ -497,15 +499,26 @@ function conquistar(p, dono, e) {
     if (ver) noticia(`🏴 ${FACCOES[dono].nome} conquistou ${p.nome}${antigo === 'neutro' ? '' : ' de ' + FACCOES[antigo].nome}.`, antigo === 'jogador');
     if (p.capital && antigo !== 'neutro' && p.capitalDe === antigo) { // só cai quem perde a PRÓPRIA capital (perder uma capital conquistada não elimina ninguém)
         if (antigo === 'jogador' && !G.online) { G.fim = 'derrota'; return mostrarFim(); }
-        eliminar(antigo, dono);
+        if (!G.online && antigo !== 'jogador') semCapital(antigo, dono); // campanha: o bot enfraquece, mas só cai quando acabar a tropa ou as províncias
+        else eliminar(antigo, dono);
     }
     verificarFim();
+}
+// Capital caída (campanha): perde 40% da tropa, não recruta mais e produz metade; só é eliminado sem províncias ou sem soldados
+function semCapital(bot, por) {
+    G.semCapital = G.semCapital || {}; G.semCapital[bot] = true;
+    exDe(bot).forEach(e => { const corta = Math.ceil(e.s.length * 0.4); e.s.splice(0, corta); });
+    limparMortos();
+    noticia(`💥 ${FACCOES[bot].nome} perdeu a capital para ${FACCOES[por].nome}: a tropa entrou em desordem (−40%), não recruta mais e produz metade. Acabe com o resto para eliminá-lo.`, por === 'jogador');
+}
+function verificarSemCapital() {
+    Object.keys(G.semCapital || {}).forEach(b => { if (!G.eliminados[b] && (!provDe(b).length || !tropaDe(b))) eliminar(b, 'jogador'); });
 }
 function eliminar(bot, por) {
     G.eliminados[bot] = true;
     G.ex = G.ex.filter(x => x.dono !== bot);
     provDe(bot).forEach(q => { q.dono = 'neutro'; q.trinch = 30; criarExercito('neutro', q.id, 2); });
-    noticia(`☠ ${FACCOES[bot].nome} perdeu a capital para ${FACCOES[por].nome} e se rendeu. As províncias dele viraram terra de milícia.`, por === 'jogador');
+    noticia(`☠ ${FACCOES[bot].nome} foi eliminado por ${FACCOES[por].nome}. As províncias que sobraram viraram terra de milícia.`, por === 'jogador');
 }
 function verificarFim() {
     if (G.fim) return;
@@ -842,13 +855,16 @@ function desenharMapa() {
     G.ex.forEach(e => {
         if (!exVisivel(e) || e.emBatalha) return; // quem está lutando aparece na batalha
         const k = e.rota.length ? e.id : e.prov + '|' + e.dono; // parados na mesma província juntam no desenho
-        if (!agrup[k]) agrup[k] = { e, n: 0, tipos: {} }; agrup[k].n += e.s.length; e.s.forEach(x => { const t = x.tipo || 'inf'; agrup[k].tipos[t] = (agrup[k].tipos[t] || 0) + 1; });
+        if (!agrup[k]) agrup[k] = { e, n: 0, tipos: {}, hp: 0, hpMax: 0 }; agrup[k].n += e.s.length; e.s.forEach(x => { agrup[k].hp += Math.max(0, x.vida); agrup[k].hpMax += vidaMax(x); }); e.s.forEach(x => { const t = x.tipo || 'inf'; agrup[k].tipos[t] = (agrup[k].tipos[t] || 0) + 1; });
     });
     let tiposVistos = false; // há tropa além da infantaria no mapa? então mostra a legenda
-    Object.values(agrup).forEach(({ e, n, tipos }) => {
+    Object.values(agrup).forEach(({ e, n, tipos, hp, hpMax }) => {
         const s = T(e.x, e.y), mexendo = e.rota.length > 0, cor = e.dono === 'neutro' ? '#8a8a78' : FACCOES[e.dono].cor;
         const x = s.x, y = s.y + 18; // abaixo do nome da província
         if (e.id === selEx) { cxM.strokeStyle = '#ffffff'; cxM.lineWidth = 2; cxM.beginPath(); cxM.ellipse(x, y + 1, 17, 6, 0, 0, Math.PI * 2); cxM.stroke(); }
+        { const v = hpMax ? hp / hpMax : 1, bw = 34; // barra de vida do grupo, sob os pés
+          cxM.fillStyle = 'rgba(0,0,0,.75)'; cxM.fillRect(Math.round(x - bw / 2) - 1, Math.round(y + 5), bw + 2, 6);
+          cxM.fillStyle = v > 0.66 ? '#7bc96f' : v > 0.33 ? '#e3b04b' : '#e0533f'; cxM.fillRect(Math.round(x - bw / 2), Math.round(y + 6), Math.round(bw * v), 4); }
         let dir = 1; if (mexendo) { const prox = G.prov[e.rota[0]]; if (prox) dir = prox.x >= e.x ? 1 : -1; }
         const px0 = 7 + desenharBoneco(x, y, cor, mexendo, n, agora, dir, tipos);
         // número de soldados numa plaquinha da cor do país
