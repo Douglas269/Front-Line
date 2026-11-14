@@ -92,9 +92,18 @@ function pixelarMapa() {
     g.drawImage(cvM, 0, 0, cvM.width, cvM.height, 0, 0, w, h);
     let im = null; try { im = g.getImageData(0, 0, w, h); } catch (e) { im = null; } // (aberto como arquivo, a imagem é 'de outra origem': fica só o efeito de blocos)
     const d = im ? im.data : [];
-    for (let i = 0; i < d.length; i += 4) { // poucas cores (paleta reduzida) com uma trama leve para não achatar o relevo
-        const px = (i >> 2) % w, py = ((i >> 2) / w) | 0, tr = ((px & 1) ^ (py & 1)) ? 6 : -6;
-        d[i] = Math.min(255, Math.max(0, Math.round((d[i] + tr) / 36) * 36)); d[i + 1] = Math.min(255, Math.max(0, Math.round((d[i + 1] + tr) / 36) * 36)); d[i + 2] = Math.min(255, Math.max(0, Math.round((d[i + 2] + tr) / 40) * 40));
+    // suaviza o ruído (cada bloco vira a média dele com os vizinhos em cruz) e achata o brilho em poucos degraus, mantendo o matiz: áreas lisas e bordas nítidas, sem trama
+    if (im) {
+        const o = new Uint8ClampedArray(d);
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+            const i = (y * w + x) * 4;
+            for (let c = 0; c < 3; c++) {
+                const v = o[i + c] * 2 + o[(y > 0 ? i - w * 4 : i) + c] + o[(y < h - 1 ? i + w * 4 : i) + c] + o[(x > 0 ? i - 4 : i) + c] + o[(x < w - 1 ? i + 4 : i) + c];
+                d[i + c] = v / 6;
+            }
+            const lum = d[i] * 0.3 + d[i + 1] * 0.59 + d[i + 2] * 0.11, q = Math.max(20, Math.round(lum / 26) * 26), k = lum > 1 ? q / lum : 1;
+            d[i] = Math.min(255, d[i] * k); d[i + 1] = Math.min(255, d[i + 1] * k); d[i + 2] = Math.min(255, d[i + 2] * k);
+        }
     }
     if (im) g.putImageData(im, 0, 0);
     cxM.setTransform(1, 0, 0, 1, 0, 0); cxM.imageSmoothingEnabled = false;
