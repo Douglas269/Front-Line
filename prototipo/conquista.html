@@ -61,6 +61,12 @@
   .lista-tropas { display: flex; flex-direction: column; gap: 5px; margin: 6px 0; }
   .linha-tropa { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border: 1px solid var(--borda); border-radius: 8px; background: var(--painel); }
   .linha-tropa.trancada { opacity: .55; }
+  .info-i { margin-left: 4px; padding: 0 6px; border-radius: 10px; border: 1px solid var(--borda); background: transparent; color: var(--mudo); font-size: 11px; line-height: 16px; }
+  .ficha { margin: -2px 0 2px; padding: 6px 8px; border: 1px dashed var(--borda); border-radius: 8px; background: #0f1411; }
+  .ficha .fl { display: grid; grid-template-columns: 112px 1fr 34px; gap: 6px; align-items: center; font-size: 11px; margin: 2px 0; }
+  .ficha .fb { height: 6px; background: #1b221d; border-radius: 3px; overflow: hidden; } .ficha .fb i { display: block; height: 100%; background: var(--ambarEsc); }
+  .ficha .fl b { text-align: right; }
+  .ficha .fx { font-size: 11px; color: var(--mudo); margin-top: 5px; line-height: 1.55; }
   .linha-tropa .txt { flex: 1; font-size: 13px; min-width: 0; }
   .linha-tropa .txt small { display: block; font-size: 10.5px; color: var(--mudo); margin-top: 1px; }
   button.mini { flex: none; min-width: 56px; padding: 6px 6px; border-radius: 8px; border: 1px solid var(--ambar); background: #2a2214; color: #ffd28a; font-weight: 700; font-size: 12px; }
@@ -126,11 +132,11 @@
 <div id="tela"><div class="caixa" id="telaCaixa"></div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
-<script src="assets/js/conquista-mapa.js?v=20261114.0812"></script>
-<script src="assets/js/conquista-extra.js?v=20261114.0812"></script>
-<script src="assets/js/conquista.js?v=20261114.0812"></script>
-<script src="assets/js/conquista-online.js?v=20261114.0812"></script>
-<script src="assets/js/conquista-config.js?v=20261114.0812"></script>
+<script src="assets/js/conquista-mapa.js?v=20261114.0831"></script>
+<script src="assets/js/conquista-extra.js?v=20261114.0831"></script>
+<script src="assets/js/conquista.js?v=20261114.0831"></script>
+<script src="assets/js/conquista-online.js?v=20261114.0831"></script>
+<script src="assets/js/conquista-config.js?v=20261114.0831"></script>
 
 </body>
 </html>

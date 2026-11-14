@@ -294,13 +294,18 @@ const espiado = (dono) => G.espiado[dono] > G.t;
 const custoEspiao = () => temPesq('jogador', 'radio') ? 10 : C.ESPIAO;
 
 /* ---------- Economia ---------- */
+// O que uma província rende por ciclo (moral, fábrica e inverno contam); a mesma conta alimenta a economia e o número no mapa
+function producaoDe(p) {
+    const pr = C.PROD[p.tipo], k = fatorMoral(p), inv = G.fase.regra === 'inverno' && p.tipo === 'campo' ? 0.6 : 1, fab = p.obras.fabrica ? 3 : 0;
+    return { comida: pr.comida * k * inv, mun: (pr.mun + fab) * k, moedas: (pr.moedas + fab) * k };
+}
 function cicloEconomia() {
     G.ciclo++;
     Object.values(G.prov).forEach(p => {
         if (p.dono === 'neutro') return;
-        const f = G.fac[p.dono], pr = C.PROD[p.tipo], k = fatorMoral(p);
-        const inverno = (G.fase.regra === 'inverno' && p.tipo === 'campo' ? 0.6 : 1) * (p.dono !== 'jogador' && G.pensar[p.dono] !== undefined ? (typeof DIFC === 'function' ? DIFC() : { vontade: 1, margem: 1, prod: 1 }).prod : 1); // inverno e dificuldade dos bots
-        f.comida += pr.comida * k * inverno; f.mun += (pr.mun + (p.obras.fabrica ? 3 : 0)) * k; f.moedas += (pr.moedas + (p.obras.fabrica ? 3 : 0)) * k;
+        const f = G.fac[p.dono], pd = producaoDe(p);
+        const bot = p.dono !== 'jogador' && G.pensar[p.dono] !== undefined ? (typeof DIFC === 'function' ? DIFC() : { vontade: 1, margem: 1, prod: 1 }).prod : 1; // dificuldade dos bots (só na comida)
+        f.comida += pd.comida * bot; f.mun += pd.mun; f.moedas += pd.moedas;
         const base = p.capital ? C.TRINCH_CAPITAL : C.TRINCH_BASE;
         if (p.trinch < base) p.trinch = Math.min(base, p.trinch + 2);
     });
@@ -797,6 +802,16 @@ function desenharMapa() {
         ocupado.push(caixa);
         cxM.fillStyle = 'rgba(0,0,0,.65)'; cxM.fillText(txt, s.x + 1, s.y - 13);
         cxM.fillStyle = p.capital ? '#ffe2a8' : '#efe6cf'; cxM.fillText(txt, s.x, s.y - 14);
+        if (p.dono === 'jogador' && provVisivel(p.id)) { // o que a sua província rende a cada ciclo (laranja quando a moral está baixa)
+            const pd = producaoDe(p), fmt = (v) => { const q = Math.round(v * 10) / 10; return Number.isInteger(q) ? q : q.toFixed(1); };
+            const prod = [['comida', '🍞'], ['mun', '🔫'], ['moedas', '🪙']].filter(([k]) => pd[k] > 0.04).map(([k, e]) => '+' + fmt(pd[k]) + e).join(' ');
+            if (prod) {
+                cxM.font = 'bold 9px sans-serif'; const w2 = cxM.measureText(prod).width;
+                cxM.fillStyle = 'rgba(12,15,13,.72)'; cxM.fillRect(s.x - w2 / 2 - 3, s.y - 41, w2 + 6, 12);
+                cxM.fillStyle = p.moral < 35 ? '#ffb36b' : '#cfe8c8'; cxM.fillText(prod, s.x, s.y - 32);
+                cxM.font = `bold ${p.capital ? 12 : 10}px "Courier New", monospace`;
+            }
+        }
         if (provVisivel(p.id)) { // forte, obra em andamento e risco de revolta
             const icones = (p.obras.forte ? '🏰' : p.trinch >= 80 ? '🛡' : '') + (p.dono === 'jogador' && p.obra ? '🏗' : '') + (p.dono === 'jogador' && !p.capital && p.moral < 35 ? '⚠' : '');
             if (icones) { const w0 = cxM.measureText(txt).width; cxM.font = '10px sans-serif'; cxM.textAlign = 'left'; cxM.fillText(icones, s.x + w0 / 2 + 3, s.y - 14); cxM.textAlign = 'center'; }

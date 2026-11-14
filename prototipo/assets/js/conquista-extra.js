@@ -285,13 +285,21 @@ function calcularEstrelas() {
 const faseLiberada = (n) => n === 1 || (lerMeta().estrelas[n - 1] || 0) >= 1;
 
 /* ---------- Painéis novos ---------- */
+// Ficha de cada tropa: barras de vida, ataque, defesa, corpo a corpo e velocidade, o alcance e contra quem é forte ou fraca
+const FICHA_STATS = [['❤', 'Vida', (T) => T.vida, 240], ['⚔', 'Ataque', (T) => T.atq, 1.6], ['🛡', 'Defesa', (T) => T.def, 2], ['🥊', 'Corpo a corpo', (T) => T.corpo, 1.6], ['👟', 'Velocidade', (T) => T.vel, 1.6]];
+function fichaTropa(t) {
+    const T = TROPAS[t], ids = Object.keys(TROPAS).filter(x => x !== t);
+    const forte = ids.filter(b => danoContra(t, b) > 1), fraco = ids.filter(a => danoContra(a, t) > 1), ic = (l) => l.length ? l.map(x => TROPAS[x].icone).join(' ') : '—';
+    return `<div class="ficha">${FICHA_STATS.map(([i, n, f, max]) => `<div class="fl"><span>${i} ${n}</span><span class="fb"><i style="width:${Math.min(100, Math.round(100 * f(T) / max))}%"></i></span><b>${f(T)}</b></div>`).join('')}
+        <div class="fx">🎯 Alcance: <b>${T.longe ? 'longo (atira de longe)' : 'curto'}</b><br>Forte contra: ${ic(forte)} &nbsp;·&nbsp; Fraco contra: ${ic(fraco)}${T.blindado ? '<br>Fuzil quase não fere; só a artilharia fura.' : ''}</div></div>`;
+}
 function painelRecrutar(provId) {
     const p = G.prov[provId], f = G.fac.jogador;
     let h = `<div class="titulo"><span>🪖 Recrutar em ${p.nome}</span><span class="dono">${tropaDe('jogador')} na tropa</span></div><div class="lista-tropas">`;
     Object.entries(TROPAS).forEach(([t, T]) => {
         const lib = tropaLiberada('jogador', t), c1 = custoRecrutarTipo('jogador', t), c5 = custoVariosTipo('jogador', t, 5);
-        h += `<div class="linha-tropa${lib ? '' : ' trancada'}"><div class="txt"><b>${T.icone} ${T.nome}</b><small>${lib ? T.txt : '🔒 pesquise ' + PESQUISAS[T.pesquisa].nome}</small></div>
-            ${lib ? `<button class="mini" onclick="recrutar('${p.id}',1,'${t}');renderPainel()" ${f.moedas < c1 ? 'disabled' : ''}>+1<small>${c1}🪙</small></button><button class="mini" onclick="recrutar('${p.id}',5,'${t}');renderPainel()" ${f.moedas < c5 ? 'disabled' : ''}>+5<small>${c5}🪙</small></button>` : ''}</div>`;
+        h += `<div class="linha-tropa${lib ? '' : ' trancada'}"><div class="txt"><b>${T.icone} ${T.nome} <button class="info-i" onclick="G.fichaTipo=G.fichaTipo==='${t}'?null:'${t}';renderPainel()" title="Ficha da tropa">ℹ</button></b><small>${lib ? T.txt : '🔒 pesquise ' + PESQUISAS[T.pesquisa].nome}</small></div>
+            ${lib ? `<button class="mini" onclick="recrutar('${p.id}',1,'${t}');renderPainel()" ${f.moedas < c1 ? 'disabled' : ''}>+1<small>${c1}🪙</small></button><button class="mini" onclick="recrutar('${p.id}',5,'${t}');renderPainel()" ${f.moedas < c5 ? 'disabled' : ''}>+5<small>${c5}🪙</small></button>` : ''}</div>${G.fichaTipo === t ? fichaTropa(t) : ''}`;
     });
     return h + `</div><div class="acoes">${botao('← Voltar', '', `G.sel={tipo:'prov',id:'${p.id}'};renderPainel()`)}</div>`;
 }

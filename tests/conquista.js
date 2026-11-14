@@ -285,6 +285,23 @@ function jogar({ N, FASE, EST }) {
             const corte = 36 * (cv.width / cv.getBoundingClientRect().width), leg = {}, tag = {};
             TIPO_COR.forEach(([id, , hex]) => { const rr = parseInt(hex.slice(1, 3), 16), gg = parseInt(hex.slice(3, 5), 16), bb = parseInt(hex.slice(5, 7), 16); let a = 0, b = 0; for (let i = 0; i < d.length; i += 4) if (d[i] === rr && d[i + 1] === gg && d[i + 2] === bb) { if (Math.floor(i / 4 / cv.width) < corte) a++; else b++; } leg[id] = a; tag[id] = b; });
             r.legendaDosTiposNoTopo = Object.values(leg).every(n => n >= 60); r.etiquetasDosTiposNosGrupos = Object.entries(tag).every(([id, n]) => n >= (id === 'inf' ? 60 : 60)); r.contagemCores = { leg, tag };
+            // produção no mapa: a conta (moral, fábrica, inverno) e o texto desenhado na capital
+            const cp = G.prov[c], base = producaoDe(cp);
+            r.producaoDaCapital = base.comida === 3 && base.mun === 5 && base.moedas === 6;
+            cp.obras.fabrica = true; const comFab = producaoDe(cp); cp.obras.fabrica = false;
+            r.fabricaSoma3 = comFab.mun === 8 && comFab.moedas === 9 && comFab.comida === 3;
+            const m0 = cp.moral; cp.moral = 0; const baixa = producaoDe(cp); cp.moral = m0;
+            r.moralBaixaRende30 = Math.abs(baixa.moedas - 6 * 0.3) < 0.01;
+            const textos = []; const ft = cxM.fillText.bind(cxM); cxM.fillText = (t, ...a) => { textos.push(String(t)); return ft(t, ...a); }; desenharMapa(); cxM.fillText = ft;
+            r.mapaMostraAProducao = textos.some(t => /^\+3🍞 \+5🔫 \+6🪙$/.test(t));
+            // ficha da tropa no painel de recrutar
+            G.sel = { tipo: 'recrutar', id: c }; G.fichaTipo = null; renderPainel();
+            const pn = document.getElementById('painel'); r.fichaTemBotaoParaCadaTropa = pn.querySelectorAll('.info-i').length === 5 && !pn.querySelector('.ficha');
+            G.fichaTipo = 'cav'; renderPainel();
+            r.fichaAbreComBarras = !!pn.querySelector('.ficha') && pn.querySelectorAll('.ficha .fl').length === 5 && /Alcance/.test(pn.textContent);
+            const fc = fichaTropa('cav'), fb = fichaTropa('blind'), fm = fichaTropa('metr');
+            r.fichaMostraForteEFraco = /Forte contra: 💣/.test(fc.replace(/&nbsp;/g, '')) && /Fraco contra: 🔫/.test(fc.replace(/&nbsp;/g, '')) && /Fraco contra: 💣/.test(fb.replace(/&nbsp;/g, '')) && /Forte contra: 🐎/.test(fm.replace(/&nbsp;/g, ''));
+            G.fichaTipo = null; G.sel = { tipo: 'prov', id: c };
             return r;
         });
         info.tropasNoMapa = tp;
