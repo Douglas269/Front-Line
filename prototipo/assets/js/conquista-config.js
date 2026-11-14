@@ -108,18 +108,23 @@ PX_SOLD.img.src = 'assets/pixel/soldados.png';
 const desenharBonecoClassico = desenharBoneco;
 desenharBoneco = function (x, y, cor, andando, n, agora, dir = 1, tipos) {
     const quantos = n >= 10 ? 3 : n >= 4 ? 2 : 1, fig = figurasDoGrupo(tipos, quantos);
-    if (!PX_SOLD.ok || fig.some(t => TIPO_ESPECIAL[t])) return desenharBonecoClassico(x, y, cor, andando, n, agora, dir, tipos);
-    const amigo = cor === FACCOES.jogador.cor, folga = 10;
+    if (!PX_SOLD.ok) return desenharBonecoClassico(x, y, cor, andando, n, agora, dir, tipos);
+    const folga = fig.some(t => TIPO_ESPECIAL[t]) ? 32 : 12;
     for (let k = quantos - 1; k >= 0; k--) {
-        const bx = x + (k - (quantos - 1) / 2) * folga * dir, by = y - k * 2;
+        const t = fig[k], bx = x + (k - (quantos - 1) / 2) * folga * dir, by = y - k * 2;
+        if (TIPO_ESPECIAL[t]) { // artilharia, cavalaria e blindado: pixel por código
+            cxM.fillStyle = 'rgba(0,0,0,.35)'; cxM.fillRect(Math.round(bx - 11), Math.round(by), 22, 2);
+            desenharTropaEspecial(cxM, t, bx, by, cor, true, andando, 1, dir, true);
+            continue;
+        }
+        if (t === 'metr') desenharTropaEspecial(cxM, 'metr', bx - 9 * dir, by, cor, true, andando, 1, dir, true);
         const id = andando ? [290, 291, 292, 293][Math.floor(agora * 8 + k) % 4] : 265;
-        const q = PX_SOLD.q[id], chave = id + cor + amigo;
+        const q = PX_SOLD.q[id], chave = id + cor;
         let c = PX_SOLD.tinta[chave];
         if (!c) {
             c = PX_SOLD.tinta[chave] = document.createElement('canvas'); c.width = q[2]; c.height = q[3];
-            const g = c.getContext('2d'); g.imageSmoothingEnabled = false; g.drawImage(PX_SOLD.img, q[0], q[1], q[2], q[3], 0, 0, q[2], q[3]);
-            g.globalCompositeOperation = 'source-atop'; g.globalAlpha = amigo ? 0.0 : 0.55; g.fillStyle = cor; g.fillRect(0, 0, q[2], q[3]);
-            if (!amigo) { g.globalAlpha = 1; g.fillRect(0, 3, q[2], 1); }
+            const g = c.getContext('2d', { willReadFrequently: true }); g.imageSmoothingEnabled = false; g.drawImage(PX_SOLD.img, q[0], q[1], q[2], q[3], 0, 0, q[2], q[3]);
+            pxPintarTime(c, g, cor);
         }
         cxM.fillStyle = 'rgba(0,0,0,.35)'; cxM.fillRect(Math.round(bx - 7), Math.round(by), 14, 2);
         cxM.save(); cxM.imageSmoothingEnabled = false; cxM.translate(Math.round(bx), Math.round(by)); cxM.scale(dir, 1);
@@ -128,3 +133,38 @@ desenharBoneco = function (x, y, cor, andando, n, agora, dir = 1, tipos) {
     }
     return (quantos - 1) / 2 * folga;
 };
+
+// Todo o time com a mesma cor: o uniforme inteiro vira a cor do país (pele e contorno preto ficam)
+const pxRgb = (h) => [1, 3, 5].map(i => parseInt(h.substr(i, 2), 16));
+const pxCorMais = (h, k) => '#' + pxRgb(h).map(v => Math.max(0, Math.min(255, Math.round(v * k))).toString(16).padStart(2, '0')).join('');
+function pxPintarTime(c, g, cor) {
+    let im = null; try { im = g.getImageData(0, 0, c.width, c.height); } catch (e) { im = null; }
+    if (!im) { g.globalCompositeOperation = 'source-atop'; g.globalAlpha = 0.8; g.fillStyle = cor; g.fillRect(0, 0, c.width, c.height); return; } // (aberto como arquivo: sem leitura de pixels)
+    const d = im.data, [R, G, B] = pxRgb(cor);
+    for (let i = 0; i < d.length; i += 4) {
+        if (d[i + 3] < 20) continue;
+        const r = d[i], gg = d[i + 1], b = d[i + 2], lum = r * 0.3 + gg * 0.59 + b * 0.11;
+        if (r > 170 && gg > 110 && b > 90 && r > gg + 15) continue; // pele
+        if (lum < 45) continue;                                    // contorno e arma
+        const k = 0.6 + lum / 255 * 0.85;
+        d[i] = Math.min(255, R * k); d[i + 1] = Math.min(255, G * k); d[i + 2] = Math.min(255, B * k);
+    }
+    g.putImageData(im, 0, 0);
+}
+
+// Artilharia, cavalaria, blindados e metralhadora em pixel (desenhados por código, na cor do time)
+const PX_BMP = {
+    blind: ['..........kkkkkk........', '.........kcllcck........', '.........kccccckkkkkkkkk', '..kkkkkkkkkcccccck......', '.kcccllcccccccccccck.....', '.kdcccccccccccccccdk.....', '.kddddddddddddddddk......', '..kgkgkgkgkgkgkgkk.......', '...kkkkkkkkkkkkkk........'],
+    cav: ['.........kkk..............', '........kcccs.............', '........kcccsk............', '.........kcck..........kk.', '........kccccck.......kbbk', '........kcccccckkkkkkkkbbbk', '..kk.kkkkcccccckbbbbbbbbbbk', '.kbbkkbbbcccccbbbbbbbbbbbbk', 'kbbbbbbbbbbbbbbbbbbbbbkkkk.', '.kbbbbbbbbbbbbbbbbbbbbk....', '..kbbbbbbbbbbbbbbbbbbk.....', '..kbbkbbk......kbbkkbbk....', '..kbbkbbk......kbbkkbbk....', '..kkkkkkk......kkkkkkk.....'],
+    art: ['.............kkkkkk....', '...........kkggggggkk..', '.........kkgggggggkkk..', '..kkkkk.kkgggggggkk....', '.kcccccckkgggggkk......', 'kccddcccckggkkk........', 'kcdkkkdcck.............', 'kcdkgkdcck.............', 'kcdkkkdcck.............', '.kccdddcck.............', '..kkkkkkk..............'],
+    metr: ['.......kkkkkkkkk', '.kk...kkggggggggk', '..kk.kkkkkkkk', '...kkgkk', '..kg..gk', '.kg....gk']
+};
+function desenharTropaEspecial(cx, tipo, x, y, cor, amigo, andando, esc = 1, dir = 1, subir = amigo) {
+    const bmp = PX_BMP[tipo]; if (!bmp) return;
+    const u = tipo === 'metr' ? 1.3 : 1.5 * esc, W = Math.max(...bmp.map(l => l.length));
+    const pal = { k: '#10130f', c: cor, d: pxCorMais(cor, 0.6), l: pxCorMais(cor, 1.35), g: '#7b837b', b: '#5a4128', s: '#e2b996' };
+    const bob = tipo === 'cav' && andando ? Math.round(Math.sin(Date.now() / 90)) : 0;
+    cx.save(); cx.translate(Math.round(x), Math.round(y)); cx.scale(dir, 1);
+    bmp.forEach((lin, j) => { for (let i = 0; i < lin.length; i++) { const ch = lin[i]; if (ch === '.') continue; cx.fillStyle = pal[ch]; cx.fillRect(Math.round((i - W / 2) * u), Math.round((j - bmp.length) * u + (j < 10 ? bob : 0)), Math.ceil(u), Math.ceil(u)); } });
+    cx.restore();
+}
