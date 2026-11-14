@@ -300,7 +300,8 @@ function jogar({ N, FASE, EST }) {
             G.fichaTipo = 'cav'; renderPainel();
             r.fichaAbreComBarras = !!pn.querySelector('.ficha') && pn.querySelectorAll('.ficha .fl').length === 5 && /Alcance/.test(pn.textContent);
             const fc = fichaTropa('cav'), fb = fichaTropa('blind'), fm = fichaTropa('metr');
-            r.fichaMostraForteEFraco = /Forte contra: 💣/.test(fc.replace(/&nbsp;/g, '')) && /Fraco contra: 🔫/.test(fc.replace(/&nbsp;/g, '')) && /Fraco contra: 💣/.test(fb.replace(/&nbsp;/g, '')) && /Forte contra: 🐎/.test(fm.replace(/&nbsp;/g, ''));
+            const veredito = (h, nome) => { const m = new RegExp(nome + '</span><span>[^<]*</span><b[^>]*>(\\w+)</b>').exec(h); return m && m[1]; };
+            r.fichaMostraForteEFraco = veredito(fc, 'Artilharia') === 'FORTE' && veredito(fc, 'Metralhadora') === 'FRACA' && veredito(fb, 'Metralhadora') === 'FORTE' && veredito(fb, 'Artilharia') !== 'FORTE' && veredito(fm, 'Cavalaria') === 'FORTE' && /Vantagens/.test(fc) && /Desvantagens/.test(fc);
             G.fichaTipo = null; G.sel = { tipo: 'prov', id: c };
             return r;
         });
