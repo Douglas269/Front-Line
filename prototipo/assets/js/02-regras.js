@@ -38,6 +38,7 @@
                     nextWaveBoost: gameState.nextWaveBoost,
                     general: gameState.general,
                     op: gameState.op, obrasT: gameState.obrasT, ordens: gameState.ordens, cartas: gameState.cartas, // operações, obras, ordens e cartas (07-operacoes.js)
+                    campo: gameState.campo, gas: gameState.gas, acamp: gameState.acamp, // crateras, gás em curso e acampamento (08 e 09)
                     feed: document.getElementById('feed-log').innerHTML,
                     diary: document.getElementById('diary-entries').innerHTML
                 }));
@@ -82,7 +83,8 @@
                 ofensiva: data.ofensiva || null,
                 nextWaveBoost: data.nextWaveBoost || 0,
                 general: data.general || newGeneral(),
-                op: data.op, obrasT: data.obrasT, ordens: data.ordens, cartas: data.cartas // 07-operacoes.js
+                op: data.op, obrasT: data.obrasT, ordens: data.ordens, cartas: data.cartas, // 07-operacoes.js
+                campo: data.campo || null, gas: data.gas || null, acamp: data.acamp || null // 08 e 09
             });
             document.getElementById('feed-log').innerHTML = data.feed;
             document.getElementById('diary-entries').innerHTML = data.diary;
@@ -695,6 +697,7 @@
                     st.tiros++; estado.combate.tiros++; disparou = true;
                     if (Math.random() < chanceDeAcerto(s, arma, alvo, estado)) {
                         st.acertos++; estado.combate.acertos++;
+                        if (typeof efeitoAcerto === 'function') efeitoAcerto(alvo); // faíscas e poeira (08-campo-ameacas.js)
                         alvo.hp -= arma.dano * blindagem(alvo, 'fuzil');
                         if (alvo.hp <= 0 && !alvo.abatidoPor) alvo.abatidoPor = s.id;
                     }

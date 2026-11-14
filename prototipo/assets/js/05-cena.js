@@ -65,11 +65,12 @@
         }
 
         // Efeitos na cena: o alvo é resolvido na hora do desenho (soldado, cômodo, inimigo)
-        function cenaEfeito(tipo, alvo) {
-            if (cenaEfeitos.length > 40) cenaEfeitos.shift();
-            const vida = { explosao: 50, fogo: 240, abate: 30, morte: 40, tiro: 5, dia: 150, numero: 55 }[tipo] || 40;
+        function cenaEfeito(tipo, alvo, vidaPersonalizada) {
+            if (cenaEfeitos.length >= 60) cenaEfeitos.shift();
+            const vida = vidaPersonalizada || { explosao: 50, fogo: 240, abate: 30, morte: 40, tiro: 5, dia: 150, numero: 55 }[tipo] || 40;
             let fixo = null;
             if (alvo && alvo.inimigo) fixo = posInimigoCena(alvo.inimigo); // o inimigo some da lista: guarda a posição agora
+            else if (alvo && alvo.pos) fixo = alvo.pos;                      // ponto da cena (x, y) já resolvido
             cenaEfeitos.push({ tipo, alvo, fixo, idade: 0, vida, sx: Math.random() });
         }
         // Número flutuante sobre um soldado ou um ponto da cena (liga e desliga nas Configurações)
@@ -238,6 +239,7 @@
             const rotulosUsados = []; // posições já ocupadas por rótulos de distância (evita texto em cima de texto)
             // De trás para a frente: os mais distantes primeiro, os de perto ficam por cima
             gameState.enemies.slice().sort((a, b) => b.distance - a.distance).forEach(e => {
+                if (typeof inimigoOculto === 'function' && inimigoOculto(e)) return; // furtivo no escuro: só aparece de perto ou com vigília total
                 const p = posInimigoCena(e);
                 const perto = 1 - Math.min(1, e.distance / 300);          // 0 longe, 1 colado na trincheira
                 const esc = 0.55 + 0.6 * perto;                           // quanto mais perto, maior (perspectiva)
@@ -280,6 +282,7 @@
                     if (!agachado && perto > 0.3) { cctx.fillStyle = 'rgba(120,100,70,0.18)'; cctx.beginPath(); cctx.ellipse(-3 * esc, -1, 4 * esc, 1.4 * esc, 0, 0, Math.PI * 2); cctx.fill(); } // poeira
                 }
                 cctx.restore();
+                if (typeof desenharExtraInimigo === 'function') desenharExtraInimigo(e, p, esc, t);
                 if (vida < 0.98 && e.type !== 'drone') { cctx.fillStyle = 'rgba(0,0,0,0.6)'; cctx.fillRect(p.x - 7, p.y - 22 * esc - 4, 14, 2.2); cctx.fillStyle = vida > 0.5 ? '#c86464' : '#ff8a5c'; cctx.fillRect(p.x - 7, p.y - 22 * esc - 4, 14 * vida, 2.2); }
                 if (maisPerto.includes(e) || e.type === 'blindado') {
                     const ry = p.y - (e.type === 'drone' ? 32 : 24 * esc) - 6;
@@ -827,7 +830,7 @@
                     cctx.globalAlpha = 1;
                 } else if (ef.tipo === 'morte') {
                     cctx.globalAlpha = 0.35 * (1 - k); cctx.fillStyle = '#8b0000'; cctx.fillRect(0, 0, CORTE.W, CORTE.H); cctx.globalAlpha = 1;
-                }
+                } else if (typeof desenharEfeitoExtra === 'function') desenharEfeitoExtra(ef, k, p); // efeitos de 08-campo-ameacas.js
             }
         }
 
@@ -889,13 +892,15 @@
 
         // Resumo da ameaça para a faixa: quem vem e em quanto tempo entra no alcance de tiro
         function resumoAmeaca() {
-            const en = gameState.enemies, cont = { infantaria: 0, patrulha: 0, drone: 0, blindado: 0 };
+            const en = gameState.enemies.filter(e => !(typeof inimigoOculto === 'function' && inimigoOculto(e))), cont = { infantaria: 0, patrulha: 0, drone: 0, blindado: 0 };
             en.forEach(e => { cont[e.type] = (cont[e.type] || 0) + 1; });
             let eta = Infinity;
             en.forEach(e => { if (e.type === 'drone') return; const v = ENEMY_TYPES[e.type].speed * (gameState.tacticalOrders.SUPPRESSION && gameState.resources.ammoHeavy > 3 ? 0.3 : 1); eta = Math.min(eta, Math.max(0, (e.distance - 140) / v)); });
             const partes = [];
             if (cont.infantaria) partes.push(cont.infantaria + ' inf.'); if (cont.patrulha) partes.push(cont.patrulha + ' patr.');
             if (cont.drone) partes.push(cont.drone + ' drone'); if (cont.blindado) partes.push(cont.blindado + ' blind.');
+            if (cont.infiltrado) partes.push(cont.infiltrado + ' infiltr.'); if (cont.sapador) partes.push(cont.sapador + ' lança-chamas');
+            if (!partes.length) return '⚠ movimento suspeito no escuro…';
             const alvo = isFinite(eta) ? (eta <= 0 ? 'NO ALCANCE' : `alcance em ${Math.max(1, Math.ceil(eta / GAME_CONFIG.TICKS_PER_SECOND))}s`) : '';
             return `⚠ ${partes.join(' · ')}${alvo ? ' · ' + alvo : ''}`;
         }

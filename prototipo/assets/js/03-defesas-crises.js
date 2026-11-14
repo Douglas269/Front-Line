@@ -409,7 +409,7 @@
         // Inimigo vivo no alcance (140 m) atira num soldado sorteado
         function inimigoAtira(estado, enemy, alive, observando) {
             const tipo = ENEMY_TYPES[enemy.type];
-            if (!(enemy.hp > 0 && enemy.distance < 140 && alive.length > 0 && Math.random() < tipo.attackChance)) return;
+            if (!(enemy.hp > 0 && enemy.distance < (tipo.alcance || 140) && alive.length > 0 && Math.random() < tipo.attackChance)) return;
             // Drone pode largar a carga no depósito de mantimentos em vez de num soldado
             if (enemy.type === 'drone' && Math.random() < DEPOSITO.DRONE_CHANCE) {
                 atingirDeposito('Um drone inimigo', DEPOSITO.DRONE_PERDA);
