@@ -286,12 +286,41 @@ const faseLiberada = (n) => n === 1 || (lerMeta().estrelas[n - 1] || 0) >= 1;
 
 /* ---------- Painéis novos ---------- */
 // Ficha de cada tropa: barras de vida, ataque, defesa, corpo a corpo e velocidade, o alcance e contra quem é forte ou fraca
-const FICHA_STATS = [['❤', 'Vida', (T) => T.vida, 240], ['⚔', 'Ataque', (T) => T.atq, 1.6], ['🛡', 'Defesa', (T) => T.def, 2], ['🥊', 'Corpo a corpo', (T) => T.corpo, 1.6], ['👟', 'Velocidade', (T) => T.vel, 1.6]];
+const UNID_INFO = {
+    inf:   { papel: 'Tropa básica: serve para tudo e não precisa de pesquisa.', vant: ['Barata e rápida de recrutar', 'Equilibrada em ataque e defesa'], desv: ['Fura pouco o blindado (só 35% do dano)', 'Perde no corpo a corpo para cavalaria e blindado'] },
+    metr:  { papel: 'Tropa de defesa: segura a trincheira e é a pior inimiga da cavalaria.', vant: ['Defesa dobrada (2.0): ótima para guardar província', 'Causa +70% de dano na cavalaria'], desv: ['Ataca pouco (0.6) e é fraca no corpo a corpo', 'Lenta (0.8) e precisa de pesquisa'] },
+    art:   { papel: 'Tropa de apoio: bate de longe e fura trincheira e blindado.', vant: ['Atira de longe: começa a causar dano antes', 'Maior ataque (1.6)', 'Fura blindado (+50% de dano)'], desv: ['Quase não luta de perto (corpo a corpo 0.3)', 'Defesa baixa (0.8) e lenta (0.7)', 'Cavalaria causa +60% de dano nela'] },
+    cav:   { papel: 'Tropa de ataque rápido: chega primeiro e vence no corpo a corpo.', vant: ['A mais rápida (1.6)', 'Melhor corpo a corpo (1.6)', 'Causa +60% de dano na artilharia'], desv: ['Defesa baixa (0.7)', 'Metralhadora causa +70% de dano nela', 'Fura pouco o blindado'] },
+    blind: { papel: 'Tropa pesada: aguenta o que vier, mas só a artilharia a fura.', vant: ['Vida 240: aguenta mais que o dobro', 'Recebe só 35% do dano de tiro'], desv: ['Cara (65 moedas) e precisa de pesquisa', 'Artilharia causa +50% de dano nela', 'Ataque médio (0.9)'] }
+};
+const UNID_STATS = [['❤', 'Vida', (T) => T.vida, 240], ['⚔', 'Ataque', (T) => T.atq, 1.6], ['🛡', 'Defesa', (T) => T.def, 2], ['🥊', 'Corpo a corpo', (T) => T.corpo, 1.6], ['👟', 'Velocidade', (T) => T.vel, 1.6]];
+// Ficha de cada tropa: o que ela é, vantagens e desvantagens, e o confronto contra cada outra tropa (dano que causa × dano que recebe)
 function fichaTropa(t) {
-    const T = TROPAS[t], ids = Object.keys(TROPAS).filter(x => x !== t);
-    const forte = ids.filter(b => danoContra(t, b) > 1), fraco = ids.filter(a => danoContra(a, t) > 1), ic = (l) => l.length ? l.map(x => TROPAS[x].icone).join(' ') : '—';
-    return `<div class="ficha">${FICHA_STATS.map(([i, n, f, max]) => `<div class="fl"><span>${i} ${n}</span><span class="fb"><i style="width:${Math.min(100, Math.round(100 * f(T) / max))}%"></i></span><b>${f(T)}</b></div>`).join('')}
-        <div class="fx">🎯 Alcance: <b>${T.longe ? 'longo (atira de longe)' : 'curto'}</b><br>Forte contra: ${ic(forte)} &nbsp;·&nbsp; Fraco contra: ${ic(fraco)}${T.blindado ? '<br>Fuzil quase não fere; só a artilharia fura.' : ''}</div></div>`;
+    const T = TROPAS[t], I = UNID_INFO[t], ids = Object.keys(TROPAS).filter(x => x !== t);
+    const linhas = ids.map(b => {
+        const B = TROPAS[b], causa = danoContra(t, b), recebe = danoContra(b, t), nota = (causa / recebe) * Math.pow(T.corpo / B.corpo, 0.25);
+        const v = nota > 1.25 ? ['forte', 'FORTE', '#7bc96f'] : nota < 0.8 ? ['fraca', 'FRACA', '#e0705f'] : ['par', 'PAREJO', '#c9b46a'];
+        return `<div class="fm"><span>${B.icone} ${B.nome}</span><span>causa ×${causa.toFixed(2).replace(/\.?0+$/, '')} · recebe ×${recebe.toFixed(2).replace(/\.?0+$/, '')}</span><b style="color:${v[2]}">${v[1]}</b></div>`;
+    }).join('');
+    return `<div class="ficha"><div class="fp">${I.papel}</div>${UNID_STATS.map(([i, n, f, max]) => `<div class="fl"><span>${i} ${n}</span><span class="fb"><i style="width:${Math.min(100, Math.round(100 * f(T) / max))}%"></i></span><b>${f(T)}</b></div>`).join('')}
+        <div class="fx">🎯 Alcance: <b>${T.longe ? 'longo (atira de longe)' : 'curto'}</b> · custo <b>${T.custo}🪙</b></div>
+        <div class="fv"><b style="color:#7bc96f">+ Vantagens</b>${I.vant.map(x => `<div>• ${x}</div>`).join('')}</div>
+        <div class="fv"><b style="color:#e0705f">− Desvantagens</b>${I.desv.map(x => `<div>• ${x}</div>`).join('')}</div>
+        <div class="fv"><b>⚔ Contra cada tropa</b>${linhas}<small>×1 = dano normal. Pesa também o corpo a corpo.</small></div></div>`;
+}
+// Painel de vida do exército: por tipo (média, mais ferido) e uma barrinha para cada soldado
+function painelVidaTropas(e) {
+    const grupos = {}; e.s.forEach(x => { const t = x.tipo || 'inf'; (grupos[t] = grupos[t] || []).push(x); });
+    const pct = (x) => Math.max(0, Math.min(100, Math.round(100 * x.vida / vidaMax(x)))), cor = (v) => v > 66 ? '#7bc96f' : v > 33 ? '#e3b04b' : '#e0533f';
+    let h = '<div class="pv"><div class="pvt">❤ Vida da tropa</div>';
+    Object.entries(grupos).forEach(([t, l]) => {
+        const ps = l.map(pct), med = Math.round(ps.reduce((a, b) => a + b, 0) / ps.length), pior = Math.min(...ps), fer = ps.filter(v => v < 50).length;
+        h += `<div class="pvl"><span>${TROPAS[t].icone} ${TROPAS[t].nome} ×${l.length} <button class="info-i" onclick="G.fichaTipo=G.fichaTipo==='${t}'?null:'${t}';renderPainel()" title="Ficha da tropa">ℹ</button></span><span class="fb"><i style="width:${med}%;background:${cor(med)}"></i></span><b style="color:${cor(med)}">${med}%</b></div>
+            <div class="pvs">${fer ? `${fer} ferido${fer > 1 ? 's' : ''} · ` : ''}pior: ${pior}%</div>`;
+        if (G.fichaTipo === t) h += fichaTropa(t);
+        h += `<div class="pvg">${l.map(x => { const v = pct(x); return `<span class="pvb" title="${x.nome}: ${v}% de vida"><i style="height:${v}%;background:${cor(v)}"></i></span>`; }).join('')}</div>`;
+    });
+    return h + '</div>';
 }
 function painelRecrutar(provId) {
     const p = G.prov[provId], f = G.fac.jogador;
