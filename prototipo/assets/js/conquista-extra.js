@@ -120,6 +120,7 @@ function atualizarMoral() {
         if (p.obras.forte) alvo += 10;
         if (temPesq(p.dono, 'propaganda')) alvo += 15;
         if (G.fac[p.dono].comida <= 0) alvo -= 15;
+        if (G.semCapital && G.semCapital[p.dono]) alvo -= 40; // sem capital: a moral desaba e as províncias pouco guardadas se revoltam
         if (p.capital) alvo = Math.max(alvo, 90);
         alvo = Math.max(5, Math.min(100, alvo));
         p.moral += (alvo - p.moral) * 0.2;

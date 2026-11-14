@@ -508,8 +508,9 @@ function conquistar(p, dono, e) {
 function semCapital(bot, por) {
     G.semCapital = G.semCapital || {}; G.semCapital[bot] = true;
     exDe(bot).forEach(e => { const corta = Math.ceil(e.s.length * 0.4); e.s.splice(0, corta); });
+    provDe(bot).forEach(q => { q.moral = Math.max(5, q.moral - 25); });
     limparMortos();
-    noticia(`💥 ${FACCOES[bot].nome} perdeu a capital para ${FACCOES[por].nome}: a tropa entrou em desordem (−40%), não recruta mais e produz metade. Acabe com o resto para eliminá-lo.`, por === 'jogador');
+    noticia(`💥 ${FACCOES[bot].nome} perdeu a capital para ${FACCOES[por].nome}: a tropa entrou em desordem (−40%), a moral desabou, não recruta mais e produz metade. Acabe com o resto para eliminá-lo.`, por === 'jogador');
 }
 function verificarSemCapital() {
     Object.keys(G.semCapital || {}).forEach(b => { if (!G.eliminados[b] && (!provDe(b).length || !tropaDe(b))) eliminar(b, 'jogador'); });

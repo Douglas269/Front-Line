@@ -479,13 +479,16 @@ function jogar({ N, FASE, EST }) {
         const cb = Object.values(G.prov).find(q => q.capital && q.capitalDe === 'bravo');
         const antes = tropaDe('bravo'); G.fac.bravo.moedas = 999;
         conquistar(cb, 'jogador');
-        const depois = tropaDe('bravo'), vivo = !G.eliminados.bravo, marcado = !!G.semCapital.bravo;
         const outra = Object.values(G.prov).find(q => q.dono === 'bravo');
         const recruta = outra ? recrutarEm(outra.id, 'bravo', 'inf') : null;
+        const moralOutra = Object.values(G.prov).filter(q => q.dono === 'bravo').map(q => q.moral);
+        for (let i = 0; i < 30; i++) atualizarMoral();
+        const moralDepois = Object.values(G.prov).filter(q => q.dono === 'bravo').map(q => q.moral);
+        const depois = tropaDe('bravo'), vivo = !G.eliminados.bravo, marcado = !!G.semCapital.bravo;
         G.ex.filter(e => e.dono === 'bravo').forEach(e => { e.s.length = 0; }); limparMortos(); verificarSemCapital();
-        return { antes, depois, vivo, marcado, recruta, caiuSemTropa: !!G.eliminados.bravo };
+        return { antes, depois, vivo, marcado, recruta, caiuSemTropa: !!G.eliminados.bravo, moralCai: !moralDepois.length || Math.max(...moralDepois) < 40 };
     });
-    if (!(semCap.antes > semCap.depois && semCap.vivo && semCap.marcado && semCap.recruta === false && semCap.caiuSemTropa)) falhas.push('capital caída: bot enfraquece e só cai sem tropa: ' + JSON.stringify(semCap));
+    if (!(semCap.antes > semCap.depois && semCap.vivo && semCap.marcado && semCap.recruta === false && semCap.caiuSemTropa && semCap.moralCai)) falhas.push('capital caída: bot enfraquece e só cai sem tropa: ' + JSON.stringify(semCap));
 
     // 4) Fases inteiras sem tela
     const rodadas = [[1, 'esperto', 6], [1, 'ingenuo', 5], [3, 'esperto', 2], [6, 'esperto', 2]];
