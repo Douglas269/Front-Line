@@ -1100,7 +1100,7 @@ function mostrarInicio() {
         return `<button class="fase${lib ? '' : ' trancada'}" ${lib ? '' : 'disabled'} onclick="comecarFase(${F.n})"><b>Fase ${F.n} · ${F.nome}</b><span class="estrelas">${lib ? estrelas(est) : '🔒'}</span>
             <small>${lib ? `${F.bots.length} inimigos · ${Math.round(F.tempo / 60)} min${F.regraTxt ? ' · ' + F.regraTxt : ''}<br>★★★ ${OBJETIVOS[F.objetivo].txt}` : 'vença a fase anterior'}</small></button>`;
     }).join('')).join('');
-    mostrarTela(`<h2>🗺️ CONQUISTA · CAMPANHA</h2>${continuar}
+    mostrarTela(`<div class="menu-brief"><div class="k">CAMPANHA DE CONQUISTA · ${CAPITULOS.length} CAPÍTULOS</div><h2>SELEÇÃO DE FASE</h2><div class="dir"><div>⭐ ${tot} ESTRELAS</div><div class="ok">STATUS: PRONTO</div></div></div>${continuar}
         <div class="sub">Você comanda um país pequeno. Em volta, países de bots com personalidades diferentes e terras livres com milícia. Os bots brigam entre si; com você, dá para negociar.</div>
         <details class="regras"><summary>Como jogar</summary><div class="lista">🪖 <b>Exércitos:</b> toque num exército seu, em <b>Mover / Atacar</b> e no destino. Você escolhe quantos vão.<br>
         🐎 <b>Tropas:</b> infantaria, metralhadora (segura a trincheira), artilharia (fura trincheira), cavalaria (rápida) e blindado. As 4 últimas saem da 🔬 pesquisa.<br>
