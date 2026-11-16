@@ -1095,11 +1095,11 @@ function mostrarInicio() {
     const sv = lerSalvamento(), m = lerMeta(), tot = totalEstrelas(m);
     const continuar = sv ? `<button class="grande" onclick="continuarPartida()">▶ CONTINUAR · FASE ${sv.fase} (${String(Math.floor(sv.t / 60)).padStart(2, '0')}:${String(Math.floor(sv.t % 60)).padStart(2, '0')} jogados)</button>` : '';
     const estrelas = (n) => '★'.repeat(n) + '☆'.repeat(3 - n);
-    const fases = CAPITULOS.map((nome, c) => `<div class="capitulo">${nome}</div>` + FASES.filter(F => F.cap === c).map(F => {
+    const fases = CAPITULOS.map((nome, c) => `<div class="capitulo">${nome}</div><div class="fases-grid">` + FASES.filter(F => F.cap === c).map(F => {
         const lib = faseLiberada(F.n), est = m.estrelas[F.n] || 0;
         return `<button class="fase${lib ? '' : ' trancada'}" ${lib ? '' : 'disabled'} onclick="comecarFase(${F.n})"><b>Fase ${F.n} · ${F.nome}</b><span class="estrelas">${lib ? estrelas(est) : '🔒'}</span>
             <small>${lib ? `${F.bots.length} inimigos · ${Math.round(F.tempo / 60)} min${F.regraTxt ? ' · ' + F.regraTxt : ''}<br>★★★ ${OBJETIVOS[F.objetivo].txt}` : 'vença a fase anterior'}</small></button>`;
-    }).join('')).join('');
+    }).join('') + '</div>').join('');
     mostrarTela(`<div class="menu-brief"><div class="k">CAMPANHA DE CONQUISTA · ${CAPITULOS.length} CAPÍTULOS</div><h2>SELEÇÃO DE FASE</h2><div class="dir"><div>⭐ ${tot} ESTRELAS</div><div class="ok">STATUS: PRONTO</div></div></div>${continuar}
         <div class="sub">Você comanda um país pequeno. Em volta, países de bots com personalidades diferentes e terras livres com milícia. Os bots brigam entre si; com você, dá para negociar.</div>
         <details class="regras"><summary>Como jogar</summary><div class="lista">🪖 <b>Exércitos:</b> toque num exército seu, em <b>Mover / Atacar</b> e no destino. Você escolhe quantos vão.<br>
