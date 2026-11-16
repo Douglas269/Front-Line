@@ -21,7 +21,13 @@ const { chromium } = require('playwright');
     R['conquista' + q] = await c.evaluate(() => ({ tropas: G.ex.length > 0 }));
     await c.close();
   }
-  const ok = R['trinch'].sprites && R['trinch'].desenhou && R['trinch'].posNoLado && R['conquista'].tropas && erros.length === 0;
+  // tela densa (3×): o mapa da Conquista usa a resolução real, sem esticar (que suavizava as bordas)
+  { const c = await b.newPage({ viewport: { width: 400, height: 800 }, deviceScaleFactor: 3 }); c.on('pageerror', e => erros.push(e.message));
+    const V = base + 'conquista.html'; await c.goto(V); await c.evaluate(() => localStorage.clear()); await c.goto(V); await c.waitForTimeout(300);
+    await c.evaluate(() => comecarFase(1)); await c.waitForTimeout(500);
+    R.densidade3 = await c.evaluate(() => Math.abs(cvM.width / cvM.getBoundingClientRect().width - 3) < 0.05);
+    await c.close(); }
+  const ok = R['trinch'].sprites && R['trinch'].desenhou && R['trinch'].posNoLado && R['conquista'].tropas && R.densidade3 && erros.length === 0;
   console.log(JSON.stringify({ R, erros: [...new Set(erros)] }, null, 1));
   console.log(ok ? 'Visual pixel: todas as verificações passaram, sem erros de JavaScript.' : 'FALHOU'); await b.close(); process.exit(ok ? 0 : 1);
 })();

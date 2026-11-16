@@ -674,7 +674,8 @@ function fimPorTempo() {
 /* ---------- Câmera (arrastar e zoom) ---------- */
 const cvM = document.getElementById('mapa'), cxM = cvM.getContext('2d');
 const cam = { x: 300, y: 400, z: 1 };
-function ajustar(cv) { const r = cv.getBoundingClientRect(), d = Math.min(2, window.devicePixelRatio || 1); cv.width = Math.max(1, Math.round(r.width * d)); cv.height = Math.max(1, Math.round(r.height * d)); }
+let dprMax = 3; // resolução máxima do mapa (cai para 2 sozinha se o aparelho engasgar)
+function ajustar(cv) { const r = cv.getBoundingClientRect(), d = Math.min(dprMax, window.devicePixelRatio || 1); cv.width = Math.max(1, Math.round(r.width * d)); cv.height = Math.max(1, Math.round(r.height * d)); }
 const DPR = () => cvM.width / Math.max(1, cvM.getBoundingClientRect().width);
 function zoomMin() { const r = cvM.getBoundingClientRect(); return MAPA ? Math.min(r.width / MAPA.W, r.height / MAPA.H) * 0.95 : 0.5; }
 function limitarCam() {

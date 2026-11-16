@@ -85,7 +85,7 @@ aplicarConfigConq();
 // ---------- Visual pixel art do mapa: o desenho vetorial já pintado vira blocos de 3 px, com poucas cores ----------
 let pxPequeno = null;
 function pixelarMapa() {
-    const S = 3 * DPR(), w = Math.ceil(cvM.width / S), h = Math.ceil(cvM.height / S);
+    const S = Math.max(3, Math.round(3 * DPR())), w = Math.ceil(cvM.width / S), h = Math.ceil(cvM.height / S); // bloco de 3 px de tela, sempre em pixels inteiros
     if (!pxPequeno) pxPequeno = document.createElement('canvas');
     if (pxPequeno.width !== w || pxPequeno.height !== h) { pxPequeno.width = w; pxPequeno.height = h; }
     const g = pxPequeno.getContext('2d', { willReadFrequently: true });
@@ -178,3 +178,11 @@ function desenharTropaEspecial(cx, tipo, x, y, cor, amigo, andando, esc = 1, dir
     bmp.forEach((lin, j) => { for (let i = 0; i < lin.length; i++) { const ch = lin[i]; if (ch === '.') continue; cx.fillStyle = pal[ch]; cx.fillRect(Math.round((i - W / 2) * u), Math.round((j - bmp.length) * u + (j < 10 ? bob : 0)), Math.ceil(u), Math.ceil(u)); } });
     cx.restore();
 }
+
+// Aparelho lento: se o desenho do mapa passar de 14 ms por muitos quadros, baixa a resolução de 3× para 2×
+let mapaLento = 0;
+const _cfg_desenharMapa = desenharMapa;
+desenharMapa = function () {
+    const t0 = performance.now(); _cfg_desenharMapa(); const dt = performance.now() - t0;
+    if (dt > 14) { if (++mapaLento > 40 && dprMax > 2) { dprMax = 2; mapaLento = 0; ajustar(cvM); } } else mapaLento = Math.max(0, mapaLento - 1);
+};
