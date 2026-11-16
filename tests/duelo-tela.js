@@ -130,6 +130,7 @@ const telaDe = (p) => p.evaluate(() => window.__duelo && window.__duelo.estado()
     await A.p.waitForFunction(() => window.__duelo.estado().tela === 'replay', null, { timeout: 8000 });
     if (process.env.PRINTS) { await A.p.waitForTimeout(2500); await A.p.screenshot({ path: process.env.PRINTS + '/d3-replay.png' }); }
     // o replay mostra uma trincheira por vez e termina com o resumo do que decidiu a rodada
+    checks.replayTemBotaoDeMenu = await A.p.evaluate(() => { const l = document.querySelector('.replayTela a.menuReplay'); return !!l && /Menu principal/.test(l.textContent) && l.getBoundingClientRect().height >= 30; });
     checks.replayUmaTrincheiraPorVez = await A.p.evaluate(() => document.querySelectorAll('canvas#cvReplay').length === 1 && !!document.querySelector('.abas [data-aba="1"]'));
     await A.p.click('#bPular');
     await A.p.waitForSelector('.decidiu li');

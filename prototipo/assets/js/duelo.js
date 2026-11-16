@@ -464,6 +464,7 @@
         const nm = o.nomes, eu = o.eu;
         const abaDef = eu ? '🛡 SUA DEFESA' : '🛡 ' + esc(nm.meu).toUpperCase(), abaAtq = eu ? '⚔️ SEU ATAQUE' : '🛡 ' + esc(nm.dele).toUpperCase();
         mostrar(`<div class="replayTela">
+            <a class="menuTopo menuReplay" href="${linkDoJogo()}" onclick="return confirmarSaida()">🏠 Menu principal</a>
             <div class="placar"><span>${esc(nm.meu)}</span><span class="sub">RODADA ${r.rodada}</span><span>${esc(nm.dele)}</span></div>
             <div class="abas"><button data-aba="0" class="on">${abaDef}<small>dano <b id="dano0">0</b></small></button><button data-aba="1">${abaAtq}<small>dano <b id="dano1">0</b></small></button></div>
             <div class="rpCampo"><canvas id="cvReplay"></canvas>
