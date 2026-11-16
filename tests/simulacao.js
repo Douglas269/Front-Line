@@ -23,13 +23,22 @@ async function run() {
   await page.goto(GAME, { waitUntil: 'load', timeout: 30000 });
   await page.waitForTimeout(1000);
 
-  // Login: abre na primeira vez e pausa o relógio; o teste entra como convidado
+  // Entrada obrigatória: sem conta nem escolha anterior, a tela de login abre antes do menu e pausa o relógio; só sai entrando ou jogando como convidado.
+  // Depois, a conta fica no menu principal (cartão de conta, configurações e créditos) e o login passa a ser uma folha opcional.
   const login = await page.evaluate(() => {
-    const abriu = loginAberto && !document.getElementById('tela-login').classList.contains('hidden');
+    const t = document.getElementById('tela-login');
+    const portaAberta = loginAberto && !t.classList.contains('hidden') && t.classList.contains('porta');
+    const semVoltar = getComputedStyle(t.querySelector('.so-sheet')).display === 'none' && getComputedStyle(document.getElementById('btn-convidado')).display !== 'none';
     const t0 = gameState.timeSeconds; updateGameTick(); const pausou = gameState.timeSeconds === t0;
-    entrarComoConvidado();
-    const fechou = !loginAberto && localStorage.getItem('frontline-modo') === 'convidado';
-    return { abriu, pausou, fechou };
+    continuarComoConvidado();
+    const fechou = !loginAberto && t.classList.contains('hidden') && localStorage.getItem('frontline-modo') === 'convidado' && menuAberto === true; // segue para o menu
+    const cartao = !!document.getElementById('chip-conta') && /Entrar/.test(document.getElementById('chip-nome').textContent) && !!document.getElementById('btn-config-menu') && /Créditos/.test(document.querySelector('#tela-modos .menu-util').textContent);
+    const foraDoJogo = !document.getElementById('btn-conta') && !document.querySelector('header [onclick*="abrirCreditos"]');
+    botaoConta();
+    const abriuFolha = loginAberto && !t.classList.contains('hidden') && !t.classList.contains('porta') && getComputedStyle(document.getElementById('btn-convidado')).display === 'none';
+    fecharLogin(); const voltou = !loginAberto;
+    escolherModo('trincheiras');
+    return { abriu: portaAberta && semVoltar, pausou, fechou, cartao, foraDoJogo, abriuFolha, voltou, entrouNoJogo: menuAberto === false };
   });
 
   // Tutorial guiado: abre (em teste automático, só chamando abrirTutorial), pausa o relógio, avança no botão do cartão e fecha gravando que foi visto
@@ -586,7 +595,7 @@ async function run() {
     c.derrotaMantemNivel = localStorage.getItem('frontline-ponto-alpha-nivel') === '2';
     localStorage.setItem('frontline-ponto-alpha-nivel', '1'); gameState.level = 1;
     return c;
-  }, [INITIAL_SQUAD(), { loginAbrePrimeiraVez: login.abriu, loginPausaRelogio: login.pausou, convidadoEntra: login.fechou, tutorialAbrePrimeiraVez: tutorial.abriu, tutorialPausaRelogio: tutorial.pausou, tutorialAvanca: tutorial.avancou, tutorialFecha: tutorial.fechou }]);
+  }, [INITIAL_SQUAD(), { loginAbrePrimeiraVez: login.abriu, loginPausaRelogio: login.pausou, convidadoEntra: login.fechou, loginSaiSoComEscolha: login.fechou, menuTemContaConfigCreditos: login.cartao, contaCreditosForaDoJogo: login.foraDoJogo, loginFolhaOpcional: login.abriuFolha, loginVolta: login.voltou, escolherTrincheirasEntra: login.entrouNoJogo, tutorialAbrePrimeiraVez: tutorial.abriu, tutorialPausaRelogio: tutorial.pausou, tutorialAvanca: tutorial.avancou, tutorialFecha: tutorial.fechou }]);
 
   // Simulações sem intervenção do jogador (renderização desligada para velocidade; lógica idêntica)
   results.sim = await page.evaluate((init) => {

@@ -100,6 +100,27 @@
         .animate-alert-pulse {
             animation: alert-glow 1.2s infinite ease-in-out;
         }
+        /* Menu principal: barra de conta/configurações, conteúdo central e rodapé discreto */
+        .menu-bar { position: sticky; top: 0; z-index: 2; display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: calc(10px + env(safe-area-inset-top)) 12px 8px; background: linear-gradient(#0c0f0d 75%, rgba(12,15,13,0)); }
+        .chip-conta { display: flex; align-items: center; gap: 9px; padding: 5px 12px 5px 6px; border-radius: 999px; text-align: left; min-width: 0; max-width: calc(100% - 56px); }
+        .chip-av { display: flex; align-items: center; justify-content: center; flex: none; width: 36px; height: 36px; border-radius: 50%; background: #1f2a21; border: 1px solid #5a7356; color: #d6e3d1; font-weight: 700; font-size: 14px; }
+        .chip-conta.logado .chip-av { background: #2e5a34; border-color: #8fd17f; }
+        .chip-txt { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
+        .chip-txt b { font-size: 13px; color: #d6e3d1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .chip-txt small { font-size: 10px; color: #9fb39a; font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .chip-conta > .fa-chevron-right { font-size: 10px; color: #9fb39a; }
+        .menu-ico { display: flex; align-items: center; justify-content: center; flex: none; width: 44px; height: 44px; border-radius: 50%; font-size: 18px; }
+        .menu-voltar { padding: 9px 14px; border-radius: 999px; font-size: 13px; font-weight: 700; }
+        .menu-meio { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 0 12px 8px; }
+        .menu-util { display: flex; justify-content: space-between; align-items: center; padding: 8px 14px calc(14px + env(safe-area-inset-bottom)); font-size: 10.5px; color: #6f8068; font-weight: 400; }
+        .menu-util button { padding: 9px 14px; border-radius: 8px; font-size: 12px; font-weight: 700; }
+        /* Tela de entrada (obrigatória) e folha de login (opcional): a mesma tela, em dois modos */
+        #tela-login.porta .so-sheet { display: none; }
+        #tela-login:not(.porta) .so-porta { display: none; }
+        .login-ou { display: flex; align-items: center; gap: 10px; margin: 14px 0 12px; color: #6f8068; font-size: 11px; letter-spacing: 1px; }
+        .login-ou::before, .login-ou::after { content: ''; flex: 1; height: 1px; background: #27332b; }
+        .btn-convidado { display: block; padding: 12px; border-radius: 6px; font-size: 14px; font-weight: 700; text-align: center; border-color: #5c4a26 !important; color: #ffd28a !important; }
+        .btn-convidado small { display: block; margin-top: 2px; font-size: 10.5px; font-weight: 400; color: #9fb39a; }
         /* Tela inicial de modos (formato de terminal tático, nas cores do FrontLine) */
         .menu-topo { display: flex; justify-content: space-between; align-items: center; font-size: 10px; letter-spacing: 1px; color: #9fb39a; padding-bottom: 6px; border-bottom: 1px solid #27332b; }
         .menu-topo .ponto { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #8fad88; margin-right: 6px; }
@@ -126,6 +147,7 @@
         @media (max-width: 440px) {
             #faixa-tempo { gap: 4px; padding-left: 8px; padding-right: 8px; font-size: 11.5px; }
             #faixa-tempo > div { gap: 4px !important; }
+            #faixa-tempo > div:first-child { gap: 9px !important; }
             #faixa-tempo .fa-clock, #faixa-tempo .text-mil-border { display: none; }
             #btn-rapido { padding-left: 7px; padding-right: 7px; }
             #btn-pause { padding-left: 9px; padding-right: 9px; }
@@ -136,14 +158,13 @@
             header { gap: 4px; padding-left: 6px; padding-right: 6px; }
             header .h-4.w-px { display: none; }
             header #lbl-level { padding-left: 4px; padding-right: 4px; font-size: 10px; }
-            header #btn-menu-topo, header #btn-conta, header #btn-config, header #btn-audio { padding-left: 7px; padding-right: 7px; }
-            header #lbl-conta { display: inline-block; max-width: 54px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+            header #btn-menu-topo, header #btn-config, header #btn-audio { padding-left: 7px; padding-right: 7px; }
         }
         @media (max-width: 379px) { header .animate-pulse { display: none; } header #lbl-level { display: none; } }
     </style>
     <!-- Tailwind: CSS fixo gerado por tools/gerar-css.sh (antes era montado no celular pelo CDN) -->
-    <link rel="stylesheet" href="assets/css/tailwind.css?v=20261116.2218">
-    <link rel="stylesheet" href="assets/css/polimento-visual.css?v=20261116.2218">
+    <link rel="stylesheet" href="assets/css/tailwind.css?v=20261116.2314">
+    <link rel="stylesheet" href="assets/css/polimento-visual.css?v=20261116.2314">
 </head>
 <body class="h-screen w-screen overflow-hidden flex justify-center bg-black">
 
@@ -163,9 +184,6 @@
             <!-- Audio Toggle & Time Speed Controls -->
             <div class="flex items-center gap-1.5">
                 <button id="btn-menu-topo" onclick="abrirMenuModos()" class="px-2.5 min-h-[34px] rounded btn-tactical border-mil-amberMuted text-mil-textGlow font-bold text-xs whitespace-nowrap" title="Menu principal (modos de jogo)">🏠 Menu</button>
-                <button id="btn-conta" onclick="botaoConta()" class="px-2 py-0.5 rounded btn-tactical text-xs" title="Conta">
-                    <i class="fa-solid fa-user"></i> <span id="lbl-conta">Entrar</span>
-                </button>
                 <button id="btn-config" onclick="abrirConfig()" class="px-2 py-0.5 rounded btn-tactical text-xs" title="Configurações">
                     <i class="fa-solid fa-gear"></i>
                 </button>
@@ -263,7 +281,6 @@
                     <!-- Volta para a tela inicial (Trincheiras, Trincheiras online e Conquista) -->
                     <button onclick="abrirMenuModos()" class="text-xs px-2 py-1 btn-tactical rounded font-bold whitespace-nowrap">🏠 Modos de jogo</button>
                     <button onclick="abrirTutorial()" class="text-xs underline text-mil-textMuted hover:text-mil-textGlow whitespace-nowrap">Como jogar</button>
-                    <button onclick="abrirCreditos()" class="text-xs underline text-mil-textMuted hover:text-mil-textGlow whitespace-nowrap">Créditos</button>
                     <button onclick="novaPartida()" class="text-xs underline text-mil-textMuted hover:text-mil-textGlow whitespace-nowrap">Nova partida</button>
                 </div>
             </div>
@@ -495,7 +512,17 @@
         </div>
 
         <!-- TELA INICIAL: escolha do modo (aparece ao abrir o jogo) -->
-        <div id="tela-modos" class="absolute inset-0 bg-mil-bg z-[70] flex flex-col justify-center p-3 overflow-y-auto">
+        <div id="tela-modos" class="absolute inset-0 bg-mil-bg z-[70] flex flex-col overflow-y-auto">
+            <!-- Barra de cima: conta à esquerda e configurações à direita (padrão dos jogos de celular) -->
+            <div class="menu-bar">
+                <button id="chip-conta" type="button" onclick="botaoConta()" class="chip-conta btn-tactical" title="Conta">
+                    <span id="chip-av" class="chip-av"><i class="fa-solid fa-user"></i></span>
+                    <span class="chip-txt"><b id="chip-nome">Entrar</b><small id="chip-sub">salve o progresso na nuvem</small></span>
+                    <i class="fa-solid fa-chevron-right"></i>
+                </button>
+                <button id="btn-config-menu" type="button" onclick="abrirConfig()" class="menu-ico btn-tactical" title="Configurações" aria-label="Configurações"><i class="fa-solid fa-gear"></i></button>
+            </div>
+            <div class="menu-meio">
             <div class="w-full max-w-md mx-auto">
                 <div class="text-center mb-4">
                     <img src="icons/icon-192.png" alt="" class="w-16 h-16 rounded mx-auto mb-2">
@@ -529,23 +556,33 @@
                     </a>
                 </div>
             </div>
+            </div>
+            <!-- Rodapé discreto: créditos e versão -->
+            <div class="menu-util">
+                <button type="button" onclick="abrirCreditos()" class="btn-tactical"><i class="fa-solid fa-circle-info"></i> Créditos</button>
+                <span id="menu-versao"></span>
+            </div>
         </div>
 
         <!-- TELA DE LOGIN -->
-        <div id="tela-login" class="hidden absolute inset-0 bg-mil-bg z-[60] flex flex-col items-center justify-center p-6 overflow-y-auto">
-            <img src="icons/icon-192.png" alt="" class="w-20 h-20 rounded mb-3">
-            <h1 class="text-2xl font-bold text-mil-textGlow tracking-wider">FrontLine</h1>
-            <p class="text-xs text-mil-textMuted mb-5 font-normal">Defenda a trincheira por 30 dias.</p>
-            <form id="form-login" onsubmit="event.preventDefault(); entrarNaConta(false);" class="w-full max-w-xs space-y-3">
-                <input id="login-email" type="email" autocomplete="email" required placeholder="E-mail"
-                       class="w-full px-3 py-2 rounded bg-mil-panel border border-mil-border text-mil-textGlow text-base font-normal focus:outline-none focus:border-mil-greenMuted">
-                <input id="login-senha" type="password" autocomplete="current-password" required minlength="6" placeholder="Senha (mínimo 6 caracteres)"
-                       class="w-full px-3 py-2 rounded bg-mil-panel border border-mil-border text-mil-textGlow text-base font-normal focus:outline-none focus:border-mil-greenMuted">
-                <p id="login-msg" class="text-xs min-h-[1rem] font-normal"></p>
-                <button id="btn-entrar" type="submit" class="w-full py-2 btn-tactical rounded font-bold text-sm">Entrar</button>
-                <button id="btn-criar" type="button" onclick="entrarNaConta(true)" class="w-full py-2 btn-tactical rounded text-sm">Criar conta</button>
-                <button type="button" onclick="entrarComoConvidado()" class="w-full text-xs underline text-mil-textMuted pt-2">Jogar sem conta (salva só neste aparelho)</button>
-            </form>
+        <div id="tela-login" class="hidden porta absolute inset-0 bg-mil-bg z-[85] flex flex-col overflow-y-auto">
+            <div class="menu-bar so-sheet"><button type="button" onclick="fecharLogin()" class="btn-tactical menu-voltar"><i class="fa-solid fa-arrow-left"></i> Voltar ao menu</button></div>
+            <div class="menu-meio items-center">
+                <img src="icons/icon-192.png" alt="" class="w-16 h-16 rounded mb-3">
+                <h1 id="login-titulo" class="text-xl font-bold text-mil-textGlow tracking-wider">Entrar na conta</h1>
+                <p id="login-sub" class="text-xs text-mil-textMuted mb-5 font-normal text-center max-w-xs"></p>
+                <form id="form-login" onsubmit="event.preventDefault(); entrarNaConta(false);" class="w-full max-w-xs space-y-3">
+                    <input id="login-email" type="email" autocomplete="email" required placeholder="E-mail"
+                           class="w-full px-3 py-2 rounded bg-mil-panel border border-mil-border text-mil-textGlow text-base font-normal focus:outline-none focus:border-mil-greenMuted">
+                    <input id="login-senha" type="password" autocomplete="current-password" required minlength="6" placeholder="Senha (mínimo 6 caracteres)"
+                           class="w-full px-3 py-2 rounded bg-mil-panel border border-mil-border text-mil-textGlow text-base font-normal focus:outline-none focus:border-mil-greenMuted">
+                    <p id="login-msg" class="text-xs min-h-[1rem] font-normal"></p>
+                    <button id="btn-entrar" type="submit" class="w-full py-2.5 btn-tactical rounded font-bold text-sm">Entrar</button>
+                    <button id="btn-criar" type="button" onclick="entrarNaConta(true)" class="w-full py-2.5 btn-tactical rounded text-sm">Criar conta</button>
+                </form>
+                <div class="so-porta login-ou w-full max-w-xs"><span>ou</span></div>
+                <button id="btn-convidado" type="button" onclick="continuarComoConvidado()" class="so-porta btn-convidado btn-tactical w-full max-w-xs">🎮 Jogar como convidado<small>o progresso fica só neste aparelho</small></button>
+            </div>
         </div>
 
         <!-- TUTORIAL (primeira vez e pelo link "Como jogar") -->
@@ -574,13 +611,14 @@
         </div>
 
         <!-- CRÉDITOS: recursos livres usados no jogo -->
-        <div id="modal-creditos" class="hidden absolute inset-0 bg-black/90 z-50 flex items-center justify-center p-4" onclick="if (event.target === this) fecharCreditos()">
+        <div id="modal-creditos" class="hidden absolute inset-0 bg-black/90 z-[85] flex items-center justify-center p-4" onclick="if (event.target === this) fecharCreditos()">
             <div class="bg-mil-panel border-2 border-mil-border rounded p-4 max-w-sm w-full space-y-2 shadow-2xl max-h-[90vh] overflow-y-auto text-xs leading-relaxed">
                 <div class="text-mil-amberMuted font-bold text-sm border-b border-mil-border pb-2">CRÉDITOS</div>
                 <p class="text-mil-textGlow"><b>FrontLine</b> — jogo de Ruan e Douglas.</p>
                 <p><b class="text-mil-textGlow">Efeitos sonoros:</b> <span class="text-mil-textMuted">gerados com ZzFX, de Frank Force — licença MIT.</span></p>
                 <p><b class="text-mil-textGlow">Ícones:</b> <span class="text-mil-textMuted">game-icons.net, de Lorc, Delapouite e colaboradores — licença CC BY 3.0.</span></p>
                 <p><b class="text-mil-textGlow">Explosões, fumaça, clarões e vapor:</b> <span class="text-mil-textMuted">"Smoke Particle Assets", de Kenney (kenney.nl) — licença CC0.</span></p>
+                <p><b class="text-mil-textGlow">Soldados em pixel art:</b> <span class="text-mil-textMuted">"Tiny Soldiers of The Old World Wars" (OpenGameArt.org) — licença CC0.</span></p>
                 <p><b class="text-mil-textGlow">Medalhas:</b> <span class="text-mil-textMuted">Kenney (kenney.nl) — licença CC0 (domínio público).</span></p>
                 <p><b class="text-mil-textGlow">Músicas:</b> <span class="text-mil-textMuted">trilhas de guerra de domínio público (CC0); detalhes em assets/music/LICENSE.md.</span></p>
                 <p><b class="text-mil-textGlow">Interface:</b> <span class="text-mil-textMuted">Tailwind CSS (MIT), Font Awesome Free (ícones CC BY 4.0) e fontes Google (OFL).</span></p>
@@ -589,7 +627,7 @@
         </div>
 
         <!-- CONFIGURAÇÕES: conta, som, jogo e dados -->
-        <div id="modal-config" class="hidden absolute inset-0 bg-black/90 z-[55] flex items-start justify-center p-3 overflow-y-auto" onclick="if (event.target === this) fecharConfig()">
+        <div id="modal-config" class="hidden absolute inset-0 bg-black/90 z-[85] flex items-start justify-center p-3 overflow-y-auto" onclick="if (event.target === this) fecharConfig()">
             <div class="bg-mil-panel border-2 border-mil-border rounded w-full max-w-md shadow-2xl my-2 text-xs">
                 <div class="flex justify-between items-center border-b border-mil-border p-3">
                     <span class="text-mil-amberMuted font-bold text-sm"><i class="fa-solid fa-gear"></i> CONFIGURAÇÕES</span>
@@ -678,16 +716,16 @@
 
     <!-- JAVASCRIPT GAME ENGINE -->
     <!-- Código do jogo, dividido por assunto (a ordem importa) -->
-    <script src="assets/js/01-base.js?v=20261116.2218"></script>
-    <script src="assets/js/02-regras.js?v=20261116.2218"></script>
-    <script src="assets/js/03-defesas-crises.js?v=20261116.2218"></script>
-    <script src="assets/js/04-interface.js?v=20261116.2218"></script>
-    <script src="assets/js/05-cena.js?v=20261116.2218"></script>
-    <script src="assets/js/05b-cena-pixel.js?v=20261116.2218"></script>
-    <script src="assets/js/guia-tutorial.js?v=20261116.2218"></script>
-    <script src="assets/js/06-conta.js?v=20261116.2218"></script>
-    <script src="assets/js/07-operacoes.js?v=20261116.2218"></script>
-    <script src="assets/js/08-campo-ameacas.js?v=20261116.2218"></script>
-    <script src="assets/js/08b-particulas.js?v=20261116.2218"></script>
+    <script src="assets/js/01-base.js?v=20261116.2314"></script>
+    <script src="assets/js/02-regras.js?v=20261116.2314"></script>
+    <script src="assets/js/03-defesas-crises.js?v=20261116.2314"></script>
+    <script src="assets/js/04-interface.js?v=20261116.2314"></script>
+    <script src="assets/js/05-cena.js?v=20261116.2314"></script>
+    <script src="assets/js/05b-cena-pixel.js?v=20261116.2314"></script>
+    <script src="assets/js/guia-tutorial.js?v=20261116.2314"></script>
+    <script src="assets/js/06-conta.js?v=20261116.2314"></script>
+    <script src="assets/js/07-operacoes.js?v=20261116.2314"></script>
+    <script src="assets/js/08-campo-ameacas.js?v=20261116.2314"></script>
+    <script src="assets/js/08b-particulas.js?v=20261116.2314"></script>
 </body>
 </html>

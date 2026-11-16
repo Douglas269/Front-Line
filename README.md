@@ -34,6 +34,9 @@ Jogo de estratégia tático com foco em realismo de comando, combate blindado e 
 - O jogo continua salvando no aparelho e espelha na nuvem a cada 30 s de jogo e na hora ao virar o dia, pausar, subir de nível, terminar a partida ou fechar o tutorial. Ao entrar, fica com o salvamento mais recente entre aparelho e nuvem; o progresso de convidado passa para a conta no primeiro login. Sem internet, segue como convidado.
 - O navegador usa só a chave pública (publishable) do Supabase; a proteção dos dados vem das políticas RLS.
 
+### Menu principal (conta, configurações e créditos)
+Em `ponto-alpha.html` (`#tela-modos`): barra de cima com o cartão de **conta** (esquerda) e o botão de **configurações** (direita), os três modos no meio e, embaixo, **Créditos** e a versão. Ao abrir o jogo pela primeira vez, a **tela de entrada é obrigatória** (`#tela-login.porta`): entrar na conta ou jogar como convidado (a escolha fica salva no aparelho; "Sair da conta" volta a pedir). Depois, o login é uma folha opcional aberta pelo cartão de conta. Só a página principal tem a porta de entrada: `conquista.html` e `duelo.html` abertos direto não passam por ela. Dentro do Trincheiras ficaram só Menu, configurações e som. O tutorial só começa depois de entrar no Trincheiras.
+
 ### Tutorial guiado (Trincheiras e campanha da Conquista)
 `prototipo/assets/js/guia-tutorial.js` é o motor; os passos de cada modo ficam em `06-conta.js` (Trincheiras, 18 passos) e `conquista-guia.js` (Conquista, fase 1, 11 passos). Os modos online (Duelo e Conquista online) não têm tutorial.
 - A pessoa é obrigada a tocar no que o tutorial pede: o alvo pisca com um anel dourado, o resto da tela escurece e não responde (toques fora do alvo são bloqueados e o cartão treme).

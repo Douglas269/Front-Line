@@ -157,13 +157,30 @@
         function escolherModo(modo) {
             if (modo === 'online') { location.href = 'duelo.html'; return; }
             if (modo === 'conquista') { location.href = 'conquista.html'; return; }
-            fecharMenuModos(); // Trincheiras: segue para o login (se precisar) e o jogo
+            fecharMenuModos(); // Trincheiras: sem conta, joga como convidado (o progresso fica só neste aparelho)
+            if (!usuario) gravarLocal(MODE_KEY, 'convidado');
+            atualizarConta();
+            mostrarTutorialSePrimeiraVez();
         }
 
-        function abrirLogin() {
+        // porta = true: tela de entrada, obrigatória (entrar na conta OU jogar como convidado). porta = false: folha opcional aberta pelo cartão de conta do menu.
+        function abrirLogin(porta) {
             loginAberto = true;
-            document.getElementById('tela-login').classList.remove('hidden');
-            document.getElementById('login-msg').textContent = sb ? '' : 'Sem conexão com o servidor: dá para jogar sem conta.';
+            const t = document.getElementById('tela-login');
+            t.classList.toggle('porta', !!porta);
+            document.getElementById('login-titulo').textContent = porta ? 'Bem-vindo, comandante' : 'Entrar na conta';
+            document.getElementById('login-sub').textContent = porta
+                ? 'Entre na sua conta para salvar o progresso na nuvem e usar o Duelo online, ou jogue como convidado.'
+                : 'Salve o progresso na nuvem, jogue em outro aparelho e use o Duelo online. Sem conta, o jogo salva só neste aparelho.';
+            t.classList.remove('hidden');
+            document.getElementById('login-msg').textContent = sb ? '' : 'Sem conexão com o servidor agora: dá para jogar como convidado.';
+        }
+
+        // Botão "Jogar como convidado" da tela de entrada: segue para o menu principal (o progresso fica só neste aparelho)
+        function continuarComoConvidado() {
+            gravarLocal(MODE_KEY, 'convidado');
+            fecharLogin();
+            atualizarConta();
         }
 
         function fecharLogin() {
@@ -172,11 +189,19 @@
         }
 
         function mostrarTutorialSePrimeiraVez() {
+            if (menuAberto || loginAberto) return; // o tutorial é do jogo: só começa depois de entrar no Trincheiras
             if (lerLocal(TUTORIAL_KEY) !== '1' && (!navigator.webdriver || /[?&]guia=1/.test(location.search))) abrirTutorial(); // (em teste automático só com ?guia=1)
         }
 
+        const esc2 = (t) => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
         function atualizarConta() {
-            document.getElementById('lbl-conta').textContent = usuario ? (CONFIG.apelido || 'Conta') : 'Entrar';
+            const chip = document.getElementById('chip-conta'); if (!chip) return;
+            const nome = usuario ? (CONFIG.apelido || (usuario.email || 'Conta').split('@')[0]) : 'Entrar';
+            document.getElementById('chip-nome').textContent = nome;
+            document.getElementById('chip-sub').textContent = usuario ? 'progresso na nuvem' : 'salve o progresso na nuvem';
+            document.getElementById('chip-av').innerHTML = usuario ? esc2(nome.charAt(0).toUpperCase()) : '<i class="fa-solid fa-user"></i>';
+            chip.classList.toggle('logado', !!usuario);
+            const v = document.getElementById('menu-versao'); if (v) v.textContent = 'v' + VERSAO_JOGO;
         }
 
         function botaoConta() {
@@ -197,6 +222,9 @@
 
         // Começo do jogo: sessão salva, convidado ou tela de login
         async function iniciarConta() {
+            // Sem escolha anterior e sem sinal de sessão salva: a tela de entrada abre já, antes do menu aparecer
+            const temSessaoSalva = (() => { try { return Object.keys(localStorage).some(k => /^sb-.*-auth-token$/.test(k)); } catch (e) { return false; } })();
+            if (!lerLocal(MODE_KEY) && !temSessaoSalva) abrirLogin(true);
             if (window.supabase && window.supabase.createClient) {
                 sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
                 try {
@@ -212,8 +240,8 @@
                 } catch (e) { /* sem rede: segue como convidado ou login */ }
             }
             atualizarConta();
-            if (lerLocal(MODE_KEY) === 'convidado') { mostrarTutorialSePrimeiraVez(); return; }
-            abrirLogin();
+            // Sem sessão: precisa escolher entre entrar na conta e jogar como convidado (a escolha fica salva neste aparelho)
+            if (lerLocal(MODE_KEY) === 'convidado') mostrarTutorialSePrimeiraVez(); else abrirLogin(true);
         }
 
         async function entrarNaConta(criar) {
@@ -474,6 +502,7 @@
         }
         function abrirTutorial() {
             if (GuiaT.ativo()) return;
+            if (menuAberto) fecharMenuModos(); // 'Rever o tutorial' nas configurações do menu principal: entra no jogo e começa
             try { switchTab('squad'); window.scrollTo(0, 0); } catch (e) {}
             if (!jogoPausado) alternarPausa(true);
             tutorialAberto = true;
@@ -521,7 +550,7 @@
            Ao abrir, ao voltar para o app e a cada minuto o jogo compara as duas. Se o site
            tiver uma versão diferente, o jogo trava numa tela que só sai atualizando.
            (tools/nova-versao.sh troca as duas juntas a cada atualização publicada.) */
-        const VERSAO_JOGO = '20261116.2218';
+        const VERSAO_JOGO = '20261116.2314';
         const ATUALIZOU_KEY = 'frontline-atualizou-para';
         async function verificarVersao() {
             if (!location.protocol.startsWith('http') || atualizacaoPendente) return;

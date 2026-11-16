@@ -12,6 +12,7 @@ const { chromium } = require('playwright');
   let p = await b.newPage({ viewport: { width: 390, height: 844 } }); p.on('pageerror', e => erros.push(e.message));
   await p.goto(base + 'ponto-alpha.html?guia=1'); await p.evaluate(() => { localStorage.clear(); localStorage.setItem('frontline-modo', 'convidado'); });
   await p.goto(base + 'ponto-alpha.html?guia=1'); await p.waitForTimeout(500);
+  if (await p.evaluate(() => GuiaT.ativo())) falhas.push('Trincheiras: o tutorial abriu por cima do menu principal (só deve abrir ao entrar no jogo)');
   await p.evaluate(() => escolherModo('trincheiras')); await p.waitForTimeout(500);
   if (!(await p.evaluate(() => GuiaT.ativo()))) falhas.push('Trincheiras: o tutorial não abriu na primeira vez');
   else {
