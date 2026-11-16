@@ -100,9 +100,27 @@
         .animate-alert-pulse {
             animation: alert-glow 1.2s infinite ease-in-out;
         }
+        /* Tela inicial de modos (formato de terminal tático, nas cores do FrontLine) */
+        .menu-topo { display: flex; justify-content: space-between; align-items: center; font-size: 10px; letter-spacing: 1px; color: #9fb39a; padding-bottom: 6px; border-bottom: 1px solid #27332b; }
+        .menu-topo .ponto { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #8fad88; margin-right: 6px; }
+        .menu-brief { position: relative; margin-top: 10px; padding: 9px 10px; border: 1px solid #27332b; background: #131815; border-radius: 4px; }
+        .menu-brief .k { font-size: 9.5px; color: #9fb39a; letter-spacing: 1px; }
+        .menu-brief h2 { margin: 3px 0 0; font-size: 13px; letter-spacing: 1px; color: #ffd28a; }
+        .menu-brief .dir { position: absolute; right: 10px; top: 9px; text-align: right; font-size: 9.5px; color: #9fb39a; }
+        .menu-brief .dir .ok { color: #8fd17f; }
+        .menu-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+        .modo-card { position: relative; display: flex; flex-direction: column; padding: 9px 7px 7px; text-align: left; border-radius: 4px; }
+        .modo-card::before, .modo-card::after { content: ''; position: absolute; width: 9px; height: 9px; border: 0 solid #8fad88; pointer-events: none; transition: border-color .15s ease; }
+        .modo-card::before { top: -3px; left: -3px; border-top-width: 2px; border-left-width: 2px; }
+        .modo-card::after { bottom: -3px; right: -3px; border-bottom-width: 2px; border-right-width: 2px; }
+        .modo-card:hover::before, .modo-card:hover::after, .modo-card:focus-visible::before, .modo-card:focus-visible::after { border-color: #d39a45; }
+        .modo-card .mt { font-weight: 700; font-size: 12px; line-height: 1.2; padding-right: 2px; }
+        .modo-tag { order: -1; align-self: flex-start; margin-bottom: 5px; font-size: 8px; letter-spacing: .5px; padding: 1px 4px; border-radius: 3px; border: 1px solid #5c4a26; color: #ffd28a; background: #2a2214; font-weight: 700; }
+        .modo-card .md { display: block; margin-top: 5px; font-size: 10px; line-height: 1.35; color: #9fb39a; font-weight: 400; }
+        .modo-rodape { display: flex; justify-content: space-between; gap: 4px; margin-top: auto; padding-top: 6px; border-top: 1px dashed #334237; font-size: 8.5px; color: #9fb39a; font-weight: 400; }
     </style>
     <!-- Tailwind: CSS fixo gerado por tools/gerar-css.sh (antes era montado no celular pelo CDN) -->
-    <link rel="stylesheet" href="assets/css/tailwind.css?v=20261114.2117">
+    <link rel="stylesheet" href="assets/css/tailwind.css?v=20261116.1519">
 </head>
 <body class="h-screen w-screen overflow-hidden flex justify-center bg-black">
 
@@ -454,23 +472,34 @@
         </div>
 
         <!-- TELA INICIAL: escolha do modo (aparece ao abrir o jogo) -->
-        <div id="tela-modos" class="absolute inset-0 bg-mil-bg z-[70] flex flex-col items-center justify-center p-6 overflow-y-auto">
-            <img src="icons/icon-192.png" alt="" class="w-20 h-20 rounded mb-3">
-            <h1 class="text-2xl font-bold text-mil-textGlow tracking-wider">FrontLine</h1>
-            <p class="text-xs text-mil-textMuted mb-5 font-normal">Escolha o modo de jogo.</p>
-            <div class="w-full max-w-xs space-y-3">
-                <button id="modo-trincheiras" type="button" onclick="escolherModo('trincheiras')" class="w-full p-3 btn-tactical rounded text-left">
-                    <span class="block font-bold text-sm">🪖 Trincheiras</span>
-                    <span class="block text-xs text-mil-textMuted font-normal mt-1">Segure a sua trincheira por 30 dias. Um jogador.</span>
-                </button>
-                <a id="modo-online" href="duelo.html" class="block w-full p-3 btn-tactical rounded text-left">
-                    <span class="block font-bold text-sm">⚔️ Trincheiras online</span>
-                    <span class="block text-xs text-mil-textMuted font-normal mt-1">Duelo 1×1 com um amigo, por código. Precisa de conta.</span>
-                </a>
-                <a id="modo-conquista" href="conquista.html" class="block w-full p-3 btn-tactical rounded text-left">
-                    <span class="block font-bold text-sm">🗺️ Conquista <span class="text-mil-amberMuted">· novo</span></span>
-                    <span class="block text-xs text-mil-textMuted font-normal mt-1">Mapa de províncias contra 3 bots. Alimente a tropa, espione e conquiste.</span>
-                </a>
+        <div id="tela-modos" class="absolute inset-0 bg-mil-bg z-[70] flex flex-col justify-center p-3 overflow-y-auto">
+            <div class="w-full max-w-md mx-auto">
+                <div class="menu-topo"><span><span class="ponto"></span><b>FRONTLINE // TERMINAL TÁTICO</b></span><span>SETOR KOMONA</span></div>
+                <div class="menu-brief">
+                    <div class="k">POSTO AVANÇADO ALPHA</div>
+                    <h2>SELEÇÃO DE OPERAÇÃO</h2>
+                    <div class="dir"><div>30 DIAS DE RESISTÊNCIA</div><div class="ok">STATUS: PRONTO</div></div>
+                </div>
+                <div class="menu-cards">
+                    <button id="modo-trincheiras" type="button" onclick="escolherModo('trincheiras')" class="modo-card btn-tactical">
+                        <span class="mt">🪖 Trincheiras</span>
+                        <span class="modo-tag">SOLO</span>
+                        <span class="md">Segure a sua trincheira por 30 dias. Um jogador.</span>
+                        <span class="modo-rodape"><span>30 dias</span><span>6 soldados</span></span>
+                    </button>
+                    <a id="modo-online" href="duelo.html" class="modo-card btn-tactical">
+                        <span class="mt">⚔️ Trincheiras online</span>
+                        <span class="modo-tag">1×1</span>
+                        <span class="md">Duelo 1×1 com um amigo, por código. Precisa de conta.</span>
+                        <span class="modo-rodape"><span>por código</span><span>com conta</span></span>
+                    </a>
+                    <a id="modo-conquista" href="conquista.html" class="modo-card btn-tactical">
+                        <span class="mt">🗺️ Conquista <span class="text-mil-amberMuted">· novo</span></span>
+                        <span class="modo-tag">ESTRATÉGICO</span>
+                        <span class="md">Mapa de províncias contra 3 bots. Alimente a tropa, espione e conquiste.</span>
+                        <span class="modo-rodape"><span>3 bots</span><span>6 fases</span></span>
+                    </a>
+                </div>
             </div>
         </div>
 
@@ -638,15 +667,15 @@
 
     <!-- JAVASCRIPT GAME ENGINE -->
     <!-- Código do jogo, dividido por assunto (a ordem importa) -->
-    <script src="assets/js/01-base.js?v=20261114.2117"></script>
-    <script src="assets/js/02-regras.js?v=20261114.2117"></script>
-    <script src="assets/js/03-defesas-crises.js?v=20261114.2117"></script>
-    <script src="assets/js/04-interface.js?v=20261114.2117"></script>
-    <script src="assets/js/05-cena.js?v=20261114.2117"></script>
-    <script src="assets/js/05b-cena-pixel.js?v=20261114.2117"></script>
-    <script src="assets/js/06-conta.js?v=20261114.2117"></script>
-    <script src="assets/js/07-operacoes.js?v=20261114.2117"></script>
-    <script src="assets/js/08-campo-ameacas.js?v=20261114.2117"></script>
-    <script src="assets/js/08b-particulas.js?v=20261114.2117"></script>
+    <script src="assets/js/01-base.js?v=20261116.1519"></script>
+    <script src="assets/js/02-regras.js?v=20261116.1519"></script>
+    <script src="assets/js/03-defesas-crises.js?v=20261116.1519"></script>
+    <script src="assets/js/04-interface.js?v=20261116.1519"></script>
+    <script src="assets/js/05-cena.js?v=20261116.1519"></script>
+    <script src="assets/js/05b-cena-pixel.js?v=20261116.1519"></script>
+    <script src="assets/js/06-conta.js?v=20261116.1519"></script>
+    <script src="assets/js/07-operacoes.js?v=20261116.1519"></script>
+    <script src="assets/js/08-campo-ameacas.js?v=20261116.1519"></script>
+    <script src="assets/js/08b-particulas.js?v=20261116.1519"></script>
 </body>
 </html>
