@@ -109,7 +109,7 @@
         .menu-brief .dir { position: absolute; right: 10px; top: 9px; text-align: right; font-size: 9.5px; color: #9fb39a; }
         .menu-brief .dir .ok { color: #8fd17f; }
         .menu-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
-        .modo-card { position: relative; display: flex; flex-direction: column; padding: 9px 7px 7px; text-align: left; border-radius: 4px; }
+        .modo-card { position: relative; display: flex; flex-direction: column; min-height: 168px; padding: 9px 7px 7px; text-align: left; border-radius: 4px; }
         .modo-card::before, .modo-card::after { content: ''; position: absolute; width: 9px; height: 9px; border: 0 solid #8fad88; pointer-events: none; transition: border-color .15s ease; }
         .modo-card::before { top: -3px; left: -3px; border-top-width: 2px; border-left-width: 2px; }
         .modo-card::after { bottom: -3px; right: -3px; border-bottom-width: 2px; border-right-width: 2px; }
@@ -120,8 +120,8 @@
         .modo-rodape { display: flex; justify-content: space-between; gap: 4px; margin-top: auto; padding-top: 6px; border-top: 1px dashed #334237; font-size: 8.5px; color: #9fb39a; font-weight: 400; }
     </style>
     <!-- Tailwind: CSS fixo gerado por tools/gerar-css.sh (antes era montado no celular pelo CDN) -->
-    <link rel="stylesheet" href="assets/css/tailwind.css?v=20261116.1529">
-    <link rel="stylesheet" href="assets/css/polimento-visual.css?v=20261116.1529">
+    <link rel="stylesheet" href="assets/css/tailwind.css?v=20261116.1533">
+    <link rel="stylesheet" href="assets/css/polimento-visual.css?v=20261116.1533">
 </head>
 <body class="h-screen w-screen overflow-hidden flex justify-center bg-black">
 
@@ -475,7 +475,12 @@
         <!-- TELA INICIAL: escolha do modo (aparece ao abrir o jogo) -->
         <div id="tela-modos" class="absolute inset-0 bg-mil-bg z-[70] flex flex-col justify-center p-3 overflow-y-auto">
             <div class="w-full max-w-md mx-auto">
-                <div class="menu-topo"><span><span class="ponto"></span><b>FRONTLINE // TERMINAL TÁTICO</b></span><span>SETOR KOMONA</span></div>
+                <div class="text-center mb-4">
+                    <img src="icons/icon-192.png" alt="" class="w-16 h-16 rounded mx-auto mb-2">
+                    <h1 class="text-2xl font-bold text-mil-textGlow tracking-wider">FrontLine</h1>
+                    <p class="text-xs text-mil-textMuted font-normal mt-1">Escolha o modo de jogo.</p>
+                </div>
+                <div class="menu-topo"><span><span class="ponto"></span><b>TERMINAL TÁTICO</b></span><span>SETOR KOMONA</span></div>
                 <div class="menu-brief">
                     <div class="k">POSTO AVANÇADO ALPHA</div>
                     <h2>SELEÇÃO DE OPERAÇÃO</h2>
@@ -668,15 +673,15 @@
 
     <!-- JAVASCRIPT GAME ENGINE -->
     <!-- Código do jogo, dividido por assunto (a ordem importa) -->
-    <script src="assets/js/01-base.js?v=20261116.1529"></script>
-    <script src="assets/js/02-regras.js?v=20261116.1529"></script>
-    <script src="assets/js/03-defesas-crises.js?v=20261116.1529"></script>
-    <script src="assets/js/04-interface.js?v=20261116.1529"></script>
-    <script src="assets/js/05-cena.js?v=20261116.1529"></script>
-    <script src="assets/js/05b-cena-pixel.js?v=20261116.1529"></script>
-    <script src="assets/js/06-conta.js?v=20261116.1529"></script>
-    <script src="assets/js/07-operacoes.js?v=20261116.1529"></script>
-    <script src="assets/js/08-campo-ameacas.js?v=20261116.1529"></script>
-    <script src="assets/js/08b-particulas.js?v=20261116.1529"></script>
+    <script src="assets/js/01-base.js?v=20261116.1533"></script>
+    <script src="assets/js/02-regras.js?v=20261116.1533"></script>
+    <script src="assets/js/03-defesas-crises.js?v=20261116.1533"></script>
+    <script src="assets/js/04-interface.js?v=20261116.1533"></script>
+    <script src="assets/js/05-cena.js?v=20261116.1533"></script>
+    <script src="assets/js/05b-cena-pixel.js?v=20261116.1533"></script>
+    <script src="assets/js/06-conta.js?v=20261116.1533"></script>
+    <script src="assets/js/07-operacoes.js?v=20261116.1533"></script>
+    <script src="assets/js/08-campo-ameacas.js?v=20261116.1533"></script>
+    <script src="assets/js/08b-particulas.js?v=20261116.1533"></script>
 </body>
 </html>
