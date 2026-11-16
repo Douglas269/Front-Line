@@ -108,20 +108,24 @@
         .menu-brief h2 { margin: 3px 0 0; font-size: 13px; letter-spacing: 1px; color: #ffd28a; }
         .menu-brief .dir { position: absolute; right: 10px; top: 9px; text-align: right; font-size: 9.5px; color: #9fb39a; }
         .menu-brief .dir .ok { color: #8fd17f; }
-        .menu-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
-        .modo-card { position: relative; display: flex; flex-direction: column; min-height: 168px; padding: 9px 7px 7px; text-align: left; border-radius: 4px; }
+        .menu-cards { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 10px; }
+        @media (min-width: 640px) { .menu-cards { grid-template-columns: repeat(3, 1fr); gap: 8px; } }
+        .modo-card { position: relative; display: flex; flex-direction: column; min-height: 0; padding: 12px 12px 10px; text-align: left; border-radius: 4px; }
         .modo-card::before, .modo-card::after { content: ''; position: absolute; width: 9px; height: 9px; border: 0 solid #8fad88; pointer-events: none; transition: border-color .15s ease; }
         .modo-card::before { top: -3px; left: -3px; border-top-width: 2px; border-left-width: 2px; }
         .modo-card::after { bottom: -3px; right: -3px; border-bottom-width: 2px; border-right-width: 2px; }
         .modo-card:hover::before, .modo-card:hover::after, .modo-card:focus-visible::before, .modo-card:focus-visible::after { border-color: #d39a45; }
-        .modo-card .mt { font-weight: 700; font-size: 12px; line-height: 1.2; padding-right: 2px; }
-        .modo-tag { order: -1; align-self: flex-start; margin-bottom: 5px; font-size: 8px; letter-spacing: .5px; padding: 1px 4px; border-radius: 3px; border: 1px solid #5c4a26; color: #ffd28a; background: #2a2214; font-weight: 700; }
-        .modo-card .md { display: block; margin-top: 5px; font-size: 10px; line-height: 1.35; color: #9fb39a; font-weight: 400; }
-        .modo-rodape { display: flex; justify-content: space-between; gap: 4px; margin-top: auto; padding-top: 6px; border-top: 1px dashed #334237; font-size: 8.5px; color: #9fb39a; font-weight: 400; }
+        .modo-card .mt { font-weight: 700; font-size: 15px; line-height: 1.2; padding-right: 96px; }
+        @media (min-width: 640px) { .modo-card { min-height: 168px; padding: 9px 7px 7px; } .modo-card .mt { font-size: 12px; padding-right: 2px; } }
+        .modo-tag { position: absolute; top: 12px; right: 12px; font-size: 9px; letter-spacing: .5px; padding: 1px 4px; border-radius: 3px; border: 1px solid #5c4a26; color: #ffd28a; background: #2a2214; font-weight: 700; }
+        .modo-card .md { display: block; margin-top: 6px; font-size: 12px; line-height: 1.4; color: #9fb39a; font-weight: 400; }
+        @media (min-width: 640px) { .modo-tag { position: static; order: -1; align-self: flex-start; margin-bottom: 5px; font-size: 8px; } .modo-card .md { font-size: 10px; margin-top: 5px; line-height: 1.35; } }
+        .modo-rodape { display: flex; justify-content: space-between; gap: 4px; margin-top: 10px; padding-top: 7px; border-top: 1px dashed #334237; font-size: 10.5px; color: #9fb39a; font-weight: 400; }
+        @media (min-width: 640px) { .modo-rodape { margin-top: auto; font-size: 8.5px; padding-top: 6px; } }
     </style>
     <!-- Tailwind: CSS fixo gerado por tools/gerar-css.sh (antes era montado no celular pelo CDN) -->
-    <link rel="stylesheet" href="assets/css/tailwind.css?v=20261116.1556">
-    <link rel="stylesheet" href="assets/css/polimento-visual.css?v=20261116.1556">
+    <link rel="stylesheet" href="assets/css/tailwind.css?v=20261116.1844">
+    <link rel="stylesheet" href="assets/css/polimento-visual.css?v=20261116.1844">
 </head>
 <body class="h-screen w-screen overflow-hidden flex justify-center bg-black">
 
@@ -673,15 +677,15 @@
 
     <!-- JAVASCRIPT GAME ENGINE -->
     <!-- Código do jogo, dividido por assunto (a ordem importa) -->
-    <script src="assets/js/01-base.js?v=20261116.1556"></script>
-    <script src="assets/js/02-regras.js?v=20261116.1556"></script>
-    <script src="assets/js/03-defesas-crises.js?v=20261116.1556"></script>
-    <script src="assets/js/04-interface.js?v=20261116.1556"></script>
-    <script src="assets/js/05-cena.js?v=20261116.1556"></script>
-    <script src="assets/js/05b-cena-pixel.js?v=20261116.1556"></script>
-    <script src="assets/js/06-conta.js?v=20261116.1556"></script>
-    <script src="assets/js/07-operacoes.js?v=20261116.1556"></script>
-    <script src="assets/js/08-campo-ameacas.js?v=20261116.1556"></script>
-    <script src="assets/js/08b-particulas.js?v=20261116.1556"></script>
+    <script src="assets/js/01-base.js?v=20261116.1844"></script>
+    <script src="assets/js/02-regras.js?v=20261116.1844"></script>
+    <script src="assets/js/03-defesas-crises.js?v=20261116.1844"></script>
+    <script src="assets/js/04-interface.js?v=20261116.1844"></script>
+    <script src="assets/js/05-cena.js?v=20261116.1844"></script>
+    <script src="assets/js/05b-cena-pixel.js?v=20261116.1844"></script>
+    <script src="assets/js/06-conta.js?v=20261116.1844"></script>
+    <script src="assets/js/07-operacoes.js?v=20261116.1844"></script>
+    <script src="assets/js/08-campo-ameacas.js?v=20261116.1844"></script>
+    <script src="assets/js/08b-particulas.js?v=20261116.1844"></script>
 </body>
 </html>
