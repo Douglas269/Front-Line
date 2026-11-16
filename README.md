@@ -34,9 +34,16 @@ Jogo de estratégia tático com foco em realismo de comando, combate blindado e 
 - O jogo continua salvando no aparelho e espelha na nuvem a cada 30 s de jogo e na hora ao virar o dia, pausar, subir de nível, terminar a partida ou fechar o tutorial. Ao entrar, fica com o salvamento mais recente entre aparelho e nuvem; o progresso de convidado passa para a conta no primeiro login. Sem internet, segue como convidado.
 - O navegador usa só a chave pública (publishable) do Supabase; a proteção dos dados vem das políticas RLS.
 
+### Tutorial guiado (Trincheiras e campanha da Conquista)
+`prototipo/assets/js/guia-tutorial.js` é o motor; os passos de cada modo ficam em `06-conta.js` (Trincheiras, 18 passos) e `conquista-guia.js` (Conquista, fase 1, 11 passos). Os modos online (Duelo e Conquista online) não têm tutorial.
+- A pessoa é obrigada a tocar no que o tutorial pede: o alvo pisca com um anel dourado, o resto da tela escurece e não responde (toques fora do alvo são bloqueados e o cartão treme).
+- O passo avança sozinho quando a ação é feita; passos de leitura avançam no botão do cartão. Alvos podem ser botões, pontos do mapa/cena ou áreas (ex.: arrastar um soldado até um cômodo).
+- Sempre dá para "Pular tutorial"; depois de 20 s num passo aparece "Pular este passo". Avisos do próprio jogo (crise, fim de partida) continuam respondendo.
+- Em teste automático (`navigator.webdriver`) o tutorial só abre com `?guia=1`. Teste: `node tests/tutorial.js` (cliques reais).
+
 ### Conquista: guia, previsão, alerta, reunir e mini mapa
 `prototipo/assets/js/conquista-guia.js` (teste: `node tests/conquista-guia.js`).
-- Tutorial da Fase 1 que avança conforme a pessoa joga (selecionar exército, mover/atacar, confirmar, recrutar); dá para pular; "Rever" em Configurações > Jogo.
+- Tutorial da Fase 1: guiado (ver "Tutorial guiado" abaixo); "Rever" em Configurações > Jogo.
 - Previsão de ataque no painel de confirmação: força × defesa estimada (calibrada por simulação: relação ≥1,5 vence quase sempre, <0,95 quase sempre perde).
 - Fases 4 em diante (campanha): alerta "⚠ X → província em ~Ns" que leva até lá ao tocar, botão "Reunir tropas aqui" e mini mapa.
 

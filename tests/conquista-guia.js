@@ -1,26 +1,10 @@
-// Conquista: tutorial jogando (pulável), previsão de ataque, alerta de ataque, reunir tropas e mini mapa (fases altas)
+// Conquista: previsão de ataque, alerta de ataque, reunir tropas e mini mapa (fases altas). O tutorial guiado é testado em tests/tutorial.js
 const { chromium } = require('playwright');
 (async () => {
   const b = await chromium.launch(); const erros = [], falhas = [];
   const base = 'file://' + __dirname.replace(/tests$/, '') + 'prototipo/conquista.html';
   const novo = async (q) => { const p = await b.newPage({ viewport: { width: 400, height: 800 } }); p.on('pageerror', e => erros.push(e.message)); await p.goto(base + q); await p.evaluate(() => localStorage.clear()); await p.goto(base + q); await p.waitForTimeout(300); return p; };
-  const txt = (p) => p.evaluate(() => document.getElementById('guia').textContent);
-  let p = await novo('?guia=1');
-  await p.evaluate(() => comecarFase(1)); await p.waitForTimeout(300);
-  if (!/1\/5/.test(await txt(p))) falhas.push('tutorial abre no passo 1');
-  await p.evaluate(() => { const e = G.ex.find(x => x.dono === 'jogador'); G.sel = { tipo: 'ex', id: e.id }; renderPainel(); }); await p.waitForTimeout(250);
-  if (!/2\/5/.test(await txt(p))) falhas.push('passo 2 depois de selecionar o exército');
-  await p.evaluate(() => { const e = G.ex.find(x => x.dono === 'jogador'); prepararOrdem(e.id, G.prov[e.prov].viz.map(v => G.prov[v]).find(v => v.dono !== 'jogador').id, 'ataque'); }); await p.waitForTimeout(250);
-  const prev = await p.evaluate(() => ({ tem: !!document.querySelector('.prev'), t: (document.querySelector('.prev') || {}).textContent || '' }));
-  if (!/3\/5/.test(await txt(p)) || !prev.tem || !/Sua força/.test(prev.t)) falhas.push('passo 3 com previsão: ' + JSON.stringify(prev));
-  await p.evaluate(() => confirmarOrdem()); await p.waitForTimeout(250);
-  if (!/4\/5/.test(await txt(p))) falhas.push('passo 4 depois de confirmar');
-  await p.evaluate(() => guiaPular());
-  const pulo = await p.evaluate(() => ({ some: document.getElementById('guia').style.display === 'none', salvo: localStorage.getItem('frontline-conq-guia') }));
-  if (!pulo.some || pulo.salvo !== 'feito') falhas.push('pular tutorial: ' + JSON.stringify(pulo));
-  await p.evaluate(() => comecarFase(1)); await p.waitForTimeout(250);
-  if (await p.evaluate(() => document.getElementById('guia').style.display) !== 'none') falhas.push('tutorial não volta depois de pulado');
-  await p.close();
+    let p;
   // fase alta: alerta, mini mapa, reunir (e previsão sem visão)
   p = await novo('');
   await p.evaluate(() => comecarFase(4)); await p.waitForTimeout(400);

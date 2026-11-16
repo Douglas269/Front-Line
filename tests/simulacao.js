@@ -32,13 +32,14 @@ async function run() {
     return { abriu, pausou, fechou };
   });
 
-  // Tutorial: abre depois do login, na primeira vez, e pausa o relógio; depois é fechado
+  // Tutorial guiado: abre (em teste automático, só chamando abrirTutorial), pausa o relógio, avança no botão do cartão e fecha gravando que foi visto
   const tutorial = await page.evaluate(() => {
-    const abriu = tutorialAberto && !document.getElementById('modal-tutorial').classList.contains('hidden');
+    abrirTutorial();
+    const abriu = GuiaT.ativo() && getComputedStyle(document.getElementById('guiaT')).display !== 'none';
     const t0 = gameState.timeSeconds; updateGameTick(); const pausou = gameState.timeSeconds === t0;
-    passoTutorial(1); const avancou = document.getElementById('tut-step').textContent === `2/${TUTORIAL.length}`;
-    fecharTutorial();
-    const fechou = !tutorialAberto && localStorage.getItem('frontline-tutorial-v1') === '1';
+    document.querySelector('#guiaT [data-g="ok"]').click(); const avancou = GuiaT.passoAtual() === 1;
+    GuiaT.parar();
+    const fechou = !GuiaT.ativo() && !tutorialAberto && localStorage.getItem('frontline-tutorial-v1') === '1';
     return { abriu, pausou, avancou, fechou };
   });
 

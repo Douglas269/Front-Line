@@ -1,6 +1,6 @@
 // FrontLine · Conquista: tutorial jogando, previsão de ataque, alerta de ataque, reunir tropas e mini mapa
 // Carregado depois de conquista-config.js. Tudo se encaixa por cima das funções do jogo (renderPainel, atualizarTopo, desenharMapa, comecarFase).
-// - Tutorial: só na fase 1, em passos que avançam quando a pessoa FAZ a ação; dá para pular a qualquer momento.
+// - Tutorial guiado: só na fase 1 da campanha (usa guia-tutorial.js): a pessoa é obrigada a tocar no que pisca; dá para pular.
 // - Previsão de ataque: ao preparar uma ordem contra uma província visível, compara sua força com a defesa estimada.
 // - Alerta de ataque, "Reunir tropas aqui" e mini mapa: só nas fases 4 em diante (mapas maiores), na campanha.
 
@@ -9,13 +9,6 @@
     const faseAlta = () => !!G && !G.online && !G.cliente && G.fase && G.fase.n >= 4;
     const estilo = document.createElement('style');
     estilo.textContent = `
-        #guia { position: absolute; left: 8px; right: 8px; top: 44px; z-index: 6; padding: 6px 9px; border-radius: 10px; background: rgba(18,30,22,.96); border: 1px solid #6fd06a; color: #e6f0e0; font-size: 11px; line-height: 1.45; box-shadow: 0 2px 12px rgba(0,0,0,.5); display: none; }
-        #guia .gh { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 4px; font-weight: 700; color: #9fd08f; }
-        #guia .gb { display: flex; gap: 6px; margin-top: 6px; justify-content: flex-end; }
-        #guia button { border: 1px solid #3c5a40; background: #1c2a1f; color: #d6e3d1; border-radius: 6px; padding: 4px 9px; font-size: 11px; }
-        #guia button.forte { background: #2e5a34; border-color: #6fd06a; }
-        .dica { outline: 2px solid #ffd28a !important; animation: pulsoDica 1s ease-in-out infinite; }
-        @keyframes pulsoDica { 50% { outline-color: rgba(255,210,138,.25); } }
         #alertaAtaque { display: none; position: absolute; left: 8px; right: 116px; top: 38px; z-index: 5; padding: 6px 8px; border-radius: 8px; font-size: 11px; font-weight: 700; background: rgba(90,24,24,.95); border: 1px solid #c0392b; color: #ffe0d8; text-align: left; }
         #miniMapa { display: none; position: absolute; right: 8px; top: 38px; z-index: 4; border: 1px solid #3a4a3e; border-radius: 6px; background: #12202a; opacity: .92; }
         .prev { margin: 4px 0; padding: 6px 8px; border-radius: 8px; border: 1px solid #3a4a3e; background: #0f1411; font-size: 11px; line-height: 1.5; }`;
@@ -98,41 +91,38 @@
         const r = mini.getBoundingClientRect(); centralizar((ev.clientX - r.left) / r.width * MAPA.W, (ev.clientY - r.top) / r.height * MAPA.H);
     });
 
-    // ---------- Tutorial jogando (fase 1) ----------
-    const guia = document.createElement('div'); guia.id = 'guia'; caixa.appendChild(guia);
-    let passo = -1, base = {};
+    // ---------- Tutorial guiado (fase 1 da campanha) ----------
     const jaViu = () => { try { return localStorage.getItem(GUIA_KEY) === 'feito'; } catch (e) { return false; } };
     const marcarFeito = () => { try { localStorage.setItem(GUIA_KEY, 'feito'); } catch (e) {} };
-    const PASSOS = [
-        { txt: 'Você é o <b style="color:#6fd06a">verde</b>. Toque no seu <b>exército</b> (os bonecos verdes no mapa) para selecioná-lo.', ok: () => G.sel && G.sel.tipo === 'ex' },
-        { txt: 'Toque em <b>Mover / Atacar</b> e depois numa província vizinha. As <b>cinzas</b> são milícia (mais fraca): boa primeira conquista.', ok: () => !!(G.modo || G.pendente), marca: 'Mover' },
-        { txt: 'Confira a <b>previsão</b> da batalha (se der risco, toque em <b>todos</b> para mandar a tropa inteira) e depois em <b>Confirmar</b>.', ok: () => G.ex.some(e => e.dono === 'jogador' && e.rota.length), marca: 'Confirmar' },
-        { txt: 'A tropa marcha e luta sozinha. Agora toque numa <b>província sua</b> (a capital ★, por exemplo) para <b>recrutar</b> mais soldados quando tiver moedas 🪙.', ok: () => G.sel && (G.sel.tipo === 'recrutar' || (G.sel.tipo === 'prov' && G.prov[G.sel.id] && G.prov[G.sel.id].dono === 'jogador')) },
-        { txt: 'Pronto! <b>Tome as capitais ★ inimigas</b> para vencer e proteja a sua. Toque no <b>ℹ</b> das tropas para ver pontos fortes e fracos. Boa sorte!', fim: true }
-    ];
-    function mostrarGuia() {
-        if (passo < 0 || !G || G.fim) { guia.style.display = 'none'; return; }
-        const P = PASSOS[passo];
-        guia.innerHTML = `<div class="gh"><span>📘 Tutorial ${passo + 1}/${PASSOS.length}</span></div><div>${P.txt}</div>
-            <div class="gb"><button onclick="guiaPular()">Pular tutorial</button>${P.fim ? '<button class="forte" onclick="guiaPular()">Concluir</button>' : '<button onclick="guiaAvancar()">Próximo ▸</button>'}</div>`;
-        guia.style.display = 'block';
+    const botaoPainel = (txt) => [...document.querySelectorAll('#painel button')].find(b => b.textContent.includes(txt) && !b.disabled);
+    const ptMapa = (x, y, r) => { const s = paraTela(x, y), rc = cvM.getBoundingClientRect(); return { x: rc.left + s.x, y: rc.top + s.y, r }; };
+    function passosGuia() {
+        const meu = G.ex.filter(e => e.dono === 'jogador' && !e.rota.length).sort((a, b) => b.s.length - a.s.length)[0];
+        const viz = meu ? G.prov[meu.prov].viz.map(v => G.prov[v]) : [];
+        const alvo = viz.find(v => v.dono === 'neutro') || viz.find(v => v.dono !== 'jogador');
+        const cap = G.prov[G.capitalJogador];
+        return [
+            { txt: 'Você é o <b style="color:#6fd06a">verde</b>. Vamos aprender <b>jogando</b>: toque sempre no que estiver <b>piscando</b>. O jogo fica pausado enquanto você aprende.', botao: 'Vamos lá' },
+            { txt: 'Este é o seu <b>exército</b> (os bonecos verdes). Toque nele para selecioná-lo.', alvo: () => meu && ptMapa(meu.x, meu.y + 4, 36), ok: () => G.sel && G.sel.tipo === 'ex' },
+            { txt: 'Toque em <b>Mover / Atacar</b>.', alvo: () => botaoPainel('Mover'), ok: () => !!(G.modo || G.pendente) },
+            { txt: `Agora toque na província de destino: <b>${alvo ? alvo.nome : 'a vizinha'}</b> (as cinzas são <b>milícia</b>, mais fraca: uma boa primeira conquista).`, alvo: () => alvo && ptMapa(alvo.x, alvo.y, 40), ok: () => !!G.pendente },
+            { txt: 'O painel mostra a <b>previsão da batalha</b>: sua força contra a defesa estimada do inimigo. Se der risco, toque em <b>todos</b> para mandar a tropa inteira.', alvo: () => document.querySelector('#painel .prev'), botao: 'Entendi' },
+            { txt: 'Toque em <b>Confirmar</b> para mandar a tropa.', alvo: () => botaoPainel('Confirmar'), ok: () => G.ex.some(e => e.dono === 'jogador' && e.rota.length) },
+            { txt: 'A tropa marcha e luta sozinha. Agora toque na sua <b>capital ★</b> (no ponto piscando, acima dos soldados) para ver o que dá para fazer nela.', alvo: () => cap && (({ x, y }) => ({ x, y: y - 34, r: 28 }))(ptMapa(cap.x, cap.y, 0)), ok: () => G.sel && G.sel.tipo === 'prov' && G.prov[G.sel.id] && G.prov[G.sel.id].dono === 'jogador' },
+            { txt: 'Toque em <b>Recrutar…</b> para escolher que tropa criar (precisa de moedas 🪙).', alvo: () => botaoPainel('Recrutar…'), ok: () => G.sel && G.sel.tipo === 'recrutar' },
+            { txt: 'Cada tropa tem pontos fortes e fracos. Toque no <b>ℹ</b> da Infantaria para ver a ficha dela.', alvo: () => document.querySelector('#painel .info-i'), ok: () => !!G.fichaTipo },
+            { txt: 'Leia as vantagens e desvantagens e o quadro <b>Contra cada tropa</b>. Depois toque em <b>← Voltar</b>.', alvo: () => botaoPainel('Voltar'), ok: () => G.sel && G.sel.tipo === 'prov', pularApos: 40 },
+            { txt: 'Pronto! <b>Tome as capitais ★ inimigas</b> para vencer e proteja a sua. Toque no <b>⏸</b> para pausar quando quiser pensar, e em <b>1×</b> para acelerar. Boa sorte!', botao: 'Concluir' }
+        ];
     }
-    window.guiaPular = function () { passo = -1; marcarFeito(); mostrarGuia(); document.querySelectorAll('.dica').forEach(x => x.classList.remove('dica')); };
-    window.guiaAvancar = function () { if (passo >= 0 && passo < PASSOS.length - 1) { passo++; mostrarGuia(); marcarDica(); } };
-    function marcarDica() {
-        document.querySelectorAll('.dica').forEach(x => x.classList.remove('dica'));
-        const P = passo >= 0 ? PASSOS[passo] : null; if (!P || !P.marca) return;
-        [...document.querySelectorAll('#painel button')].filter(b => b.textContent.includes(P.marca)).forEach(b => b.classList.add('dica'));
-    }
-    function checarGuia() {
-        if (passo < 0 || !G || G.fim) return;
-        const P = PASSOS[passo];
-        if (P.ok && P.ok() && passo < PASSOS.length - 1) { passo++; mostrarGuia(); marcarDica(); }
-    }
+    function terminarGuia() { marcarFeito(); try { pausar(false); } catch (e) {} }
     window.guiaReiniciar = function () { try { localStorage.removeItem(GUIA_KEY); } catch (e) {} };
-    window.guiaSeVale = function () { // chamado ao começar a fase 1
+    window.guiaSeVale = function () { // chamado ao começar a fase 1 da campanha (o online não tem tutorial)
         const forcar = /[?&]guia=1/.test(location.search);
-        if (G && !G.online && G.fase.n === 1 && !jaViu() && (forcar || !navigator.webdriver)) { passo = 0; mostrarGuia(); } else { passo = -1; mostrarGuia(); }
+        if (G && !G.online && G.fase.n === 1 && !jaViu() && (forcar || !navigator.webdriver)) {
+            try { pausar(true); } catch (e) {}
+            GuiaT.iniciar(passosGuia(), { aoFim: terminarGuia });
+        }
     };
 
     // ---------- encaixes ----------
@@ -148,11 +138,10 @@
             const n = paradosFora(G.sel.id);
             if (n) ult.insertAdjacentHTML('beforeend', botao('🧲 Reunir tropas aqui', `traz os ${n} exército${n > 1 ? 's' : ''} parado${n > 1 ? 's' : ''}`, `reunirAqui('${G.sel.id}')`));
         }
-        marcarDica();
         return r;
     };
     const _g_atualizarTopo = atualizarTopo;
-    atualizarTopo = function () { _g_atualizarTopo(); atualizarAlerta(); checarGuia(); };
+    atualizarTopo = function () { _g_atualizarTopo(); atualizarAlerta(); };
     const _g_desenharMapa = desenharMapa;
     desenharMapa = function () { _g_desenharMapa(); desenharMini(performance.now()); };
 })();

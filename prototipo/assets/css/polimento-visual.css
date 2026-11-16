@@ -38,7 +38,7 @@ button:disabled {
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
     }
-    .pisca, .animate-alert-pulse, .dica {
+    .pisca, .animate-alert-pulse, .dica, .guiaAnel {
         animation-duration: 2s !important;
         animation-iteration-count: infinite !important;
     }

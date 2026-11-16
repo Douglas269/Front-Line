@@ -172,7 +172,7 @@
         }
 
         function mostrarTutorialSePrimeiraVez() {
-            if (lerLocal(TUTORIAL_KEY) !== '1') abrirTutorial();
+            if (lerLocal(TUTORIAL_KEY) !== '1' && (!navigator.webdriver || /[?&]guia=1/.test(location.search))) abrirTutorial(); // (em teste automático só com ?guia=1)
         }
 
         function atualizarConta() {
@@ -336,19 +336,6 @@
            TUTORIAL: passos curtos para quem joga pela primeira vez
            ========================================================================== */
         const TUTORIAL_KEY = 'frontline-tutorial-v1';
-        const TUTORIAL = [
-            { t: '🎯 Objetivo', x: 'Segure a trincheira por 30 dias. Cada dia dura 40 segundos e vira sozinho. Use o botão "Pausar" sempre que precisar pensar: pausado, nada acontece e você pode reorganizar tudo. Se o esquadrão inteiro cair, a posição está perdida. Vencer sobe o nível, e cada nível é mais difícil.' },
-            { t: '🪖 Funções do esquadrão', x: 'Na aba Esquadrão, cada soldado tem uma função: Vigília (vê o inimigo e acerta melhor), Descanso (recupera fadiga e vida), Manutenção (conserta a trincheira; o Engenheiro conserta bem mais rápido) e Cozinha (o único lugar onde se come e bebe). O segredo é revezar.' },
-            { t: '🍞 Fome, sede e trincheira', x: 'Fome e sede sobem o tempo todo: passe cada soldado pela Cozinha antes de chegar a 75%. A trincheira se desgasta com o tempo, a chuva e os ataques. Abaixo de 20% ela rompe, e uma invasão mata todo mundo. Veja tudo na aba Logística.' },
-            { t: '🗺️ Lendo o mapa', x: 'O inimigo vem do norte (topo do mapa). Losango = infantaria, quadrado = patrulha, círculo = drone. A linha amarela é o alcance de tiro deles. O aviso vermelho em cima avisa contato ou artilharia chegando, com a contagem. A artilharia anuncia os alvos (mira vermelha no mapa): soldado marcado em Descanso fica no abrigo e leva só 30% do dano. Cada soldado tem um traço; com a moral muito baixa ele pode entrar em pânico, ficar apático ou virar herói.' },
-            { t: '⚔️ Ordens táticas', x: 'Fogo Supressão: mais dano e freia o inimigo, gasta munição. Abrigo Reforçado: protege do dano (use na artilharia). Economizar: poupa munição. Vigília Total: vê tudo, cansa todos. Bloqueio de Sinal: derruba drones, mas corta o rádio. Algumas ordens se anulam.' },
-            { t: '📻 Rádio e o general inimigo', x: 'Envie o relatório uma vez por dia para ganhar prestígio. Prestígio paga artilharia, evacuação, carga emergencial e contra-bateria. O general inimigo aprende o seu jeito de jogar e muda de tática: o painel dele no Rádio mostra o que ele já percebeu.' },
-            { t: '🪖 A trincheira por dentro', x: 'A cena mostra a trincheira em corte: posto de vigília, ninhos, cozinha, depósito, abrigo e oficina. Cada soldado está no cômodo da sua função. Arraste o soldado para outro cômodo (ou toque nele e depois no cômodo) para trocar a função. Prefere o mapa antigo? Configurações → Jogo → Visual clássico.' },
-            { t: '👀 Lendo a cena de relance', x: 'A faixa vermelha no topo diz quem está chegando e em quantos segundos entra no alcance. Os ícones acima da cabeça mostram quem está ferido, com fome, sede ou cansaço (amarelo = atenção, vermelho = crítico). Avisos importantes, como pânico e baixas, aparecem no rodapé da cena. Para mais tempo de pensar, use Pausar, ou ligue a pausa automática na artilharia em Configurações. Se estiver difícil, escolha Recruta em Configurações → Jogo → Dificuldade.' },
-            { t: '🛡️ Defesas', x: 'Na aba Defesas, construa ninhos na trincheira (quem está na Manutenção trabalha na obra; o Engenheiro é mais rápido). Monte neles a metralhadora .50, o morteiro ou o anticarro e escolha um operador de vigília. A partir do dia 8 podem vir blindados: fuzil quase não fere, use o anticarro. Granadas e arame farpado também ajudam.' },
-            { t: '⏩ Escala, ofensivas e pressa', x: 'A escala automática manda comer quem está com fome e descansar quem está exausto, e depois devolve cada um ao posto que você escolheu (dá para desligar em Configurações → Jogo). Quando está calmo, o botão ⏩ ao lado do Pausar acelera o tempo; no primeiro contato ele volta ao normal. Fique de olho no rádio: na véspera de uma OFENSIVA ele avisa, e no dia o inimigo vem com tudo à tarde.' },
-            { t: '✅ Para começar', x: 'Um bom começo: 2 soldados de vigília, 1 na cozinha, o Engenheiro na manutenção e o resto descansando. Reveze quando a fadiga, a fome ou a sede subirem. Você pode rever este guia em "Como jogar". Boa sorte, comandante.' }
-        ];
 
         // ===== Perfis dos soldados (só imersão: não mudam regras) =====
         const PERFIS = {
@@ -454,40 +441,52 @@
             document.getElementById('modal-perfil').classList.add('hidden');
         }
 
-        let tutorialAberto = false;
-        let tutorialPasso = 0;
-
+        // ===== Tutorial guiado: a pessoa aprende jogando; o que deve tocar pisca e o resto da tela não responde (motor em guia-tutorial.js) =====
+        let tutorialAberto = false; // enquanto verdadeiro o relógio do jogo fica parado (os passos de tempo liberam)
+        const pontoCena = (x, y, r) => { const rc = corteCanvas.getBoundingClientRect(), e = CORTE.escCss; return { x: rc.left + x * e, y: rc.top + y * e, r: r * e }; };
+        function passosTutorialTrincheiras() {
+            const el = (id) => document.getElementById(id), aba = (t) => !el('panel-' + t).classList.contains('hidden');
+            const sold = gameState.squad.find(s => s.hp > 0 && s.duty === 'REST') || gameState.squad.find(s => s.hp > 0);
+            const dutyInicial = sold ? sold.duty : null, sala = sold && sold.duty === 'RATIONING' ? 'oficina' : 'cozinha', nomeSala = sala === 'oficina' ? 'a Oficina' : 'a Cozinha';
+            const ptSold = () => { const p = sold && posicoesCena[sold.id]; return p ? pontoCena(p.x, p.y - (comodoDoSoldado(sold) === 'abrigo' ? 8 : 22), 32) : null; }; // deitado no abrigo, o corpo fica mais baixo
+            const retSala = () => { const c = CORTE.comodos[sala], rc = corteCanvas.getBoundingClientRect(), e = CORTE.escCss; return { x: rc.left + c.x * e, y: rc.top + c.y * e, w: c.w * e, h: c.h * e }; };
+            const nome = sold ? sold.name : 'o soldado';
+            return [
+                { txt: 'Segure a trincheira por <b>30 dias</b> (cada dia dura 40 segundos). Se o esquadrão inteiro cair, a posição está perdida. Vamos aprender <b>jogando</b>: toque sempre no que estiver <b>piscando</b>.', botao: 'Vamos lá' },
+                { txt: 'O jogo está <b>pausado</b>. Toque em <b>Continuar</b> para o tempo andar.', alvo: () => el('btn-pause'), ok: () => !jogoPausado, tempo: true },
+                { txt: 'Quando está calmo, o <b>⏩ 2×</b> acelera o tempo. Toque nele.', alvo: () => el('btn-rapido'), ok: () => velocidadeRapida, tempo: true, pularApos: 12 },
+                { txt: 'Toque de novo para voltar à velocidade normal.', alvo: () => el('btn-rapido'), ok: () => !velocidadeRapida, tempo: true, pularApos: 12 },
+                { txt: 'Toque em <b>Pausar</b>. Pausado, nada acontece e você pode reorganizar tudo com calma.', alvo: () => el('btn-pause'), ok: () => jogoPausado, tempo: true },
+                { txt: `Esta é a trincheira em corte. Toque no soldado <b>${nome}</b> para ver o estado dele.`, alvo: ptSold, ok: () => cartaoAberto, rolar: () => corteCanvas },
+                { txt: `Cada soldado tem uma <b>função</b>: vigília (vê e atira melhor), descanso, manutenção (conserta a trincheira) e cozinha (único lugar onde se come e bebe). Arraste <b>${nome}</b> até <b>${nomeSala}</b>, ou toque nele e depois no cômodo.`, alvo: () => [ptSold(), retSala()], ok: () => sold && sold.duty !== dutyInicial, aoEntrar: () => { try { fecharCartao(); } catch (e) {} }, rolar: () => corteCanvas, pularApos: 30 },
+                { txt: 'Toque na aba <b>Logística</b>.', alvo: () => el('tab-logistics'), ok: () => aba('logistics') },
+                { txt: 'Aqui você vê <b>fome, sede, munição e a trincheira</b>. Fome e sede sobem o tempo todo: passe cada soldado pela Cozinha antes de chegar a 75%. A trincheira se desgasta com o tempo e os ataques; abaixo de 20% ela rompe.', alvo: () => el('panel-logistics'), botao: 'Entendi' },
+                { txt: 'Agora toque na aba <b>Defesas</b>.', alvo: () => el('tab-defense'), ok: () => aba('defense') },
+                { txt: 'Aqui você constrói <b>ninhos</b> e monta metralhadora, morteiro e anticarro, com um operador de vigília. A partir do dia 8 podem vir blindados: o fuzil quase não fere, use o anticarro.', alvo: () => el('panel-defense'), botao: 'Entendi' },
+                { txt: 'Toque em <b>Abrigo Reforçado</b>: protege do dano. Use quando a artilharia inimiga for anunciada.', alvo: () => el('btn-ord-cover'), ok: () => gameState.tacticalOrders.SHELTER },
+                { txt: 'Toque de novo para desligar a ordem.', alvo: () => el('btn-ord-cover'), ok: () => !gameState.tacticalOrders.SHELTER },
+                { txt: 'Toque na aba <b>Rádio</b>.', alvo: () => el('tab-radio'), ok: () => aba('radio') },
+                { txt: 'Toque em <b>Enviar Relatório</b> (uma vez por dia): rende prestígio, que paga artilharia, evacuação e contra-bateria.', alvo: () => el('btn-intel'), ok: () => gameState.lastIntelDay === gameState.day },
+                { txt: 'O <b>general inimigo</b> aprende o seu jeito de jogar e muda de tática. O painel dele mostra o que ele já percebeu sobre você.', alvo: () => el('panel-radio'), botao: 'Entendi' },
+                { txt: 'Volte para a aba <b>Esquadrão</b>.', alvo: () => el('tab-squad'), ok: () => aba('squad') },
+                { txt: 'Um bom começo: 2 soldados de vigília, 1 na cozinha, o Engenheiro na manutenção e o resto descansando. Reveze quando fadiga, fome ou sede subirem. Para rever o guia: Configurações → Rever o tutorial. Boa sorte, comandante!', botao: 'Começar' }
+            ];
+        }
         function abrirTutorial() {
+            if (GuiaT.ativo()) return;
+            try { switchTab('squad'); window.scrollTo(0, 0); } catch (e) {}
+            if (!jogoPausado) alternarPausa(true);
             tutorialAberto = true;
-            tutorialPasso = 0;
-            mostrarPassoTutorial();
-            document.getElementById('modal-tutorial').classList.remove('hidden');
+            GuiaT.iniciar(passosTutorialTrincheiras(), {
+                aoPasso: (P) => { tutorialAberto = !P.tempo; if (P.aoEntrar) P.aoEntrar(); },
+                aoFim: () => fecharTutorial()
+            });
         }
-
-        function mostrarPassoTutorial() {
-            const passo = TUTORIAL[tutorialPasso];
-            document.getElementById('tut-title').textContent = passo.t;
-            document.getElementById('tut-text').textContent = passo.x;
-            document.getElementById('tut-step').textContent = `${tutorialPasso + 1}/${TUTORIAL.length}`;
-            const voltar = document.getElementById('tut-back');
-            voltar.disabled = tutorialPasso === 0;
-            voltar.classList.toggle('opacity-40', tutorialPasso === 0);
-            document.getElementById('tut-next').textContent = tutorialPasso === TUTORIAL.length - 1 ? 'Começar' : 'Próximo';
-        }
-
-        function passoTutorial(delta) {
-            const novo = tutorialPasso + delta;
-            if (novo >= TUTORIAL.length) return fecharTutorial();
-            if (novo < 0) return;
-            tutorialPasso = novo;
-            mostrarPassoTutorial();
-        }
-
         function fecharTutorial() {
             tutorialAberto = false;
-            document.getElementById('modal-tutorial').classList.add('hidden');
             try { localStorage.setItem(TUTORIAL_KEY, '1'); } catch (e) {}
             enviarNuvem(true);
+            if (jogoPausado && !menuAberto && !loginAberto) alternarPausa(false);
         }
 
         // Nível atual (fica salvo mesmo entre partidas)
@@ -522,7 +521,7 @@
            Ao abrir, ao voltar para o app e a cada minuto o jogo compara as duas. Se o site
            tiver uma versão diferente, o jogo trava numa tela que só sai atualizando.
            (tools/nova-versao.sh troca as duas juntas a cada atualização publicada.) */
-        const VERSAO_JOGO = '20261116.2057';
+        const VERSAO_JOGO = '20261116.2218';
         const ATUALIZOU_KEY = 'frontline-atualizou-para';
         async function verificarVersao() {
             if (!location.protocol.startsWith('http') || atualizacaoPendente) return;

@@ -122,10 +122,28 @@
         @media (min-width: 640px) { .modo-tag { position: static; order: -1; align-self: flex-start; margin-bottom: 5px; font-size: 8px; } .modo-card .md { font-size: 10px; margin-top: 5px; line-height: 1.35; } }
         .modo-rodape { display: flex; justify-content: space-between; gap: 4px; margin-top: 10px; padding-top: 7px; border-top: 1px dashed #334237; font-size: 10.5px; color: #9fb39a; font-weight: 400; }
         @media (min-width: 640px) { .modo-rodape { margin-top: auto; font-size: 8.5px; padding-top: 6px; } }
+        /* Faixa de dia/hora/tempo: cabe em celular estreito (antes o botão Pausar/Continuar saía da tela) */
+        @media (max-width: 440px) {
+            #faixa-tempo { gap: 4px; padding-left: 8px; padding-right: 8px; font-size: 11.5px; }
+            #faixa-tempo > div { gap: 4px !important; }
+            #faixa-tempo .fa-clock, #faixa-tempo .text-mil-border { display: none; }
+            #btn-rapido { padding-left: 7px; padding-right: 7px; }
+            #btn-pause { padding-left: 9px; padding-right: 9px; }
+        }
+        @media (max-width: 379px) { #faixa-tempo #ico-weather { display: none; } }
+        /* Cabeçalho de cima também cabe em celular estreito */
+        @media (max-width: 420px) {
+            header { gap: 4px; padding-left: 6px; padding-right: 6px; }
+            header .h-4.w-px { display: none; }
+            header #lbl-level { padding-left: 4px; padding-right: 4px; font-size: 10px; }
+            header #btn-menu-topo, header #btn-conta, header #btn-config, header #btn-audio { padding-left: 7px; padding-right: 7px; }
+            header #lbl-conta { display: inline-block; max-width: 54px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+        }
+        @media (max-width: 379px) { header .animate-pulse { display: none; } header #lbl-level { display: none; } }
     </style>
     <!-- Tailwind: CSS fixo gerado por tools/gerar-css.sh (antes era montado no celular pelo CDN) -->
-    <link rel="stylesheet" href="assets/css/tailwind.css?v=20261116.2057">
-    <link rel="stylesheet" href="assets/css/polimento-visual.css?v=20261116.2057">
+    <link rel="stylesheet" href="assets/css/tailwind.css?v=20261116.2218">
+    <link rel="stylesheet" href="assets/css/polimento-visual.css?v=20261116.2218">
 </head>
 <body class="h-screen w-screen overflow-hidden flex justify-center bg-black">
 
@@ -159,7 +177,7 @@
         </header>
 
         <!-- SUB-HEADER: DATE, TIME & WEATHER BAR -->
-        <div class="bg-mil-bg border-b border-mil-border px-3 py-1 flex justify-between items-center text-[13px] text-mil-textMuted font-mono z-20">
+        <div id="faixa-tempo" class="bg-mil-bg border-b border-mil-border px-3 py-1 flex justify-between items-center text-[13px] text-mil-textMuted font-mono z-20">
             <div class="flex items-center gap-2 whitespace-nowrap">
                 <i class="fa-regular fa-clock text-mil-greenMuted"></i>
                 <span>DIA <strong id="lbl-day" class="text-mil-textGlow font-bold">1</strong>/30</span>
@@ -625,23 +643,6 @@
             </div>
         </div>
 
-        <div id="modal-tutorial" class="hidden absolute inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
-            <div class="bg-mil-panel border-2 border-mil-greenMuted rounded p-4 max-w-sm w-full space-y-3 shadow-2xl">
-                <div class="flex justify-between items-center border-b border-mil-border pb-2">
-                    <span id="tut-title" class="text-mil-textGlow font-bold text-sm"></span>
-                    <span id="tut-step" class="text-xs text-mil-textMuted"></span>
-                </div>
-                <p id="tut-text" class="text-[13px] text-mil-textGlow leading-relaxed font-normal"></p>
-                <div class="flex justify-between items-center pt-1">
-                    <button onclick="fecharTutorial()" class="text-xs underline text-mil-textMuted">Pular</button>
-                    <div class="flex gap-2">
-                        <button id="tut-back" onclick="passoTutorial(-1)" class="px-3 py-1.5 btn-tactical rounded text-xs">Voltar</button>
-                        <button id="tut-next" onclick="passoTutorial(1)" class="px-3 py-1.5 btn-tactical rounded text-xs font-bold">Próximo</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- PERFIL DO SOLDADO (toque no nome no card do esquadrão) -->
         <div id="modal-perfil" class="hidden absolute inset-0 bg-black/90 z-50 flex items-center justify-center p-4" onclick="if (event.target === this) fecharPerfil()">
             <div class="bg-mil-panel border-2 border-mil-border rounded p-4 max-w-sm w-full space-y-3 shadow-2xl max-h-[90vh] overflow-y-auto">
@@ -677,15 +678,16 @@
 
     <!-- JAVASCRIPT GAME ENGINE -->
     <!-- Código do jogo, dividido por assunto (a ordem importa) -->
-    <script src="assets/js/01-base.js?v=20261116.2057"></script>
-    <script src="assets/js/02-regras.js?v=20261116.2057"></script>
-    <script src="assets/js/03-defesas-crises.js?v=20261116.2057"></script>
-    <script src="assets/js/04-interface.js?v=20261116.2057"></script>
-    <script src="assets/js/05-cena.js?v=20261116.2057"></script>
-    <script src="assets/js/05b-cena-pixel.js?v=20261116.2057"></script>
-    <script src="assets/js/06-conta.js?v=20261116.2057"></script>
-    <script src="assets/js/07-operacoes.js?v=20261116.2057"></script>
-    <script src="assets/js/08-campo-ameacas.js?v=20261116.2057"></script>
-    <script src="assets/js/08b-particulas.js?v=20261116.2057"></script>
+    <script src="assets/js/01-base.js?v=20261116.2218"></script>
+    <script src="assets/js/02-regras.js?v=20261116.2218"></script>
+    <script src="assets/js/03-defesas-crises.js?v=20261116.2218"></script>
+    <script src="assets/js/04-interface.js?v=20261116.2218"></script>
+    <script src="assets/js/05-cena.js?v=20261116.2218"></script>
+    <script src="assets/js/05b-cena-pixel.js?v=20261116.2218"></script>
+    <script src="assets/js/guia-tutorial.js?v=20261116.2218"></script>
+    <script src="assets/js/06-conta.js?v=20261116.2218"></script>
+    <script src="assets/js/07-operacoes.js?v=20261116.2218"></script>
+    <script src="assets/js/08-campo-ameacas.js?v=20261116.2218"></script>
+    <script src="assets/js/08b-particulas.js?v=20261116.2218"></script>
 </body>
 </html>
