@@ -47,7 +47,7 @@
   #fase { color: var(--ambar); letter-spacing: 1px; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
   #l1 .esq { min-width: 0; flex: 1; margin-right: 6px; }
   #l1 .dir { flex: none; }
-  #bMenu { background: none; border: 1px solid var(--borda); border-radius: 6px; padding: 0 5px; font-size: 13px; }
+  #bMenu { background: var(--painel); border: 1px solid var(--ambar); border-radius: 6px; padding: 4px 9px; min-height: 32px; color: #ffd28a; font-weight: 700; font-size: 12px; white-space: nowrap; }
   a.voltarMenu { display: block; text-align: center; margin-top: 12px; color: var(--mudo); font-size: 13px; }
   #recs { display: flex; gap: 6px; margin-top: 6px; }
   .rec { flex: 1; background: var(--painel); border: 1px solid var(--borda); border-radius: 6px; padding: 3px; text-align: center; font-size: 11px; color: var(--mudo); }
@@ -124,12 +124,12 @@
   button.fase small { display: block; color: var(--mudo); font-size: 11px; margin-top: 3px; }
   button.fase.trancada { border-color: var(--borda); background: var(--painel); color: var(--mudo); }
 </style>
-    <link rel="stylesheet" href="assets/css/polimento-visual.css?v=20261116.1533">
+    <link rel="stylesheet" href="assets/css/polimento-visual.css?v=20261116.1537">
 </head>
 <body>
 <div id="app">
   <div id="topo">
-    <div id="l1"><span class="esq"><button id="bMenu" onclick="voltarAoMenu()" title="Modos de jogo">🏠</button><span id="fase">CONQUISTA</span></span><span class="dir"><button id="bConfig" onclick="abrirConfigConq()" title="Configurações">⚙️</button><button id="bSom" onclick="alternarSom()" title="Som">🔊</button><button id="bPausa" onclick="pausar()" title="Pausar">⏸</button><button id="bVelMapa" onclick="G.velocidade = G.velocidade === 1 ? 2 : 1" title="Velocidade do mapa">1×</button><span id="relogio">00:00</span></span></div>
+    <div id="l1"><span class="esq"><button id="bMenu" onclick="voltarAoMenu()" title="Modos de jogo">🏠 Menu</button><span id="fase">CONQUISTA</span></span><span class="dir"><button id="bConfig" onclick="abrirConfigConq()" title="Configurações">⚙️</button><button id="bSom" onclick="alternarSom()" title="Som">🔊</button><button id="bPausa" onclick="pausar()" title="Pausar">⏸</button><button id="bVelMapa" onclick="G.velocidade = G.velocidade === 1 ? 2 : 1" title="Velocidade do mapa">1×</button><span id="relogio">00:00</span></span></div>
     <div id="recs">
       <div class="rec" id="rCom">🍞 Comida<b>0</b></div>
       <div class="rec" id="rMun">🔫 Munição<b>0</b></div>
@@ -144,12 +144,12 @@
 <div id="tela"><div class="caixa" id="telaCaixa"></div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
-<script src="assets/js/conquista-mapa.js?v=20261116.1533"></script>
-<script src="assets/js/conquista-extra.js?v=20261116.1533"></script>
-<script src="assets/js/conquista.js?v=20261116.1533"></script>
-<script src="assets/js/conquista-online.js?v=20261116.1533"></script>
-<script src="assets/js/conquista-config.js?v=20261116.1533"></script>
-<script src="assets/js/conquista-guia.js?v=20261116.1533"></script>
+<script src="assets/js/conquista-mapa.js?v=20261116.1537"></script>
+<script src="assets/js/conquista-extra.js?v=20261116.1537"></script>
+<script src="assets/js/conquista.js?v=20261116.1537"></script>
+<script src="assets/js/conquista-online.js?v=20261116.1537"></script>
+<script src="assets/js/conquista-config.js?v=20261116.1537"></script>
+<script src="assets/js/conquista-guia.js?v=20261116.1537"></script>
 
 </body>
 </html>
