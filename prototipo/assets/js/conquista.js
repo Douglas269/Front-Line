@@ -438,19 +438,36 @@ function chegarAqui(e, p) {
             e.emBatalha = true; e.aguarda = p.id; return;
         }
         const defensores = exParadosEm(p.id, p.dono);
-        if (defensores.some(d => d.s.length)) {
-            const b = criarBatalha(e, p, defensores);
-            e.emBatalha = true; defensores.forEach(d => { d.emBatalha = true; });
-            b.audivel = e.dono === 'jogador' || p.dono === 'jogador';
-            G.batalhas.push(b);
-            if (e.dono === 'jogador') noticia(`⚔️ Seus ${e.s.length} soldados atacam ${p.nome} (${b.def.length} defendendo).`);
-            else if (p.dono === 'jogador') noticia(`⚔️ ${FACCOES[e.dono].nome} ataca ${p.nome} com ${e.s.length} soldados!`, true);
-            return;
-        }
+        if (defensores.some(d => d.s.length)) { abrirBatalha(e, p, defensores); return; }
         if (e.missao === 'saque') { saquear(e, p); return; }
         conquistar(p, e.dono, e);
     }
     if (!e.rota.length) parar(e);
+}
+// Começa uma batalha: o atacante contra os defensores parados na província
+function abrirBatalha(e, p, defensores) {
+    const b = criarBatalha(e, p, defensores);
+    e.emBatalha = true; defensores.forEach(d => { d.emBatalha = true; });
+    b.audivel = e.dono === 'jogador' || p.dono === 'jogador';
+    G.batalhas.push(b);
+    if (e.dono === 'jogador') noticia(`⚔️ Seus ${e.s.length} soldados atacam ${p.nome} (${b.def.length} defendendo).`);
+    else if (p.dono === 'jogador') noticia(`⚔️ ${FACCOES[e.dono].nome} ataca ${p.nome} com ${e.s.length} soldados!`, true);
+    return b;
+}
+// Rede de segurança (roda a cada ~1 s): exércitos de países em guerra parados no mesmo lugar, sem batalha ali, passam a lutar; sozinho em terra inimiga, o exército conquista.
+// Evita o caso de tropas inimigas "convivendo" com as suas depois de uma batalha que terminou com a província já trocada (revolta, queda de capital, etc.).
+function resolverConfrontos() {
+    if (G.cliente || G.fim) return;
+    const hostil = (a, b) => a.dono !== b.dono && emGuerra(a.dono, b.dono);
+    const porProv = {};
+    G.ex.forEach(e => { if (parado(e) && e.s.length) (porProv[e.prov] = porProv[e.prov] || []).push(e); });
+    Object.entries(porProv).forEach(([id, lista]) => {
+        const p = G.prov[id]; if (!p || batalhaEm(id)) return;
+        const atq = lista.find(a => a.dono !== p.dono && lista.some(d => hostil(a, d))) || lista.find(a => lista.some(d => hostil(a, d)));
+        if (atq) { abrirBatalha(atq, p, lista.filter(d => d !== atq && hostil(atq, d))); return; }
+        const sozinho = lista.find(a => a.dono !== 'neutro' && a.dono !== 'jogador' && a.dono !== p.dono && a.missao !== 'saque' && emGuerra(a.dono, p.dono)); // (só bots: as suas tropas só conquistam quando você manda)
+        if (sozinho && !lista.some(d => d.dono === p.dono)) conquistar(p, sozinho.dono, sozinho);
+    });
 }
 function batalhaEm(provId) {
     if (G.cliente) { // no online o cliente só conhece o placar que o anfitrião mandou
@@ -608,7 +625,10 @@ function concluirBatalha(b) {
     G.ex = G.ex.filter(x => x.s.length || x === e);
     const ver = b.atqDono === 'jogador' || b.defDono === 'jogador' || provVisivel(p.id) || espiado(b.atqDono) || espiado(b.defDono);
     if (b.vencedor === 'atq' && e.s.length) {
-        if (p.dono !== b.defDono) { if (!e.rota.length) parar(e); return; } // alguém tomou antes
+        if (p.dono !== b.defDono) { // a província mudou de dono no meio da batalha (revolta, queda de capital, outro exército): continua contra o novo dono, em vez de estacionar ao lado dele
+            if (!e.rota.length) { if (p.dono !== e.dono && emGuerra(e.dono, p.dono)) chegarAqui(e, p); else parar(e); }
+            return;
+        }
         if (b.saque) { saquear(e, p); return; }
         conquistar(p, e.dono, e);
         if (!e.rota.length && G.ex.includes(e)) parar(e);
@@ -631,6 +651,7 @@ function passoMapa(dt) {
     Object.keys(G.pensar).forEach(dono => { G.pensar[dono] -= dt; if (G.pensar[dono] <= 0) { G.pensar[dono] = C.BOT_PENSA + Math.random() * C.BOT_PENSA_VAR; pensarBot(dono); } });
     moverExercitos(dt);
     avancarBatalhas(dt);
+    G.confT = (G.confT || 0) + dt; if (G.confT >= 1) { G.confT = 0; resolverConfrontos(); }
     // espiões viajando
     G.espioes = G.espioes.filter(s => {
         const p = G.prov[s.para], dx = p.x - s.x, dy = p.y - s.y, d = Math.hypot(dx, dy), passo = C.ESPIAO_VEL * dt;
