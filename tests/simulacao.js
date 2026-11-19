@@ -396,16 +396,17 @@ async function run() {
       gameState.recargaContra = 0; gameState.enemies = []; gameState.counterBattery = { ticks: 1 }; processCounterBattery();
       c.contraBateriaSemDroneAcerta = gameState.barrage === null;
       // Ofensiva: agenda, anuncia, ataca reforçada e dá prêmio quando repelida
-      gameState.ofensiva = null; gameState.day = 1; agendarOfensiva();
+      gameState.level = 1; gameState.ofensiva = null; gameState.day = 1; agendarOfensiva(); const semOfNivel1 = gameState.ofensiva === null; // nível 1: sem ofensivas
+      gameState.level = 3; gameState.ofensiva = null; gameState.day = 1; agendarOfensiva();
       const agendada = gameState.ofensiva && gameState.ofensiva.dia >= 6 && gameState.ofensiva.dia <= 8 && !gameState.ofensiva.anunciada;
       gameState.day = gameState.ofensiva.dia - 1; agendarOfensiva(); const anunciou = gameState.ofensiva.anunciada && avisoOfensiva().includes('AMANHÃ');
       gameState.day = gameState.ofensiva.dia; gameState.timeSeconds = gameState.ofensiva.hora; gameState.enemies = []; gameState.barrage = null; gameState.nextWaveBoost = 0;
       processarOfensiva(); const inf = gameState.enemies.filter(e => e.type === 'infantaria').length;
-      c.ofensivaAgendaAnunciaEAtaca = agendada && anunciou && gameState.ofensiva.ativa && inf >= PRESSURE.WAVE_BASE + OFENSIVA.EXTRA_BASE && !!gameState.barrage;
+      c.ofensivaAgendaAnunciaEAtaca = semOfNivel1 && agendada && anunciou && gameState.ofensiva.ativa && inf >= PRESSURE.WAVE_BASE + OFENSIVA.EXTRA_BASE && !!gameState.barrage;
       const pr = gameState.prestige; gameState.enemies = []; gameState.barrage = null; processarOfensiva();
       c.ofensivaRepelidaDaPremio = gameState.ofensiva.feita && gameState.prestige > pr;
       // Modificadores por nível
-      gameState.level = 4; const nenhum = modificadoresAtivos().length === 0 && miraDeNoite() === TIRO.NOITE;
+      gameState.level = 1; const nenhum = modificadoresAtivos().length === 0 && miraDeNoite() === TIRO.NOITE;
       gameState.level = 9; c.modificadoresPorNivel = nenhum && modAtivo('noites') && modAtivo('franco') && !modAtivo('noturno') && miraDeNoite() === 0.75 && proximoModificador().id === 'noturno';
       gameState.level = 25; Math.random = () => 0; const vig = sv.find(m => m.duty === 'WATCH' && m.class !== 'Atirador de Elite'); sv.forEach(m => { if (m.class === 'Atirador de Elite') m.duty = 'REST'; });
       const hp0 = vig.hp; francoAtirador(); Math.random = rnd; c.francoAtiradorAtinge = vig.hp < hp0;
@@ -599,7 +600,7 @@ async function run() {
 
   // Simulações sem intervenção do jogador (renderização desligada para velocidade; lógica idêntica)
   results.sim = await page.evaluate((init) => {
-    const realUI = updateUI; updateUI = () => {};
+    const realUI = updateUI, realLog = logFeed, realDiario = addDiaryEntry; updateUI = () => {}; logFeed = () => {}; addDiaryEntry = () => {}; // sem DOM: milhares de linhas de log estouravam a memória da página
     const out = { runs: 0, vitorias: 0, extintos: 0, mediaDias: 0, racoesZeraram: 0, aguaZerou: 0, mortesCombate: 0, mortesInvasao: 0, mortesFomeSede: 0, hpNegativo: 0 };
     const N = 60; let soma = 0;
     for (let run = 0; run < N; run++) {
@@ -633,7 +634,7 @@ async function run() {
       if (minW === 0) out.aguaZerou++;
     }
     out.mediaDias = +(soma / N).toFixed(1);
-    updateUI = realUI;
+    updateUI = realUI; logFeed = realLog; addDiaryEntry = realDiario;
     return out;
   }, INITIAL_SQUAD());
 

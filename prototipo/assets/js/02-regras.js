@@ -38,7 +38,7 @@
                     nextWaveBoost: gameState.nextWaveBoost,
                     general: gameState.general,
                     op: gameState.op, obrasT: gameState.obrasT, ordens: gameState.ordens, cartas: gameState.cartas, // operações, obras, ordens e cartas (07-operacoes.js)
-                    campo: gameState.campo, gas: gameState.gas, acamp: gameState.acamp, // crateras, gás em curso e acampamento (08 e 09)
+                    campo: gameState.campo, gas: gameState.gas, sabotagem: gameState.sabotagem, mecVistas: gameState.mecVistas, acamp: gameState.acamp, // crateras, gás em curso e acampamento (08 e 09)
                     feed: document.getElementById('feed-log').innerHTML,
                     diary: document.getElementById('diary-entries').innerHTML
                 }));
@@ -84,7 +84,7 @@
                 nextWaveBoost: data.nextWaveBoost || 0,
                 general: data.general || newGeneral(),
                 op: data.op, obrasT: data.obrasT, ordens: data.ordens, cartas: data.cartas, // 07-operacoes.js
-                campo: data.campo || null, gas: data.gas || null, acamp: data.acamp || null // 08 e 09
+                campo: data.campo || null, gas: data.gas || null, sabotagem: data.sabotagem || null, mecVistas: data.mecVistas || {}, acamp: data.acamp || null // 08 e 09
             });
             document.getElementById('feed-log').innerHTML = data.feed;
             document.getElementById('diary-entries').innerHTML = data.diary;
@@ -191,11 +191,16 @@
             playTacticalBeep(1000, 0.08);
 
             // Weather Transition
-            const roll = Math.random();
-            if (roll < 0.35) gameState.weather = 'Nublado';
-            else if (roll < 0.60) gameState.weather = 'Névoa Espessa';
-            else if (roll < 0.85) gameState.weather = 'Chuva Forte';
-            else gameState.weather = 'Neve';
+            // Clima: nos primeiros níveis só nublado; chuva entra no nível 3 e névoa e neve no 4
+            const opcoes = [['Nublado', 0.35]];
+            if (modAtivo('nevoa')) opcoes.push(['Névoa Espessa', 0.25]);
+            if (modAtivo('chuva')) opcoes.push(['Chuva Forte', 0.25]);
+            if (modAtivo('nevoa')) opcoes.push(['Neve', 0.15]);
+            let roll = Math.random() * opcoes.reduce((t, o) => t + o[1], 0);
+            gameState.weather = (opcoes.find(o => (roll -= o[1]) < 0) || opcoes[0])[0];
+            if (gameState.weather === 'Chuva Forte') primeiraVez('chuva', '🌧 PRIMEIRA CHUVA: o parapeito desgasta mais rápido, a mira cai e o chão vira lama (os soldados andam mais devagar).');
+            if (gameState.weather === 'Névoa Espessa') primeiraVez('nevoa', '🌫 PRIMEIRA NÉVOA: o inimigo aparece tarde. Mantenha vigias ou use a Vigília Total.');
+            if (gameState.weather === 'Neve') primeiraVez('neve', '❄ PRIMEIRA NEVE: o comboio demora mais e o frio dá mais fome ao esquadrão.');
 
             // Supply line impact
             let baseEff = 90;
@@ -549,12 +554,26 @@
         /* ===== Modificadores por faixa de nível =====
            Cada faixa traz uma regra nova que muda o jeito de jogar (e elas se somam). */
         const MODIFICADORES = [
+            { nivel: 2,  id: 'ofensivas', nome: 'Ofensivas anunciadas', desc: 'O general marca ataques grandes; o rádio avisa na véspera. Prepare o esquadrão e o paiol.' },
+            { nivel: 3,  id: 'chuva',     nome: 'Chuva forte',         desc: 'Chuva alaga a trincheira: desgasta o parapeito, piora a mira, o comboio e o passo dos soldados.' },
+            { nivel: 4,  id: 'nevoa',     nome: 'Névoa e neve',        desc: 'Névoa espessa e neve entram no sorteio do clima: menos visão, comboio mais lento.' },
             { nivel: 5,  id: 'noites',    nome: 'Noites longas',       desc: 'À noite a mira cai 25% (antes 15%): use a Vigília Total ou segure o fogo.' },
+            { nivel: 5,  id: 'incursao',  nome: 'Incursão noturna',    desc: 'Batedores furtivos chegam no escuro. Mantenha 3 vigias ou a Vigília Total.' },
+            { nivel: 6,  id: 'gas',       nome: 'Ataque químico',      desc: 'Nuvem de gás avisada com antecedência: máscaras ou abrigo.' },
+            { nivel: 7,  id: 'chamas',    nome: 'Lança-chamas',        desc: 'Tropa de choque com lança-chamas: derrube-o antes que chegue perto.' },
+            { nivel: 8,  id: 'sabotagem', nome: 'Sabotagem',           desc: 'Um espião mira uma sala (aviso na cena): quem estiver lá a tempo impede o estrago.' },
             { nivel: 9,  id: 'franco',    nome: 'Franco-atirador',     desc: 'Um atirador inimigo dispara de vez em quando em quem está de vigília. Abrigo Reforçado protege; o Atirador de Elite de vigília pode abatê-lo.' },
             { nivel: 13, id: 'noturno',   nome: 'Assaltos noturnos',   desc: 'Ondas que chegam à noite vêm com 2 soldados a mais.' },
             { nivel: 17, id: 'blindados', nome: 'Blindados em dupla',  desc: 'A partir do dia 15, o blindado pode vir acompanhado de outro.' },
             { nivel: 21, id: 'pesada',    nome: 'Artilharia pesada',   desc: 'Os bombardeios inimigos dão 25% mais dano.' }
         ];
+        // Primeira vez que uma mecânica aparece na partida: uma explicação curta, uma vez só
+        function primeiraVez(id, msg, estilo) {
+            gameState.mecVistas = gameState.mecVistas || {};
+            if (gameState.mecVistas[id]) return;
+            gameState.mecVistas[id] = 1;
+            logFeed(msg, estilo || 'text-mil-amberMuted font-bold');
+        }
         const modAtivo = (id) => MODIFICADORES.some(m => m.id === id && Math.min(MAX_LEVEL, gameState.level || 1) >= m.nivel);
         const modificadoresAtivos = () => MODIFICADORES.filter(m => Math.min(MAX_LEVEL, gameState.level || 1) >= m.nivel);
         const proximoModificador = () => MODIFICADORES.find(m => m.nivel > Math.min(MAX_LEVEL, gameState.level || 1)) || null;
@@ -922,6 +941,7 @@
         const OFENSIVA = { PRIMEIRA: [6, 8], INTERVALO: [6, 8], HORA: [66, 96], EXTRA_BASE: 6, EXTRA_POR_DIAS: 8, PREMIO: 40, MORAL: 4 };
         const sorteiaEntre = ([a, b]) => a + Math.floor(Math.random() * (b - a + 1));
         function agendarOfensiva() {
+            if (!modAtivo('ofensivas')) { gameState.ofensiva = null; return; }
             const of = gameState.ofensiva;
             if (!of || of.feita) {
                 const dia = of ? of.dia + sorteiaEntre(OFENSIVA.INTERVALO) : sorteiaEntre(OFENSIVA.PRIMEIRA);

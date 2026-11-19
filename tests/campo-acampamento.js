@@ -93,6 +93,7 @@ const PAGINA = 'file://' + path.resolve(__dirname, '..', 'prototipo', 'ponto-alp
     Object.assign(ck, await p.evaluate(() => {
         const r = {};
         // só aparecem nos dias certos
+        gameState.level = 12; // as ameaças complexas só entram por nível (ver MODIFICADORES)
         const viaveis = (dia, t) => { gameState.enemies = []; gameState.barrage = null; gameState.gas = null; gameState.day = dia; gameState.timeSeconds = t; return ['gas', 'incursao', 'chamas'].map(id => planoViavel(id)); };
         r.planosSoNosDiasCertos = JSON.stringify(viaveis(2, 10)) === '[false,false,false]' && JSON.stringify(viaveis(12, 130)) === '[true,true,true]' && viaveis(12, 10)[1] === false; // incursão só à noite
         r.utilidadeValida = ['gas', 'incursao', 'chamas'].every(id => { const u = utilidadePlano(id, situacao(), gameState.general.memoria); return Number.isFinite(u) && u > 0.5; });

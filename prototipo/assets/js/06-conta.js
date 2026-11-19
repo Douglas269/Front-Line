@@ -125,7 +125,7 @@
                 endGame(`<img src="${musicBase}assets/medals/${medalhaDaVitoria(nivel)}" alt="Medalha" class="mx-auto" style="height:96px;image-rendering:pixelated">`, 'VITÓRIA DA REPÚBLICA', 'text-mil-greenMuted',
                     `Você manteve a trincheira Alpha por 30 dias no nível ${nivel}! ` +
                     (nivel < MAX_LEVEL ? `Próxima operação: nível ${proximo}, mais difícil.` : 'Você venceu o nível máximo.') +
-                    (() => { const m = MODIFICADORES.find(x => x.nivel === proximo); return m && nivel < MAX_LEVEL ? ` Novidade no nível ${proximo}: ${m.nome}. ${m.desc}` : ''; })());
+                    (() => { const ms = MODIFICADORES.filter(x => x.nivel === proximo); return ms.length && nivel < MAX_LEVEL ? ` Novidade${ms.length > 1 ? 's' : ''} no nível ${proximo}: ${ms.map(m => `${m.nome} (${m.desc})`).join(' ')}` : ''; })());
             }
         }
 
@@ -529,6 +529,8 @@
         if (!localStorage.getItem(SAVE_KEY)) {
             const mods = modificadoresAtivos();
             if (mods.length) logFeed(`⚙️ Nível ${gameState.level}: ${mods.map(m => m.nome).join(', ')}. Detalhes em Configurações → Jogo.`, 'text-mil-amberMuted font-bold');
+            const novas = mods.filter(m => m.nivel === gameState.level);
+            if (novas.length) logFeed(`🆕 NOVIDADE DESTE NÍVEL: ${novas.map(m => `${m.nome} — ${m.desc}`).join(' ')}`, 'text-mil-greenMuted font-bold');
         }
         if (loadGame()) {
             normalizeOrders();
@@ -550,7 +552,7 @@
            Ao abrir, ao voltar para o app e a cada minuto o jogo compara as duas. Se o site
            tiver uma versão diferente, o jogo trava numa tela que só sai atualizando.
            (tools/nova-versao.sh troca as duas juntas a cada atualização publicada.) */
-        const VERSAO_JOGO = '20261119.1256';
+        const VERSAO_JOGO = '20261119.1321';
         const ATUALIZOU_KEY = 'frontline-atualizou-para';
         async function verificarVersao() {
             if (!location.protocol.startsWith('http') || atualizacaoPendente) return;

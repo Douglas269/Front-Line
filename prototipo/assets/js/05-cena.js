@@ -248,12 +248,65 @@
             cctx.drawImage(atlasImg, x, y, w, h, px - w * f / 2, py - h * f / 2, w * f, h * f);
             cctx.globalAlpha = 1;
         }
+        // ---------- Pistas visuais: o estado da tropa aparece no corpo, não em barras ----------
+        // Cansado: cabeça baixa e passo curto. Com fome: mão na barriga. Com sede: tosse seca. Ferido: manca e sangra.
+        // Desmoralizado: encolhido, com uma nuvem escura em cima. Firme: peito aberto.
+        function posturaSoldado(s, t) {
+            const f = s.fatigue || 0, h = s.hunger || 0, hp = s.hp, mo = s.moral == null ? 100 : s.moral, m = mentalDe(s);
+            let inc = 0;
+            if (f >= 60) inc += 0.08 + 0.16 * Math.min(1, (f - 60) / 40);
+            if (h >= 50) inc += 0.05 + 0.05 * Math.min(1, (h - 50) / 50);
+            if (hp < 50) inc += 0.06 + 0.06 * (1 - hp / 50);
+            if (mo < 40) inc += 0.05 + 0.06 * (1 - mo / 40);
+            if (m === 'apatia') inc += 0.12;
+            if (m === 'heroismo' || (mo >= 85 && f < 40 && hp >= 80 && h < 40)) inc -= 0.04;
+            const manca = hp < 50 && Math.sin(t / 260 + s.id) > 0.2 ? 1 : 0;
+            return { inc: Math.max(-0.06, Math.min(0.4, inc)), dy: manca };
+        }
+        // Velocidade ao caminhar entre as salas: cansaço e ferimento deixam o passo pesado
+        function fatorAndar(s) {
+            const f = s.fatigue || 0;
+            return Math.max(0.3, (1 - 0.4 * Math.max(0, (f - 50) / 50) - (s.hp < 50 ? 0.2 : 0)) * (gameState.weather === 'Chuva Forte' ? 0.7 : 1)); // chuva: lama no chão
+        }
+        function sinaisDoCorpo(s, x, y, pose, t) {
+            const deitado = pose === 'deitado' || pose === 'encolhido' || pose === 'panico';
+            const f = s.fatigue || 0, h = s.hunger || 0, th = s.thirst || 0, hp = s.hp, mo = s.moral == null ? 100 : s.moral;
+            const X = Math.round(x), Y = Math.round(y);
+            if (hp < 80) { // mancha de sangue, maior quanto mais ferido
+                const q = Math.min(1, (80 - hp) / 70), w = 2 + Math.round(q * 4), hh = 3 + Math.round(q * 5);
+                cctx.fillStyle = '#8a1f1f';
+                if (deitado) cctx.fillRect(X - 6, Y - 9, w + 2, 3); else cctx.fillRect(X - 4, Y - 24, w, hh);
+                if (hp < 30 && Math.floor(t / 400 + s.id) % 2) { cctx.fillStyle = '#b02a2a'; cctx.fillRect(X - 3, Y - 24 + hh + ((t / 90) % 8 | 0), 1, 2); }
+            }
+            if (deitado) return;
+            if (f >= 60) { // gotas de suor escorrendo da testa
+                cctx.fillStyle = '#9fdcff';
+                for (let k = 0; k < (f >= 85 ? 2 : 1); k++) cctx.fillRect(X + 6 + k * 5, Y - 38 + (((t / 110) + s.id * 7 + k * 5) % 12 | 0), 2, 3);
+            }
+            if (h >= 50) { // mão na barriga
+                cctx.fillStyle = '#e2b996'; cctx.fillRect(X + 2, Y - 18, 6, 4);
+                cctx.fillStyle = '#3e4a33'; cctx.fillRect(X, Y - 19, 3, 4);
+            }
+            if (th >= 50) { // tosse seca: fumacinhas claras saindo da boca
+                const fase = ((t / 260) + s.id * 3) % 6;
+                if (fase < 3) { cctx.fillStyle = 'rgba(220,220,200,0.7)'; cctx.fillRect(X + 9 + (fase | 0) * 3, Y - 31 - (fase | 0) * 2, 3, 3); }
+            }
+            if (mo < 25) { // nuvem escura sobre a cabeça
+                cctx.fillStyle = 'rgba(40,44,48,0.85)'; cctx.fillRect(X - 7, Y - 50, 14, 3); cctx.fillRect(X - 4, Y - 53, 8, 3);
+                if (Math.floor(t / 300) % 2) { cctx.fillStyle = '#7fa5c0'; cctx.fillRect(X - 2, Y - 46, 1, 2); cctx.fillRect(X + 3, Y - 46, 1, 2); }
+            }
+        }
         function desenharSoldadoCena(s, x, y, pose, t, rotY = 0) {
             const flash = (feridosRecentes.get(s.id) || 0) > 0 && Math.floor(t / 80) % 2 === 0;
             const corpo = flash ? '#a83232' : (s.class === 'Médico' ? '#5f6b4c' : '#5d6b48');
             const pele = { 1: '#c99a74', 2: '#7a4f33', 3: '#e2b996', 4: '#a8714c', 5: '#d9a988', 6: '#b98159' }[s.id] || '#c99a74';
             const POSE_SILHUETA = { mira: 'mira', ninho: 'ninho', come: 'come', trabalho: 'trabalho', deitado: 'deitado', encolhido: 'panico', panico: 'panico', 'em pé': 'arrastado' };
+            const post = posturaSoldado(s, t), emPe = pose !== 'deitado' && pose !== 'encolhido' && pose !== 'panico';
+            cctx.save();
+            if (emPe && (post.inc || post.dy)) { cctx.translate(x, y + post.dy); cctx.rotate(post.inc); cctx.scale(1, 1 - Math.max(0, post.inc) * 0.35); cctx.translate(-x, -y); }
             const usouBoneco = !!desenharSilhueta(s, x, y, POSE_SILHUETA[pose] || 'mira', t);
+            cctx.restore();
+            if (usouBoneco) sinaisDoCorpo(s, x, y, pose, t);
             if (usouBoneco && pose === 'deitado' && mentalDe(s) !== 'panico') txtC(x - 16 + Math.sin(t / 500) * 2, y - 16 - (t / 60) % 10, 'z', '#b3c4ae', 9, 700);
             if (!usouBoneco) {
             const balanco = Math.sin(t / 400 + s.id) * 0.8;
@@ -280,25 +333,9 @@
             // nome e barrinha de vida
             const sel = s.id === soldadoSelecionado;
             txtC(x, y + 16 + rotY, s.name, sel ? '#ffe08a' : '#cfe0c4', 7.5, 700, 'center');
-            cctx.fillStyle = '#222b25'; cctx.fillRect(x - 10, y + 19 + rotY, 20, 2.5);
-            cctx.fillStyle = s.hp > 50 ? '#5a7356' : '#c0392b'; cctx.fillRect(x - 10, y + 19 + rotY, 20 * Math.max(0, s.hp) / 100, 2.5);
+            if (s.hp < 30) { cctx.fillStyle = '#222b25'; cctx.fillRect(x - 10, y + 19 + rotY, 20, 2.5); cctx.fillStyle = '#c0392b'; cctx.fillRect(x - 10, y + 19 + rotY, 20 * Math.max(0, s.hp) / 30, 2.5); }
             const deitado = pose === 'deitado';
             if (sel) { cctx.strokeStyle = 'rgba(255,224,138,0.8)'; cctx.lineWidth = 1.2; cctx.setLineDash([3, 2]); if (deitado) cctx.strokeRect(x - 26, y - 16, 54, 40); else cctx.strokeRect(x - 16, y - 40 * CORTE.ESC, 32, 40 * CORTE.ESC + 24 + rotY); cctx.setLineDash([]); }
-            // avisos em cima da cabeça: só aparece o que está ruim (amarelo = atenção, vermelho = crítico)
-            // Na cabeça só vida, fome, sede e cansaço; a moral fica no cartão e no resumo (o vermelho confundia com vida baixa)
-            const avisos = avisosDoSoldado(s).filter(a => a.nome !== 'moral baixa');
-            if (avisos.length) {
-                const deit = pose === 'deitado';
-                avisos.forEach((a, i) => {
-                    // deitado: em fila acima; em pé: em coluna ao lado da cabeça (não cobre o nome do cômodo)
-                    const ax = deit ? x - 18 + i * 11 : x - 16;
-                    const topo = deit ? y - 24 : y - 44 * CORTE.ESC + i * 10.5;
-                    const pul = a.critico ? 1 + 0.12 * Math.sin(t / 150) : 1;
-                    cctx.fillStyle = a.critico ? 'rgba(170,30,30,0.92)' : 'rgba(170,130,30,0.9)';
-                    cctx.beginPath(); cctx.arc(ax, topo, 5.2 * pul, 0, Math.PI * 2); cctx.fill();
-                    cctx.font = '7px sans-serif'; cctx.textAlign = 'center'; cctx.fillStyle = '#fff'; cctx.fillText(a.icone, ax, topo + 2.5); cctx.textAlign = 'left';
-                });
-            }
             // estado mental e medalhas
             const m = mentalDe(s);
             if (m) {
@@ -429,9 +466,10 @@
             const y0 = 410;
             cctx.fillStyle = '#0f1411'; cctx.fillRect(0, y0, CORTE.W, CORTE.H - y0);
             const barra = (x, y, w, v, cor) => { cctx.fillStyle = '#222b25'; cctx.fillRect(x, y, w, 4); cctx.fillStyle = cor; cctx.fillRect(x, y, w * Math.max(0, Math.min(1, v)), 4); };
+            // O estado da trincheira aparece no próprio parapeito (sacos rachados e caídos); aqui só o alerta quando está ruim
             const tr = gameState.trench;
-            txtC(10, y0 + 16, `TRINCHEIRA ${Math.round(tr)}%${trincheiraRompida() ? ' · ROMPIDA' : ''}`, trincheiraRompida() ? '#ff5c5c' : '#8fad88', 8.5);
-            barra(10, y0 + 20, 120, tr / 100, tr > 50 ? '#5a7356' : tr > 20 ? '#d9a35a' : '#c0392b');
+            if (trincheiraRompida()) txtC(10, y0 + 16, 'PARAPEITO ROMPIDO', '#ff5c5c', 8.5);
+            else if (tr <= 50) txtC(10, y0 + 16, 'PARAPEITO DANIFICADO', '#d9a35a', 8.5);
             const cb = gameState.combate || { tiros: 0, abates: 0 };
             const noite = periodoDoDia() >= 2;
             txtC(150, y0 + 16, noite && !gameState.tacticalOrders.FULL_VIGILANCE ? `NOITE · −${Math.round(100 * (1 - miraDeNoite()))}% DE MIRA` : `TIROS ${cb.tiros} · ABATES ${cb.abates}`, '#d9a35a', 8.5);
@@ -504,7 +542,7 @@
                 else {
                     // Caminha até a nova posição em vez de aparecer lá de repente
                     const a = animPos[s.id] || (animPos[s.id] = { x, y });
-                    a.x += (x - a.x) * 0.09; a.y += (y - a.y) * 0.09;
+                    const vel = 0.09 * fatorAndar(s); a.x += (x - a.x) * vel; a.y += (y - a.y) * vel;
                     if (Math.hypot(x - a.x, y - a.y) > 2.5) { pose = 'em pé'; x = a.x; y = a.y; } else { a.x = x; a.y = y; }
                 }
                 posicoesCena[s.id] = { x, y };
@@ -596,6 +634,19 @@
             return av;
         }
 
+        // Estado do soldado em palavras (no lugar de barras e números)
+        function frasesDoSoldado(s) {
+            const f = [], add = (txt, crit) => f.push({ txt, critico: !!crit });
+            if (s.hp < 25) add('Gravemente ferido: mal se mantém em pé', 1); else if (s.hp < 50) add('Ferido: manca e segura o ferimento', 1); else if (s.hp < 80) add('Ferimentos leves');
+            if (s.fatigue >= 85) add('Exausto: arrasta os pés, precisa dormir', 1); else if (s.fatigue >= 60) add('Cansado: cabeça baixa, passo lento');
+            if (s.hunger >= 75) add('Faminto: mão na barriga', 1); else if (s.hunger >= 50) add('Com fome');
+            if (s.thirst >= 75) add('Boca seca: tosse, precisa de água', 1); else if (s.thirst >= 50) add('Com sede');
+            if (s.moral < 20) add('Desmoralizado: encolhido, olhar no chão', 1); else if (s.moral < 40) add('Abatido, sem ânimo');
+            if (!f.length) add(s.moral >= 85 ? 'Firme e confiante, peito aberto' : 'Em boa forma');
+            return f;
+        }
+        const frasesHtml = (s) => frasesDoSoldado(s).map(x => `<div class="${x.critico ? 'text-red-400' : 'text-mil-textGlow'}">${x.txt}</div>`).join('');
+
         // ---------- cartão rápido (toque no soldado) ----------
         let cartaoAberto = false, assinaturaCartao = '';
         function abrirCartao(id) {
@@ -640,10 +691,7 @@
                         </div>
                         <button onclick="fecharCartao()" class="px-1.5 text-mil-textMuted text-sm leading-none" aria-label="Fechar">✕</button>
                     </div>
-                    <div class="space-y-px mt-0.5">
-                        ${barraCartao('Vida', s.hp, false)}${barraCartao('Fadiga', s.fatigue, true)}${barraCartao('Fome', s.hunger, true)}${barraCartao('Sede', s.thirst, true)}${barraCartao('Moral', s.moral, false)}
-                    </div>
-                    ${av.length ? `<div class="mt-0.5 ${av.some(a => a.critico) ? 'text-red-400' : 'text-mil-amberMuted'}">${av.map(a => a.icone + ' ' + a.nome).join(' · ')}</div>` : ''}
+                    <div class="mt-0.5 leading-snug">${frasesHtml(s)}</div>
                     <div class="grid grid-cols-4 gap-0.5 mt-1 text-[9px]">${btn('WATCH', 'Vigília')}${btn('REST', 'Desc.')}${btn('MAINTENANCE', 'Manut.')}${btn('RATIONING', 'Coz.')}</div>
                     <button onclick="fecharCartao(); abrirPerfil(${s.id})" class="w-full mt-1 py-0.5 btn-tactical rounded font-bold"><i class="fa-solid fa-id-card"></i> Ficha completa</button>`;
             }
@@ -673,8 +721,7 @@
             corteCanvas.style.cursor = 'grab';
             const av = avisosDoSoldado(s), m = mentalDe(s);
             dica.innerHTML = `<b class="text-[#ffe08a]">${s.rank} ${s.name}</b> · ${(CORTE.comodos[comodoDoSoldado(s)] || {}).nome || ''}<br>` +
-                `Vida ${Math.round(s.hp)} · Fadiga ${Math.round(s.fatigue)} · Fome ${Math.round(s.hunger)} · Sede ${Math.round(s.thirst)} · Moral ${Math.round(s.moral)}` +
-                (m ? `<br>${ROTULO_MENTAL[m]}` : '') + (av.length ? `<br><span class="${av.some(a => a.critico) ? 'text-red-400' : 'text-mil-amberMuted'}">${av.map(a => a.icone + ' ' + a.nome).join(' · ')}</span>` : '') +
+                frasesDoSoldado(s).map(x => `<span class="${x.critico ? 'text-red-400' : 'text-mil-textGlow'}">${x.txt}</span>`).join('<br>') + (m ? `<br>${ROTULO_MENTAL[m]}` : '') +
                 `<br><span class="text-mil-textMuted">clique: ações · arraste: trocar de cômodo</span>`;
             dica.classList.remove('hidden');
             const r = corteCanvas.getBoundingClientRect();
@@ -758,7 +805,7 @@
                     const m = mentalDe(s);
                     return `<button onclick="selecionarSoldado(${s.id})" ${vivo ? '' : 'disabled'} class="py-1 px-1 rounded border text-left ${sel ? 'border-[#ffe08a] bg-mil-oliveDark' : 'border-mil-border bg-black/40'} ${vivo ? '' : 'opacity-40'}">
                         <div class="font-bold ${sel ? 'text-[#ffe08a]' : 'text-mil-textGlow'} truncate">${s.name}${m ? ' ' + ROTULO_MENTAL[m].split(' ')[0] : ''}${soldadoMarcado(s) ? ' 🎯' : ''}</div>
-                        <div class="text-mil-textMuted truncate">${vivo ? (CORTE.comodos[comodoDoSoldado(s)] || {}).nome.split(' ')[0].toLowerCase() + ' · ' + Math.round(s.hp) + '%' : (s.deserted ? 'desertou' : 'morto')}</div>
+                        <div class="text-mil-textMuted truncate">${vivo ? (CORTE.comodos[comodoDoSoldado(s)] || {}).nome.split(' ')[0].toLowerCase() + ' · ' + frasesDoSoldado(s)[0].txt.split(':')[0].toLowerCase() : (s.deserted ? 'desertou' : 'morto')}</div>
                     </button>`;
                 }).join('')}</div>`;
         }

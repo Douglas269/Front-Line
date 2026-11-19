@@ -102,15 +102,19 @@ GENERAL_PLANS.gas = { nome: 'Ataque químico', custo: 7, passos: [{ a: 'gas', d:
     pista: '📻 Rádio: cheiro de mostarda no vento… cilindros sendo posicionados.' };
 GENERAL_PLANS.incursao = { nome: 'Incursão noturna', custo: 5, passos: [{ a: 'incursao', d: 0 }],
     pista: '📻 Rádio: silêncio estranho do lado deles… batedores sem lanterna.' };
+GENERAL_PLANS.sabotagem = { nome: 'Sabotagem', custo: 5, passos: [{ a: 'sabotagem', d: 0 }],
+    pista: '📻 Rádio: um espião cruzou as linhas e procura um ponto fraco.' };
 GENERAL_PLANS.chamas = { nome: 'Tropa de choque com lança-chamas', custo: 6, passos: [{ a: 'infantaria', d: 0 }, { a: 'sapador', d: 10 }],
     pista: '📻 Rádio: tropa de choque com tanques de combustível avançando.' };
 
 const _o8_planoViavel = planoViavel;
 planoViavel = function (id) {
     if (!_o8_planoViavel(id)) return false;
-    if (id === 'gas') return gameState.day >= 6 && !gameState.gas && !gameState.barrage;
-    if (id === 'incursao') return gameState.day >= 3 && ehNoite() && !gameState.enemies.some(e => e.type === 'infiltrado');
-    if (id === 'chamas') return gameState.day >= 9 && !gameState.enemies.some(e => e.type === 'sapador');
+    // Cada ameaça complexa só entra quando o nível a libera (o jogador já domina o básico)
+    if (id === 'gas') return modAtivo('gas') && gameState.day >= 6 && !gameState.gas && !gameState.barrage;
+    if (id === 'incursao') return modAtivo('incursao') && gameState.day >= 3 && ehNoite() && !gameState.enemies.some(e => e.type === 'infiltrado');
+    if (id === 'chamas') return modAtivo('chamas') && gameState.day >= 9 && !gameState.enemies.some(e => e.type === 'sapador');
+    if (id === 'sabotagem') return modAtivo('sabotagem') && gameState.day >= 4 && !gameState.sabotagem;
     return true;
 };
 const _o8_utilidadePlano = utilidadePlano;
@@ -119,11 +123,13 @@ utilidadePlano = function (id, sit, m) {
     if (id === 'gas') return 0.8 + 0.5 * b(sit.cansado) + 0.3 * b(sit.noite);
     if (id === 'incursao') return 0.9 + 0.7 * b(sit.vigiasFracos) + 0.4 * b(sit.nevoa);
     if (id === 'chamas') return 0.7 + 0.6 * b(sit.trincheiraFraca) + 0.3 * b(sit.noite);
+    if (id === 'sabotagem') return 0.8 + 0.5 * b(sit.noite) + 0.4 * b(sit.vigiasFracos);
     return _o8_utilidadePlano(id, sit, m);
 };
 const _o8_executarPasso = executarPasso;
 executarPasso = function (acao) {
     if (acao === 'gas') return iniciarGas();
+    if (acao === 'sabotagem') return iniciarSabotagem();
     if (acao === 'incursao') {
         for (let i = 0; i < 3; i++) spawnEnemy('infiltrado', 220 + Math.random() * 25);
         if (Math.random() < 0.5) logFeed('🌑 Movimento suspeito no escuro… os vigias não têm certeza do que viram.', 'text-mil-amberMuted font-bold');
@@ -172,6 +178,41 @@ resolverChegadaNaTrincheira = function (estado, enemy, alive) {
         if (s.hp <= 0) { logFeed(`❌ BAIXA: ${s.rank} ${s.name} morreu queimado!`, 'text-red-500 font-bold'); impacto('morte'); }
     });
 };
+
+/* ---------- 🕵 Sabotagem ----------
+   Um espião mira uma sala (a cena mostra a sala piscando e a faixa avisa o tempo). Se houver pelo menos um soldado
+   vivo nessa sala quando o prazo acabar, ele é visto e foge. Senão o estrago acontece:
+   cozinha → 25% das rações e da água estragam · oficina → o parapeito leva −10% · ninhos → 20% da munição leve some. */
+const SABOTAGEM = { AVISO: 72, ALVOS: ['cozinha', 'oficina', 'ninhos'] };
+const NOME_SALA_SAB = { cozinha: 'a cozinha', oficina: 'a oficina', ninhos: 'os ninhos' };
+function iniciarSabotagem() {
+    const alvo = SABOTAGEM.ALVOS[Math.floor(Math.random() * SABOTAGEM.ALVOS.length)];
+    gameState.sabotagem = { ticks: SABOTAGEM.AVISO, alvo };
+    tocarSom('alarme', 0.5);
+    primeiraVez('sabotagem', '🕵 PRIMEIRA SABOTAGEM: um espião mira uma sala. Ponha alguém lá dentro antes do prazo e ele foge.');
+    logFeed(`🕵 SABOTAGEM: um espião mira ${NOME_SALA_SAB[alvo]}! Em ${seg(SABOTAGEM.AVISO)}s o estrago acontece, a menos que alguém esteja na sala.`, 'text-red-400 font-bold');
+    playTacticalBeep(480, 0.2);
+}
+function processarSabotagem() {
+    const sb = gameState.sabotagem;
+    if (!sb) return;
+    if (--sb.ticks > 0) return;
+    gameState.sabotagem = null;
+    const guarda = gameState.squad.find(s => s.hp > 0 && !s.deserted && comodoDoSoldado(s) === sb.alvo);
+    if (guarda) {
+        logFeed(`🕵 ${guarda.rank} ${guarda.name} viu o espião em ${NOME_SALA_SAB[sb.alvo]} e ele fugiu. Sabotagem frustrada!`, 'text-mil-greenMuted font-bold');
+        gameState.prestige += 4;
+        return;
+    }
+    const r = gameState.resources;
+    if (sb.alvo === 'cozinha') { r.rations = Math.floor(r.rations * 0.75); r.water = Math.floor(r.water * 0.75); }
+    else if (sb.alvo === 'ninhos') r.ammoRifle = Math.floor(r.ammoRifle * 0.8);
+    else trenchDamage(10, 'a sabotagem');
+    logFeed(`🕵 SABOTAGEM: o espião agiu em ${NOME_SALA_SAB[sb.alvo]} sem ninguém por perto! ${{ cozinha: 'Rações e água estragaram.', oficina: 'O parapeito foi minado.', ninhos: 'Munição leve inutilizada.' }[sb.alvo]}`, 'text-red-500 font-bold');
+    tremer(1.5, 200);
+}
+const _o8s_processEnemiesAndCombat = processEnemiesAndCombat;
+processEnemiesAndCombat = function () { const r = _o8s_processEnemiesAndCombat.apply(this, arguments); processarSabotagem(); return r; };
 
 /* ---------- ☣ Ataque químico ----------
    Aviso de ~8 s reais; a nuvem chega e fica ~7 s reais. Quem não se protege perde vida, moral e fôlego.
@@ -225,6 +266,15 @@ cadenciaDe = function (s, arma, estado) { const c = _o8_cadenciaDe(s, arma, esta
 const _o8_desenharClimaCena = desenharClimaCena;
 desenharClimaCena = function (t) {
     _o8_desenharClimaCena(t);
+    const sb = gameState.sabotagem;
+    if (sb) { // a sala mirada pisca, com uma mira sobre ela
+        const c = CORTE.comodos[sb.alvo], pis = 0.45 + 0.4 * Math.sin(t / 130);
+        cctx.strokeStyle = `rgba(255,190,60,${pis})`; cctx.lineWidth = 3; cctx.strokeRect(c.x + 1, c.y + 1, c.w - 2, c.h - 2);
+        cctx.fillStyle = `rgba(255,190,60,${0.07 + 0.05 * pis})`; cctx.fillRect(c.x, c.y, c.w, c.h);
+        const cx = c.x + c.w / 2, cy = c.y + c.h / 2;
+        cctx.strokeStyle = `rgba(255,120,60,${pis})`; cctx.lineWidth = 2; cctx.beginPath(); cctx.arc(cx, cy, 22, 0, Math.PI * 2);
+        cctx.moveTo(cx - 30, cy); cctx.lineTo(cx - 14, cy); cctx.moveTo(cx + 14, cy); cctx.lineTo(cx + 30, cy); cctx.moveTo(cx, cy - 30); cctx.lineTo(cx, cy - 14); cctx.moveTo(cx, cy + 14); cctx.lineTo(cx, cy + 30); cctx.stroke();
+    }
     const g = gameState.gas;
     if (!g) return;
     if (g.ticks > 0) {
@@ -263,6 +313,11 @@ const _o8_renderCorte = renderCorte;
 renderCorte = function (forcar) {
     _o8_renderCorte(forcar);
     renderBotaoMascaras();
+    const sb = gameState.sabotagem;
+    if (sb && !gameState.gas) {
+        const b = document.getElementById('corte-banner'), txt = `🕵 SABOTAGEM EM ${seg(sb.ticks)}s · PONHA ALGUÉM NA ${NOME_SALA_SAB[sb.alvo].replace('a ', '').replace('os ', '').toUpperCase()}`;
+        b.classList.remove('hidden'); if (b.textContent !== txt) b.textContent = txt;
+    }
     const g = gameState.gas;
     if (g) {
         const b = document.getElementById('corte-banner'), txt = g.ticks > 0 ? `☣ GÁS EM ${seg(g.ticks)}s · ${g.mascaras ? 'MÁSCARAS VESTIDAS' : 'VISTAM AS MÁSCARAS OU ABRIGO'}` : `☣ NUVEM DE GÁS · ${seg(g.dur)}s${g.mascaras ? ' · máscaras' : ''}`;

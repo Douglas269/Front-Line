@@ -82,9 +82,20 @@ function desenharCeuFundo() {
         for (let k = 0; k < 4; k++) for (let x = xa - 6; x < xa + 8; x += 2) cctx.fillRect(x, S - 22 + k * 5 + ((x >> 1) % 2), 2, 1);
         txtC(xa + 12, S - 28, `ARAME ${Math.ceil(ars.arame)}%`, '#b9b9ac', 6.5, 700, 'left', 8.5);
     }
-    for (let r = 0; r < 3; r++) for (let x = (r % 2) * 7 - 7; x < 112; x += 14) { // parapeito de sacos de areia
+    // parapeito de sacos de areia: o estrago da trincheira aparece aqui (sacos rachados, remendados e caídos)
+    const dano = Math.max(0, Math.min(1, (100 - gameState.trench) / 100)); let k = 0;
+    for (let r = 0; r < 3; r++) for (let x = (r % 2) * 7 - 7; x < 112; x += 14) {
         const y = S - 18 + r * 8; if (r === 0 && x > 98) continue;
-        cctx.fillStyle = '#8a7c5a'; cctx.fillRect(x, y, 13, 7); cctx.fillStyle = '#a89a74'; cctx.fillRect(x, y, 13, 2); cctx.fillStyle = '#5d533f'; cctx.fillRect(x, y + 6, 13, 1); cctx.fillRect(x + 12, y, 1, 7);
+        const q = pxRuido(++k + 500);
+        if (q < dano * 0.4) { // saco destruído: sobram entulho e areia
+            cctx.fillStyle = '#6b5a3e'; cctx.fillRect(x + 2, y + 5, 4, 2); cctx.fillRect(x + 8, y + 4, 3, 3); cctx.fillStyle = '#5d533f'; cctx.fillRect(x + 5, y + 6, 2, 1);
+            continue;
+        }
+        const gasto = q < dano * 0.85;
+        cctx.fillStyle = gasto ? '#6e6248' : '#8a7c5a'; cctx.fillRect(x, y, 13, 7);
+        cctx.fillStyle = gasto ? '#847856' : '#a89a74'; cctx.fillRect(x, y, 13, 2);
+        cctx.fillStyle = '#5d533f'; cctx.fillRect(x, y + 6, 13, 1); cctx.fillRect(x + 12, y, 1, 7);
+        if (gasto) { cctx.fillStyle = '#2f281c'; cctx.fillRect(x + 4, y + 1, 1, 3); cctx.fillRect(x + 5, y + 3, 2, 1); cctx.fillRect(x + 7, y + 4, 1, 2); }
     }
 };
 
