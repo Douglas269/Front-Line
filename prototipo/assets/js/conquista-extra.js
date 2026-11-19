@@ -6,11 +6,12 @@
    atq/def: força do tiro no ataque e na defesa · corpo: corpo a corpo · vel: velocidade no mapa
    Infantaria < Metralhadora (na defesa) < Artilharia < Cavalaria < Metralhadora; o blindado só cai para a artilharia. */
 const TROPAS = {
-    inf:   { nome: 'Infantaria', icone: '🪖', custo: 20, vel: 1,   vida: 100, atq: 1,   def: 1,   corpo: 1,   pesquisa: null,    txt: 'equilibrada' },
-    metr:  { nome: 'Metralhadora', icone: '🔫', custo: 30, vel: 0.8, vida: 100, atq: 0.6, def: 2.0, corpo: 0.7, pesquisa: 'metr',  txt: 'segura a trincheira; ataca pouco; mata cavalaria' },
-    art:   { nome: 'Artilharia', icone: '💣', custo: 40, vel: 0.7, vida: 90,  atq: 1.6, def: 0.8, corpo: 0.3, pesquisa: 'art',   txt: 'atira de longe e fura trincheira; fraca de perto', longe: true },
-    cav:   { nome: 'Cavalaria', icone: '🐎', custo: 30, vel: 1.6, vida: 110, atq: 0.9, def: 0.7, corpo: 1.6, pesquisa: 'cav',   txt: 'rápida e forte no corpo a corpo; morre para metralhadora' },
-    blind: { nome: 'Blindado', icone: '🚜', custo: 65, vel: 1.1, vida: 240, atq: 0.9, def: 1.0, corpo: 1.1, pesquisa: 'blind', txt: 'aguenta tiro de fuzil; só a artilharia fura', blindado: true }
+    // custo: dinheiro para criar · aco: aço para criar · mo: mão de obra ocupada enquanto viver · manut: dinheiro por ciclo de manutenção
+    inf:   { nome: 'Infantaria', icone: '🪖', custo: 15, aco: 0,  mo: 1, manut: 0.15, vel: 1,   vida: 100, atq: 1,   def: 1,   corpo: 1,   pesquisa: null,    txt: 'equilibrada' },
+    metr:  { nome: 'Metralhadora', icone: '🔫', custo: 25, aco: 2,  mo: 1, manut: 0.22, vel: 0.8, vida: 100, atq: 0.6, def: 2.0, corpo: 0.7, pesquisa: 'metr',  txt: 'segura a trincheira; ataca pouco; mata cavalaria' },
+    art:   { nome: 'Artilharia', icone: '💣', custo: 35, aco: 6,  mo: 1, manut: 0.35, vel: 0.7, vida: 90,  atq: 1.6, def: 0.8, corpo: 0.3, pesquisa: 'art',   txt: 'atira de longe e fura trincheira; fraca de perto', longe: true },
+    cav:   { nome: 'Cavalaria', icone: '🐎', custo: 28, aco: 0,  mo: 1, manut: 0.30, vel: 1.6, vida: 110, atq: 0.9, def: 0.7, corpo: 1.6, pesquisa: 'cav',   txt: 'rápida e forte no corpo a corpo; morre para metralhadora' },
+    blind: { nome: 'Blindado', icone: '🚜', custo: 50, aco: 12, mo: 1, manut: 0.60, vel: 1.1, vida: 240, atq: 0.9, def: 1.0, corpo: 1.1, pesquisa: 'blind', txt: 'aguenta tiro de fuzil; só a artilharia fura', blindado: true }
 };
 const vidaMax = (s) => (TROPAS[s.tipo || 'inf'] || TROPAS.inf).vida;
 // multiplicador de dano de quem atira (tipo a) em quem leva (tipo b)
@@ -63,20 +64,22 @@ function avancarPesquisas(dt) {
 
 /* ---------- Obras nas províncias (uma de cada vez por província) ---------- */
 const OBRAS = {
-    forte:    { nome: 'Forte', icone: '🏰', custo: 40, tempo: 30, txt: '+25% de defesa e +10 de moral' },
-    ferrovia: { nome: 'Ferrovia', icone: '🚂', custo: 35, tempo: 25, txt: 'tropa chega aqui 2× mais rápido' },
-    fabrica:  { nome: 'Fábrica', icone: '🏭', custo: 45, tempo: 40, txt: '+3 moedas e +3 munição por ciclo' },
-    hospital: { nome: 'Hospital', icone: '🏥', custo: 30, tempo: 25, txt: 'soldados parados aqui se curam rápido' }
+    forte:    { nome: 'Forte', icone: '🏰', custo: 40, aco: 6, tempo: 30, txt: '+25% de defesa e +10 de moral' },
+    ferrovia: { nome: 'Ferrovia', icone: '🚂', custo: 35, aco: 5, tempo: 25, txt: 'tropa chega aqui 2× mais rápido' },
+    fabrica:  { nome: 'Fábrica', icone: '🏭', custo: 45, aco: 8, tempo: 40, txt: '+1 aço e +2 munição por ciclo' },
+    hospital: { nome: 'Hospital', icone: '🏥', custo: 30, aco: 4, tempo: 25, txt: 'soldados parados aqui se curam rápido' }
 };
 function construir(provId, obra, dono = 'jogador') {
     const p = G.prov[provId], O = OBRAS[obra], f = G.fac[dono];
     const custo = custoObra(dono, obra);
-    if (!p || p.dono !== dono || p.obra || p.obras[obra] || f.moedas < custo) return false;
-    f.moedas -= custo; p.obra = { id: obra, resta: O.tempo * (temPesq(dono, 'concreto') ? 0.7 : 1) };
+    const aco = custoObraAco(dono, obra);
+    if (!p || p.dono !== dono || p.obra || p.obras[obra] || f.moedas < custo || (f.aco || 0) < aco) return false;
+    f.moedas -= custo; f.aco -= aco; p.obra = { id: obra, resta: O.tempo * (temPesq(dono, 'concreto') ? 0.7 : 1) };
     if (dono === 'jogador') { noticia(`🏗 Obra começou em ${p.nome}: ${O.nome}.`); som('ordem'); }
     return true;
 }
 const custoObra = (dono, obra) => Math.round(OBRAS[obra].custo * (G.fase.regra === 'industria' && dono === 'jogador' ? 0.5 : 1));
+const custoObraAco = (dono, obra) => Math.round(OBRAS[obra].aco * (G.fase.regra === 'industria' && dono === 'jogador' ? 0.5 : 1));
 function avancarObras(dt) {
     Object.values(G.prov).forEach(p => {
         if (!p.obra) return;
@@ -120,6 +123,7 @@ function atualizarMoral() {
         if (p.obras.forte) alvo += 10;
         if (temPesq(p.dono, 'propaganda')) alvo += 15;
         if (G.fac[p.dono].comida <= 0) alvo -= 15;
+        if ((G.fac[p.dono].atraso || 0) >= 40) alvo -= 15; // soldo atrasado, como comida faltando
         if (G.semCapital && G.semCapital[p.dono]) alvo -= 40; // sem capital: a moral desaba e as províncias pouco guardadas se revoltam
         if (p.capital) alvo = Math.max(alvo, 90);
         alvo = Math.max(5, Math.min(100, alvo));
@@ -292,7 +296,7 @@ const UNID_INFO = {
     metr:  { papel: 'Tropa de defesa: segura a trincheira e é a pior inimiga da cavalaria.', vant: ['Defesa dobrada (2.0): ótima para guardar província', 'Causa +70% de dano na cavalaria'], desv: ['Ataca pouco (0.6) e é fraca no corpo a corpo', 'Lenta (0.8) e precisa de pesquisa'] },
     art:   { papel: 'Tropa de apoio: bate de longe e fura trincheira e blindado.', vant: ['Atira de longe: começa a causar dano antes', 'Maior ataque (1.6)', 'Fura blindado (+50% de dano)'], desv: ['Quase não luta de perto (corpo a corpo 0.3)', 'Defesa baixa (0.8) e lenta (0.7)', 'Cavalaria causa +60% de dano nela'] },
     cav:   { papel: 'Tropa de ataque rápido: chega primeiro e vence no corpo a corpo.', vant: ['A mais rápida (1.6)', 'Melhor corpo a corpo (1.6)', 'Causa +60% de dano na artilharia'], desv: ['Defesa baixa (0.7)', 'Metralhadora causa +70% de dano nela', 'Fura pouco o blindado'] },
-    blind: { papel: 'Tropa pesada: aguenta o que vier, mas só a artilharia a fura.', vant: ['Vida 240: aguenta mais que o dobro', 'Recebe só 35% do dano de tiro'], desv: ['Cara (65 moedas) e precisa de pesquisa', 'Artilharia causa +50% de dano nela', 'Ataque médio (0.9)'] }
+    blind: { papel: 'Tropa pesada: aguenta o que vier, mas só a artilharia a fura.', vant: ['Vida 240: aguenta mais que o dobro', 'Recebe só 35% do dano de tiro'], desv: ['Cara (dinheiro, muito aço e manutenção alta) e precisa de pesquisa', 'Artilharia causa +50% de dano nela', 'Ataque médio (0.9)'] }
 };
 const UNID_STATS = [['❤', 'Vida', (T) => T.vida, 240], ['⚔', 'Ataque', (T) => T.atq, 1.6], ['🛡', 'Defesa', (T) => T.def, 2], ['🥊', 'Corpo a corpo', (T) => T.corpo, 1.6], ['👟', 'Velocidade', (T) => T.vel, 1.6]];
 // Ficha de cada tropa: o que ela é, vantagens e desvantagens, e o confronto contra cada outra tropa (dano que causa × dano que recebe)
@@ -304,7 +308,7 @@ function fichaTropa(t) {
         return `<div class="fm"><span>${B.icone} ${B.nome}</span><span>causa ×${causa.toFixed(2).replace(/\.?0+$/, '')} · recebe ×${recebe.toFixed(2).replace(/\.?0+$/, '')}</span><b style="color:${v[2]}">${v[1]}</b></div>`;
     }).join('');
     return `<div class="ficha"><div class="fp">${I.papel}</div>${UNID_STATS.map(([i, n, f, max]) => `<div class="fl"><span>${i} ${n}</span><span class="fb"><i style="width:${Math.min(100, Math.round(100 * f(T) / max))}%"></i></span><b>${f(T)}</b></div>`).join('')}
-        <div class="fx">🎯 Alcance: <b>${T.longe ? 'longo (atira de longe)' : 'curto'}</b> · custo <b>${T.custo}🪙</b></div>
+        <div class="fx">🎯 Alcance: <b>${T.longe ? 'longo (atira de longe)' : 'curto'}</b><br>💰 Custo: <b>${custoTxt(t)}</b> e <b>1 👥</b> de mão de obra · manutenção <b>${T.manut.toFixed(2).replace(/0$/, '')}🪙</b> por ciclo</div>
         <div class="fv"><b style="color:#7bc96f">+ Vantagens</b>${I.vant.map(x => `<div>• ${x}</div>`).join('')}</div>
         <div class="fv"><b style="color:#e0705f">− Desvantagens</b>${I.desv.map(x => `<div>• ${x}</div>`).join('')}</div>
         <div class="fv"><b>⚔ Contra cada tropa</b>${linhas}<small>×1 = dano normal. Pesa também o corpo a corpo.</small></div></div>`;
@@ -323,23 +327,26 @@ function painelVidaTropas(e) {
     });
     return h + '</div>';
 }
+// Custo de uma tropa em texto: dinheiro, aço e a vaga de mão de obra
+const custoTxt = (t, n = 1) => `${TROPAS[t].custo * n}🪙${TROPAS[t].aco ? ' ' + TROPAS[t].aco * n + '⚙️' : ''}`;
 function painelRecrutar(provId) {
-    const p = G.prov[provId], f = G.fac.jogador;
-    let h = `<div class="titulo"><span>🪖 Recrutar em ${p.nome}</span><span class="dono">${tropaDe('jogador')} na tropa</span></div><div class="lista-tropas">`;
+    const p = G.prov[provId];
+    let h = `<div class="titulo"><span>🪖 Recrutar em ${p.nome}</span><span class="dono">👥 ${maoDeObraUsada('jogador')}/${maoDeObraMax('jogador')} · ${G.fac.jogador.moedas | 0}🪙 ${G.fac.jogador.aco | 0}⚙️</span></div><div class="lista-tropas">`;
     Object.entries(TROPAS).forEach(([t, T]) => {
-        const lib = tropaLiberada('jogador', t), c1 = custoRecrutarTipo('jogador', t), c5 = custoVariosTipo('jogador', t, 5);
-        h += `<div class="linha-tropa${lib ? '' : ' trancada'}"><div class="txt"><b>${T.icone} ${T.nome} <button class="info-i" onclick="G.fichaTipo=G.fichaTipo==='${t}'?null:'${t}';renderPainel()" title="Ficha da tropa">ℹ</button></b><small>${lib ? T.txt : '🔒 pesquise ' + PESQUISAS[T.pesquisa].nome}</small></div>
-            ${lib ? `<button class="mini" onclick="recrutar('${p.id}',1,'${t}');renderPainel()" ${f.moedas < c1 ? 'disabled' : ''}>+1<small>${c1}🪙</small></button><button class="mini" onclick="recrutar('${p.id}',5,'${t}');renderPainel()" ${f.moedas < c5 ? 'disabled' : ''}>+5<small>${c5}🪙</small></button>` : ''}</div>${G.fichaTipo === t ? fichaTropa(t) : ''}`;
+        const lib = tropaLiberada('jogador', t), m1 = motivoSemRecrutar('jogador', t, 1), m5 = motivoSemRecrutar('jogador', t, 5);
+        const sub = lib ? `${custoTxt(t)} · 1 👥 · paga ${T.manut.toFixed(2).replace(/0$/, '')}🪙/ciclo${m1 ? ` · <span style="color:#e3a37b">${m1}</span>` : ''}` : '🔒 pesquise ' + PESQUISAS[T.pesquisa].nome;
+        h += `<div class="linha-tropa${lib ? '' : ' trancada'}"><div class="txt"><b>${T.icone} ${T.nome} <button class="info-i" onclick="G.fichaTipo=G.fichaTipo==='${t}'?null:'${t}';renderPainel()" title="Ficha da tropa">ℹ</button></b><small>${T.txt}</small><small>${sub}</small></div>
+            ${lib ? `<button class="mini" onclick="recrutar('${p.id}',1,'${t}');renderPainel()" ${m1 ? 'disabled' : ''}>+1<small>${custoTxt(t)}</small></button><button class="mini" onclick="recrutar('${p.id}',5,'${t}');renderPainel()" ${m5 ? 'disabled' : ''}>+5<small>${custoTxt(t, 5)}</small></button>` : ''}</div>${G.fichaTipo === t ? fichaTropa(t) : ''}`;
     });
     return h + `</div><div class="acoes">${botao('← Voltar', '', `G.sel={tipo:'prov',id:'${p.id}'};renderPainel()`)}</div>`;
 }
 function painelObras(provId) {
-    const p = G.prov[provId], f = G.fac.jogador;
+    const p = G.prov[provId];
     let h = `<div class="titulo"><span>🏗 Obras em ${p.nome}</span><span class="dono">${p.obra ? `${OBRAS[p.obra.id].icone} faltam ${Math.ceil(p.obra.resta)}s` : 'nenhuma em andamento'}</span></div><div class="lista-tropas">`;
     Object.entries(OBRAS).forEach(([id, O]) => {
-        const feito = p.obras[id], c = custoObra('jogador', id);
+        const feito = p.obras[id], c = custoObra('jogador', id), ca = custoObraAco('jogador', id), f = G.fac.jogador;
         h += `<div class="linha-tropa${feito ? ' trancada' : ''}"><div class="txt"><b>${O.icone} ${O.nome}</b><small>${feito ? '✔ pronto' : O.txt + ` · ${Math.round(O.tempo * (temPesq('jogador', 'concreto') ? 0.7 : 1))}s`}</small></div>
-            ${feito ? '' : `<button class="mini" onclick="construir('${p.id}','${id}');renderPainel()" ${p.obra || f.moedas < c ? 'disabled' : ''}>Construir<small>${c}🪙</small></button>`}</div>`;
+            ${feito ? '' : `<button class="mini" onclick="construir('${p.id}','${id}');renderPainel()" ${p.obra || f.moedas < c || (f.aco || 0) < ca ? 'disabled' : ''}>Construir<small>${c}🪙 ${ca}⚙️</small></button>`}</div>`;
     });
     return h + `</div><div class="acoes">${botao('← Voltar', '', `G.sel={tipo:'prov',id:'${p.id}'};renderPainel()`)}</div>`;
 }
@@ -390,3 +397,37 @@ function painelEscolherGeneral(exId) {
     return h + `</div><div class="acoes">${botao('Sem general', '', `designarGeneral('${exId}',null);G.sel={tipo:'ex',id:'${exId}'};renderPainel()`)}${botao('← Voltar', '', `G.sel={tipo:'ex',id:'${exId}'};renderPainel()`)}</div>`;
 }
 const composicao = (s) => Object.entries(s.reduce((t, x) => (t[x.tipo || 'inf'] = (t[x.tipo || 'inf'] || 0) + 1, t), {})).map(([t, n]) => `${TROPAS[t].icone}${n}`).join(' ');
+
+/* ---------- Painel Economia e dispensar tropa ---------- */
+function abrirEconomia() { if (!G) return; G.sel = { tipo: 'economia' }; G.pendente = null; G.modo = null; renderPainel(); }
+function painelEconomia() {
+    const f = G.fac.jogador, tropa = tropaDe('jogador'), porcao = temPesq('jogador', 'racoes') ? 0.7 : 1;
+    const ent = (k) => rendaDe('jogador', k), manut = manutencaoDe('jogador'), come = tropa / (C.COME_ALIVIA / C.FOME_CICLO) * porcao;
+    const fmt = (v) => (Math.round(v * 10) / 10).toString().replace('.', ',');
+    const sinal = (v) => (v >= 0 ? '+' : '−') + fmt(Math.abs(v));
+    const linha = (ic, nome, estoque, entra, sai, nota) => {
+        const saldo = entra - sai, cor = saldo < 0 ? '#ff8a7a' : '#9fd08f';
+        return `<div class="el"><span title="${nome}">${ic} ${nome}</span><span>${estoque}</span><span>${entra == null ? '—' : '+' + fmt(entra)}</span><span>${sai == null ? '—' : '−' + fmt(sai)}</span><b style="color:${entra == null ? 'inherit' : cor}">${entra == null ? nota : sinal(saldo)}</b></div>`;
+    };
+    const porTipo = Object.entries(TROPAS).map(([t, T]) => { const n = exDe('jogador').reduce((c, e) => c + e.s.filter(x => (x.tipo || 'inf') === t).length, 0); return n ? `${T.icone}${n} (${fmt(n * T.manut)}🪙)` : ''; }).filter(Boolean).join(' · ') || 'sem tropa';
+    const atraso = f.atraso || 0;
+    return `<div class="titulo"><span>📊 Economia</span><span class="dono">valores por ciclo de ${C.CICLO}s</span></div>
+        <div class="eco"><div class="eh"><span></span><span>Estoque</span><span>Entra</span><span>Sai</span><span>Saldo</span></div>
+        ${linha('🍞', 'Comida', Math.floor(f.comida), ent('comida'), come)}
+        ${linha('🔫', 'Munição', Math.floor(f.mun), ent('mun'), null, 'gasta em batalha')}
+        ${linha('🪙', 'Dinheiro', Math.floor(f.moedas), ent('moedas'), manut)}
+        ${linha('⚙️', 'Aço', Math.floor(f.aco || 0), ent('aco'), null, 'só ao criar/obras')}
+        <div class="el"><span>👥 Mão de obra</span><span>${maoDeObraUsada('jogador')}/${maoDeObraMax('jogador')}</span><span colspan="3" style="grid-column: span 3; text-align:right"><b style="color:${maoDeObraLivre('jogador') ? '#9fd08f' : '#ff8a7a'}">${maoDeObraLivre('jogador')} livres</b></span></div></div>
+        ${atraso > 0 ? `<div class="info" style="color:#ffb36b">⚠ <b>Soldo atrasado (${Math.round(atraso)}%)</b>: a tropa rende menos${atraso >= 40 ? ', a moral das províncias cai' : ''}${atraso >= C.ATRASO_DESERTA ? ' e soldados estão desertando' : ''}. Falta dinheiro para a manutenção: recrute menos, dispense tropa ou produza mais dinheiro.</div>` : `<div class="info">✔ Soldo em dia. A manutenção de <b>${fmt(manut)}🪙</b> por ciclo sai do dinheiro; se faltar, o soldo atrasa e a tropa desanima.</div>`}
+        <div class="info"><b>Manutenção por tropa:</b> ${porTipo}<br><b>Mão de obra:</b> cada província sustenta um máximo de soldados (campo 6, cidade 8, capital 14, floresta e morro 4). Soldado morto ou dispensado devolve a vaga.<br><b>Aço:</b> só vai em tropa pesada e obras. Morros e a obra Fábrica produzem mais.</div>
+        <div class="acoes">${botao('✖ Fechar', '', `G.sel={tipo:'prov',id:G.capitalJogador};renderPainel()`)}</div>`;
+}
+function painelDispensar(exId) {
+    const e = G.ex.find(x => x.id === exId); if (!e) { G.sel = { tipo: 'prov', id: G.capitalJogador }; return ''; }
+    const n = e.s.length, manut = e.s.reduce((t, s) => t + TROPAS[s.tipo || 'inf'].manut, 0);
+    const op = (q, txt) => botao(txt, q >= n ? 'dispensa o exército inteiro' : 'os mais fracos saem primeiro', `if (${q >= n} ? confirm('Dispensar o exército inteiro (${n} soldados)?') : true) dispensar('${e.id}', ${q});renderPainel()`);
+    return `<div class="titulo"><span>🚪 Dispensar tropa</span><span class="dono">${n} soldados · manutenção ${manut.toFixed(1).replace('.', ',')}🪙/ciclo</span></div>
+        <div class="info">Dispensar devolve a <b>mão de obra</b> e economiza a <b>manutenção</b>, mas não devolve o dinheiro nem o aço gastos para criar a tropa. Saem primeiro os soldados mais fracos.</div>
+        <div class="acoes">${op(1, '🚪 Dispensar 1')}${n > 5 ? op(5, '🚪 Dispensar 5') : ''}${n > 2 ? op(Math.floor(n / 2), `🚪 Metade (${Math.floor(n / 2)})`) : ''}${op(n, '🚪 Todos')}</div>
+        <div class="acoes">${botao('← Voltar', '', `G.sel={tipo:'ex',id:'${e.id}'};renderPainel()`)}</div>`;
+}

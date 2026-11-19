@@ -295,11 +295,11 @@ function jogar({ N, FASE, EST }) {
             const cp = G.prov[c], base = producaoDe(cp);
             r.producaoDaCapital = base.comida === 3 && base.mun === 5 && base.moedas === 6;
             cp.obras.fabrica = true; const comFab = producaoDe(cp); cp.obras.fabrica = false;
-            r.fabricaSoma3 = comFab.mun === 8 && comFab.moedas === 9 && comFab.comida === 3;
+            r.fabricaSoma3 = comFab.mun === 7 && comFab.moedas === 6 && comFab.comida === 3 && Math.abs(comFab.aco - (0.5 + 1)) < 0.01; // fábrica: +2 munição e +1 aço (o dinheiro vem só da província)
             const m0 = cp.moral; cp.moral = 0; const baixa = producaoDe(cp); cp.moral = m0;
             r.moralBaixaRende30 = Math.abs(baixa.moedas - 6 * 0.3) < 0.01;
             const textos = []; const ft = cxM.fillText.bind(cxM); cxM.fillText = (t, ...a) => { textos.push(String(t)); return ft(t, ...a); }; desenharMapa(); cxM.fillText = ft;
-            r.mapaMostraAProducao = textos.some(t => /^\+3🍞 \+5🔫 \+6🪙$/.test(t));
+            r.mapaMostraAProducao = textos.some(t => /^\+3🍞 \+5🔫 \+6🪙( \+0\.5⚙️)?$/.test(t)); // o aço aparece depois do dinheiro
             // ficha da tropa no painel de recrutar
             G.sel = { tipo: 'recrutar', id: c }; G.fichaTipo = null; renderPainel();
             const pn = document.getElementById('painel'); r.fichaTemBotaoParaCadaTropa = pn.querySelectorAll('.info-i').length === 5 && !pn.querySelector('.ficha');
@@ -361,7 +361,7 @@ function jogar({ N, FASE, EST }) {
         // obra: fábrica aumenta as moedas
         const antes = () => { const m0 = G.fac.jogador.moedas; cicloEconomia(); return G.fac.jogador.moedas - m0; };
         const sem = antes(); construir(cap.id, 'fabrica'); for (let i = 0; i < 100 && !cap.obras.fabrica; i++) passoMapa(0.5);
-        r.fabricaProduzMais = cap.obras.fabrica && antes() > sem + 2;
+        r.fabricaProduzMais = cap.obras.fabrica && producaoDe(cap).aco > C.PROD.capital.aco + 0.5; // a fábrica aumenta o aço
         // moral: província longe, recém-conquistada e sem guarda se revolta
         const longe = Object.values(G.prov).filter(q => !q.capital && q.dono === 'neutro').sort((a, b) => Math.hypot(b.x - cap.x, b.y - cap.y) - Math.hypot(a.x - cap.x, a.y - cap.y))[0];
         G.ex = G.ex.filter(e => e.prov !== longe.id); conquistar(longe, 'jogador', null);
@@ -414,8 +414,8 @@ function jogar({ N, FASE, EST }) {
             const t0 = G.t; passoMapa(1); r.mapaNaoPara = G.t > t0;
             G.sel = { tipo: 'prov', id: alvo.id }; renderPainel();
             r.painelMostraBatalha = /Batalha em/.test(document.getElementById('painel').textContent);
-            G.fac.jogador.moedas = 100; acaoBatalha(alvo.id, 'cobertura'); acaoBatalha(alvo.id, 'art');
-            r.ordensNaBatalha = b.postAtq === 'cobertura' && b.usouArt && G.fac.jogador.moedas === 100 - C.ARTILHARIA;
+            G.fac.jogador.mun = 100; acaoBatalha(alvo.id, 'cobertura'); acaoBatalha(alvo.id, 'art');
+            r.ordensNaBatalha = b.postAtq === 'cobertura' && b.usouArt && G.fac.jogador.mun === 100 - C.ARTILHARIA_MUN; // a barragem gasta munição
             G.pausado = true; const bt0 = b.t; r.pausaParaABatalha = (() => { /* com o mapa pausado o laço não chama passoMapa */ return true; })();
             G.pausado = false; acaoBatalha(alvo.id, 'avancar');
             for (let i = 0; i < 2000 && G.batalhas.length; i++) passoMapa(0.25);

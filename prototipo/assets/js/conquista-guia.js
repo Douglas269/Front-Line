@@ -109,10 +109,10 @@
             { txt: 'O painel mostra a <b>previsão da batalha</b>: sua força contra a defesa estimada do inimigo. Se der risco, toque em <b>todos</b> para mandar a tropa inteira.', alvo: () => document.querySelector('#painel .prev'), botao: 'Entendi' },
             { txt: 'Toque em <b>Confirmar</b> para mandar a tropa.', alvo: () => botaoPainel('Confirmar'), ok: () => G.ex.some(e => e.dono === 'jogador' && e.rota.length) },
             { txt: 'A tropa marcha e luta sozinha. Agora toque na sua <b>capital ★</b> (no ponto piscando, acima dos soldados) para ver o que dá para fazer nela.', alvo: () => cap && (({ x, y }) => ({ x, y: y - 34, r: 28 }))(ptMapa(cap.x, cap.y, 0)), ok: () => G.sel && G.sel.tipo === 'prov' && G.prov[G.sel.id] && G.prov[G.sel.id].dono === 'jogador' },
-            { txt: 'Toque em <b>Recrutar…</b> para escolher que tropa criar (precisa de moedas 🪙).', alvo: () => botaoPainel('Recrutar…'), ok: () => G.sel && G.sel.tipo === 'recrutar' },
+            { txt: 'Toque em <b>Recrutar…</b> para escolher que tropa criar. Cada tropa custa <b>dinheiro 🪙</b> (as pesadas também <b>aço ⚙️</b>), ocupa <b>1 vaga de mão de obra 👥</b> e paga <b>manutenção</b> a cada ciclo.', alvo: () => botaoPainel('Recrutar…'), ok: () => G.sel && G.sel.tipo === 'recrutar' },
             { txt: 'Cada tropa tem pontos fortes e fracos. Toque no <b>ℹ</b> da Infantaria para ver a ficha dela.', alvo: () => document.querySelector('#painel .info-i'), ok: () => !!G.fichaTipo },
-            { txt: 'Leia as vantagens e desvantagens e o quadro <b>Contra cada tropa</b>. Depois toque em <b>← Voltar</b>.', alvo: () => botaoPainel('Voltar'), ok: () => G.sel && G.sel.tipo === 'prov', pularApos: 40 },
-            { txt: 'Pronto! <b>Tome as capitais ★ inimigas</b> para vencer e proteja a sua. Toque no <b>⏸</b> para pausar quando quiser pensar, e em <b>1×</b> para acelerar. Boa sorte!', botao: 'Concluir' }
+            { txt: 'Leia o custo, as vantagens e desvantagens e o quadro <b>Contra cada tropa</b>. Depois toque em <b>← Voltar</b>.', alvo: () => botaoPainel('Voltar'), ok: () => G.sel && G.sel.tipo === 'prov', pularApos: 40 },
+            { txt: 'Pronto! <b>Tome as capitais ★ inimigas</b> para vencer e proteja a sua. Toque no <b>⏸</b> para pausar quando quiser pensar, e em qualquer recurso do topo (🍞 🪙 ⚙️ 👥) para ver a <b>economia</b>: o que entra, o que sai e a manutenção da tropa. Boa sorte!', botao: 'Concluir' }
         ];
     }
     function terminarGuia() { marcarFeito(); try { pausar(false); } catch (e) {} }

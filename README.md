@@ -34,6 +34,13 @@ Jogo de estratégia tático com foco em realismo de comando, combate blindado e 
 - O jogo continua salvando no aparelho e espelha na nuvem a cada 30 s de jogo e na hora ao virar o dia, pausar, subir de nível, terminar a partida ou fechar o tutorial. Ao entrar, fica com o salvamento mais recente entre aparelho e nuvem; o progresso de convidado passa para a conta no primeiro login. Sem internet, segue como convidado.
 - O navegador usa só a chave pública (publishable) do Supabase; a proteção dos dados vem das políticas RLS.
 
+### Economia da Conquista (dinheiro, aço, mão de obra, comida, munição)
+- **Dinheiro 🪙:** cria a tropa e paga a **manutenção** de cada soldado a cada ciclo (5 s). Sem dinheiro, o **soldo atrasa**, com a mesma lógica da fome: a eficácia cai, a moral das províncias cai e, no extremo (atraso ≥ 80%), soldados desertam. Pagando em dia, o atraso some.
+- **Aço ⚙️:** só no custo de criar tropa pesada (metralhadora 2, artilharia 6, blindado 12) e de obras e fortificar. Vem de morros, capital, cidades e da obra Fábrica.
+- **Mão de obra 👥:** limite de soldados (usado/máximo). Cada província sustenta: capital 14, cidade 8, campo 6, floresta 4, morro 4. Soldado morto ou dispensado devolve a vaga; "Dispensar" está no painel do exército.
+- **Comida 🍞** (regra anterior) e **munição 🔫** (batalha e barragem de artilharia, que agora gasta 40 de munição).
+- Topo com os cinco recursos; tocar em qualquer um abre o painel **Economia** (estoque, entra, sai e saldo por ciclo). Números em `C` (`conquista.js`) e `TROPAS` (`conquista-extra.js`); bots só recrutam se a renda aguenta a manutenção. Combustível fica para uma fase futura. Saves antigos são migrados (aço inicial). Simulação: `sim/economia.js` (scratch); teste: `node tests/economia.js`.
+
 ### Menu principal (conta, configurações e créditos)
 Em `ponto-alpha.html` (`#tela-modos`): barra de cima com o cartão de **conta** (esquerda) e o botão de **configurações** (direita), os três modos no meio e, embaixo, **Créditos** e a versão. Ao abrir o jogo pela primeira vez, a **tela de entrada é obrigatória** (`#tela-login.porta`): entrar na conta ou jogar como convidado (a escolha fica salva no aparelho; "Sair da conta" volta a pedir). Depois, o login é uma folha opcional aberta pelo cartão de conta. Só a página principal tem a porta de entrada: `conquista.html` e `duelo.html` abertos direto não passam por ela. Dentro do Trincheiras ficaram só Menu, configurações e som. O tutorial só começa depois de entrar no Trincheiras.
 
