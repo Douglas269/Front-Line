@@ -197,7 +197,7 @@ function transmitirEstado() {
         prov: ids.map(id => { const p = G.prov[id]; return [p.dono, TIPOS_PROV.indexOf(p.tipo), Math.round(p.trinch), Math.round(p.moral), OBRAS_IDX.reduce((m, o, i) => m | (p.obras[o] ? 1 << i : 0), 0), p.obra ? [OBRAS_IDX.indexOf(p.obra.id), Math.ceil(p.obra.resta)] : 0, p.capital ? 1 : 0]; }),
         bat: batalhasParaDesenho(),
         ex: G.ex.map(e => [e.id, e.dono, e.prov, Math.round(e.x), Math.round(e.y), e.rota, e.missao, e.semSuprimento ? 1 : 0, e.general ? 1 : 0, e.s.flatMap(s => [TIPOS_S.indexOf(s.tipo || 'inf'), Math.round(s.vida), Math.round(s.fome), Math.round(s.cansaco)]), e.emBatalha ? 1 : 0, e.aguarda || null]),
-        fac: Object.fromEntries(Object.entries(G.fac).map(([d, f]) => [d, [Math.floor(f.comida), Math.floor(f.mun), Math.floor(f.moedas), Math.floor(f.aco || 0), Math.round(f.atraso || 0)]])),
+        fac: Object.fromEntries(Object.entries(G.fac).map(([d, f]) => [d, [Math.floor(f.comida), Math.floor(f.mun), Math.floor(f.moedas), Math.floor(f.aco || 0), Math.round(f.atraso || 0), Math.floor(f.comb || 0)]])),
         pesq: Object.fromEntries(Object.entries(G.pesq).map(([d, st]) => [d, [Object.keys(st.feitas), st.atual ? st.atual.id : null, st.atual ? Math.ceil(st.atual.resta) : 0]])),
         intel: Object.fromEntries(Object.entries(G.intel || {}).map(([d, I]) => [d, { e: I.espiado, r: I.revelado, s: I.espioes.map(s => [s.para, Math.round(s.x), Math.round(s.y)]) }])),
         hostIntel: { e: G.espiado, r: G.revelado }, // para quem quiser ver o que o anfitrião espionou (não usado nos clientes)
@@ -228,7 +228,7 @@ function aplicarEstado(m) {
     });
     if (selAntes && !G.ex.some(e => e.id === selAntes)) G.sel = { tipo: 'prov', id: G.capitalJogador };
     G.batalhasVis = (m.bat || []).map(b => ({ ...b, atq: L(b.atq), def: L(b.def) }));
-    G.fac = Object.fromEntries(Object.entries(m.fac).map(([d, f]) => [L(d), { comida: f[0], mun: f[1], moedas: f[2], aco: f[3] || 0, atraso: f[4] || 0 }]));
+    G.fac = Object.fromEntries(Object.entries(m.fac).map(([d, f]) => [L(d), { comida: f[0], mun: f[1], moedas: f[2], aco: f[3] || 0, atraso: f[4] || 0, comb: f[5] || 0 }]));
     G.pesq = Object.fromEntries(Object.entries(m.pesq).map(([d, st]) => [L(d), { feitas: Object.fromEntries(st[0].map(x => [x, true])), atual: st[1] ? { id: st[1], resta: st[2] } : null }]));
     G.eliminados = Object.fromEntries(Object.entries(m.eliminados || {}).map(([d, v]) => [L(d), v]));
     const I = (m.intel || {})[minha] || { e: {}, r: {}, s: [] };

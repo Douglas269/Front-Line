@@ -296,7 +296,7 @@ const UNID_INFO = {
     metr:  { papel: 'Tropa de defesa: segura a trincheira e é a pior inimiga da cavalaria.', vant: ['Defesa dobrada (2.0): ótima para guardar província', 'Causa +70% de dano na cavalaria'], desv: ['Ataca pouco (0.6) e é fraca no corpo a corpo', 'Lenta (0.8) e precisa de pesquisa'] },
     art:   { papel: 'Tropa de apoio: bate de longe e fura trincheira e blindado.', vant: ['Atira de longe: começa a causar dano antes', 'Maior ataque (1.6)', 'Fura blindado (+50% de dano)'], desv: ['Quase não luta de perto (corpo a corpo 0.3)', 'Defesa baixa (0.8) e lenta (0.7)', 'Cavalaria causa +60% de dano nela'] },
     cav:   { papel: 'Tropa de ataque rápido: chega primeiro e vence no corpo a corpo.', vant: ['A mais rápida (1.6)', 'Melhor corpo a corpo (1.6)', 'Causa +60% de dano na artilharia'], desv: ['Defesa baixa (0.7)', 'Metralhadora causa +70% de dano nela', 'Fura pouco o blindado'] },
-    blind: { papel: 'Tropa pesada: aguenta o que vier, mas só a artilharia a fura.', vant: ['Vida 240: aguenta mais que o dobro', 'Recebe só 35% do dano de tiro'], desv: ['Cara (dinheiro, muito aço e manutenção alta) e precisa de pesquisa', 'Artilharia causa +50% de dano nela', 'Ataque médio (0.9)'] }
+    blind: { papel: 'Tropa pesada: aguenta o que vier, mas só a artilharia a fura.', vant: ['Vida 240: aguenta mais que o dobro', 'Recebe só 35% do dano de tiro'], desv: ['Cara (dinheiro, muito aço e manutenção alta) e precisa de pesquisa', 'Artilharia causa +50% de dano nela', 'Gasta ⛽ combustível em marcha e ataque; sem ele anda a 25% e atira com metade da chance'] }
 };
 const UNID_STATS = [['❤', 'Vida', (T) => T.vida, 240], ['⚔', 'Ataque', (T) => T.atq, 1.6], ['🛡', 'Defesa', (T) => T.def, 2], ['🥊', 'Corpo a corpo', (T) => T.corpo, 1.6], ['👟', 'Velocidade', (T) => T.vel, 1.6]];
 // Ficha de cada tropa: o que ela é, vantagens e desvantagens, e o confronto contra cada outra tropa (dano que causa × dano que recebe)
@@ -402,7 +402,7 @@ const composicao = (s) => Object.entries(s.reduce((t, x) => (t[x.tipo || 'inf'] 
 function abrirEconomia() { if (!G) return; G.sel = { tipo: 'economia' }; G.pendente = null; G.modo = null; renderPainel(); }
 function painelEconomia() {
     const f = G.fac.jogador, tropa = tropaDe('jogador'), porcao = temPesq('jogador', 'racoes') ? 0.7 : 1;
-    const ent = (k) => rendaDe('jogador', k), manut = manutencaoDe('jogador'), come = tropa / (C.COME_ALIVIA / C.FOME_CICLO) * porcao;
+    const ent = (k) => rendaDe('jogador', k), manut = manutencaoDe('jogador'), come = tropa / (C.COME_ALIVIA / C.FOME_CICLO) * porcao, combGasto = f.combGasto || 0;
     const fmt = (v) => (Math.round(v * 10) / 10).toString().replace('.', ',');
     const sinal = (v) => (v >= 0 ? '+' : '−') + fmt(Math.abs(v));
     const linha = (ic, nome, estoque, entra, sai, nota) => {
@@ -417,6 +417,7 @@ function painelEconomia() {
         ${linha('🔫', 'Munição', Math.floor(f.mun), ent('mun'), null, 'gasta em batalha')}
         ${linha('🪙', 'Dinheiro', Math.floor(f.moedas), ent('moedas'), manut)}
         ${linha('⚙️', 'Aço', Math.floor(f.aco || 0), ent('aco'), null, 'só ao criar/obras')}
+        ${linha('⛽', 'Combustível', Math.floor(f.comb || 0), ent('comb'), combGasto, f.combDef ? 'acabou: blindados andam devagar' : 'só blindado em marcha')}
         <div class="el"><span>👥 Mão de obra</span><span>${maoDeObraUsada('jogador')}/${maoDeObraMax('jogador')}</span><span colspan="3" style="grid-column: span 3; text-align:right"><b style="color:${maoDeObraLivre('jogador') ? '#9fd08f' : '#ff8a7a'}">${maoDeObraLivre('jogador')} livres</b></span></div></div>
         ${atraso > 0 ? `<div class="info" style="color:#ffb36b">⚠ <b>Soldo atrasado (${Math.round(atraso)}%)</b>: a tropa rende menos${atraso >= 40 ? ', a moral das províncias cai' : ''}${atraso >= C.ATRASO_DESERTA ? ' e soldados estão desertando' : ''}. Falta dinheiro para a manutenção: recrute menos, dispense tropa ou produza mais dinheiro.</div>` : `<div class="info">✔ Soldo em dia. A manutenção de <b>${fmt(manut)}🪙</b> por ciclo sai do dinheiro; se faltar, o soldo atrasa e a tropa desanima.</div>`}
         <div class="info"><b>Manutenção por tropa:</b> ${porTipo}<br><b>Mão de obra:</b> cada província sustenta um máximo de soldados (campo 6, cidade 8, capital 14, floresta e morro 4). Soldado morto ou dispensado devolve a vaga.<br><b>Aço:</b> só vai em tropa pesada e obras. Morros e a obra Fábrica produzem mais.</div>
@@ -430,4 +431,58 @@ function painelDispensar(exId) {
         <div class="info">Dispensar devolve a <b>mão de obra</b> e economiza a <b>manutenção</b>, mas não devolve o dinheiro nem o aço gastos para criar a tropa. Saem primeiro os soldados mais fracos.</div>
         <div class="acoes">${op(1, '🚪 Dispensar 1')}${n > 5 ? op(5, '🚪 Dispensar 5') : ''}${n > 2 ? op(Math.floor(n / 2), `🚪 Metade (${Math.floor(n / 2)})`) : ''}${op(n, '🚪 Todos')}</div>
         <div class="acoes">${botao('← Voltar', '', `G.sel={tipo:'ex',id:'${e.id}'};renderPainel()`)}</div>`;
+}
+
+const escNome = (t) => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+/* ---------- Painel da unidade (estilo Call of War): cabeçalho, combate, logística e composição ---------- */
+function separarRegimentos(exId, n, dono = 'jogador') {
+    const e = G.ex.find(x => x.id === exId);
+    if (!e || e.dono !== dono || e.emBatalha || e.rota.length || e.s.length < 2) return null;
+    n = Math.max(1, Math.min(n, e.s.length - 1));
+    const saem = e.s.slice().sort((a, b) => eficacia(b) - eficacia(a)).slice(-n); // separa os mais fracos (ficam os melhores)
+    e.s = e.s.filter(x => !saem.includes(x));
+    const novo = criarExercito(dono, e.prov, 0, saem);
+    novo.nome = 'Separado de ' + (e.nome || 'exército');
+    noticia(`🪖 ${n} regimento${n > 1 ? 's' : ''} separado${n > 1 ? 's' : ''} de ${e.nome || 'um exército'}.`);
+    return novo;
+}
+function renomearFormacao(exId, nome) {
+    const e = G.ex.find(x => x.id === exId); if (!e) return false;
+    e.nome = String(nome || '').trim().slice(0, 28) || null; return true;
+}
+function painelUnidadeDetalhe(e) {
+    const q = e.s.length, nivel = FrontLineUnidades.nivelFormacao(q), U = FrontLineUnidades.TIPOS_UNIDADE;
+    const hp = e.s.reduce((t, x) => t + Math.max(0, x.vida), 0), hpMax = e.s.reduce((t, x) => t + vidaMax(x), 0);
+    const pct = (v) => Math.max(0, Math.min(100, Math.round(v)));
+    const p = G.prov[e.prov];
+    const contagem = {}; e.s.forEach(x => { const t = x.tipo || 'inf'; contagem[t] = (contagem[t] || 0) + 1; });
+    const temBlind = !!contagem.blind, temArt = !!contagem.art;
+    const estado = e.emBatalha ? (e.aguarda ? 'aguardando a vez' : '⚔ atacando') : e.rota.length ? 'marchando' : e.semSuprimento ? 'sem suprimentos' : (p && p.dono === 'jogador' && p.trinch >= 60 ? 'entrincheirado' : 'parado');
+    // ataque por classe de alvo: média dos tipos presentes contra infantaria (leve) e contra blindado (pesado)
+    const media = (alvo) => { const ts = Object.keys(contagem); return ts.reduce((t, k) => t + danoContra(k, alvo) * TROPAS[k].atq * contagem[k], 0) / Math.max(1, q); };
+    const vsLeve = media('inf'), vsPesado = media('blind');
+    const vel = velEx(e);
+    const terreno = [];
+    if (contagem.inf) terreno.push('infantaria defendendo: +30% em cidade, +25% em floresta, +15% em morro');
+    if (contagem.blind) terreno.push('blindado atacando: +25% em campo (planície)');
+    const logi = { dinheiro: e.s.reduce((t, x) => t + TROPAS[x.tipo || 'inf'].manut, 0), comida: q / (C.COME_ALIVIA / C.FOME_CICLO) * (temPesq('jogador', 'racoes') ? 0.7 : 1), comb: temBlind && (e.rota.length || e.emBatalha) ? (contagem.blind || 0) * C.COMB_BLIND_CICLO : 0 };
+    const comp = Object.entries(contagem).map(([t, n]) => `${TROPAS[t].icone} ${TROPAS[t].nome} ×${n}`).join(' · ');
+    return `<div class="ud">
+        <div class="ud-h"><span class="ud-sim">${nivel ? nivel.simbolo : ''}</span><input class="ud-nome" maxlength="28" value="${escNome(e.nome || nivel.nome)}" placeholder="${nivel.nome}" onchange="renomearFormacao('${e.id}', this.value);renderPainel()" title="Toque para renomear"><span class="ud-est">${estado}</span></div>
+        <div class="ud-barra"><span>❤ Vida</span><span class="fb"><i style="width:${pct(hpMax ? 100 * hp / hpMax : 0)}%;background:#7bc96f"></i></span><b>${pct(hpMax ? 100 * hp / hpMax : 0)}%</b></div>
+        <div class="ud-barra"><span>🛡 Moral</span><span class="fb"><i style="width:${p ? pct(p.moral) : 0}%;background:${p && p.moral < 35 ? '#e0533f' : '#e3b04b'}"></i></span><b>${p ? Math.round(p.moral) : 0}%</b></div>
+        <div class="ud-sec"><b>⚔ Combate</b>
+            <div>Ataque vs leve (infantaria): <b>${vsLeve.toFixed(1)}</b> · vs pesado (blindado): <b>${vsPesado.toFixed(1)}</b></div>
+            <div>Alcance: <b>${temArt ? 'longo (artilharia)' : 'curto'}</b> · Velocidade: <b>${vel.toFixed(1)}</b> ${temBlind && (G.fac.jogador.comb || 0) <= 0 ? '<span style="color:#ff8a7a">(sem combustível)</span>' : ''}</div>
+            <div class="ud-t">${terreno.join(' · ') || '—'}</div>
+            ${q > C.STACK_LIMITE ? `<div style="color:#e3b04b">⚠ Excesso de tropas: eficiência ${Math.round(FrontLineUnidades.eficienciaStack(q) * 100)}%</div>` : ''}
+        </div>
+        <div class="ud-sec"><b>📦 Logística (por ciclo de ${C.CICLO}s)</b>
+            <div>💰 Manutenção: <b>${logi.dinheiro.toFixed(2)}</b> · 🍞 Comida: <b>${logi.comida.toFixed(1)}</b> · ⛽ Combustível: <b>${logi.comb}</b> ${temBlind ? '(só em marcha ou ataque)' : ''}</div>
+            <div>👥 Mão de obra alocada: <b>${q}</b></div>
+        </div>
+        <div class="ud-sec"><b>🧩 Composição</b> <small>${comp}</small>
+            <div class="acoes">${botao('✂ Separar 1 regimento', 'vira um exército novo aqui', `separarRegimentos('${e.id}',1);renderPainel()`, { off: q < 2 || e.rota.length > 0 || e.emBatalha })}</div>
+        </div>
+    </div>`;
 }

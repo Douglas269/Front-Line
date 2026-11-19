@@ -299,7 +299,7 @@ function jogar({ N, FASE, EST }) {
             const m0 = cp.moral; cp.moral = 0; const baixa = producaoDe(cp); cp.moral = m0;
             r.moralBaixaRende30 = Math.abs(baixa.moedas - 6 * 0.3) < 0.01;
             const textos = []; const ft = cxM.fillText.bind(cxM); cxM.fillText = (t, ...a) => { textos.push(String(t)); return ft(t, ...a); }; desenharMapa(); cxM.fillText = ft;
-            r.mapaMostraAProducao = textos.some(t => /^\+3🍞 \+5🔫 \+6🪙( \+0\.5⚙️)?$/.test(t)); // o aço aparece depois do dinheiro
+            r.mapaMostraAProducao = textos.some(t => /^\+3🍞 \+5🔫 \+6🪙( \+0\.5⚙️)?( \+0\.\d+⛽)?$/.test(t)); // o aço aparece depois do dinheiro
             // ficha da tropa no painel de recrutar
             G.sel = { tipo: 'recrutar', id: c }; G.fichaTipo = null; renderPainel();
             const pn = document.getElementById('painel'); r.fichaTemBotaoParaCadaTropa = pn.querySelectorAll('.info-i').length === 5 && !pn.querySelector('.ficha');

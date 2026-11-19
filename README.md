@@ -34,6 +34,14 @@ Jogo de estratégia tático com foco em realismo de comando, combate blindado e 
 - O jogo continua salvando no aparelho e espelha na nuvem a cada 30 s de jogo e na hora ao virar o dia, pausar, subir de nível, terminar a partida ou fechar o tutorial. Ao entrar, fica com o salvamento mais recente entre aparelho e nuvem; o progresso de convidado passa para a conta no primeiro login. Sem internet, segue como convidado.
 - O navegador usa só a chave pública (publishable) do Supabase; a proteção dos dados vem das políticas RLS.
 
+### Combustível, excesso de tropas e painel da unidade (Conquista)
+- **⛽ Combustível:** cada blindado que marcha ou ataca gasta 1 por ciclo. Sai de morro (0,4 por ciclo), capital (0,3) e da obra Fábrica (+0,5). Sem combustível: o blindado anda a 25% da velocidade e atira com metade da chance. Aparece no painel Economia e no painel do exército.
+- **Excesso de tropas:** a partir de 15 regimentos, cada unidade extra tira 3% de eficiência (piso de 60%), na batalha e no exército.
+- **Nomes do exército:** III (regimento), X (brigada), XX (divisão), XXX (corpo de exército), XXXX (exército) pela quantidade.
+- **Painel da unidade:** nome editável, vida, moral, estado, combate por classe, logística por ciclo e composição, com "separar 1 regimento".
+- **Terreno em batalha:** infantaria defendendo em cidade (+30%), floresta (+25%) ou morro (+15%); blindado atacando em campo (+25%).
+- Módulo de estruturas `conquista-unidades.js` (ainda sem uso direto no jogo); teste `node tests/combustivel.js`.
+
 ### Economia da Conquista (dinheiro, aço, mão de obra, comida, munição)
 - **Dinheiro 🪙:** cria a tropa e paga a **manutenção** de cada soldado a cada ciclo (5 s). Sem dinheiro, o **soldo atrasa**, com a mesma lógica da fome: a eficácia cai, a moral das províncias cai e, no extremo (atraso ≥ 80%), soldados desertam. Pagando em dia, o atraso some.
 - **Aço ⚙️:** só no custo de criar tropa pesada (metralhadora 2, artilharia 6, blindado 12) e de obras e fortificar. Vem de morros, capital, cidades e da obra Fábrica.
