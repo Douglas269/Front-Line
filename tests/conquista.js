@@ -485,15 +485,16 @@ function jogar({ N, FASE, EST }) {
         const out = {};
         const novo = () => { comecarFase(1); G.pausado = false; };
         const juntos = () => { const m = {}; G.ex.filter(e => !e.rota.length && e.s.length && !e.emBatalha).forEach(e => { (m[e.prov] = m[e.prov] || []).push(e.dono); }); return Object.entries(m).filter(([id, l]) => l.some(a => l.some(c => a !== c && emGuerra(a, c)))).length; };
-        const roda = (seg) => { for (let i = 0; i < seg * 10; i++) passoMapa(0.1); };
-        novo(); { const cap = G.prov[G.capitalJogador]; criarExercito(G.fase.bots[0], cap.id, 4); out.s1Antes = juntos(); roda(3); out.s1Depois = { juntos: juntos(), batalhas: G.batalhas.length }; }
+        let maxB = 0; // maior número de batalhas abertas durante o trecho (a batalha pode terminar sozinha no sorteio, o que não é falha)
+        const roda = (seg) => { maxB = 0; for (let i = 0; i < seg * 10; i++) { passoMapa(0.1); maxB = Math.max(maxB, G.batalhas.length); } };
+        novo(); { const cap = G.prov[G.capitalJogador]; criarExercito(G.fase.bots[0], cap.id, 4); out.s1Antes = juntos(); roda(3); out.s1Depois = { juntos: juntos(), batalhas: maxB }; }
         novo(); { const meu = G.ex.find(e => e.dono === 'jogador'); const q = Object.values(G.prov).find(x => x.dono !== 'jogador' && x.dono !== 'neutro' && !x.capital);
             meu.s.forEach(s => { s.vida = 100; }); meu.prov = q.id; meu.x = q.x; meu.y = q.y; meu.rota = []; chegarAqui(meu, q);
             q.dono = 'neutro'; criarExercito('neutro', q.id, 3, Array.from({ length: 3 }, () => soldado('Rebelde')));
             for (let i = 0; i < 3000 && G.batalhas.length; i++) passoMapa(0.1);
             roda(20); out.s2 = { juntos: juntos(), batalhas: G.batalhas.length }; }
         novo(); { const q = minhas().find(x => !x.capital); G.ex = G.ex.filter(e => !(e.prov === q.id && e.dono === 'jogador')); criarExercito(G.fase.bots[0], q.id, 4); roda(3); out.s3 = { dono: q.dono, juntos: juntos() }; }
-        novo(); { const cap = G.prov[G.capitalJogador]; const bot = G.fase.bots[0]; G.rel[bot].estado = 'paz'; G.rel[bot].ate = G.t + 999; criarExercito(bot, cap.id, 4); roda(3); out.s4Paz = { batalhas: G.batalhas.length }; declararGuerra(bot, 'bot'); roda(2); out.s4Guerra = { batalhas: G.batalhas.length, juntos: juntos() }; }
+        novo(); { const cap = G.prov[G.capitalJogador]; const bot = G.fase.bots[0]; G.rel[bot].estado = 'paz'; G.rel[bot].ate = G.t + 999; criarExercito(bot, cap.id, 4); roda(3); out.s4Paz = { batalhas: maxB }; declararGuerra(bot, 'bot'); roda(2); out.s4Guerra = { batalhas: maxB, juntos: juntos() }; }
         return out;
     });
     if (confr.s1Antes !== 1 || confr.s1Depois.juntos !== 0 || confr.s1Depois.batalhas < 1) falhas.push('tropa inimiga parada junto com a minha deveria passar a lutar: ' + JSON.stringify(confr));
