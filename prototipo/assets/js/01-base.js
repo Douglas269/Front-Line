@@ -212,6 +212,7 @@
                 SHELTER: false,
                 CONSERVE: false,
                 FULL_VIGILANCE: false,
+                SILENCE: false,
                 SIGNAL_JAM: false
             },
             supplyLineEff: 85,
