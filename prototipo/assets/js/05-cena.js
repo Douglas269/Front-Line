@@ -273,27 +273,27 @@
             const f = s.fatigue || 0, h = s.hunger || 0, th = s.thirst || 0, hp = s.hp, mo = s.moral == null ? 100 : s.moral;
             const X = Math.round(x), Y = Math.round(y);
             if (hp < 80) { // mancha de sangue, maior quanto mais ferido
-                const q = Math.min(1, (80 - hp) / 70), w = 2 + Math.round(q * 4), hh = 3 + Math.round(q * 5);
+                const q = Math.min(1, (80 - hp) / 70), w = 3 + Math.round(q * 5), hh = 4 + Math.round(q * 6);
                 cctx.fillStyle = '#8a1f1f';
                 if (deitado) cctx.fillRect(X - 6, Y - 9, w + 2, 3); else cctx.fillRect(X - 4, Y - 24, w, hh);
                 if (hp < 30 && Math.floor(t / 400 + s.id) % 2) { cctx.fillStyle = '#b02a2a'; cctx.fillRect(X - 3, Y - 24 + hh + ((t / 90) % 8 | 0), 1, 2); }
             }
             if (deitado) return;
-            if (f >= 60) { // gotas de suor escorrendo da testa
-                cctx.fillStyle = '#9fdcff';
-                for (let k = 0; k < (f >= 85 ? 2 : 1); k++) cctx.fillRect(X + 6 + k * 5, Y - 38 + (((t / 110) + s.id * 7 + k * 5) % 12 | 0), 2, 3);
+            // Cada sinal leva um contorno escuro de 1 px: continua visível sobre a madeira, mesmo no celular
+            const pix = (x, yy, w, hh, cor) => { cctx.fillStyle = 'rgba(10,12,10,0.85)'; cctx.fillRect(x - 1, yy - 1, w + 2, hh + 2); cctx.fillStyle = cor; cctx.fillRect(x, yy, w, hh); };
+            if (f >= 60) { // gotas de suor escorrendo da testa (mais gotas quanto mais exausto)
+                for (let k = 0; k < (f >= 85 ? 3 : 2); k++) { pix(X + 7 + k * 6, Y - 40 + (((t / 100) + s.id * 7 + k * 5) % 13 | 0), 3, 5, '#9fdcff'); }
             }
-            if (h >= 50) { // mão na barriga
-                cctx.fillStyle = '#e2b996'; cctx.fillRect(X + 2, Y - 18, 6, 4);
-                cctx.fillStyle = '#3e4a33'; cctx.fillRect(X, Y - 19, 3, 4);
+            if (h >= 50) { // mão na barriga, com o braço dobrado
+                pix(X + 1, Y - 20, 10, 6, '#e2b996'); pix(X - 2, Y - 22, 4, 6, '#3e4a33');
             }
-            if (th >= 50) { // tosse seca: fumacinhas claras saindo da boca
+            if (th >= 50) { // tosse seca: nuvenzinhas claras saindo da boca
                 const fase = ((t / 260) + s.id * 3) % 6;
-                if (fase < 3) { cctx.fillStyle = 'rgba(220,220,200,0.7)'; cctx.fillRect(X + 9 + (fase | 0) * 3, Y - 31 - (fase | 0) * 2, 3, 3); }
+                if (fase < 3) pix(X + 10 + (fase | 0) * 4, Y - 32 - (fase | 0) * 3, 5, 5, '#e8e8d8');
             }
-            if (mo < 25) { // nuvem escura sobre a cabeça
-                cctx.fillStyle = 'rgba(40,44,48,0.85)'; cctx.fillRect(X - 7, Y - 50, 14, 3); cctx.fillRect(X - 4, Y - 53, 8, 3);
-                if (Math.floor(t / 300) % 2) { cctx.fillStyle = '#7fa5c0'; cctx.fillRect(X - 2, Y - 46, 1, 2); cctx.fillRect(X + 3, Y - 46, 1, 2); }
+            if (mo < 25) { // nuvem escura com chuvisco sobre a cabeça
+                cctx.fillStyle = 'rgba(40,44,48,0.92)'; cctx.fillRect(X - 10, Y - 52, 20, 4); cctx.fillRect(X - 6, Y - 56, 12, 4);
+                if (Math.floor(t / 300) % 2) { cctx.fillStyle = '#7fa5c0'; cctx.fillRect(X - 5, Y - 47, 2, 3); cctx.fillRect(X + 4, Y - 47, 2, 3); }
             }
         }
         function desenharSoldadoCena(s, x, y, pose, t, rotY = 0) {
