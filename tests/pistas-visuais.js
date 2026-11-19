@@ -115,6 +115,22 @@ const PAGINA = 'file://' + path.resolve(__dirname, '..', 'prototipo', 'ponto-alp
         return r;
     }));
     await p.waitForTimeout(300); await shot('b1-sabotagem-telegrafada');
+    // ---------- D) painel tático: cantoneiras, LED das salas e linha de destino ----------
+    {
+        await p.evaluate(() => { gameState.level = 1; jogoPausado = true; gameState.enemies = []; gameState.barrage = null; gameState.sabotagem = null; gameState.gas = null; gameState.squad.forEach(s => Object.assign(s, { hp: 100, fatigue: 0, hunger: 0, thirst: 0, moral: 85, mental: null, duty: 'WATCH' })); Object.keys(animPos).forEach(k => delete animPos[k]); renderCorte(true); });
+        const clip = await p.evaluate(() => { const r = corteCanvas.getBoundingClientRect(), e = r.width / CORTE.W, c = CORTE.comodos.abrigo; return { x: r.left + 0, y: r.top + c.y * e - 160 * e, width: r.width, height: 330 * e }; });
+        const foto = async () => { await p.evaluate(() => renderCorte(true)); return p.screenshot({ clip }); };
+        const parado = await foto();
+        // manda um soldado do posto para o abrigo: no meio da caminhada a linha de destino aparece
+        await p.evaluate(() => { const s = gameState.squad[0]; s.duty = 'REST'; renderCorte(true); const a = animPos[s.id]; a.x -= 0; a.y -= 0; });
+        const andando = await foto();
+        ck.painel_linhaDeDestinoAoCaminhar = !parado.equals(andando);
+        // posto sem ninguém: LED vermelho (o posto não pode ficar vazio)
+        await p.evaluate(() => { gameState.squad.forEach(s => { s.duty = 'REST'; }); Object.keys(animPos).forEach(k => delete animPos[k]); renderCorte(true); });
+        const semVigia = await foto();
+        ck.painel_ledMudaComOPostoVazio = !semVigia.equals(andando);
+        ck.painel_semErrosNoDesenho = true;
+    }
     ck.semErrosJS = erros.length === 0;
     console.log(JSON.stringify(ck, null, 1));
     if (erros.length) console.log('ERROS:', erros);
