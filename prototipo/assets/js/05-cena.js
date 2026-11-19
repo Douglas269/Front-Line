@@ -462,6 +462,34 @@
             }
         }
 
+        // Mira da artilharia: cada alvo anunciado ganha um anel que fecha até o impacto (pisca mais rápido perto do fim)
+        // e, nos últimos 2 s, um projétil riscando o céu até ele. O jogador vê onde vai cair e quem mover.
+        function desenharMiraArtilharia(t) {
+            const bar = gameState.barrage;
+            if (!bar || !(bar.alvos || []).length) return;
+            if (!bar.t0) bar.t0 = bar.ticks;
+            const k = Math.max(0, Math.min(1, bar.ticks / bar.t0));            // 1 no começo do aviso, 0 no impacto
+            (bar.alvos || []).forEach(a => {
+                let cx, cy, sala = null;
+                if (a.tipo === 'soldado') { const p = posicoesCena[a.id]; if (!p) return; cx = p.x; cy = p.y - 18 * CORTE.ESC; }
+                else { sala = CORTE.comodos[a.tipo === 'ninho' ? 'ninhos' : 'deposito']; cx = sala.x + sala.w / 2; cy = sala.y + sala.h / 2 + 8; }
+                const pis = 0.5 + 0.45 * Math.sin(t / (60 + 90 * k)), r = 15 + 22 * k;
+                cctx.strokeStyle = `rgba(255,74,60,${pis})`; cctx.lineWidth = 2;
+                cctx.beginPath(); cctx.arc(cx, cy, r, 0, Math.PI * 2); cctx.stroke();
+                if (sala) { // o soldado já tem a própria mira; os outros alvos ganham a cruz
+                    cctx.beginPath(); cctx.arc(cx, cy, 15, 0, Math.PI * 2);
+                    cctx.moveTo(cx - 22, cy); cctx.lineTo(cx - 9, cy); cctx.moveTo(cx + 9, cy); cctx.lineTo(cx + 22, cy);
+                    cctx.moveTo(cx, cy - 22); cctx.lineTo(cx, cy - 9); cctx.moveTo(cx, cy + 9); cctx.lineTo(cx, cy + 22); cctx.stroke();
+                    cctx.fillStyle = `rgba(255,74,60,${0.10 + 0.08 * pis})`; cctx.fillRect(sala.x, sala.y, sala.w, sala.h);
+                }
+                if (bar.ticks <= 12) { // projétil caindo do céu
+                    const f = 1 - bar.ticks / 12, y = f * cy;
+                    cctx.strokeStyle = 'rgba(255,200,120,0.9)'; cctx.lineWidth = 2; cctx.beginPath(); cctx.moveTo(cx, Math.max(0, y - 22)); cctx.lineTo(cx, y); cctx.stroke();
+                    cctx.fillStyle = '#fff2c8'; cctx.fillRect(cx - 1.5, y - 2, 3, 4);
+                }
+            });
+        }
+
         function desenharRodapeCena() {
             const y0 = 410;
             cctx.fillStyle = '#0f1411'; cctx.fillRect(0, y0, CORTE.W, CORTE.H - y0);
@@ -550,6 +578,7 @@
             });
             { const nn = CORTE.comodos.ninhos; cctx.fillStyle = '#7d7056'; cctx.fillRect(nn.x + 4, nn.y + 94, nn.w - 8, 12); cctx.strokeStyle = '#5d533f'; cctx.lineWidth = 1; for (let xx = nn.x + 4; xx < nn.x + nn.w - 8; xx += 14) cctx.strokeRect(xx, nn.y + 94, 14, 12); }
             desenharClimaCena(t);
+            desenharMiraArtilharia(t);
             desenharEfeitosCena();
             desenharRodapeCena();
             // faixa de aviso e selo de pausa da cena

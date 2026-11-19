@@ -115,6 +115,25 @@ const PAGINA = 'file://' + path.resolve(__dirname, '..', 'prototipo', 'ponto-alp
         return r;
     }));
     await p.waitForTimeout(300); await shot('b1-sabotagem-telegrafada');
+    // ---------- C) mira telegrafada da artilharia ----------
+    {
+        // (o canvas fica "contaminado" em file://, então a comparação é por captura de tela da sala do depósito)
+        await p.evaluate(() => { gameState.level = 1; jogoPausado = true; gameState.enemies = []; gameState.sabotagem = null; gameState.gas = null; gameState.barrage = null; assinaturaFundo = ''; renderCorte(true); });
+        const clip = await p.evaluate(() => { const r = corteCanvas.getBoundingClientRect(), e = r.width / CORTE.W, c = CORTE.comodos.deposito; return { x: r.left + c.x * e, y: r.top + c.y * e, width: c.w * e, height: c.h * e }; });
+        const foto = async () => { await p.evaluate(() => renderCorte(true)); return p.screenshot({ clip }); };
+        const sem = await foto();
+        await p.evaluate(() => { gameState.barrage = { ticks: 40, alvos: [{ tipo: 'deposito' }, { tipo: 'ninho', i: 0 }, { tipo: 'soldado', id: 1 }] }; });
+        const com = await foto();
+        ck.mira_aparecNaSalaMirada = !sem.equals(com);
+        ck.mira_guardaTempoInicial = await p.evaluate(() => gameState.barrage.t0 === 40);
+        await p.evaluate(() => { gameState.barrage.ticks = 6; });
+        const perto = await foto();
+        ck.mira_projetilNosUltimos2s = !perto.equals(com);
+        await p.evaluate(() => { gameState.barrage = null; });
+        ck.mira_someSemBombardeio = !(await foto()).equals(perto);
+        await p.evaluate(() => { gameState.barrage = { ticks: 40, alvos: [{ tipo: 'deposito' }, { tipo: 'ninho', i: 0 }, { tipo: 'soldado', id: 1 }] }; renderCorte(true); });
+    }
+    await p.waitForTimeout(300); await shot('c1-mira-artilharia');
     ck.semErrosJS = erros.length === 0;
     console.log(JSON.stringify(ck, null, 1));
     if (erros.length) console.log('ERROS:', erros);
