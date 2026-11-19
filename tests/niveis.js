@@ -1,3 +1,6 @@
+// ATENÇÃO: este jogador automático não usa as defesas e ficou defasado (dá 0% de vitória desde antes das mudanças de 2026-11).
+// Para medir o equilíbrio de verdade use `DEF=1 node tests/balanco.js <níveis> <partidas>` (ver README, "Níveis de dificuldade").
+// Este arquivo continua servindo ao balanco.js, que lê daqui o esquadrão inicial (INITIAL_SQUAD).
 // Calibração dos níveis de dificuldade do Ponto Alpha.
 // Mede a taxa de vitória em cada nível com dois perfis de jogador:
 //   parado: nenhuma ação

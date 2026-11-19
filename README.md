@@ -247,17 +247,17 @@ Modo a mais: o jogo de um jogador continua igual. Escolha **⚔️ Trincheiras o
 - 25 níveis. Cada vitória sobe um nível; derrota mantém o nível. O nível fica salvo no navegador, mesmo com "Nova partida".
 - Cada nível define uma dificuldade que aumenta a frequência de eventos, a vida e o dano dos inimigos e o tamanho das ondas, e diminui a entrega diária de suprimentos e o prestígio ganho; os apoios da Central ficam mais caros.
 - Além disso, cada nível acima do 1 aperta de forma visível (bloco `PRESSURE`): −0,4% de ração e água no comboio (nível 25: −10%), modificadores de nível (veja **Jogabilidade**) e ataques do general 0,3% mais rápidos (nível 25: +7%). Antes eram −1,5%, +1 soldado por onda a cada 6 níveis e 2%: no nível 25 o esquadrão morria de fome mesmo jogando bem, e o soldado extra por onda derrubava a vitória de uma vez.
-- Vitórias do jogador automático **usando as defesas** (`DIF_MODO=<modo> DEF=1 node tests/balanco.js 1,7,13,19,25 40`; 40 partidas por nível, margem de uns 15 pontos):
+- Vitórias do jogador automático **usando as defesas** (`DIF_MODO=<modo> DEF=1 node tests/balanco.js 1,7,13,19,25 20`; 20 partidas por nível, margem de uns 20 pontos), **medidas em 2026-11-19**, já com o desbloqueio gradual por nível (clima, ofensivas, gás, incursão, lança-chamas e sabotagem entram nos níveis 2 a 8):
 
 | Nível | Recruta | Soldado | Veterano |
 |---|---|---|---|
 | 1 | 100% | 100% | 100% |
-| 7 | 100% | 100% | 98% |
-| 13 | 100% | 93% | 70% |
-| 19 | 100% | 83% | 58% |
-| 25 | 100% | 65% | 15% |
+| 7 | 10% | 0% | 0% |
+| 13 | 15% | 0% | 0% |
+| 19 | 10% | 5% | 0% |
+| 25 | 5% | 0% | 0% |
 
-Medido já com as ofensivas anunciadas, a contra-bateria com recarga e os modificadores de nível (o robô não usa a escala automática nem o 2×, porque já faz isso sozinho). Os níveis baixos ficaram fáceis para o robô, que reage a cada segundo; a subida agora vem principalmente dos modificadores (níveis 5, 9, 13, 17 e 21).
+**Atenção:** a tabela antiga (100% no nível 7 e 93% no 13 no Soldado) já não se repete: do nível 7 em diante o robô quase nunca vence (o código anterior ao desbloqueio gradual dava o mesmo resultado nos níveis 8 e 13). O robô não usa máscaras contra gás nem reage a lança-chamas, então não dá para saber ainda se o problema é o robô ou o equilíbrio do jogo; isso está na issue #17. O robô só reage à sabotagem (cozinha e oficina).
 
 Medido com o comboio maior (850 de munição leve, 160 de pesada, 10 granadas de morteiro e 4 foguetes anticarro por comboio) e a metralhadora .50 gastando meia munição pesada por disparo. O robô decide a cada segundo, sem cansar; um jogador de verdade tende a ir um pouco pior, por isso o Soldado ficou folgado para o robô.
 
