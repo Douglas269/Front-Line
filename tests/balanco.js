@@ -57,6 +57,13 @@ const INIT = eval(src.slice(src.indexOf('const INITIAL_SQUAD = ') + 22, src.inde
         if (vivos.some(s => s.hp < 30) && gameState.prestige >= custo(150) && gameState.supplyLineEff >= 30) requestSupport('MEDEVAC');
         o.SIGNAL_JAM = droneObservando();
         if (USA_DEF) defesas(vivos, ameaca);
+        // Sabotagem (nível 8+): nos últimos segundos do aviso, põe alguém na sala mirada (cozinha ou oficina)
+        const sb = gameState.sabotagem;
+        if (sb && sb.ticks <= 6) {
+          const funcao = { cozinha: 'RATIONING', oficina: 'MAINTENANCE' }[sb.alvo];
+          const vigias = vivos.filter(s => s.duty === 'WATCH');
+          if (funcao && !vivos.some(s => s.duty === funcao) && vigias.length > 1) vigias.sort((a, b) => b.fatigue - a.fatigue)[0].duty = funcao;
+        }
       }
       // Usa as defesas: obra com o Engenheiro, MG no centro (Santos), morteiro (Ferreira), AT (Silva), arame e requisições
       const PLANO = [[1, 'metralhadora', 'Metralhador'], [0, 'morteiro', 'Fuzileiro Regular'], [2, 'lancaAT', 'Fuzileiro Regular']];
