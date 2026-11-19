@@ -163,8 +163,8 @@
         @media (max-width: 379px) { header .animate-pulse { display: none; } header #lbl-level { display: none; } }
     </style>
     <!-- Tailwind: CSS fixo gerado por tools/gerar-css.sh (antes era montado no celular pelo CDN) -->
-    <link rel="stylesheet" href="assets/css/tailwind.css?v=20261119.2240">
-    <link rel="stylesheet" href="assets/css/polimento-visual.css?v=20261119.2240">
+    <link rel="stylesheet" href="assets/css/tailwind.css?v=20261119.2241">
+    <link rel="stylesheet" href="assets/css/polimento-visual.css?v=20261119.2241">
 </head>
 <body class="h-screen w-screen overflow-hidden flex justify-center bg-black">
 
@@ -177,7 +177,7 @@
         <!-- HEADER / TOP CONTROL BAR -->
         <header class="bg-mil-panel border-b border-mil-border p-2 z-20 flex justify-between items-center text-xs">
             <div class="flex items-center gap-2">
-                <span class="inline-block w-2.5 h-2.5 bg-mil-greenMuted rounded-sm animate-pulse"></span>
+                <img src="icons/escudo-48.png" alt="" class="h-5 w-auto">
                 <span class="font-bold tracking-normal text-mil-textGlow text-sm whitespace-nowrap">FrontLine</span>
                 <span id="lbl-level" class="text-xs font-bold px-1.5 py-0.5 rounded border border-mil-amberMuted text-mil-amberMuted whitespace-nowrap">NÍVEL 1</span>
             </div>
@@ -525,7 +525,7 @@
             <div class="menu-meio">
             <div class="w-full max-w-md mx-auto">
                 <div class="text-center mb-4">
-                    <img src="icons/icon-192.png" alt="" class="w-16 h-16 rounded mx-auto mb-2">
+                    <img src="icons/escudo-160.png" alt="" class="h-20 w-auto mx-auto mb-2">
                     <h1 class="text-2xl font-bold text-mil-textGlow tracking-wider">FrontLine</h1>
                     <p class="text-xs text-mil-textMuted font-normal mt-1">Escolha o modo de jogo.</p>
                 </div>
@@ -568,7 +568,7 @@
         <div id="tela-login" class="hidden porta absolute inset-0 bg-mil-bg z-[85] flex flex-col overflow-y-auto">
             <div class="menu-bar so-sheet"><button type="button" onclick="fecharLogin()" class="btn-tactical menu-voltar"><i class="fa-solid fa-arrow-left"></i> Voltar ao menu</button></div>
             <div class="menu-meio items-center">
-                <img src="icons/icon-192.png" alt="" class="w-16 h-16 rounded mb-3">
+                <img src="icons/escudo-160.png" alt="" class="h-20 w-auto mb-3">
                 <h1 id="login-titulo" class="text-xl font-bold text-mil-textGlow tracking-wider">Entrar na conta</h1>
                 <p id="login-sub" class="text-xs text-mil-textMuted mb-5 font-normal text-center max-w-xs"></p>
                 <form id="form-login" onsubmit="event.preventDefault(); entrarNaConta(false);" class="w-full max-w-xs space-y-3">
@@ -716,16 +716,16 @@
 
     <!-- JAVASCRIPT GAME ENGINE -->
     <!-- Código do jogo, dividido por assunto (a ordem importa) -->
-    <script src="assets/js/01-base.js?v=20261119.2240"></script>
-    <script src="assets/js/02-regras.js?v=20261119.2240"></script>
-    <script src="assets/js/03-defesas-crises.js?v=20261119.2240"></script>
-    <script src="assets/js/04-interface.js?v=20261119.2240"></script>
-    <script src="assets/js/05-cena.js?v=20261119.2240"></script>
-    <script src="assets/js/05b-cena-pixel.js?v=20261119.2240"></script>
-    <script src="assets/js/guia-tutorial.js?v=20261119.2240"></script>
-    <script src="assets/js/06-conta.js?v=20261119.2240"></script>
-    <script src="assets/js/07-operacoes.js?v=20261119.2240"></script>
-    <script src="assets/js/08-campo-ameacas.js?v=20261119.2240"></script>
-    <script src="assets/js/08b-particulas.js?v=20261119.2240"></script>
+    <script src="assets/js/01-base.js?v=20261119.2241"></script>
+    <script src="assets/js/02-regras.js?v=20261119.2241"></script>
+    <script src="assets/js/03-defesas-crises.js?v=20261119.2241"></script>
+    <script src="assets/js/04-interface.js?v=20261119.2241"></script>
+    <script src="assets/js/05-cena.js?v=20261119.2241"></script>
+    <script src="assets/js/05b-cena-pixel.js?v=20261119.2241"></script>
+    <script src="assets/js/guia-tutorial.js?v=20261119.2241"></script>
+    <script src="assets/js/06-conta.js?v=20261119.2241"></script>
+    <script src="assets/js/07-operacoes.js?v=20261119.2241"></script>
+    <script src="assets/js/08-campo-ameacas.js?v=20261119.2241"></script>
+    <script src="assets/js/08b-particulas.js?v=20261119.2241"></script>
 </body>
 </html>
