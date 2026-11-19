@@ -45,6 +45,7 @@ Toda tarefa (Correção, Melhoria ou Nova função) tem uma **issue**, e todo de
 - **Terreno em batalha:** infantaria defendendo em cidade (+30%), floresta (+25%) ou morro (+15%); blindado atacando em campo (+25%).
 - Módulo de estruturas `conquista-unidades.js` (ainda sem uso direto no jogo); teste `node tests/combustivel.js`.
 
+- **Bots e combustível:** só recrutam blindado com pelo menos 8 de reserva, constroem a fábrica primeiro quando o combustível cai abaixo de 6 e têm blindados, e deixam em casa os blindados quando o combustível acaba (a função `ordem` aceita uma lista de aptos para a divisão; o wrapper online repassa o parâmetro). Teste em `tests/combustivel.js`.
 ### Economia da Conquista (dinheiro, aço, mão de obra, comida, munição)
 - **Dinheiro 🪙:** cria a tropa e paga a **manutenção** de cada soldado a cada ciclo (5 s). Sem dinheiro, o **soldo atrasa**, com a mesma lógica da fome: a eficácia cai, a moral das províncias cai e, no extremo (atraso ≥ 80%), soldados desertam. Pagando em dia, o atraso some.
 - **Aço ⚙️:** só no custo de criar tropa pesada (metralhadora 2, artilharia 6, blindado 12) e de obras e fortificar. Vem de morros, capital, cidades e da obra Fábrica.
