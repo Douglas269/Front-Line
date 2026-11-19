@@ -1172,6 +1172,7 @@ function atualizarTopo() {
     const f = G.fac.jogador, tropa = tropaDe('jogador');
     const rec = (id, v, baixo) => { const el = document.getElementById(id); el.querySelector('b').textContent = Math.floor(v); el.classList.toggle('baixo', baixo); };
     rec('rCom', f.comida, f.comida < tropa); rec('rMun', f.mun, f.mun < 60); rec('rMoe', f.moedas, f.moedas < manutencaoDe('jogador') * 2 || (f.atraso || 0) > 0); rec('rAco', f.aco || 0, false);
+    { const temBlind = G.ex.some(e => e.dono === 'jogador' && e.s.some(x => x.tipo === 'blind')); rec('rComb', f.comb || 0, temBlind && (f.comb || 0) < 5); }
     { const mo = document.getElementById('rMO'), usada = maoDeObraUsada('jogador'), max = maoDeObraMax('jogador'); mo.querySelector('b').textContent = usada + '/' + max; mo.classList.toggle('baixo', usada >= max); }
     const pl = placar(); document.getElementById('rProv').querySelector('b').textContent = `${pl.jogador || 0}/${Object.keys(G.prov).length}`;
     const resta = Math.max(0, G.fase.tempo - G.t);
