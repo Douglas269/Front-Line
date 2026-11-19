@@ -17,7 +17,7 @@ Toda tarefa é de um destes tipos: **Correção** (bug), **Melhoria** (algo exis
 4. **Antes de abrir o PR:**
    - rode os testes que a mudança afeta (`node tests/<arquivo>.js`; ver README, seção "Testes");
    - se usou classes novas de Tailwind, rode `tools/gerar-css.sh`;
-   - rode `tools/nova-versao.sh` (atualiza `VERSAO_JOGO` e os `?v=` dos HTML) como último passo antes do merge, para não gerar conflito entre PRs.
+   - se a mudança altera o jogo (código, HTML, CSS, imagens), rode `tools/nova-versao.sh` (atualiza `VERSAO_JOGO` e os `?v=` dos HTML) como último passo antes do merge, para não gerar conflito entre PRs; mudança só de documentação ou de testes não precisa de versão nova.
 5. **PR com base na branch de produção.** A descrição **precisa mencionar a issue**: use `Closes #<nº>` (ou `Fixes #<nº>`), que fecha a issue no merge. Estrutura da descrição: *Resumo*, *O que mudou*, *Como testei* (comandos e resultado), *Capturas* (quando for visual) e *Riscos*.
 6. **O merge do PR é o deploy** (a Vercel publica a branch de produção). Regra de publicação:
    - **Mudança pequena** (ajuste de texto ou visual pontual, correção localizada, ícone, README): o agente testa e faz o merge sozinho.
