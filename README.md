@@ -13,6 +13,9 @@ Jogo de estratégia tático com foco em realismo de comando, combate blindado e 
 - `prototipo/assets/css/tailwind.css` — CSS fixo gerado por `tools/gerar-css.sh` (rodar depois de mudar classes no HTML ou no código). Antes o Tailwind vinha de um CDN de desenvolvimento (398 KB, montado no celular a cada abertura); agora são 17 KB
 - `tools/nova-versao.sh` — marca uma versão nova: troca `VERSAO_JOGO` (em `06-conta.js`), o `versao.json` e o `?v=` dos arquivos na página
 
+## Como trabalhamos (issues e PRs)
+Toda tarefa (Correção, Melhoria ou Nova função) tem uma **issue**, e todo deploy passa por um **PR** que cita a issue (`Closes #N`). O merge do PR é o deploy. Mudança pequena, o agente testa e faz o merge; mudança grande espera o "pode publicar" do Douglas. O fluxo completo, as regras de branch e a lista do que fazer antes do PR estão no [`AGENTS.md`](AGENTS.md), que vale para qualquer agente e modelo.
+
 ## Campanha atual
 
 **O Guardião de Voznesensk**, capítulo 2. A sessão começa na crise do Esquadrão Charlie no topo da torre do silo.
