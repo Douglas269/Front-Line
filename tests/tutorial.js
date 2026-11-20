@@ -20,6 +20,19 @@ const { chromium } = require('playwright');
     await p.evaluate(() => document.querySelector('#btn-pause').click());
     if (!(await p.evaluate(() => jogoPausado)) || (await passo(p)) !== 0) falhas.push('passo 0: o toque fora do cartão deveria ser bloqueado');
     await p.click('#guiaT [data-g="ok"]'); await aguardaPasso(p, 1, 'T0');
+    // durante o tutorial não sorteia crise nem franco-atirador, mesmo com a sorte toda a favor
+    const semCrise = await p.evaluate(() => { const r = Math.random; Math.random = () => 0; gameState.level = 25; gameState.crisisCooldown = 0; gameState.enemies = []; gameState.barrage = null; gameState.activeCrisis = null; randomCrisisCheck(); const vig = gameState.squad.filter(s => s.duty === 'WATCH'); const hp0 = vig.map(s => s.hp); francoAtirador(); Math.random = r; return !gameState.activeCrisis && vig.every((s, k) => s.hp === hp0[k]); });
+    if (!semCrise) falhas.push('Trincheiras: crise ou franco-atirador sorteou durante o tutorial');
+    // com uma janela do jogo aberta, a camada escura do tutorial sai (a janela fica legível)
+    const janela = await p.evaluate(async () => { const m = document.getElementById('modal-crisis'); m.classList.remove('hidden'); await new Promise(r => setTimeout(r, 120)); const escuro = [...document.querySelectorAll('.guiaAnel'), document.getElementById('guiaBloqueio')].some(e => getComputedStyle(e).display !== 'none'); m.classList.add('hidden'); await new Promise(r => setTimeout(r, 120)); return { escuro, volta: [...document.querySelectorAll('.guiaAnel'), document.getElementById('guiaBloqueio')].some(e => getComputedStyle(e).display !== 'none') }; });
+    if (janela.escuro) falhas.push('Trincheiras: a camada escura do tutorial ficou por cima da janela do jogo');
+    if (!janela.volta) falhas.push('Trincheiras: a camada do tutorial não voltou depois de fechar a janela');
+    // partida em andamento não abre o tutorial sozinha
+    const andamento = await p.evaluate(() => { GuiaT.parar(); localStorage.removeItem(TUTORIAL_KEY); gameState.day = 7; const novo = (() => { mostrarTutorialSePrimeiraVez(); return GuiaT.ativo(); })(); gameState.day = 1; gameState.timeSeconds = 0; mostrarTutorialSePrimeiraVez(); return { emAndamento: novo, partidaNova: GuiaT.ativo() }; });
+    if (andamento.emAndamento) falhas.push('Trincheiras: o tutorial abriu sozinho numa partida em andamento (dia 7)');
+    if (!andamento.partidaNova) falhas.push('Trincheiras: o tutorial deveria abrir sozinho numa partida nova');
+    await p.evaluate(() => { GuiaT.parar(); gameState.level = 1; try { abrirTutorial(); } catch (e) {} });
+    await aguardaPasso(p, 0, 'T0b'); await p.click('#guiaT [data-g="ok"]'); await aguardaPasso(p, 1, 'T0c');
     // passo 1: só o botão Continuar responde; a aba Logística é bloqueada
     await p.evaluate(() => document.querySelector('#tab-logistics').click());
     if (await p.evaluate(() => !document.getElementById('panel-logistics').classList.contains('hidden'))) falhas.push('passo 1: aba Logística respondeu durante o tutorial');

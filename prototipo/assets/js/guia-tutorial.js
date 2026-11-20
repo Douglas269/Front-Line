@@ -97,7 +97,10 @@
         Object.assign(anel.style, { left: r.x - pad + 'px', top: r.y - pad + 'px', width: r.w + 2 * pad + 'px', height: r.h + 2 * pad + 'px', display: 'block' });
         anel.classList.toggle('circ', !!r.circ); anel.classList.toggle('sem', !sombra);
     }
+    // Uma janela do próprio jogo aberta (crise, confirmação, atualização): sai a camada escura para ela ficar legível e tocável
+    const janelaAberta = () => [...document.querySelectorAll('[id^="modal-"]')].some(m => !m.classList.contains('hidden') && getComputedStyle(m).display !== 'none');
     function quadro() {
+        if (i >= 0 && janelaAberta()) { anelA.style.display = anelB.style.display = 'none'; fundo.style.display = 'none'; requestAnimationFrame(quadro); return; }
         if (i >= 0) {
             const P = passos[i], alvos = alvosDoPasso(), agora = performance.now();
             if (!alvos.length) { anelA.style.display = anelB.style.display = 'none'; fundo.style.display = 'block'; }

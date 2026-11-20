@@ -583,6 +583,7 @@
         // Franco-atirador (nível 9+): ~1 disparo por dia em quem está de vigília
         const FRANCO = { CHANCE: 0.04, DANO: 14, CONTRA: 0.5 };
         function francoAtirador() {
+            if (typeof GuiaT !== 'undefined' && GuiaT.ativo()) return; // durante o tutorial não há ataques sorteados
             if (!modAtivo('franco') || Math.random() >= FRANCO.CHANCE) return;
             const vigias = gameState.squad.filter(s => s.hp > 0 && s.duty === 'WATCH' && !s.deserted);
             if (!vigias.length) return;

@@ -190,6 +190,9 @@
 
         function mostrarTutorialSePrimeiraVez() {
             if (menuAberto || loginAberto) return; // o tutorial é do jogo: só começa depois de entrar no Trincheiras
+            // só abre sozinho numa partida NOVA (dia 1, fora do Desafio); numa partida em andamento fica para o "Rever o tutorial"
+            const emAndamento = gameState.day > 1 || gameState.timeSeconds > 60 || (typeof opAtual === 'function' && opAtual().tipo === 'desafio');
+            if (emAndamento) return;
             if (lerLocal(TUTORIAL_KEY) !== '1' && (!navigator.webdriver || /[?&]guia=1/.test(location.search))) abrirTutorial(); // (em teste automático só com ?guia=1)
         }
 
@@ -552,7 +555,7 @@
            Ao abrir, ao voltar para o app e a cada minuto o jogo compara as duas. Se o site
            tiver uma versão diferente, o jogo trava numa tela que só sai atualizando.
            (tools/nova-versao.sh troca as duas juntas a cada atualização publicada.) */
-        const VERSAO_JOGO = '20261120.2310';
+        const VERSAO_JOGO = '20261120.2320';
         const ATUALIZOU_KEY = 'frontline-atualizou-para';
         async function verificarVersao() {
             if (!location.protocol.startsWith('http') || atualizacaoPendente) return;
