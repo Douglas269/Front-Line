@@ -673,6 +673,7 @@
 
         function randomCrisisCheck() {
             if (gameState.activeCrisis) return;
+            if (typeof GuiaT !== 'undefined' && GuiaT.ativo()) return; // durante o tutorial não há crises sorteadas
             if (gameState.crisisCooldown > 0) { gameState.crisisCooldown--; return; }
             if (gameState.enemies.length > 0 || gameState.barrage) return;
             if (Math.random() >= CRISIS_CHANCE * diff().crisisMult) return;
