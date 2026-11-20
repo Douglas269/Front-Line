@@ -144,10 +144,12 @@
             cctx.moveTo(c.x + c.w - L, c.y + 1); cctx.lineTo(c.x + c.w - 1, c.y + 1); cctx.lineTo(c.x + c.w - 1, c.y + L);
             cctx.moveTo(c.x + 1, c.y + c.h - L); cctx.lineTo(c.x + 1, c.y + c.h - 1); cctx.lineTo(c.x + L, c.y + c.h - 1);
             cctx.moveTo(c.x + c.w - L, c.y + c.h - 1); cctx.lineTo(c.x + c.w - 1, c.y + c.h - 1); cctx.lineTo(c.x + c.w - 1, c.y + c.h - L); cctx.stroke();
-            if (c.duty) {
+            if (c.duty) { // o LED tem forma e cor: círculo cheio = ocupada, quadrado vazado = vazia, triângulo piscando = posto sem vigia
                 const vazioCritico = chave === 'posto' && !ocupantes, pisca = Math.floor(performance.now() / 350) % 2;
-                cctx.fillStyle = ocupantes ? '#6fd06a' : vazioCritico ? (pisca ? '#ff5c4a' : '#5a1c16') : '#3a4a3c';
-                cctx.fillRect(c.x + c.w - 25 - (ocupantes > 9 ? 5 : 0), c.y + 6, 4, 4);
+                const lx = c.x + c.w - 22 - (ocupantes > 9 ? 5 : 0), ly = c.y + 8;
+                if (ocupantes) { cctx.fillStyle = '#6fd06a'; cctx.beginPath(); cctx.arc(lx, ly, 2.8, 0, Math.PI * 2); cctx.fill(); }
+                else if (vazioCritico) { cctx.fillStyle = pisca ? '#ff5c4a' : '#7a2a22'; cctx.beginPath(); cctx.moveTo(lx, ly - 3.6); cctx.lineTo(lx + 3.6, ly + 3); cctx.lineTo(lx - 3.6, ly + 3); cctx.closePath(); cctx.fill(); }
+                else { cctx.strokeStyle = '#6a7a6c'; cctx.lineWidth = 1.2; cctx.strokeRect(lx - 2.4, ly - 2.4, 4.8, 4.8); }
             }
         }
 
