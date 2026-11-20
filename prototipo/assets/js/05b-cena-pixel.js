@@ -32,7 +32,16 @@ function pxQuadro(id, s, vermelho) {
         if (s.class === 'Atirador de Elite' && !deitado) { g.fillStyle = '#111'; g.fillRect(hx + 9, 12, 5, 1); g.fillStyle = '#6ad0ff'; g.fillRect(hx + 12, 11, 1, 1); } // luneta
         if (s.rank === 'Sgt.' && !deitado) { g.fillStyle = '#f2d34a'; g.fillRect(hx - 1, 17, 3, 1); g.fillRect(hx - 1, 19, 3, 1); } // divisas do sargento
     }
+    pxContorno(c);
     return pxVariantes[chave] = { c, PAD, w: q[2], h: q[3] };
+}
+// Contorno escuro de 1 px em volta do sprite (feito uma vez, no cache): destaca o soldado do fundo de madeira e de terra
+function pxContorno(c) {
+    const g = c.getContext('2d'), t = document.createElement('canvas'); t.width = c.width; t.height = c.height;
+    const tg = t.getContext('2d'); tg.drawImage(c, 0, 0); tg.globalCompositeOperation = 'source-in'; tg.fillStyle = 'rgba(14,11,8,0.9)'; tg.fillRect(0, 0, c.width, c.height);
+    g.globalCompositeOperation = 'destination-over';
+    [[-1, 0], [1, 0], [0, -1], [0, 1]].forEach(([dx, dy]) => g.drawImage(t, dx, dy));
+    g.globalCompositeOperation = 'source-over';
 }
 // Desenha um quadro com os pés em (x, y); ancora = coluna do corpo no quadro; flip vira para a esquerda
 // Inclinação do soldado (cansaço, fome, ferimento): em vez de girar o sprite (o que serrilha o pixel art), desloca cada linha de
@@ -211,6 +220,7 @@ function desenharSilhueta(s, x, y, pose, t) {
     else if (pose === 'panico' || pose === 'encolhido') { id = 138; ax = 27; yy = y + 3; }
     else if (pose === 'arrastado') id = [290, 291, 292, 293][Math.floor(t / 110) % 4];
     if (!PX_QUADROS[id]) id = 265;
+    if (pose !== 'deitado' && pose !== 'panico' && pose !== 'encolhido') { cctx.fillStyle = 'rgba(0,0,0,0.32)'; cctx.fillRect(Math.round(x - 11), Math.round(y + 2), 22, 2); cctx.fillRect(Math.round(x - 8), Math.round(y + 4), 16, 1); }  // sombra sob os pés
     pxDesenha(id, pose === 'panico' ? x + Math.round(Math.sin(t / 40) * 1.2) : x, yy, PX_ESC_SOLDADO, false, s, ferido, ax);
     if (pose === 'trabalho') { const a = Math.sin(t / 150) > 0 ? 0 : 5; cctx.fillStyle = '#9aa0a0'; cctx.fillRect(Math.round(x + 14), Math.round(y - 22 + a), 3, 3); cctx.fillStyle = '#6b4a2a'; cctx.fillRect(Math.round(x + 15), Math.round(y - 19 + a), 1, 8); }
     if (pose === 'come') { cctx.fillStyle = '#c8c8bc'; cctx.fillRect(Math.round(x + 10), Math.round(y - 26), 5, 3); cctx.fillStyle = '#6b5a3a'; cctx.fillRect(Math.round(x + 11), Math.round(y - 27), 3, 1); }

@@ -135,6 +135,9 @@ desenharBoneco = function (x, y, cor, andando, n, agora, dir = 1, tipos) {
             c = PX_SOLD.tinta[chave] = document.createElement('canvas'); c.width = q[2]; c.height = q[3];
             const g = c.getContext('2d', { willReadFrequently: true }); g.imageSmoothingEnabled = false; g.drawImage(PX_SOLD.img, q[0], q[1], q[2], q[3], 0, 0, q[2], q[3]);
             pxPintarTime(c, g, cor);
+            // contorno escuro de 1 px (uma vez, no cache): o soldado se destaca do terreno
+            const t = document.createElement('canvas'); t.width = c.width; t.height = c.height; const tg = t.getContext('2d'); tg.drawImage(c, 0, 0); tg.globalCompositeOperation = 'source-in'; tg.fillStyle = 'rgba(14,11,8,0.9)'; tg.fillRect(0, 0, c.width, c.height);
+            g.globalCompositeOperation = 'destination-over'; [[-1, 0], [1, 0], [0, -1], [0, 1]].forEach(([dx, dy]) => g.drawImage(t, dx, dy)); g.globalCompositeOperation = 'source-over';
         }
         cxM.fillStyle = 'rgba(0,0,0,.35)'; cxM.fillRect(Math.round(bx - 7), Math.round(by), 14, 2);
         cxM.save(); cxM.imageSmoothingEnabled = false; cxM.translate(Math.round(bx), Math.round(by)); cxM.scale(dir, 1);
