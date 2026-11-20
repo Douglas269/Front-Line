@@ -612,3 +612,23 @@
         }
 
 
+
+
+/* ---------- Layout de computador: painéis laterais espelham o diário e a logística ----------
+   Copiam o conteúdo das abas (sem os ids, para não duplicá-los) só quando a tela tem 1100 px ou mais e algo mudou.
+   Os botões copiados continuam funcionando (usam as mesmas funções globais). */
+(function () {
+    const larga = window.matchMedia('(min-width: 1100px)');
+    const pares = [['panel-diary', 'lateral-esq-corpo'], ['panel-logistics', 'lateral-dir-corpo']], ultimo = {};
+    function espelhar() {
+        if (!larga.matches) return;
+        pares.forEach(([origem, destino]) => {
+            const o = document.getElementById(origem), d = document.getElementById(destino); if (!o || !d) return;
+            const html = o.innerHTML.replace(/\sid="[^"]*"/g, '');
+            if (html !== ultimo[destino]) { ultimo[destino] = html; d.innerHTML = html; }
+        });
+    }
+    setInterval(espelhar, 700);
+    if (larga.addEventListener) larga.addEventListener('change', () => { Object.keys(ultimo).forEach(k => delete ultimo[k]); espelhar(); });
+    window.espelharLaterais = espelhar;
+})();
