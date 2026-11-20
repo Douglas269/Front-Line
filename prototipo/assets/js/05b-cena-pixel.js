@@ -207,6 +207,7 @@ function desenharComodoBase(chave) {
 
 // ---------- soldado: sprite; o resto (nome, vida, avisos, seleção) continua sendo desenhado pelo 05-cena ----------
 const PX_ESC_SOLDADO = 1.5;
+let pxVira = false;      // o soldado em trânsito olha para o lado em que anda (definido por 05-cena.js)
 function desenharSilhueta(s, x, y, pose, t) {
     if (!pxPronto) return false;
     const ferido = (feridosRecentes.get(s.id) || 0) > 0 && Math.floor(t / 80) % 2 === 0;
@@ -221,7 +222,9 @@ function desenharSilhueta(s, x, y, pose, t) {
     else if (pose === 'arrastado') id = [290, 291, 292, 293][Math.floor(t / 110) % 4];
     if (!PX_QUADROS[id]) id = 265;
     if (pose !== 'deitado' && pose !== 'panico' && pose !== 'encolhido') { cctx.fillStyle = 'rgba(0,0,0,0.32)'; cctx.fillRect(Math.round(x - 11), Math.round(y + 2), 22, 2); cctx.fillRect(Math.round(x - 8), Math.round(y + 4), 16, 1); }  // sombra sob os pés
-    pxDesenha(id, pose === 'panico' ? x + Math.round(Math.sin(t / 40) * 1.2) : x, yy, PX_ESC_SOLDADO, false, s, ferido, ax);
+    const recuo = atirou && (pose === 'mira' || pose === 'ninho') ? 1 : 0;                       // recuo de 1 px a cada tiro
+    if (pose === 'arrastado') yy -= Math.abs(Math.round(Math.sin(t / 110) * 1));                  // passo: o corpo sobe e desce
+    pxDesenha(id, (pose === 'panico' ? x + Math.round(Math.sin(t / 40) * 1.2) : x) - recuo, yy, PX_ESC_SOLDADO, pose === 'arrastado' && pxVira, s, ferido, ax);
     if (pose === 'trabalho') { const a = Math.sin(t / 150) > 0 ? 0 : 5; cctx.fillStyle = '#9aa0a0'; cctx.fillRect(Math.round(x + 14), Math.round(y - 22 + a), 3, 3); cctx.fillStyle = '#6b4a2a'; cctx.fillRect(Math.round(x + 15), Math.round(y - 19 + a), 1, 8); }
     if (pose === 'come') { cctx.fillStyle = '#c8c8bc'; cctx.fillRect(Math.round(x + 10), Math.round(y - 26), 5, 3); cctx.fillStyle = '#6b5a3a'; cctx.fillRect(Math.round(x + 11), Math.round(y - 27), 3, 1); }
     return true;
