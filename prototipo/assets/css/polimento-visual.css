@@ -46,7 +46,7 @@ button:disabled {
 
 /* Cartão de briefing (topo da tela de campanha) e cantos táticos nas fases */
 .menu-brief { position: relative; margin: 2px 0 8px; padding: 9px 10px; border: 1px solid #27332b; background: #131815; border-radius: 4px; }
-.menu-brief .k { font-size: 9.5px; color: #9fb39a; letter-spacing: 1px; }
+.menu-brief .k { font-size: 10.5px; color: #9fb39a; letter-spacing: 1px; }
 .menu-brief h2 { margin: 3px 0 0; font-size: 13px; letter-spacing: 1px; color: #ffd28a; }
 .menu-brief .dir { position: absolute; right: 10px; top: 9px; text-align: right; font-size: 9.5px; color: #9fb39a; }
 .menu-brief .dir .ok { color: #8fd17f; }
@@ -62,3 +62,10 @@ button.fase:not(:disabled):hover::before, button.fase:not(:disabled):hover::afte
 .fases-grid button.fase b { display: block; line-height: 1.25; }
 .fases-grid button.fase .estrelas { float: none; display: block; margin: 3px 0 2px; }
 .fases-grid button.fase:last-child:nth-child(odd) { grid-column: span 2; }
+
+
+/* Textos corridos na fonte de leitura (condensada): o monoespaçado fica para títulos e números */
+#guiaT, #corte-cartao, #corte-dica, #cfg-jogo, #corte-fichas, #panel-diary, #panel-logistics .font-normal,
+.menu-brief, .modo p { font-family: 'Barlow Condensed', 'Courier Prime', monospace; letter-spacing: .1px; }
+#guiaT, #corte-cartao, #corte-dica { font-size: 13px; line-height: 1.35; }
+#cfg-jogo .text-mil-textMuted, #corte-fichas, #panel-diary { font-size: 13.5px; }

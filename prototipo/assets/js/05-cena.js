@@ -111,7 +111,7 @@
             return corteCanvas.width / CORTE.W;
         }
         // Texto da cena: fonte condensada e nunca menor que minPx na tela (letra pequena demais não se lê no celular)
-        function txtC(x, y, t, cor, tam = 8.5, peso = 700, anc = 'left', minPx = 9.5) {
+        function txtC(x, y, t, cor, tam = 8.5, peso = 700, anc = 'left', minPx = 10.5) {
             const tt = Math.max(tam, minPx / CORTE.escCss);
             cctx.font = `${peso >= 600 ? 700 : 500} ${tt}px ${FONTE_CENA}`;
             cctx.textAlign = anc; cctx.fillStyle = cor; cctx.fillText(t, x, y); cctx.textAlign = 'left';
