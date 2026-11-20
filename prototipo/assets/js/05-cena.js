@@ -137,6 +137,18 @@
                 cctx.fillStyle = 'rgba(143,173,136,0.14)'; cctx.fillRect(c.x, c.y, c.w, c.h);
             }
             if (c.duty) txtC(c.x + c.w - 5, c.y + 11, String(ocupantes), '#b3c4ae', 8, 500, 'right', 10);
+            // Painel tático: cantoneiras de terminal e um LED de estado (verde = ocupada; o posto vazio fica vermelho e piscando)
+            const L = 9;
+            cctx.strokeStyle = 'rgba(143,173,136,0.75)'; cctx.lineWidth = 1.5; cctx.beginPath();
+            cctx.moveTo(c.x + 1, c.y + L); cctx.lineTo(c.x + 1, c.y + 1); cctx.lineTo(c.x + L, c.y + 1);
+            cctx.moveTo(c.x + c.w - L, c.y + 1); cctx.lineTo(c.x + c.w - 1, c.y + 1); cctx.lineTo(c.x + c.w - 1, c.y + L);
+            cctx.moveTo(c.x + 1, c.y + c.h - L); cctx.lineTo(c.x + 1, c.y + c.h - 1); cctx.lineTo(c.x + L, c.y + c.h - 1);
+            cctx.moveTo(c.x + c.w - L, c.y + c.h - 1); cctx.lineTo(c.x + c.w - 1, c.y + c.h - 1); cctx.lineTo(c.x + c.w - 1, c.y + c.h - L); cctx.stroke();
+            if (c.duty) {
+                const vazioCritico = chave === 'posto' && !ocupantes, pisca = Math.floor(performance.now() / 350) % 2;
+                cctx.fillStyle = ocupantes ? '#6fd06a' : vazioCritico ? (pisca ? '#ff5c4a' : '#5a1c16') : '#3a4a3c';
+                cctx.fillRect(c.x + c.w - 25 - (ocupantes > 9 ? 5 : 0), c.y + 6, 4, 4);
+            }
         }
 
         // Móveis fixos (vão para o fundo em cache; dependem do estoque e das armas)
@@ -571,7 +583,13 @@
                     // Caminha até a nova posição em vez de aparecer lá de repente
                     const a = animPos[s.id] || (animPos[s.id] = { x, y });
                     const vel = 0.09 * fatorAndar(s); a.x += (x - a.x) * vel; a.y += (y - a.y) * vel;
-                    if (Math.hypot(x - a.x, y - a.y) > 2.5) { pose = 'em pé'; x = a.x; y = a.y; } else { a.x = x; a.y = y; }
+                    if (Math.hypot(x - a.x, y - a.y) > 2.5) {
+                        // em trânsito: linha tracejada até o destino, com um ponto de chegada piscando
+                        cctx.strokeStyle = 'rgba(143,173,136,0.6)'; cctx.lineWidth = 1.2; cctx.setLineDash([3, 3]);
+                        cctx.beginPath(); cctx.moveTo(a.x, a.y - 14); cctx.lineTo(x, y - 14); cctx.stroke(); cctx.setLineDash([]);
+                        cctx.fillStyle = `rgba(143,173,136,${0.5 + 0.4 * Math.sin(t / 140)})`; cctx.fillRect(Math.round(x) - 2, Math.round(y) - 16, 4, 4);
+                        pose = 'em pé'; x = a.x; y = a.y;
+                    } else { a.x = x; a.y = y; }
                 }
                 posicoesCena[s.id] = { x, y };
                 desenharSoldadoCena(s, x, y, pose, t, pose === p.pose ? (p.rotY || 0) : 0);
