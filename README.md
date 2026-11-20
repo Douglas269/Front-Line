@@ -206,7 +206,7 @@ Modo a mais: o jogo de um jogador continua igual. Escolha **⚔️ Trincheiras o
 
 ### Recursos livres usados (tela "Créditos" no jogo)
 - **ZzFX 1.4.0** (MIT, Frank Force): sons de tiro, rajada, explosão, assobio do morteiro, foguete, alarme de artilharia e queda. Adaptado em `prototipo/vendor/zzfx.js` para só gerar as amostras; quem toca é o áudio do jogo (o botão de som manda em tudo). Presets no bloco `SONS`.
-- **game-icons.net** (CC BY 3.0, Lorc, Delapouite e colaboradores): ícones de armas, munições, rações, água, kits e apoios nas abas Logística, Rádio e Defesas. Só os ícones usados, em `prototipo/vendor/game-icons.js`.
+- **game-icons.net** (CC BY 3.0, Lorc, Delapouite e colaboradores): ícones de armas, munições, rações, água, kits e apoios nas abas Logística, Rádio e Defesas, e os chips de recursos e o painel Economia da Conquista (pão, moedas, engrenagem, galão, capacete, bandeira). Só os ícones usados, em `prototipo/vendor/game-icons.js`.
 - **Medalhas de Kenney** (CC0): medalha na tela de vitória (bronze até o nível 8, prata até o 16, ouro até o 24, especial no 25) e condecorações dos soldados — Cruz de Combate (15 abates), Ferido em Combate (sobreviveu com menos de 25% de vida), Medalha da Trincheira (vivo no dia 15) e Estrela de Bravura (fúria heroica). Aparecem no card e na ficha. Arquivos em `prototipo/assets/medals/`.
 
 ### Balanceamento atual (resumo)
