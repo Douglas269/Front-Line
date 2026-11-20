@@ -60,6 +60,7 @@ Toda tarefa (Correção, Melhoria ou Nova função) tem uma **issue**, e todo de
 - **Painel tático:** cada sala ganha cantoneiras de terminal e um LED de estado (verde = ocupada; o posto de vigília vazio pisca em vermelho), e o soldado em trânsito mostra uma linha tracejada até o destino, com um ponto de chegada piscando.
 - **Silêncio (nível 3+, `08-campo-ameacas.js`):** nova ordem tática. Por 10 s reais ninguém atira (o esquadrão não gasta munição e os inimigos, inclusive drones, não disparam), mas o inimigo continua avançando e a invasão acontece se ele chegar; artilharia e franco-atirador seguem. Depois recarrega por 30 s. Ligar Fogo Supressão ou Vigília Total rompe o silêncio, e ligar o silêncio desliga as de fogo. A cena ganha um tom azulado e a faixa mostra o tempo. Teste: `node tests/silencio.js`.
 - **Mira da artilharia na cena:** durante o aviso, cada alvo (depósito, ninhos e soldados marcados) ganha um anel vermelho que fecha até o impacto e pisca mais rápido; nos últimos 2 s um projétil risca o céu até ele. Some no impacto ou se a contra-bateria chegar.
+- **Layout de computador (1100 px ou mais):** o Trincheiras ganha dois painéis laterais ao vivo, o diário à esquerda e a logística à direita, que espelham as abas (sem ids duplicados; os botões copiados continuam funcionando). No celular e em telas menores nada muda. Teste: `node tests/layout-pc.js`.
 - Teste: `node tests/pistas-visuais.js` (PRINTS=pasta salva capturas).
 
 ### Menu principal (conta, configurações e créditos)
