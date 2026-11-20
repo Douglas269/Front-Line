@@ -45,6 +45,7 @@ Toda tarefa (Correção, Melhoria ou Nova função) tem uma **issue**, e todo de
 - **Terreno em batalha:** infantaria defendendo em cidade (+30%), floresta (+25%) ou morro (+15%); blindado atacando em campo (+25%).
 - Módulo de estruturas `conquista-unidades.js` (ainda sem uso direto no jogo); teste `node tests/combustivel.js`.
 
+- **Bots e combustível:** só recrutam blindado com pelo menos 8 de reserva, constroem a fábrica primeiro quando o combustível cai abaixo de 6 e têm blindados, e deixam em casa os blindados quando o combustível acaba (a função `ordem` aceita uma lista de aptos para a divisão; o wrapper online repassa o parâmetro). Teste em `tests/combustivel.js`.
 ### Economia da Conquista (dinheiro, aço, mão de obra, comida, munição)
 - **Dinheiro 🪙:** cria a tropa e paga a **manutenção** de cada soldado a cada ciclo (5 s). Sem dinheiro, o **soldo atrasa**, com a mesma lógica da fome: a eficácia cai, a moral das províncias cai e, no extremo (atraso ≥ 80%), soldados desertam. Pagando em dia, o atraso some.
 - **Aço ⚙️:** só no custo de criar tropa pesada (metralhadora 2, artilharia 6, blindado 12) e de obras e fortificar. Vem de morros, capital, cidades e da obra Fábrica.
@@ -57,6 +58,7 @@ Toda tarefa (Correção, Melhoria ou Nova função) tem uma **issue**, e todo de
 - **Desbloqueio gradual por nível** (tabela `MODIFICADORES` em `02-regras.js`): nível 1 só nublado e sem eventos complexos; 2 ofensivas anunciadas; 3 chuva (e lama: o soldado anda mais devagar); 4 névoa e neve; 5 noites longas e incursão noturna; 6 gás; 7 lança-chamas; 8 sabotagem; 9 franco-atirador e os níveis seguintes como antes. A primeira vez que cada mecânica aparece numa partida, o jogo explica em uma linha, e a tela de vitória e o início do nível listam as novidades.
 - **Sabotagem (nível 8+, `08-campo-ameacas.js`).** O espião mira uma sala (cozinha, oficina ou ninhos): a sala pisca com uma mira na cena e a faixa mostra o tempo (cerca de 12 s). Se houver ao menos um soldado vivo na sala no fim do prazo, o espião foge (+4 de prestígio); senão o estrago acontece (rações e água −25%, parapeito −10% ou munição leve −20%).
 - **Painel tático:** cada sala ganha cantoneiras de terminal e um LED de estado (verde = ocupada; o posto de vigília vazio pisca em vermelho), e o soldado em trânsito mostra uma linha tracejada até o destino, com um ponto de chegada piscando.
+- **Mira da artilharia na cena:** durante o aviso, cada alvo (depósito, ninhos e soldados marcados) ganha um anel vermelho que fecha até o impacto e pisca mais rápido; nos últimos 2 s um projétil risca o céu até ele. Some no impacto ou se a contra-bateria chegar.
 - Teste: `node tests/pistas-visuais.js` (PRINTS=pasta salva capturas).
 
 ### Menu principal (conta, configurações e créditos)

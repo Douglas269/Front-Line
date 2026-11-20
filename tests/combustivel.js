@@ -32,6 +32,27 @@ const { chromium } = require('playwright');
     r.nomes = [1, 2, 4, 8, 15].map(n => nomeFormacao(n).split(' · ')[0]);
     // 6) save antigo sem combustível é migrado
     novo(); { G.pausado = false; salvarPartida(); const d = JSON.parse(localStorage.getItem(SAVE_CONQ)); Object.values(d.fac).forEach(f => { delete f.comb; }); localStorage.setItem(SAVE_CONQ, JSON.stringify(d)); carregarPartida(); r.saveAntigo = G.fac.jogador.comb === C.COMB_INICIAL; }
+    // 7) bots e combustível (issue #10): só recrutam blindado com reserva, fabricam quando falta e deixam blindado sem combustível em casa
+    { novo(); const bot = G.fase.bots[0], f = G.fac[bot];
+      const contaBlind = () => G.ex.filter(e => e.dono === bot).reduce((t, e) => t + e.s.filter(x => x.tipo === 'blind').length, 0);
+      const orig = Math.random; Math.random = () => 0.5;
+      f.comb = 0; f.moedas = 400; f.aco = 400; const antes = contaBlind();
+      for (let i = 0; i < 40; i++) { f.moedas = 400; f.aco = 400; f.comb = 0; pensarBot(bot); }
+      r.botSemCombNaoRecrutaBlind = contaBlind() === antes;
+      Math.random = orig;
+      // ordem(): com lista de aptos, o blindado não vai na divisão
+      const casa = provDe(bot).find(q => q.capital) || provDe(bot)[0], viz = G.prov[casa.viz[0]];
+      const ex = criarExercito(bot, casa.id, 3); ex.s.push(soldado('Tanque', 'blind'));
+      const aptos = ex.s.filter(x => x.tipo !== 'blind'), tanque = ex.s.find(x => x.tipo === 'blind');
+      const novoEx = ordem(ex.id, viz.id, 3, 'ataque', aptos);
+      r.ordemDeixaBlindado = !!novoEx && !novoEx.s.includes(tanque) && ex.s.includes(tanque);
+      // fábrica passa na frente quando o combustível está baixo e há blindado
+      novo(); const bot2 = G.fase.bots[0], f2 = G.fac[bot2]; f2.comb = 1;
+      const capB = provDe(bot2).find(q => q.capital); const ex2 = exParadosEm(capB.id, bot2)[0] || criarExercito(bot2, capB.id, 3); ex2.s.push(soldado('Tanque', 'blind'));
+      const o2 = Math.random; Math.random = () => 0.1; f2.moedas = 900; capB.obras = {}; capB.obra = null;
+      pensarBot(bot2); Math.random = o2;
+      r.botFazFabricaSemCombustivel = !!(capB.obra && capB.obra.tipo === 'fabrica') || !!capB.obras.fabrica || (capB.obra && /fabrica|fábrica/i.test(JSON.stringify(capB.obra)));
+    }
     return r;
   });
   const ck = (ok, m) => { if (!ok) falhas.push(m + ' ' + JSON.stringify(R)); };
@@ -43,6 +64,9 @@ const { chromium } = require('playwright');
   ck(R.semCombChance === 0.5 && R.comChance === 1 && R.infSemComb === 1, 'sem combustível o blindado atira com metade da chance; infantaria não');
   ck(R.stack14 === 1 && R.stack15 === 0.97 && R.stack100 === 0.6, 'penalidade de excesso: 14 sem perda, 15 com 3%, piso 60%');
   ck(R.nomes.join('|') === '🪖 Regimento (III)|🪖 Brigada (X)|🪖 Divisão (XX)|🪖 Corpo de Exército (XXX)|🪖 Exército (XXXX)', 'nomes: ' + R.nomes.join('|'));
+  ck(R.botSemCombNaoRecrutaBlind, 'bot sem combustível não recruta blindado');
+  ck(R.ordemDeixaBlindado, 'ordem com lista de aptos deixa o blindado em casa');
+  ck(R.botFazFabricaSemCombustivel, 'bot com blindado e pouco combustível constrói a fábrica primeiro');
   ck(R.saveAntigo, 'save antigo sem combustível é migrado');
   // terreno: infantaria defendendo em cidade, floresta ou morro; blindado atacando em campo
   const T = await p.evaluate(() => ({ cidade: bonusTerreno('inf', 'cidade', 'def'), capital: bonusTerreno('inf', 'capital', 'def'), floresta: bonusTerreno('inf', 'floresta', 'def'), morro: bonusTerreno('inf', 'morro', 'def'), campo: bonusTerreno('inf', 'campo', 'def'), blindCampo: bonusTerreno('blind', 'campo', 'atq'), blindCidade: bonusTerreno('blind', 'cidade', 'atq'), infAtaca: bonusTerreno('inf', 'campo', 'atq') }));

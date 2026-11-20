@@ -254,14 +254,14 @@ function rotaPara(e, destId) {
     if (!e.rota.length) return c;
     return { rota: [base, ...c.rota], dist: c.dist + Math.hypot(e.x - G.prov[base].x, e.y - G.prov[base].y) };
 }
-function ordem(exId, destId, qtd, missao) {
+function ordem(exId, destId, qtd, missao, aptos) { // aptos (opcional): só estes podem ir na divisão (ex.: o bot deixa os blindados sem combustível em casa)
     let e = G.ex.find(x => x.id === exId);
     if (!e || e.emBatalha || (!e.rota.length && destId === e.prov)) return false;
     const emMarcha = e.rota.length > 0;
     const c = rotaPara(e, destId); if (!c) return false;
     qtd = emMarcha ? e.s.length : Math.max(1, Math.min(qtd || e.s.length, e.s.length));
     if (qtd < e.s.length) { // divide: vão os mais inteiros
-        const ord = vivos(e.s).sort((a, b) => eficacia(b) - eficacia(a)), vao = ord.slice(0, qtd);
+        const ord = (aptos ? vivos(aptos).filter(s => e.s.includes(s)) : vivos(e.s)).sort((a, b) => eficacia(b) - eficacia(a)), vao = ord.slice(0, qtd);
         e.s = e.s.filter(s => !vao.includes(s));
         e = criarExercito(e.dono, e.prov, 0, vao);
     }
@@ -425,6 +425,8 @@ function pensarBot(dono) {
     const capital = provs.find(p => p.capital && p.dono === dono);
     // 0) pesquisa e obras (com o dinheiro que sobra depois de separar o da manutenção)
     const manutBot = manutencaoDe(dono), sobra = f.moedas - 4 * manutBot;
+    // combustível: o bot só recruta blindado com reserva, constrói fábrica quando falta e deixa blindado sem combustível em casa
+    const combBaixo = (f.comb || 0) < 6, temBlind = exDe(dono).some(e => e.s.some(x => x.tipo === 'blind'));
     if (!G.pesq[dono].atual && sobra > FX.reserva + 50 && Math.random() < 0.5) {
         const pref = { agressivo: ['cav', 'estradas', 'metr', 'art', 'blind'], 'ladrão': ['cav', 'radio', 'estradas', 'metr'], defensivo: ['metr', 'concreto', 'art', 'propaganda', 'blind'], oportunista: ['art', 'cav', 'metr', 'racoes', 'blind'] }[FX.perso] || [];
         const id = pref.concat(Object.keys(PESQUISAS)).find(x => pesquisaDisponivel(dono, x) && PESQUISAS[x].custo <= sobra - FX.reserva);
@@ -432,6 +434,7 @@ function pensarBot(dono) {
     }
     if (capital && sobra > FX.reserva + 60 && Math.random() < 0.3) {
         const obra = FX.perso === 'defensivo' ? ['forte', 'hospital', 'fabrica'] : ['fabrica', 'forte', 'ferrovia'];
+        if (combBaixo && temBlind) obra.unshift('fabrica'); // blindado sem combustível não anda: a fábrica passa na frente
         const alvoObra = [capital, ...provs.filter(q => q.viz.some(v => G.prov[v].dono !== dono))].find(q => !q.obra && obra.some(o => !q.obras[o]));
         if (alvoObra) construir(alvoObra.id, obra.find(o => !alvoObra.obras[o]), dono);
     }
@@ -441,7 +444,7 @@ function pensarBot(dono) {
     // só recruta se há mão de obra e aço, sobra dinheiro e a renda aguenta a manutenção da nova tropa (senão o soldo atrasa e a tropa deserta)
     let saldoMoedas = rendaDe(dono, 'moedas') - manutBot;
     for (let k = 0; k < 3 && cidades.length; k++) {
-        const tipos = gosto.filter(t => !motivoSemRecrutar(dono, t)), tipo = tipos[Math.floor(Math.random() * tipos.length)] || (motivoSemRecrutar(dono, 'inf') ? null : 'inf');
+        const tipos = gosto.filter(t => !motivoSemRecrutar(dono, t) && !(t === 'blind' && (f.comb || 0) < 8)), tipo = tipos[Math.floor(Math.random() * tipos.length)] || (motivoSemRecrutar(dono, 'inf') ? null : 'inf');
         if (!tipo || f.moedas < custoRecrutarTipo(dono, tipo) + FX.reserva || saldoMoedas < TROPAS[tipo].manut + 0.3 || Math.random() < 0.2) break;
         if (recrutarEm(cidades[0].id, dono, tipo)) saldoMoedas -= TROPAS[tipo].manut;
     }
@@ -461,8 +464,9 @@ function pensarBot(dono) {
     exDe(dono).filter(e => parado(e) && e.s.length >= 3).forEach(e => {
         const casa = G.prov[e.prov];
         const deixar = casa.capital ? (FX.perso === 'agressivo' && Math.random() < 0.25 ? 1 : 4) : (ameaca(casa, dono) > 0 ? 2 : 1);
-        const manda = e.s.length - deixar; if (manda < 2) return;
-        const enviados = vivos(e.s).sort((a, b) => eficacia(b) - eficacia(a)).slice(0, manda);
+        const aptos = vivos(e.s).filter(x => !((f.comb || 0) <= 0 && x.tipo === 'blind'));   // sem combustível o blindado fica
+        const manda = Math.min(e.s.length - deixar, aptos.length); if (manda < 2) return;
+        const enviados = aptos.slice().sort((a, b) => eficacia(b) - eficacia(a)).slice(0, manda);
         casa.viz.map(id => G.prov[id]).filter(q => q.dono !== dono && emGuerra(dono, q.dono)).forEach(q => {
             let est = defesaEm(q) * (1 + (Math.random() - 0.5) * 0.6);
             const fora = G.ex.filter(x => x.dono === q.dono && x.rota.length && x.origem === q.id).length; // oportunista: dono saiu para brigar
@@ -470,7 +474,7 @@ function pensarBot(dono) {
             if (FX.perso === 'oportunista' && fora) pref *= 1.6;
             if (FX.perso === 'agressivo' && q.dono === 'jogador') pref *= 1.2;
             if (q.dono !== 'neutro' && (placar()[q.dono] || 0) >= Math.max(...Object.entries(placar()).filter(([d]) => d !== 'neutro').map(([, n]) => n))) pref *= 1.25; // todos de olho no líder
-            opcoes.push({ e, q, manda, est, pref, forcaEnv: forca(enviados) });
+            opcoes.push({ e, q, manda, est, pref, aptos, forcaEnv: forca(enviados) });
         });
     });
     const boas = opcoes.filter(o => o.forcaEnv > o.est * FX.coragem * C.BOT_MARGEM * (typeof DIFC === 'function' ? DIFC() : { vontade: 1, margem: 1, prod: 1 }).margem).sort((a, b) => b.pref * (b.forcaEnv - b.est) - a.pref * (a.forcaEnv - a.est));
@@ -479,9 +483,9 @@ function pensarBot(dono) {
     // ladrão: prefere saquear quem tem dinheiro
     if (FX.perso === 'ladrão' && Math.random() < 0.55) {
         const s = opcoes.filter(o => o.q.dono !== 'neutro' && emGuerra(dono, o.q.dono) && G.fac[o.q.dono].moedas > 30 && o.forcaEnv > o.est * 0.9).sort((a, b) => G.fac[b.q.dono].moedas - G.fac[a.q.dono].moedas)[0];
-        if (s && ordem(s.e.id, s.q.id, Math.min(4, s.manda), 'saque')) { G.ultimoAtaque[dono] = G.t; return; }
+        if (s && ordem(s.e.id, s.q.id, Math.min(4, s.manda), 'saque', s.aptos)) { G.ultimoAtaque[dono] = G.t; return; }
     }
-    if (esc && ordem(esc.e.id, esc.q.id, esc.manda, 'ataque')) G.ultimoAtaque[dono] = G.t;
+    if (esc && ordem(esc.e.id, esc.q.id, esc.manda, 'ataque', esc.aptos)) G.ultimoAtaque[dono] = G.t;
 }
 function generalDosBots() { // cada bot tem um general no seu maior exército (+12%)
     G.fase.bots.filter(b => G.pensar[b] !== undefined).forEach(b => { const ex = exDe(b); ex.forEach(e => { e.general = null; }); /* só os países dos bots */ const maior = ex.sort((a, z) => z.s.length - a.s.length)[0]; if (maior) maior.general = 'bot'; });
