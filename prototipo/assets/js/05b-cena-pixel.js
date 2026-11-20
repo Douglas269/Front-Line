@@ -119,6 +119,7 @@ function desenharInimigosCena(t) {
         return;
     }
     const maisPerto = gameState.enemies.slice().sort((a, b) => a.distance - b.distance).slice(0, 4), usados = [];
+    const alvoMaior = maisPerto.find(e => e.type !== 'drone' && !(typeof inimigoOculto === 'function' && inimigoOculto(e))); // a ameaça mais próxima: sprite maior e distância em destaque
     gameState.enemies.slice().sort((a, b) => b.distance - a.distance).forEach(e => {
         if (typeof inimigoOculto === 'function' && inimigoOculto(e)) return;
         const p = posInimigoCena(e), fase = Math.floor(t / 230 + (e.offsetX || 0) * 0.07);
@@ -139,13 +140,16 @@ function desenharInimigosCena(t) {
             topo = 40;
         } else {
             const ids = PX_INIM[e.type] || PX_INIM.infantaria;
-            pxDesenha(ids[fase % ids.length], p.x, p.y, 1, true, null, ferido, 13);
+            const esc = e === alvoMaior ? 1.6 : 1;
+            if (e === alvoMaior) { cctx.fillStyle = `rgba(255,90,70,${0.18 + 0.12 * Math.sin(t / 160)})`; cctx.beginPath(); cctx.ellipse(Math.round(p.x), Math.round(p.y), 13, 4, 0, 0, Math.PI * 2); cctx.fill(); }
+            pxDesenha(ids[fase % ids.length], p.x, p.y, esc, true, null, ferido, 13);
+            if (esc > 1) topo = 36 * esc;
         }
         if (typeof desenharExtraInimigo === 'function') desenharExtraInimigo(e, p, 1, t);
         if (vida < 0.98 && e.type !== 'drone') { cctx.fillStyle = '#000'; cctx.fillRect(Math.round(p.x - 8), Math.round(p.y - topo - 3), 16, 3); cctx.fillStyle = vida > 0.5 ? '#d46a6a' : '#ff9a5c'; cctx.fillRect(Math.round(p.x - 7), Math.round(p.y - topo - 2), Math.round(14 * vida), 1); }
         if (maisPerto.includes(e) || e.type === 'blindado') {
             const ry = p.y - topo - 7;
-            if (!usados.some(r => Math.abs(r.x - p.x) < 28 && Math.abs(r.y - ry) < 9)) { usados.push({ x: p.x, y: ry }); txtC(p.x, ry, `${Math.round(e.distance)}m`, '#f4a094', 7, 700, 'center', 8.5); }
+            if (!usados.some(r => Math.abs(r.x - p.x) < 28 && Math.abs(r.y - ry) < 9)) { usados.push({ x: p.x, y: ry }); if (e === alvoMaior) { const tx = `${Math.round(e.distance)}m`; cctx.fillStyle = 'rgba(40,10,6,0.85)'; cctx.fillRect(Math.round(p.x) - 18, Math.round(ry) - 11, 36, 14); txtC(p.x, ry, tx, '#ffb3a6', 10, 700, 'center', 11.5); cctx.fillStyle = '#ff5c4a'; cctx.beginPath(); cctx.moveTo(p.x - 4, ry + 5); cctx.lineTo(p.x + 4, ry + 5); cctx.lineTo(p.x, ry + 10); cctx.closePath(); cctx.fill(); } else txtC(p.x, ry, `${Math.round(e.distance)}m`, '#f4a094', 7, 700, 'center', 8.5); }
         }
     });
 };
@@ -213,6 +217,7 @@ function desenharFundoCompleto() {
     Object.keys(CORTE.comodos).forEach(desenharComodoBase);
     desenharMoveisFundo();
     const per = periodoDoDia();
-    if (per >= 2) { cctx.fillStyle = 'rgba(8,18,40,0.22)'; cctx.fillRect(0, 0, CORTE.W, CORTE.H); }
-    else if (per === 1) { cctx.fillStyle = 'rgba(255,170,80,0.06)'; cctx.fillRect(0, 0, CORTE.W, CORTE.H); }
+    if (per >= 2) { cctx.fillStyle = `rgba(6,14,38,${per === 3 ? 0.42 : 0.34})`; cctx.fillRect(0, 0, CORTE.W, CORTE.H); }   // noite e madrugada: bem mais escuras
+    else if (per === 1) { cctx.fillStyle = 'rgba(255,150,60,0.13)'; cctx.fillRect(0, 0, CORTE.W, CORTE.H); }                  // tarde: luz alaranjada
+    else { cctx.fillStyle = 'rgba(200,225,255,0.04)'; cctx.fillRect(0, 0, CORTE.W, CORTE.H); }                                   // manhã: luz fria e clara
 };
