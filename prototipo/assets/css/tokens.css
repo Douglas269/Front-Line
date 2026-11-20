@@ -23,6 +23,10 @@
     --fl-perigo-forte: #ff6b5b;  /* chip em falta */
     --fl-vermelho: #8a2b2b;
     --fl-azul: #3b5266;
+    /* paleta do pixel art (iguais a FL_PAL em assets/js/paleta.js) */
+    --px-contorno: #0e0b08; --px-farda: #5d6b48; --px-farda-escura: #3e4a33; --px-farda-medico: #5f6b4c; --px-bota: #2a2a22; --px-sangue: #8a1f1f;
+    --px-pele-1: #c99a74; --px-pele-2: #7a4f33; --px-pele-3: #e2b996; --px-pele-4: #a8714c; --px-pele-5: #d9a988; --px-pele-6: #b98159;
+    --px-soldado-1: #e5483d; --px-soldado-2: #3d8be5; --px-soldado-3: #e8c53a; --px-soldado-4: #f2f2ee; --px-soldado-5: #e88a2a; --px-soldado-6: #a96be5;
     /* forma */
     --fl-raio: 6px;
     --fl-raio-grande: 10px;
