@@ -288,7 +288,7 @@
             const X = Math.round(x), Y = Math.round(y);
             if (hp < 80) { // mancha de sangue, maior quanto mais ferido
                 const q = Math.min(1, (80 - hp) / 70), w = 3 + Math.round(q * 5), hh = 4 + Math.round(q * 6);
-                cctx.fillStyle = '#8a1f1f';
+                cctx.fillStyle = FL_PAL.sangue;
                 if (deitado) cctx.fillRect(X - 6, Y - 9, w + 2, 3); else cctx.fillRect(X - 4, Y - 24, w, hh);
                 if (hp < 30 && Math.floor(t / 400 + s.id) % 2) { cctx.fillStyle = '#b02a2a'; cctx.fillRect(X - 3, Y - 24 + hh + ((t / 90) % 8 | 0), 1, 2); }
             }
@@ -312,8 +312,8 @@
         }
         function desenharSoldadoCena(s, x, y, pose, t, rotY = 0) {
             const flash = (feridosRecentes.get(s.id) || 0) > 0 && Math.floor(t / 80) % 2 === 0;
-            const corpo = flash ? '#a83232' : (s.class === 'Médico' ? '#5f6b4c' : '#5d6b48');
-            const pele = { 1: '#c99a74', 2: '#7a4f33', 3: '#e2b996', 4: '#a8714c', 5: '#d9a988', 6: '#b98159' }[s.id] || '#c99a74';
+            const corpo = flash ? '#a83232' : (s.class === 'Médico' ? FL_PAL.fardaMedico : FL_PAL.farda);
+            const pele = FL_PAL.pele[s.id] || FL_PAL.pele[1];
             const POSE_SILHUETA = { mira: 'mira', ninho: 'ninho', come: 'come', trabalho: 'trabalho', deitado: 'deitado', encolhido: 'panico', panico: 'panico', 'em pé': 'arrastado' };
             const post = posturaSoldado(s, t), emPe = pose !== 'deitado' && pose !== 'encolhido' && pose !== 'panico';
             // postura: o sprite é deslocado por linhas de pixels inteiros (nada de rotação, que serrilharia o pixel art)

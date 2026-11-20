@@ -11,7 +11,7 @@ pxImg.src = musicBase + 'assets/pixel/soldados.png';
 pxTanque.src = musicBase + 'assets/pixel/blindado.png';
 
 // Cores de cada soldado (lenço e faixa do capacete): dá para reconhecer quem é quem sem ler o nome
-const PX_COR_SOLDADO = { 1: '#e5483d', 2: '#3d8be5', 3: '#e8c53a', 4: '#f2f2ee', 5: '#e88a2a', 6: '#a96be5' };
+const PX_COR_SOLDADO = FL_PAL.soldado;
 const pxVariantes = {};
 function pxQuadro(id, s, vermelho) {
     const q = PX_QUADROS[id]; if (!q || !pxPronto) return null;
@@ -38,7 +38,7 @@ function pxQuadro(id, s, vermelho) {
 // Contorno escuro de 1 px em volta do sprite (feito uma vez, no cache): destaca o soldado do fundo de madeira e de terra
 function pxContorno(c) {
     const g = c.getContext('2d'), t = document.createElement('canvas'); t.width = c.width; t.height = c.height;
-    const tg = t.getContext('2d'); tg.drawImage(c, 0, 0); tg.globalCompositeOperation = 'source-in'; tg.fillStyle = 'rgba(14,11,8,0.9)'; tg.fillRect(0, 0, c.width, c.height);
+    const tg = t.getContext('2d'); tg.drawImage(c, 0, 0); tg.globalCompositeOperation = 'source-in'; tg.fillStyle = FL_PAL.contorno; tg.fillRect(0, 0, c.width, c.height);
     g.globalCompositeOperation = 'destination-over';
     [[-1, 0], [1, 0], [0, -1], [0, 1]].forEach(([dx, dy]) => g.drawImage(t, dx, dy));
     g.globalCompositeOperation = 'source-over';
@@ -221,7 +221,7 @@ function desenharSilhueta(s, x, y, pose, t) {
     else if (pose === 'panico' || pose === 'encolhido') { id = 138; ax = 27; yy = y + 3; }
     else if (pose === 'arrastado') id = [290, 291, 292, 293][Math.floor(t / 110) % 4];
     if (!PX_QUADROS[id]) id = 265;
-    if (pose !== 'deitado' && pose !== 'panico' && pose !== 'encolhido') { cctx.fillStyle = 'rgba(0,0,0,0.32)'; cctx.fillRect(Math.round(x - 11), Math.round(y + 2), 22, 2); cctx.fillRect(Math.round(x - 8), Math.round(y + 4), 16, 1); }  // sombra sob os pés
+    if (pose !== 'deitado' && pose !== 'panico' && pose !== 'encolhido') { cctx.fillStyle = FL_PAL.sombra; cctx.fillRect(Math.round(x - 11), Math.round(y + 2), 22, 2); cctx.fillRect(Math.round(x - 8), Math.round(y + 4), 16, 1); }  // sombra sob os pés
     const recuo = atirou && (pose === 'mira' || pose === 'ninho') ? 1 : 0;                       // recuo de 1 px a cada tiro
     if (pose === 'arrastado') yy -= Math.abs(Math.round(Math.sin(t / 110) * 1));                  // passo: o corpo sobe e desce
     pxDesenha(id, (pose === 'panico' ? x + Math.round(Math.sin(t / 40) * 1.2) : x) - recuo, yy, PX_ESC_SOLDADO, pose === 'arrastado' && pxVira, s, ferido, ax);
