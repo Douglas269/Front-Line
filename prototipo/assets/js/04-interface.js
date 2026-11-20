@@ -9,6 +9,7 @@
             SHELTER: { nome: 'Abrigo Reforçado', desc: 'dano recebido −75% (tiros, drones e artilharia); ataque −60%. Não protege contra invasão.' },
             CONSERVE: { nome: 'Economizar Munição', desc: 'gasto de munição leve −65%; ataque −30%.' },
             FULL_VIGILANCE: { nome: 'Vigília Total', desc: 'mapa visível e tiro com mira mesmo sem vigias; todo o esquadrão cansa mais rápido.' },
+            SILENCE: { nome: 'Silêncio', desc: 'por 10 s reais ninguém atira (nem o inimigo, nem os drones), mas o inimigo continua avançando; depois recarrega por 30 s. Ligar Supressão ou Vigília Total rompe o silêncio.' },
             SIGNAL_JAM: { nome: 'Bloqueio de Sinal', desc: 'drones não guiam mais a artilharia nem os tiros inimigos, e cada um tem 40% de chance por segundo de cair; o rádio fica ocupado (sem relatório e sem apoios da Central).' }
         };
 
@@ -17,13 +18,14 @@
             SHELTER: 'btn-ord-cover',
             CONSERVE: 'btn-ord-conserve',
             FULL_VIGILANCE: 'btn-ord-vigilance',
+            SILENCE: 'btn-ord-silence',
             SIGNAL_JAM: 'btn-ord-jam'
         };
 
         // Acende os botões conforme as ordens ligadas (também ao restaurar a partida)
         function syncOrderButtons() {
             Object.entries(ORDER_BUTTONS).forEach(([order, id]) => {
-                document.getElementById(id).classList.toggle('btn-active-order', !!gameState.tacticalOrders[order]);
+                const el = document.getElementById(id); if (el) el.classList.toggle('btn-active-order', !!gameState.tacticalOrders[order]);
             });
         }
 
@@ -40,6 +42,7 @@
             const o = gameState.tacticalOrders;
             if (o.SUPPRESSION && o.CONSERVE) o.CONSERVE = false;
             if (o.SHELTER && o.FULL_VIGILANCE) o.FULL_VIGILANCE = false;
+            if (o.SILENCE && (o.SUPPRESSION || o.FULL_VIGILANCE)) o.SILENCE = false; // o silêncio não combina com as ordens de fogo
         }
 
         function toggleTacticalOrder(order) {

@@ -38,7 +38,7 @@
                     nextWaveBoost: gameState.nextWaveBoost,
                     general: gameState.general,
                     op: gameState.op, obrasT: gameState.obrasT, ordens: gameState.ordens, cartas: gameState.cartas, // operações, obras, ordens e cartas (07-operacoes.js)
-                    campo: gameState.campo, gas: gameState.gas, sabotagem: gameState.sabotagem, mecVistas: gameState.mecVistas, acamp: gameState.acamp, // crateras, gás em curso e acampamento (08 e 09)
+                    campo: gameState.campo, gas: gameState.gas, sabotagem: gameState.sabotagem, silencio: gameState.silencio, silencioRecarga: gameState.silencioRecarga, mecVistas: gameState.mecVistas, acamp: gameState.acamp, // crateras, gás em curso e acampamento (08 e 09)
                     feed: document.getElementById('feed-log').innerHTML,
                     diary: document.getElementById('diary-entries').innerHTML
                 }));
@@ -84,7 +84,7 @@
                 nextWaveBoost: data.nextWaveBoost || 0,
                 general: data.general || newGeneral(),
                 op: data.op, obrasT: data.obrasT, ordens: data.ordens, cartas: data.cartas, // 07-operacoes.js
-                campo: data.campo || null, gas: data.gas || null, sabotagem: data.sabotagem || null, mecVistas: data.mecVistas || {}, acamp: data.acamp || null // 08 e 09
+                campo: data.campo || null, gas: data.gas || null, sabotagem: data.sabotagem || null, silencio: data.silencio || null, silencioRecarga: data.silencioRecarga || 0, mecVistas: data.mecVistas || {}, acamp: data.acamp || null // 08 e 09
             });
             document.getElementById('feed-log').innerHTML = data.feed;
             document.getElementById('diary-entries').innerHTML = data.diary;
@@ -556,6 +556,7 @@
         const MODIFICADORES = [
             { nivel: 2,  id: 'ofensivas', nome: 'Ofensivas anunciadas', desc: 'O general marca ataques grandes; o rádio avisa na véspera. Prepare o esquadrão e o paiol.' },
             { nivel: 3,  id: 'chuva',     nome: 'Chuva forte',         desc: 'Chuva alaga a trincheira: desgasta o parapeito, piora a mira, o comboio e o passo dos soldados.' },
+            { nivel: 3,  id: 'silencio',  nome: 'Silêncio',            desc: 'Nova ordem tática: por 10 s reais ninguém atira (o inimigo continua avançando). Recarrega por 30 s.' },
             { nivel: 4,  id: 'nevoa',     nome: 'Névoa e neve',        desc: 'Névoa espessa e neve entram no sorteio do clima: menos visão, comboio mais lento.' },
             { nivel: 5,  id: 'noites',    nome: 'Noites longas',       desc: 'À noite a mira cai 25% (antes 15%): use a Vigília Total ou segure o fogo.' },
             { nivel: 5,  id: 'incursao',  nome: 'Incursão noturna',    desc: 'Batedores furtivos chegam no escuro. Mantenha 3 vigias ou a Vigília Total.' },
