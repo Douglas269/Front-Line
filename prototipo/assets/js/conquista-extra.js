@@ -413,12 +413,12 @@ function painelEconomia() {
     const atraso = f.atraso || 0;
     return `<div class="titulo"><span>📊 Economia</span><span class="dono">valores por ciclo de ${C.CICLO}s</span></div>
         <div class="eco"><div class="eh"><span></span><span>Estoque</span><span>Entra</span><span>Sai</span><span>Saldo</span></div>
-        ${linha('🍞', 'Comida', Math.floor(f.comida), ent('comida'), come)}
-        ${linha('🔫', 'Munição', Math.floor(f.mun), ent('mun'), null, 'gasta em batalha')}
-        ${linha('🪙', 'Dinheiro', Math.floor(f.moedas), ent('moedas'), manut)}
-        ${linha('⚙️', 'Aço', Math.floor(f.aco || 0), ent('aco'), null, 'só ao criar/obras')}
-        ${linha('⛽', 'Combustível', Math.floor(f.comb || 0), ent('comb'), combGasto, f.combDef ? 'acabou: blindados andam devagar' : 'só blindado em marcha')}
-        <div class="el"><span>👥 Mão de obra</span><span>${maoDeObraUsada('jogador')}/${maoDeObraMax('jogador')}</span><span colspan="3" style="grid-column: span 3; text-align:right"><b style="color:${maoDeObraLivre('jogador') ? '#9fd08f' : '#ff8a7a'}">${maoDeObraLivre('jogador')} livres</b></span></div></div>
+        ${linha(`<span style="color:#d9a35a">${icone('bread')}</span>`, 'Comida', Math.floor(f.comida), ent('comida'), come)}
+        ${linha(`<span style="color:#c8d0c4">${icone('bullets')}</span>`, 'Munição', Math.floor(f.mun), ent('mun'), null, 'gasta em batalha')}
+        ${linha(`<span style="color:#e6c35a">${icone('two-coins')}</span>`, 'Dinheiro', Math.floor(f.moedas), ent('moedas'), manut)}
+        ${linha(`<span style="color:#9fb3c8">${icone('cog')}</span>`, 'Aço', Math.floor(f.aco || 0), ent('aco'), null, 'só ao criar/obras')}
+        ${linha(`<span style="color:#e08a3c">${icone('jerrycan')}</span>`, 'Combustível', Math.floor(f.comb || 0), ent('comb'), combGasto, f.combDef ? 'acabou: blindados andam devagar' : 'só blindado em marcha')}
+        <div class="el"><span><span style="color:#8fad88">${icone('brodie-helmet')}</span> Mão de obra</span><span>${maoDeObraUsada('jogador')}/${maoDeObraMax('jogador')}</span><span colspan="3" style="grid-column: span 3; text-align:right"><b style="color:${maoDeObraLivre('jogador') ? '#9fd08f' : '#ff8a7a'}">${maoDeObraLivre('jogador')} livres</b></span></div></div>
         ${atraso > 0 ? `<div class="info" style="color:#ffb36b">⚠ <b>Soldo atrasado (${Math.round(atraso)}%)</b>: a tropa rende menos${atraso >= 40 ? ', a moral das províncias cai' : ''}${atraso >= C.ATRASO_DESERTA ? ' e soldados estão desertando' : ''}. Falta dinheiro para a manutenção: recrute menos, dispense tropa ou produza mais dinheiro.</div>` : `<div class="info">✔ Soldo em dia. A manutenção de <b>${fmt(manut)}🪙</b> por ciclo sai do dinheiro; se faltar, o soldo atrasa e a tropa desanima.</div>`}
         <div class="info"><b>Manutenção por tropa:</b> ${porTipo}<br><b>Mão de obra:</b> cada província sustenta um máximo de soldados (campo 6, cidade 8, capital 14, floresta e morro 4). Soldado morto ou dispensado devolve a vaga.<br><b>Aço:</b> só vai em tropa pesada e obras. Morros e a obra Fábrica produzem mais.</div>
         <div class="acoes">${botao('✖ Fechar', '', `G.sel={tipo:'prov',id:G.capitalJogador};renderPainel()`)}</div>`;

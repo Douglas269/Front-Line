@@ -52,7 +52,7 @@
   #recs { display: flex; gap: 4px; margin-top: 6px; }
   .rec { flex: 1; min-width: 0; background: var(--painel); border: 1px solid var(--borda); border-radius: 6px; padding: 3px 1px; text-align: center; font-size: 13px; color: var(--mudo); line-height: 1.2; }
   button.rec { cursor: pointer; font-family: inherit; }
-  .rec span { display: block; font-size: 13px; }
+  .rec span { display: block; font-size: 17px; line-height: 1.2; }
   .rec b { display: block; font-size: 13px; color: var(--texto); white-space: nowrap; }
   .rec.baixo b { color: var(--verm); }
   .rec.baixo b::before { content: '▼ '; font-size: 10px; } /* além da cor: um símbolo para quem não distingue verde de vermelho */
@@ -143,21 +143,21 @@
   button.fase small { display: block; color: var(--mudo); font-size: 11px; margin-top: 3px; }
   button.fase.trancada { border-color: var(--borda); background: var(--painel); color: var(--mudo); }
 </style>
-    <link rel="stylesheet" href="assets/css/tokens.css?v=20261120.2050">
-    <link rel="stylesheet" href="assets/css/polimento-visual.css?v=20261120.2050">
+    <link rel="stylesheet" href="assets/css/tokens.css?v=20261120.2100">
+    <link rel="stylesheet" href="assets/css/polimento-visual.css?v=20261120.2100">
 </head>
 <body>
 <div id="app">
   <div id="topo">
     <div id="l1"><span class="esq"><button id="bMenu" onclick="voltarAoMenu()" title="Modos de jogo">🏠 Menu</button><span id="fase">CONQUISTA</span></span><span class="dir"><button id="bConfig" onclick="abrirConfigConq()" title="Configurações">⚙️</button><button id="bSom" onclick="alternarSom()" title="Som">🔊</button><button id="bPausa" onclick="pausar()" title="Pausar">⏸</button><button id="bVelMapa" onclick="G.velocidade = G.velocidade === 1 ? 2 : 1" title="Velocidade do mapa">1×</button><span id="relogio">00:00</span></span></div>
     <div id="recs" title="Toque para ver a economia">
-      <button class="rec" id="rCom" onclick="abrirEconomia()" title="Comida"><span>🍞</span><b>0</b></button>
-      <button class="rec" id="rMun" onclick="abrirEconomia()" title="Munição"><span>🔫</span><b>0</b></button>
-      <button class="rec" id="rMoe" onclick="abrirEconomia()" title="Dinheiro"><span>🪙</span><b>0</b></button>
-      <button class="rec" id="rAco" onclick="abrirEconomia()" title="Aço"><span>⚙️</span><b>0</b></button>
-      <button class="rec" id="rComb" onclick="abrirEconomia()" title="Combustível (os blindados gastam ao marchar e atacar)"><span>⛽</span><b>0</b></button>
-      <button class="rec" id="rMO" onclick="abrirEconomia()" title="Mão de obra (usada/máxima)"><span>👥</span><b>0</b></button>
-      <div class="rec" id="rProv" title="Províncias suas / total"><span>🏴</span><b>0</b></div>
+      <button class="rec" id="rCom" onclick="abrirEconomia()" title="Comida"><span data-icone="bread" style="color:#d9a35a"></span><b>0</b></button>
+      <button class="rec" id="rMun" onclick="abrirEconomia()" title="Munição"><span data-icone="bullets" style="color:#c8d0c4"></span><b>0</b></button>
+      <button class="rec" id="rMoe" onclick="abrirEconomia()" title="Dinheiro"><span data-icone="two-coins" style="color:#e6c35a"></span><b>0</b></button>
+      <button class="rec" id="rAco" onclick="abrirEconomia()" title="Aço"><span data-icone="cog" style="color:#9fb3c8"></span><b>0</b></button>
+      <button class="rec" id="rComb" onclick="abrirEconomia()" title="Combustível (os blindados gastam ao marchar e atacar)"><span data-icone="jerrycan" style="color:#e08a3c"></span><b>0</b></button>
+      <button class="rec" id="rMO" onclick="abrirEconomia()" title="Mão de obra (usada/máxima)"><span data-icone="brodie-helmet" style="color:#8fad88"></span><b>0</b></button>
+      <div class="rec" id="rProv" title="Províncias suas / total"><span data-icone="flying-flag" style="color:#ffd28a"></span><b>0</b></div>
     </div>
   </div>
   <div id="mapaBox"><canvas id="mapa"></canvas><div id="aviso"></div><div id="ferramentas"><button onclick="G.sel={tipo:'pesquisa'};renderPainel()" title="Pesquisa">🔬<small>Pesquisa</small></button><button onclick="G.sel={tipo:'diplo'};renderPainel()" title="Diplomacia">🤝<small>Diplomacia</small></button><button onclick="G.sel={tipo:'generais'};renderPainel()" title="Generais">🎖<small>Generais</small></button></div><div id="faixaPausa">⏸ PAUSADO · dá para dar ordens</div>
@@ -167,14 +167,16 @@
 <div id="tela"><div class="caixa" id="telaCaixa"></div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
-<script src="assets/js/conquista-unidades.js?v=20261120.2050"></script>
-<script src="assets/js/conquista-mapa.js?v=20261120.2050"></script>
-<script src="assets/js/conquista-extra.js?v=20261120.2050"></script>
-<script src="assets/js/conquista.js?v=20261120.2050"></script>
-<script src="assets/js/conquista-online.js?v=20261120.2050"></script>
-<script src="assets/js/conquista-config.js?v=20261120.2050"></script>
-<script src="assets/js/guia-tutorial.js?v=20261120.2050"></script>
-<script src="assets/js/conquista-guia.js?v=20261120.2050"></script>
+<script src="vendor/game-icons.js"></script>
+<script>document.querySelectorAll('[data-icone]').forEach(el => { if (!el.innerHTML) el.innerHTML = icone(el.dataset.icone); });</script>
+<script src="assets/js/conquista-unidades.js?v=20261120.2100"></script>
+<script src="assets/js/conquista-mapa.js?v=20261120.2100"></script>
+<script src="assets/js/conquista-extra.js?v=20261120.2100"></script>
+<script src="assets/js/conquista.js?v=20261120.2100"></script>
+<script src="assets/js/conquista-online.js?v=20261120.2100"></script>
+<script src="assets/js/conquista-config.js?v=20261120.2100"></script>
+<script src="assets/js/guia-tutorial.js?v=20261120.2100"></script>
+<script src="assets/js/conquista-guia.js?v=20261120.2100"></script>
 
 </body>
 </html>
