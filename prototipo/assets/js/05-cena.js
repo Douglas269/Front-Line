@@ -91,7 +91,7 @@
         // O que não muda (céu, terra, paredes, móveis) é pintado uma vez numa imagem guardada e só
         // repintado quando algo que ela mostra muda; por quadro só se desenha o que se mexe.
         const FONTE_CENA = '"Barlow Condensed", "Arial Narrow", "Roboto Condensed", "Courier Prime", sans-serif';
-        let corteQualidade = Math.min(2, window.devicePixelRatio || 1); // pixels por pixel de tela; cai sozinho se o aparelho engasgar
+        let corteQualidade = Math.min(3, window.devicePixelRatio || 1); // pixels por pixel de tela (até 3×, igual à tela, senão o navegador estica e embaça); se o aparelho engasgar, cai pela METADE (divisor inteiro: os pixels continuam uniformes)
         let corteLentos = 0, ultimoQuadroCorte = 0;
         const camadaFundo = document.createElement('canvas');
         const ctxFundo = camadaFundo.getContext('2d');
@@ -554,7 +554,7 @@
             if (!forcar && t - ultimoQuadroCorte < 22) return;
             if (ultimoQuadroCorte && !forcar) {
                 const dt = t - ultimoQuadroCorte;
-                if (dt > 55 && dt < 400) { if (++corteLentos > 25 && corteQualidade > 1) { corteQualidade = Math.max(1, corteQualidade - 0.25); corteLentos = 0; } }
+                if (dt > 55 && dt < 400) { if (++corteLentos > 25 && corteQualidade > 1) { corteQualidade = Math.max(1, corteQualidade / 2); corteLentos = 0; } }
                 else if (dt < 42) corteLentos = Math.max(0, corteLentos - 1);
             }
             ultimoQuadroCorte = t;

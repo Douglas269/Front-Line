@@ -620,12 +620,14 @@
         const c = spritePx(id, cor); if (!c) return false;
         ctx.save(); ctx.imageSmoothingEnabled = false;
         ctx.fillStyle = FL_PAL.sombra; ctx.fillRect(Math.round(x - 8), Math.round(y), 16, 2);   // sombra sob os pés
-        ctx.drawImage(c, Math.round(x - c.width / 2), Math.round(y - c.height + 1)); ctx.restore(); return true;
+        // escala inteira de pixels do aparelho e posição alinhada à grade: pixels uniformes, sem borrão
+        const e = ctx.getTransform().a || 1, S = Math.max(1, Math.round(e)) / e, al = (n) => Math.round(n * e) / e;
+        ctx.drawImage(c, al(x - (c.width * S) / 2), al(y - c.height * S + S), c.width * S, c.height * S); ctx.restore(); return true;
     }
     const corCond = (c) => (c <= 0 ? '#555' : c < 35 ? '#e0533f' : c < 65 ? '#e3b04b' : '#7bc96f');
     const COR_EU = '#9fd08f', COR_ELE = '#e0533f';
     function ajustarCanvas(cv) {
-        const dpr = Math.min(2, window.devicePixelRatio || 1), w = Math.round(cv.clientWidth * dpr), h = Math.round(cv.clientHeight * dpr);
+        const dpr = Math.min(3, window.devicePixelRatio || 1), w = Math.round(cv.clientWidth * dpr), h = Math.round(cv.clientHeight * dpr);
         if (w && h && (cv.width !== w || cv.height !== h)) { cv.width = w; cv.height = h; }
     }
     function sorteio(semente) { let x = (semente >>> 0) || 1; return () => { x ^= x << 13; x ^= x >>> 17; x ^= x << 5; return ((x >>> 0) % 10000) / 10000; }; }

@@ -132,16 +132,18 @@ desenharBoneco = function (x, y, cor, andando, n, agora, dir = 1, tipos) {
         const q = PX_SOLD.q[id], chave = id + cor;
         let c = PX_SOLD.tinta[chave];
         if (!c) {
-            c = PX_SOLD.tinta[chave] = document.createElement('canvas'); c.width = q[2]; c.height = q[3];
-            const g = c.getContext('2d', { willReadFrequently: true }); g.imageSmoothingEnabled = false; g.drawImage(PX_SOLD.img, q[0], q[1], q[2], q[3], 0, 0, q[2], q[3]);
+            c = PX_SOLD.tinta[chave] = document.createElement('canvas'); c.width = q[2] + 2; c.height = q[3] + 2;   // 1 px de margem para o contorno não ser cortado
+            const g = c.getContext('2d', { willReadFrequently: true }); g.imageSmoothingEnabled = false; g.drawImage(PX_SOLD.img, q[0], q[1], q[2], q[3], 1, 1, q[2], q[3]);
             pxPintarTime(c, g, cor);
             // contorno escuro de 1 px (uma vez, no cache): o soldado se destaca do terreno
             const t = document.createElement('canvas'); t.width = c.width; t.height = c.height; const tg = t.getContext('2d'); tg.drawImage(c, 0, 0); tg.globalCompositeOperation = 'source-in'; tg.fillStyle = FL_PAL.contorno; tg.fillRect(0, 0, c.width, c.height);
             g.globalCompositeOperation = 'destination-over'; [[-1, 0], [1, 0], [0, -1], [0, 1]].forEach(([dx, dy]) => g.drawImage(t, dx, dy)); g.globalCompositeOperation = 'source-over';
         }
         cxM.fillStyle = 'rgba(0,0,0,.35)'; cxM.fillRect(Math.round(bx - 7), Math.round(by), 14, 2);
-        cxM.save(); cxM.imageSmoothingEnabled = false; cxM.translate(Math.round(bx), Math.round(by)); cxM.scale(dir, 1);
-        const F = 1.1; cxM.drawImage(c, Math.round(-11 * F), Math.round(-q[3] * F), Math.round(q[2] * F), Math.round(q[3] * F)); cxM.restore();
+        // escala inteira de pixels do aparelho, alinhada à grade: todos os pixels do sprite saem do mesmo tamanho
+        const dd = DPR(), F = Math.max(1, Math.round(1.1 * dd)) / dd, al = (n) => Math.round(n * dd) / dd;
+        cxM.save(); cxM.imageSmoothingEnabled = false; cxM.translate(al(bx), al(by)); cxM.scale(dir, 1);
+        cxM.drawImage(c, al(-12 * F), al(-(q[3] + 1) * F), c.width * F, c.height * F); cxM.restore();
         cxM.fillStyle = cor; cxM.fillRect(Math.round(bx - 2), Math.round(by - q[3] * F - 6), 5, 5); cxM.strokeStyle = 'rgba(0,0,0,.7)'; cxM.lineWidth = 1; cxM.strokeRect(Math.round(bx - 2) + 0.5, Math.round(by - q[3] * F - 6) + 0.5, 4, 4);
     }
     return (quantos - 1) / 2 * folga;
