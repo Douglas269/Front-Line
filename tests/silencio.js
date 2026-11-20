@@ -51,7 +51,7 @@ const PAGINA = 'file://' + path.resolve(__dirname, '..', 'prototipo', 'ponto-alp
         // cena e faixa
         gameState.level = 3; jogoPausado = true; renderCorte(true);
         r.faixaMostraSilencio = /SILÊNCIO/.test(document.getElementById('corte-banner').textContent);
-        r.botaoMostraTempo = /ATIVO/.test(document.getElementById('lbl-silencio').textContent) && document.getElementById('btn-ord-silence').classList.contains('btn-active-order');
+        r.botaoMostraTempo = /^\d+s$/.test(document.getElementById('lbl-silencio').textContent) && document.getElementById('btn-ord-silence').classList.contains('btn-active-order');
         return r;
     });
     await p.waitForTimeout(300);

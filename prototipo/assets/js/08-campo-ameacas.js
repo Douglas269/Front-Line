@@ -352,7 +352,7 @@ toggleTacticalOrder = function (order) {
         gameState.silencio = { ticks: SILENCIO.DURACAO };
         primeiraVez('silencio', '🤫 PRIMEIRO SILÊNCIO: os dois lados param de atirar por 10 s, mas o inimigo continua avançando. Use para comer, descansar e reparar.');
         logFeed(`🤫 SILÊNCIO: ninguém atira por ${seg(SILENCIO.DURACAO)}s. Cuidado: o inimigo continua avançando.`, 'text-mil-greenMuted font-bold');
-        syncOrderButtons(); playTacticalBeep(300, 0.05);
+        syncOrderButtons(); playTacticalBeep(300, 0.05); mostrarInfoOrdem(`${ORDER_INFO.SILENCE.nome} ligada: ${ORDER_INFO.SILENCE.desc}`);
         return;
     }
     if (o.SILENCE && (order === 'SUPPRESSION' || order === 'FULL_VIGILANCE') && !o[order]) encerrarSilencio('🤫 Silêncio rompido pela nova ordem.');
@@ -381,7 +381,7 @@ renderCorte = function (forcar) {
     if (btn) {
         const liberado = modAtivo('silencio'), rec = gameState.silencioRecarga || 0, ativo = silencioAtivo();
         btn.classList.toggle('hidden', !liberado);
-        const sub = document.getElementById('lbl-silencio'), txt = ativo ? `ATIVO · ${seg(gameState.silencio ? gameState.silencio.ticks : 0)}s` : rec > 0 ? `recarga ${seg(rec)}s` : 'ninguém atira · o inimigo avança';
+        const sub = document.getElementById('lbl-silencio'), txt = ativo ? `${seg(gameState.silencio ? gameState.silencio.ticks : 0)}s` : rec > 0 ? `rec. ${seg(rec)}s` : 'Silêncio';
         if (sub && sub.textContent !== txt) sub.textContent = txt;
         btn.classList.toggle('opacity-60', !ativo && rec > 0);
     }
