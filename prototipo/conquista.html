@@ -8,7 +8,7 @@
 <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
 <link rel="manifest" href="manifest.webmanifest">
 <style>
-  :root { --bg: #0c0f0d; --painel: #131815; --borda: #27332b; --ambar: #d39a45; --ambarEsc: #b37d2e; --texto: #d6e3d1; --mudo: #9fb39a; --verm: #ff8a7a; --verde: #8fd17f; }
+  :root { --verde: var(--fl-verde-vivo); } /* demais cores: assets/css/tokens.css */
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; height: 100%; background: var(--bg); color: var(--texto); font-family: "Courier New", ui-monospace, monospace; overflow: hidden; }
   body { display: flex; justify-content: center; }
@@ -143,7 +143,8 @@
   button.fase small { display: block; color: var(--mudo); font-size: 11px; margin-top: 3px; }
   button.fase.trancada { border-color: var(--borda); background: var(--painel); color: var(--mudo); }
 </style>
-    <link rel="stylesheet" href="assets/css/polimento-visual.css?v=20261120.2025">
+    <link rel="stylesheet" href="assets/css/tokens.css?v=20261120.2030">
+    <link rel="stylesheet" href="assets/css/polimento-visual.css?v=20261120.2030">
 </head>
 <body>
 <div id="app">
@@ -166,14 +167,14 @@
 <div id="tela"><div class="caixa" id="telaCaixa"></div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
-<script src="assets/js/conquista-unidades.js?v=20261120.2025"></script>
-<script src="assets/js/conquista-mapa.js?v=20261120.2025"></script>
-<script src="assets/js/conquista-extra.js?v=20261120.2025"></script>
-<script src="assets/js/conquista.js?v=20261120.2025"></script>
-<script src="assets/js/conquista-online.js?v=20261120.2025"></script>
-<script src="assets/js/conquista-config.js?v=20261120.2025"></script>
-<script src="assets/js/guia-tutorial.js?v=20261120.2025"></script>
-<script src="assets/js/conquista-guia.js?v=20261120.2025"></script>
+<script src="assets/js/conquista-unidades.js?v=20261120.2030"></script>
+<script src="assets/js/conquista-mapa.js?v=20261120.2030"></script>
+<script src="assets/js/conquista-extra.js?v=20261120.2030"></script>
+<script src="assets/js/conquista.js?v=20261120.2030"></script>
+<script src="assets/js/conquista-online.js?v=20261120.2030"></script>
+<script src="assets/js/conquista-config.js?v=20261120.2030"></script>
+<script src="assets/js/guia-tutorial.js?v=20261120.2030"></script>
+<script src="assets/js/conquista-guia.js?v=20261120.2030"></script>
 
 </body>
 </html>

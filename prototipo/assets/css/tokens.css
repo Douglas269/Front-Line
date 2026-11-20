@@ -1,0 +1,38 @@
+/* FrontLine: tokens de design (cores, raios, espaçamentos e fontes) — fonte única para os três modos.
+   Regra: estilo novo usa var(--fl-...) e não um hexadecimal solto. Os nomes antigos (--bg, --painel, --borda,
+   --ambar, --texto, --mudo, --verm, --verde...) continuam valendo como apelidos, para o CSS existente não quebrar.
+   As mesmas cores em JavaScript (canvas) ficam em constantes e devem ser iguais a estas. */
+:root {
+    /* superfícies */
+    --fl-bg: #0c0f0d;            /* fundo do jogo */
+    --fl-panel: #131815;         /* painéis e cartões */
+    --fl-borda: #27332b;         /* contorno de painéis */
+    --fl-borda-escura: #1a221d;
+    /* texto */
+    --fl-texto: #d6e3d1;         /* texto principal */
+    --fl-texto-suave: #b3c4ae;   /* rótulos */
+    --fl-texto-mudo: #9fb39a;    /* secundário */
+    --fl-verde: #8fad88;         /* títulos, números, acentos táticos */
+    --fl-verde-vivo: #8fd17f;    /* ok, ganho */
+    --fl-verde-escuro: #5a7356;
+    /* alerta e destaque */
+    --fl-ambar: #d39a45;
+    --fl-ambar-escuro: #b37d2e;
+    --fl-destaque: #ffd28a;      /* seleção, tutorial, avisos importantes */
+    --fl-perigo: #ff8a7a;        /* texto de perigo */
+    --fl-perigo-forte: #ff6b5b;  /* chip em falta */
+    --fl-vermelho: #8a2b2b;
+    --fl-azul: #3b5266;
+    /* forma */
+    --fl-raio: 6px;
+    --fl-raio-grande: 10px;
+    --fl-gap: 8px;
+    --fl-gap-pequeno: 4px;
+    /* fontes: títulos e números em monoespaçado; textos corridos na condensada de leitura */
+    --fl-fonte-titulo: 'Courier Prime', 'Courier New', monospace;
+    --fl-fonte-leitura: 'Barlow Condensed', 'Courier Prime', monospace;
+
+    /* apelidos antigos (Conquista e Trincheiras online; o --verde de cada página fica na própria página: a Conquista usa --fl-verde-vivo e o duelo usa --fl-verde) */
+    --bg: var(--fl-bg); --painel: var(--fl-panel); --borda: var(--fl-borda); --texto: var(--fl-texto); --mudo: var(--fl-texto-mudo);
+    --ambar: var(--fl-ambar); --ambarEsc: var(--fl-ambar-escuro); --verm: var(--fl-perigo); --verdeEsc: var(--fl-verde-escuro);
+}
