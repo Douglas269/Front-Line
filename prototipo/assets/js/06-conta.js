@@ -562,7 +562,7 @@
            Ao abrir, ao voltar para o app e a cada minuto o jogo compara as duas. Se o site
            tiver uma versão diferente, o jogo trava numa tela que só sai atualizando.
            (tools/nova-versao.sh troca as duas juntas a cada atualização publicada.) */
-        const VERSAO_JOGO = '20261120.2330';
+        const VERSAO_JOGO = '20261120.2340';
         const ATUALIZOU_KEY = 'frontline-atualizou-para';
         async function verificarVersao() {
             if (!location.protocol.startsWith('http') || atualizacaoPendente) return;
@@ -588,10 +588,12 @@
             document.getElementById('modal-atualizacao').classList.remove('hidden');
             window.__versaoNova = nova;
         }
+        // Fim de jogo: recarrega e já abre a operação nova (sem parar no menu de modos)
+        function reiniciarOperacao() { try { sessionStorage.setItem(DIRETO_KEY, '1'); } catch (e) {} location.reload(); }
         async function atualizarAgora() {
             const btn = document.getElementById('btn-atualizar');
             btn.disabled = true; btn.textContent = 'Atualizando...';
-            try { sessionStorage.setItem(ATUALIZOU_KEY, window.__versaoNova || ''); } catch (e) {}
+            try { sessionStorage.setItem(ATUALIZOU_KEY, window.__versaoNova || ''); if (!menuAberto && !loginAberto) sessionStorage.setItem(DIRETO_KEY, '1'); } catch (e) {}   // quem estava jogando volta para o jogo
             if (!gameEnded) saveGame();
             skipPageHideSave = true;
             // Apaga as cópias guardadas pelo app instalado e pede a versão nova ao site

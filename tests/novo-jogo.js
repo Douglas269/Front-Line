@@ -23,6 +23,20 @@ const { chromium } = require('playwright');
     // recarregar de novo (sem nova partida): volta ao menu
     await p.reload({ waitUntil: 'load' }); await p.waitForTimeout(800);
     if (!(await p.evaluate(() => menuAberto))) falhas.push('recarregar o site depois disso deveria mostrar o menu de modos');
+    // fim de jogo: REINICIAR OPERAÇÃO também abre direto na operação nova
+    await p.evaluate(() => { escolherModo('trincheiras'); try { fecharTutorial(); } catch (e) {} }); await p.waitForTimeout(300);
+    await p.evaluate(() => endGame('💀', 'POSIÇÃO PERDIDA', 'text-red-600', 'teste')); await p.waitForTimeout(300);
+    await Promise.all([p.waitForNavigation({ waitUntil: 'load' }), p.evaluate(() => [...document.querySelectorAll('#modal-end button')].find(b => /REINICIAR/.test(b.textContent)).click())]);
+    await p.waitForTimeout(1000);
+    if (await p.evaluate(() => menuAberto)) falhas.push('REINICIAR OPERAÇÃO voltou ao menu de modos');
+    // atualizar de versão no meio do jogo volta para o jogo; no menu continua no menu
+    await Promise.all([p.waitForNavigation({ waitUntil: 'load' }), p.evaluate(() => { window.__versaoNova = 'teste1'; atualizarAgora(); })]);
+    await p.waitForTimeout(1000);
+    if (await p.evaluate(() => menuAberto)) falhas.push('Atualizar no meio do jogo voltou ao menu de modos');
+    await p.evaluate(() => { abrirMenuModos && abrirMenuModos(); }); await p.waitForTimeout(300);
+    await Promise.all([p.waitForNavigation({ waitUntil: 'load' }), p.evaluate(() => { window.__versaoNova = 'teste2'; atualizarAgora(); })]);
+    await p.waitForTimeout(1000);
+    if (!(await p.evaluate(() => menuAberto))) falhas.push('Atualizar estando no menu deveria continuar no menu');
     if (erros.length) falhas.push('erros de JavaScript: ' + erros.slice(0, 2).join(' | '));
     console.log(falhas.length ? 'FALHAS: ' + JSON.stringify(falhas, null, 1) : 'Nova partida: entra direto no jogo; o site normal continua abrindo no menu.');
     await b.close(); process.exit(falhas.length ? 1 : 0);
