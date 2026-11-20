@@ -324,3 +324,75 @@ renderCorte = function (forcar) {
         b.classList.remove('hidden'); if (b.textContent !== txt) b.textContent = txt;
     }
 };
+
+
+/* ---------- 🤫 Silêncio (ordem tática, nível 3+) ----------
+   Por 10 s reais os dois lados param de atirar: o esquadrão não gasta munição e os inimigos não disparam (nem os drones).
+   Eles continuam avançando e, se chegarem à trincheira, a invasão acontece. Artilharia e franco-atirador continuam.
+   Serve para respirar (comer, descansar, reparar) quando a munição acabou ou o esquadrão está no limite.
+   Depois do silêncio, a ordem recarrega por 30 s reais. Ligar Fogo Supressão ou Vigília Total rompe o silêncio. */
+const SILENCIO = { DURACAO: 60, RECARGA: 180 };
+function silencioAtivo(estado = gameState) { return !!(estado.tacticalOrders && estado.tacticalOrders.SILENCE); }
+function encerrarSilencio(motivo) {
+    const o = gameState.tacticalOrders;
+    if (!o.SILENCE) return;
+    o.SILENCE = false; gameState.silencio = null;
+    gameState.silencioRecarga = SILENCIO.RECARGA;
+    logFeed(motivo, 'text-mil-amberMuted font-bold');
+    syncOrderButtons();
+}
+const _o8s_toggleTacticalOrder = toggleTacticalOrder;
+toggleTacticalOrder = function (order) {
+    const o = gameState.tacticalOrders;
+    if (order === 'SILENCE') {
+        if (o.SILENCE) { encerrarSilencio('🤫 Silêncio encerrado: o esquadrão volta a atirar.'); return; }
+        if (!modAtivo('silencio')) return;
+        if ((gameState.silencioRecarga || 0) > 0) { logFeed(`🤫 Silêncio em recarga: ${seg(gameState.silencioRecarga)}s.`, 'text-mil-amberMuted'); return; }
+        o.SILENCE = true; o.SUPPRESSION = false; o.CONSERVE = false; o.FULL_VIGILANCE = false;
+        gameState.silencio = { ticks: SILENCIO.DURACAO };
+        primeiraVez('silencio', '🤫 PRIMEIRO SILÊNCIO: os dois lados param de atirar por 10 s, mas o inimigo continua avançando. Use para comer, descansar e reparar.');
+        logFeed(`🤫 SILÊNCIO: ninguém atira por ${seg(SILENCIO.DURACAO)}s. Cuidado: o inimigo continua avançando.`, 'text-mil-greenMuted font-bold');
+        syncOrderButtons(); playTacticalBeep(300, 0.05);
+        return;
+    }
+    if (o.SILENCE && (order === 'SUPPRESSION' || order === 'FULL_VIGILANCE') && !o[order]) encerrarSilencio('🤫 Silêncio rompido pela nova ordem.');
+    return _o8s_toggleTacticalOrder(order);
+};
+const _o8s_dispararEsquadrao = dispararEsquadrao;
+dispararEsquadrao = function (alive, estado = gameState) { if (silencioAtivo(estado)) return; return _o8s_dispararEsquadrao.apply(this, arguments); };
+const _o8s_dispararDefesas = dispararDefesas;
+dispararDefesas = function (estado, alive) { if (silencioAtivo(estado)) return; return _o8s_dispararDefesas.apply(this, arguments); };
+const _o8s_inimigoAtira = inimigoAtira;
+inimigoAtira = function (estado, enemy) { if (silencioAtivo(estado)) return; return _o8s_inimigoAtira.apply(this, arguments); };
+const _o8s_processEnemiesAndCombat2 = processEnemiesAndCombat;
+processEnemiesAndCombat = function () {
+    const r = _o8s_processEnemiesAndCombat2.apply(this, arguments);
+    if (silencioAtivo()) {
+        gameState.silencio = gameState.silencio || { ticks: SILENCIO.DURACAO };
+        if (--gameState.silencio.ticks <= 0) encerrarSilencio('🤫 O silêncio acabou: os dois lados voltam a atirar.');
+    } else if ((gameState.silencioRecarga || 0) > 0) gameState.silencioRecarga--;
+    return r;
+};
+// Botão (aparece quando o nível libera) e faixa de aviso
+const _o8s_renderCorte = renderCorte;
+renderCorte = function (forcar) {
+    _o8s_renderCorte(forcar);
+    const btn = document.getElementById('btn-ord-silence');
+    if (btn) {
+        const liberado = modAtivo('silencio'), rec = gameState.silencioRecarga || 0, ativo = silencioAtivo();
+        btn.classList.toggle('hidden', !liberado);
+        const sub = document.getElementById('lbl-silencio'), txt = ativo ? `ATIVO · ${seg(gameState.silencio ? gameState.silencio.ticks : 0)}s` : rec > 0 ? `recarga ${seg(rec)}s` : 'ninguém atira · o inimigo avança';
+        if (sub && sub.textContent !== txt) sub.textContent = txt;
+        btn.classList.toggle('opacity-60', !ativo && rec > 0);
+    }
+    if (silencioAtivo() && !gameState.gas && !gameState.sabotagem) {
+        const b = document.getElementById('corte-banner'), txt = `🤫 SILÊNCIO · ${seg(gameState.silencio ? gameState.silencio.ticks : 0)}s · ninguém atira, o inimigo avança`;
+        b.classList.remove('hidden'); if (b.textContent !== txt) b.textContent = txt;
+    }
+};
+// Cena: tom azulado e frio enquanto dura o silêncio
+const _o8s_desenharClimaCena = desenharClimaCena;
+desenharClimaCena = function (t) {
+    _o8s_desenharClimaCena(t);
+    if (silencioAtivo()) { cctx.fillStyle = 'rgba(70,110,160,0.13)'; cctx.fillRect(0, 0, CORTE.W, CORTE.SOLO + 120); }
+};

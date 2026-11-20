@@ -163,8 +163,8 @@
         @media (max-width: 379px) { header .animate-pulse { display: none; } header #lbl-level { display: none; } }
     </style>
     <!-- Tailwind: CSS fixo gerado por tools/gerar-css.sh (antes era montado no celular pelo CDN) -->
-    <link rel="stylesheet" href="assets/css/tailwind.css?v=20261120.1138">
-    <link rel="stylesheet" href="assets/css/polimento-visual.css?v=20261120.1138">
+    <link rel="stylesheet" href="assets/css/tailwind.css?v=20261120.1139">
+    <link rel="stylesheet" href="assets/css/polimento-visual.css?v=20261120.1139">
 </head>
 <body class="h-screen w-screen overflow-hidden flex justify-center bg-black">
 
@@ -263,11 +263,15 @@
                         <span class="flex items-center gap-1.5"><i class="fa-solid fa-binoculars text-mil-textGlow"></i> Vigília Total</span>
                         <span class="text-xs text-mil-textMuted font-normal">vê tudo · +fadiga</span>
                     </button>
+                    <button id="btn-ord-silence" onclick="toggleTacticalOrder('SILENCE')" class="hidden col-span-2 py-1.5 px-2 btn-tactical rounded flex flex-col items-center justify-center">
+                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-volume-xmark text-mil-komonaBlue"></i> Silêncio</span>
+                        <span id="lbl-silencio" class="text-xs text-mil-textMuted font-normal">ninguém atira · o inimigo avança</span>
+                    </button>
                     <button id="btn-ord-jam" onclick="toggleTacticalOrder('SIGNAL_JAM')" class="col-span-2 py-1.5 px-2 btn-tactical rounded flex flex-col items-center justify-center">
                         <span class="flex items-center gap-1.5"><i class="fa-solid fa-tower-broadcast text-mil-komonaBlue"></i> Bloqueio de Sinal</span>
                         <span class="text-xs text-mil-textMuted font-normal">cega e derruba drones · sem rádio</span>
                     </button>
-                    <p class="col-span-2 text-center text-xs text-mil-textMuted font-normal">Supressão e Economia se anulam · Abrigo e Vigília Total também</p>
+                    <p class="col-span-2 text-center text-xs text-mil-textMuted font-normal">Supressão e Economia se anulam · Abrigo e Vigília Total também · Silêncio é rompido por Supressão e Vigília Total</p>
                 </div>
             </div>
 
@@ -716,16 +720,16 @@
 
     <!-- JAVASCRIPT GAME ENGINE -->
     <!-- Código do jogo, dividido por assunto (a ordem importa) -->
-    <script src="assets/js/01-base.js?v=20261120.1138"></script>
-    <script src="assets/js/02-regras.js?v=20261120.1138"></script>
-    <script src="assets/js/03-defesas-crises.js?v=20261120.1138"></script>
-    <script src="assets/js/04-interface.js?v=20261120.1138"></script>
-    <script src="assets/js/05-cena.js?v=20261120.1138"></script>
-    <script src="assets/js/05b-cena-pixel.js?v=20261120.1138"></script>
-    <script src="assets/js/guia-tutorial.js?v=20261120.1138"></script>
-    <script src="assets/js/06-conta.js?v=20261120.1138"></script>
-    <script src="assets/js/07-operacoes.js?v=20261120.1138"></script>
-    <script src="assets/js/08-campo-ameacas.js?v=20261120.1138"></script>
-    <script src="assets/js/08b-particulas.js?v=20261120.1138"></script>
+    <script src="assets/js/01-base.js?v=20261120.1139"></script>
+    <script src="assets/js/02-regras.js?v=20261120.1139"></script>
+    <script src="assets/js/03-defesas-crises.js?v=20261120.1139"></script>
+    <script src="assets/js/04-interface.js?v=20261120.1139"></script>
+    <script src="assets/js/05-cena.js?v=20261120.1139"></script>
+    <script src="assets/js/05b-cena-pixel.js?v=20261120.1139"></script>
+    <script src="assets/js/guia-tutorial.js?v=20261120.1139"></script>
+    <script src="assets/js/06-conta.js?v=20261120.1139"></script>
+    <script src="assets/js/07-operacoes.js?v=20261120.1139"></script>
+    <script src="assets/js/08-campo-ameacas.js?v=20261120.1139"></script>
+    <script src="assets/js/08b-particulas.js?v=20261120.1139"></script>
 </body>
 </html>
