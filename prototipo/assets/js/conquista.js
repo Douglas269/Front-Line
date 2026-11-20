@@ -908,7 +908,7 @@ function desenharMapa() {
     cxM.setTransform(d, 0, 0, d, 0, 0);
     if (typeof pixelarMapa === 'function') pixelarMapa(); // visual pixel art (teste): terreno, cores e rotas viram blocos
     // nomes: capitais e as suas primeiro; um nome que encostaria em outro já escrito fica de fora (aparece com zoom)
-    const ocupado = [];
+    const ocupado = [], nomesDepois = [];
     Object.values(G.prov).sort((a, b) => (b.capital - a.capital) || ((b.dono === 'jogador') - (a.dono === 'jogador'))).forEach(p => {
         const s = T(p.x, p.y);
         if (s.x < -60 || s.y < -60 || s.x > r.width + 60 || s.y > r.height + 60) return;
@@ -917,6 +917,11 @@ function desenharMapa() {
         const w = cxM.measureText(txt).width, caixa = { x0: s.x - w / 2 - 3, x1: s.x + w / 2 + 3, y0: s.y - 26, y1: s.y - 9 };
         if (!p.capital && ocupado.some(o => o.x0 < caixa.x1 && caixa.x0 < o.x1 && o.y0 < caixa.y1 && caixa.y0 < o.y1)) return;
         ocupado.push(caixa);
+        const fonteNome = `bold ${p.capital ? 12 : 10}px "Courier New", monospace`;
+        // os nomes são desenhados depois das tropas, por cima, com uma plaquinha escura atrás (a tropa não cobre mais o nome)
+        nomesDepois.push(() => {
+        cxM.textAlign = 'center'; cxM.font = fonteNome;
+        cxM.fillStyle = 'rgba(12,15,13,.72)'; cxM.fillRect(caixa.x0, s.y - 25, caixa.x1 - caixa.x0, 15);
         cxM.fillStyle = 'rgba(0,0,0,.65)'; cxM.fillText(txt, s.x + 1, s.y - 13);
         cxM.fillStyle = p.capital ? '#ffe2a8' : '#efe6cf'; cxM.fillText(txt, s.x, s.y - 14);
         if (p.dono === 'jogador' && provVisivel(p.id)) { // o que a sua província rende a cada ciclo (laranja quando a moral está baixa)
@@ -926,7 +931,7 @@ function desenharMapa() {
                 cxM.font = 'bold 9px sans-serif'; const w2 = cxM.measureText(prod).width;
                 cxM.fillStyle = 'rgba(12,15,13,.72)'; cxM.fillRect(s.x - w2 / 2 - 3, s.y - 41, w2 + 6, 12);
                 cxM.fillStyle = p.moral < 35 ? '#ffb36b' : '#cfe8c8'; cxM.fillText(prod, s.x, s.y - 32);
-                cxM.font = `bold ${p.capital ? 12 : 10}px "Courier New", monospace`;
+                cxM.font = fonteNome;
             }
         }
         if (provVisivel(p.id)) { // forte, obra em andamento e risco de revolta
@@ -934,6 +939,7 @@ function desenharMapa() {
             if (icones) { const w0 = cxM.measureText(txt).width; cxM.font = '10px sans-serif'; cxM.textAlign = 'left'; cxM.fillText(icones, s.x + w0 / 2 + 3, s.y - 14); cxM.textAlign = 'center'; }
         }
         if (p.dono !== 'jogador' && G.rel[p.dono] && G.rel[p.dono].estado !== 'guerra') { cxM.font = '10px sans-serif'; cxM.fillText(G.rel[p.dono].estado === 'paz' ? '🕊' : '🤝', s.x, s.y - 28); }
+        });
     });
     // batalhas no próprio mapa: anel pulsando, tiros e o placar
     const agora = performance.now() / 1000;
@@ -982,6 +988,7 @@ function desenharMapa() {
     });
     // espiões
     G.espioes.forEach(sp => { const s = T(sp.x, sp.y); cxM.font = '15px sans-serif'; cxM.textAlign = 'center'; cxM.fillText('👁', s.x, s.y + 5); });
+    cxM.setTransform(d, 0, 0, d, 0, 0); nomesDepois.forEach(f => f()); // nomes por cima das tropas
     if (tiposVistos) { // legenda das cores das tropas, fixa no topo do mapa
         cxM.setTransform(d, 0, 0, d, 0, 0); cxM.font = 'bold 10px "Courier New", monospace'; cxM.textAlign = 'left';
         const itens = TIPO_COR.map(([, letra, corT, nome]) => ({ letra, corT, nome, w: 17 + cxM.measureText(nome).width }));
