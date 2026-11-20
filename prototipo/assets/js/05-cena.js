@@ -232,9 +232,9 @@
             ['posto', 'cozinha', 'abrigo', 'oficina', 'ninhos'].forEach((k, i) => {
                 const c = C[k], lx = c.x + c.w * (k === 'abrigo' ? 0.86 : 0.72), ly = c.y + 20;
                 const pisca = 0.9 + 0.1 * Math.sin(t / 170 + i * 2) + (Math.random() < 0.02 ? -0.25 : 0);
-                const raio = c.w * 0.75;
+                const raio = c.w * (noite ? 0.95 : 0.75);
                 cctx.save(); cctx.beginPath(); cctx.rect(c.x, c.y, c.w, c.h); cctx.clip();
-                cctx.globalAlpha = (noite ? 0.34 : 0.16) * pisca;
+                cctx.globalAlpha = (noite ? 0.55 : 0.14) * pisca;
                 cctx.drawImage(brilhoLamparina, lx - raio, ly + 10 - raio, raio * 2, raio * 2);
                 cctx.restore();
                 cctx.fillStyle = `rgba(255,214,130,${pisca})`; cctx.beginPath(); cctx.arc(lx, ly + 1, 2.2, 0, Math.PI * 2); cctx.fill();
