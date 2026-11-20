@@ -622,6 +622,7 @@
     const pares = [['panel-diary', 'lateral-esq-corpo'], ['panel-logistics', 'lateral-dir-corpo']], ultimo = {};
     function espelhar() {
         if (!larga.matches) return;
+        document.body.classList.toggle('sem-laterais', typeof menuAberto !== 'undefined' && !!menuAberto); // no menu de modos os painéis ficam escondidos
         pares.forEach(([origem, destino]) => {
             const o = document.getElementById(origem), d = document.getElementById(destino); if (!o || !d) return;
             const html = o.innerHTML.replace(/\sid="[^"]*"/g, '');
