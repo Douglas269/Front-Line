@@ -115,7 +115,6 @@ const PAGINA = 'file://' + path.resolve(__dirname, '..', 'prototipo', 'ponto-alp
         return r;
     }));
     await p.waitForTimeout(300); await shot('b1-sabotagem-telegrafada');
-<<<<<<< HEAD
     // ---------- D) painel tático: cantoneiras, LED das salas e linha de destino ----------
     {
         await p.evaluate(() => { gameState.level = 1; jogoPausado = true; gameState.enemies = []; gameState.barrage = null; gameState.sabotagem = null; gameState.gas = null; gameState.squad.forEach(s => Object.assign(s, { hp: 100, fatigue: 0, hunger: 0, thirst: 0, moral: 85, mental: null, duty: 'WATCH' })); Object.keys(animPos).forEach(k => delete animPos[k]); renderCorte(true); });
@@ -132,7 +131,6 @@ const PAGINA = 'file://' + path.resolve(__dirname, '..', 'prototipo', 'ponto-alp
         ck.painel_ledMudaComOPostoVazio = !semVigia.equals(andando);
         ck.painel_semErrosNoDesenho = true;
     }
-=======
     // ---------- C) mira telegrafada da artilharia ----------
     {
         // (o canvas fica "contaminado" em file://, então a comparação é por captura de tela da sala do depósito)
@@ -152,7 +150,6 @@ const PAGINA = 'file://' + path.resolve(__dirname, '..', 'prototipo', 'ponto-alp
         await p.evaluate(() => { gameState.barrage = { ticks: 40, alvos: [{ tipo: 'deposito' }, { tipo: 'ninho', i: 0 }, { tipo: 'soldado', id: 1 }] }; renderCorte(true); });
     }
     await p.waitForTimeout(300); await shot('c1-mira-artilharia');
->>>>>>> origin/ccr-3ca40911-h58fwx
     ck.semErrosJS = erros.length === 0;
     console.log(JSON.stringify(ck, null, 1));
     if (erros.length) console.log('ERROS:', erros);
