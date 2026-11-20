@@ -45,6 +45,13 @@
             if (o.SILENCE && (o.SUPPRESSION || o.FULL_VIGILANCE)) o.SILENCE = false; // o silêncio não combina com as ordens de fogo
         }
 
+        // Linha de explicação das ordens: mostra a regra da última ordem tocada e o aviso de conflito
+        let tInfoOrdem = 0;
+        function mostrarInfoOrdem(txt) {
+            const el = document.getElementById('ordem-info'); if (!el) return;
+            el.textContent = txt; clearTimeout(tInfoOrdem);
+            tInfoOrdem = setTimeout(() => { el.textContent = 'Toque numa ordem para ver o que ela faz.'; }, 7000);
+        }
         function toggleTacticalOrder(order) {
             gameState.tacticalOrders[order] = !gameState.tacticalOrders[order];
             const info = ORDER_INFO[order];
@@ -55,6 +62,7 @@
                 logFeed(`Ordem DESATIVADA: ${ORDER_INFO[rival].nome} (não combina com ${info.nome}).`, 'text-mil-amberMuted');
             }
             logFeed(`Ordem ${ligada ? 'ATIVADA' : 'DESATIVADA'}: ${info.nome}${ligada ? ' (' + info.desc + ')' : ''}`, 'text-mil-amberMuted');
+            mostrarInfoOrdem(`${info.nome} ${ligada ? 'ligada' : 'desligada'}: ${info.desc}${ligada && rival && !gameState.tacticalOrders[rival] ? ` (${ORDER_INFO[rival].nome} foi desligada.)` : ''}`);
             syncOrderButtons();
             playTacticalBeep(650, 0.03);
         }

@@ -87,6 +87,9 @@
             box-shadow: inset 0 2px 4px rgba(0,0,0,0.9);
         }
 
+        .ordem-ico { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 6px 2px; font-size: 10.5px; line-height: 1.1; }
+        .ordem-ico i { font-size: 16px; }
+        .ordem-ico span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .btn-active-order {
             background: #3e4c3a !important;
             border-color: var(--fl-verde) !important;
@@ -165,9 +168,9 @@
         @media (max-width: 379px) { header .animate-pulse { display: none; } header #lbl-level { display: none; } }
     </style>
     <!-- Tailwind: CSS fixo gerado por tools/gerar-css.sh (antes era montado no celular pelo CDN) -->
-    <link rel="stylesheet" href="assets/css/tokens.css?v=20261120.2030">
-    <link rel="stylesheet" href="assets/css/tailwind.css?v=20261120.2030">
-    <link rel="stylesheet" href="assets/css/polimento-visual.css?v=20261120.2030">
+    <link rel="stylesheet" href="assets/css/tokens.css?v=20261120.2040">
+    <link rel="stylesheet" href="assets/css/tailwind.css?v=20261120.2040">
+    <link rel="stylesheet" href="assets/css/polimento-visual.css?v=20261120.2040">
 </head>
 <body class="h-screen w-screen overflow-hidden flex justify-center bg-black">
 
@@ -248,33 +251,17 @@
                     <div id="corte-pausa" class="hidden absolute right-2 z-20 px-2 py-0.5 rounded bg-black/80 border border-mil-amberMuted text-[11px] text-mil-amberMuted font-bold whitespace-nowrap pointer-events-none" style="top:10%">⏸ PAUSADO</div>
                 </div>
 
-                <!-- QUICK ORDERS PANEL -->
-                <div class="grid grid-cols-2 gap-1 p-1 bg-mil-bg border-t border-mil-border text-xs">
-                    <button id="btn-ord-suppress" onclick="toggleTacticalOrder('SUPPRESSION')" class="py-1.5 px-2 btn-tactical rounded flex flex-col items-center justify-center">
-                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-burst text-mil-amberMuted"></i> Fogo Supressão</span>
-                        <span class="text-xs text-mil-textMuted font-normal">+dano · −munição</span>
-                    </button>
-                    <button id="btn-ord-cover" onclick="toggleTacticalOrder('SHELTER')" class="py-1.5 px-2 btn-tactical rounded flex flex-col items-center justify-center">
-                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-shield-halved text-mil-komonaBlue"></i> Abrigo Reforçado</span>
-                        <span class="text-xs text-mil-textMuted font-normal">defesa · −ataque</span>
-                    </button>
-                    <button id="btn-ord-conserve" onclick="toggleTacticalOrder('CONSERVE')" class="py-1.5 px-2 btn-tactical rounded flex flex-col items-center justify-center">
-                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-box text-mil-greenMuted"></i> Economizar Mun.</span>
-                        <span class="text-xs text-mil-textMuted font-normal">−gasto · −ataque</span>
-                    </button>
-                    <button id="btn-ord-vigilance" onclick="toggleTacticalOrder('FULL_VIGILANCE')" class="py-1.5 px-2 btn-tactical rounded flex flex-col items-center justify-center">
-                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-binoculars text-mil-textGlow"></i> Vigília Total</span>
-                        <span class="text-xs text-mil-textMuted font-normal">vê tudo · +fadiga</span>
-                    </button>
-                    <button id="btn-ord-silence" onclick="toggleTacticalOrder('SILENCE')" class="hidden col-span-2 py-1.5 px-2 btn-tactical rounded flex flex-col items-center justify-center">
-                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-volume-xmark text-mil-komonaBlue"></i> Silêncio</span>
-                        <span id="lbl-silencio" class="text-xs text-mil-textMuted font-normal">ninguém atira · o inimigo avança</span>
-                    </button>
-                    <button id="btn-ord-jam" onclick="toggleTacticalOrder('SIGNAL_JAM')" class="col-span-2 py-1.5 px-2 btn-tactical rounded flex flex-col items-center justify-center">
-                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-tower-broadcast text-mil-komonaBlue"></i> Bloqueio de Sinal</span>
-                        <span class="text-xs text-mil-textMuted font-normal">cega e derruba drones · sem rádio</span>
-                    </button>
-                    <p class="col-span-2 text-center text-xs text-mil-textMuted font-normal">Conflitos: Supressão × Economia · Abrigo × Vigília · Silêncio × fogo</p>
+                <!-- QUICK ORDERS PANEL: fileira compacta de ícones; o nome e a regra aparecem ao tocar -->
+                <div class="p-1 bg-mil-bg border-t border-mil-border text-xs">
+                    <div id="fileira-ordens" class="flex gap-1">
+                        <button id="btn-ord-suppress" onclick="toggleTacticalOrder('SUPPRESSION')" class="ordem-ico btn-tactical rounded" aria-label="Fogo Supressão"><i class="fa-solid fa-burst text-mil-amberMuted"></i><span>Fogo</span></button>
+                        <button id="btn-ord-cover" onclick="toggleTacticalOrder('SHELTER')" class="ordem-ico btn-tactical rounded" aria-label="Abrigo Reforçado"><i class="fa-solid fa-shield-halved text-mil-komonaBlue"></i><span>Abrigo</span></button>
+                        <button id="btn-ord-conserve" onclick="toggleTacticalOrder('CONSERVE')" class="ordem-ico btn-tactical rounded" aria-label="Economizar Munição"><i class="fa-solid fa-box text-mil-greenMuted"></i><span>Economia</span></button>
+                        <button id="btn-ord-vigilance" onclick="toggleTacticalOrder('FULL_VIGILANCE')" class="ordem-ico btn-tactical rounded" aria-label="Vigília Total"><i class="fa-solid fa-binoculars text-mil-textGlow"></i><span>Vigília</span></button>
+                        <button id="btn-ord-silence" onclick="toggleTacticalOrder('SILENCE')" class="hidden ordem-ico btn-tactical rounded" aria-label="Silêncio"><i class="fa-solid fa-volume-xmark text-mil-komonaBlue"></i><span id="lbl-silencio">Silêncio</span></button>
+                        <button id="btn-ord-jam" onclick="toggleTacticalOrder('SIGNAL_JAM')" class="ordem-ico btn-tactical rounded" aria-label="Bloqueio de Sinal"><i class="fa-solid fa-tower-broadcast text-mil-komonaBlue"></i><span>Bloqueio</span></button>
+                    </div>
+                    <p id="ordem-info" class="text-center text-mil-textMuted font-normal mt-1 min-h-[2.4em]" style="font-size:12px;line-height:1.25">Toque numa ordem para ver o que ela faz.</p>
                 </div>
             </div>
 
@@ -723,16 +710,16 @@
 
     <!-- JAVASCRIPT GAME ENGINE -->
     <!-- Código do jogo, dividido por assunto (a ordem importa) -->
-    <script src="assets/js/01-base.js?v=20261120.2030"></script>
-    <script src="assets/js/02-regras.js?v=20261120.2030"></script>
-    <script src="assets/js/03-defesas-crises.js?v=20261120.2030"></script>
-    <script src="assets/js/04-interface.js?v=20261120.2030"></script>
-    <script src="assets/js/05-cena.js?v=20261120.2030"></script>
-    <script src="assets/js/05b-cena-pixel.js?v=20261120.2030"></script>
-    <script src="assets/js/guia-tutorial.js?v=20261120.2030"></script>
-    <script src="assets/js/06-conta.js?v=20261120.2030"></script>
-    <script src="assets/js/07-operacoes.js?v=20261120.2030"></script>
-    <script src="assets/js/08-campo-ameacas.js?v=20261120.2030"></script>
-    <script src="assets/js/08b-particulas.js?v=20261120.2030"></script>
+    <script src="assets/js/01-base.js?v=20261120.2040"></script>
+    <script src="assets/js/02-regras.js?v=20261120.2040"></script>
+    <script src="assets/js/03-defesas-crises.js?v=20261120.2040"></script>
+    <script src="assets/js/04-interface.js?v=20261120.2040"></script>
+    <script src="assets/js/05-cena.js?v=20261120.2040"></script>
+    <script src="assets/js/05b-cena-pixel.js?v=20261120.2040"></script>
+    <script src="assets/js/guia-tutorial.js?v=20261120.2040"></script>
+    <script src="assets/js/06-conta.js?v=20261120.2040"></script>
+    <script src="assets/js/07-operacoes.js?v=20261120.2040"></script>
+    <script src="assets/js/08-campo-ameacas.js?v=20261120.2040"></script>
+    <script src="assets/js/08b-particulas.js?v=20261120.2040"></script>
 </body>
 </html>
