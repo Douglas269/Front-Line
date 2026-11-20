@@ -70,3 +70,6 @@ button.fase:not(:disabled):hover::before, button.fase:not(:disabled):hover::afte
 #guiaT, #corte-cartao, #corte-dica { font-size: 13px; line-height: 1.35; }
 #cfg-jogo .text-mil-textMuted, #corte-fichas, #panel-diary { font-size: 13.5px; }
 #ordem-info { font-family: var(--fl-fonte-leitura); font-size: 13.5px !important; }
+
+/* Pixel art nítido: se o canvas for esticado, vira bloco (vizinho mais próximo) e nunca borrão (suavização bilinear) */
+canvas { image-rendering: crisp-edges; image-rendering: pixelated; }

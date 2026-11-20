@@ -607,7 +607,7 @@
     const corCond = (c) => (c <= 0 ? '#555' : c < 35 ? '#e0533f' : c < 65 ? '#e3b04b' : '#7bc96f');
     const COR_EU = '#9fd08f', COR_ELE = '#e0533f';
     function ajustarCanvas(cv) {
-        const dpr = Math.min(2, window.devicePixelRatio || 1), w = Math.round(cv.clientWidth * dpr), h = Math.round(cv.clientHeight * dpr);
+        const dpr = Math.min(3, window.devicePixelRatio || 1), w = Math.round(cv.clientWidth * dpr), h = Math.round(cv.clientHeight * dpr);
         if (w && h && (cv.width !== w || cv.height !== h)) { cv.width = w; cv.height = h; }
     }
     function sorteio(semente) { let x = (semente >>> 0) || 1; return () => { x ^= x << 13; x ^= x >>> 17; x ^= x << 5; return ((x >>> 0) % 10000) / 10000; }; }
