@@ -320,6 +320,7 @@
             cctx.save();
             if (emPe && post.dy) cctx.translate(0, post.dy);
             pxInclinacao = emPe ? Math.round(post.inc * 34) : 0;
+            pxVira = pose === 'em pé' && !!(animPos[s.id] && animPos[s.id].esq);
             const usouBoneco = !!desenharSilhueta(s, x, y, POSE_SILHUETA[pose] || 'mira', t);
             pxInclinacao = 0;
             cctx.restore();
@@ -589,6 +590,7 @@
                     const a = animPos[s.id] || (animPos[s.id] = { x, y });
                     const vel = 0.09 * fatorAndar(s); a.x += (x - a.x) * vel; a.y += (y - a.y) * vel;
                     if (Math.hypot(x - a.x, y - a.y) > 2.5) {
+                        if (Math.abs(x - a.x) > 1) a.esq = x < a.x;   // para onde ele olha enquanto anda
                         // em trânsito: linha tracejada até o destino, com um ponto de chegada piscando
                         cctx.strokeStyle = 'rgba(143,173,136,0.6)'; cctx.lineWidth = 1.2; cctx.setLineDash([3, 3]);
                         cctx.beginPath(); cctx.moveTo(a.x, a.y - 14); cctx.lineTo(x, y - 14); cctx.stroke(); cctx.setLineDash([]);
