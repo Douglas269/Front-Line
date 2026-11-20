@@ -47,19 +47,23 @@ function pxContorno(c) {
 // Inclinação do soldado (cansaço, fome, ferimento): em vez de girar o sprite (o que serrilha o pixel art), desloca cada linha de
 // pixels da cabeça para os pés por um número inteiro de pixels, num degrau suave. A grade de pixels continua intacta.
 let pxInclinacao = 0;
+// Escala inteira: cada pixel do sprite ocupa um número INTEIRO de pixels do aparelho e a origem cai na grade do aparelho,
+// então todos os pixels saem do mesmo tamanho (antes, 1,5× deixava uns com 1 px e outros com 2 px, e a arte "piscava").
 function pxDesenha(id, x, y, esc, flip, s, vermelho, ancora) {
     const v = pxQuadro(id, s, vermelho); if (!v) return false;
-    const w = v.c.width * esc, h = v.c.height * esc, cx = (ancora !== undefined ? ancora : 11 + v.PAD) * esc;
+    const E = (corteCanvas.width / CORTE.W) || 1;                    // pixels do aparelho por unidade da cena
+    const escI = Math.max(1, Math.round(esc * E)) / E, al = (n) => Math.round(n * E) / E;
+    const w = v.c.width * escI, h = v.c.height * escI, cx = (ancora !== undefined ? ancora : 11 + v.PAD) * escI;
     cctx.save(); cctx.imageSmoothingEnabled = false;
-    cctx.translate(Math.round(x), Math.round(y));
+    cctx.translate(al(x), al(y));
     if (flip) cctx.scale(-1, 1);
-    if (!pxInclinacao) cctx.drawImage(v.c, Math.round(-cx), Math.round(-h), Math.round(w), Math.round(h));
+    if (!pxInclinacao) cctx.drawImage(v.c, al(-cx), al(-h), w, h);
     else {
         const linhas = v.c.height, L = pxInclinacao;
         for (let i = 0; i < linhas; i++) {      // da cabeça (i = 0) aos pés: o deslocamento cai de L até 0, em pixels inteiros do sprite
-            const desl = Math.round(L * (1 - i / linhas) * (L > 0 ? 1 : 1)) * esc;
-            const y0 = Math.round(-h + i * esc), y1 = Math.round(-h + (i + 1) * esc);
-            cctx.drawImage(v.c, 0, i, v.c.width, 1, Math.round(-cx + desl), y0, Math.round(w), Math.max(1, y1 - y0));
+            const desl = Math.round(L * (1 - i / linhas)) * escI;
+            const y0 = al(-h + i * escI);
+            cctx.drawImage(v.c, 0, i, v.c.width, 1, al(-cx + desl), y0, w, escI);
         }
     }
     cctx.restore(); return true;
