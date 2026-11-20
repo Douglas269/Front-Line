@@ -601,9 +601,29 @@
     }
 
     // ---------- Desenho de um campo de batalha (mesmo estilo da batalha da Conquista) ----------
-    const IMGS = {};
-    ['mira', 'trabalho', 'come', 'andando'].forEach(k => { const im = new Image(); im.onload = () => { if (tela === 'plano') desenharPrevia(); }; im.src = 'assets/soldados/' + k + '.png'; IMGS[k] = im; });
-    const SPR = { mira: { ax: 62, ay: 208 }, trabalho: { ax: 80, ay: 193 }, come: { ax: 80, ay: 190 }, andando: { ax: 87, ay: 193 } };
+    // Soldados em pixel art: os mesmos sprites do Trincheiras e da Conquista (atlas soldados.png), tingidos com a cor do lado
+    const ATLAS = new Image(); ATLAS.onload = () => { if (tela === 'plano') desenharPrevia(); }; ATLAS.src = 'assets/pixel/soldados.png';
+    const SOLD_PX = { 265: [737, 632, 29, 33], 275: [737, 674, 41, 32], 266: [789, 632, 22, 34], 290: [268, 755, 22, 33], 291: [301, 755, 22, 33], 292: [334, 754, 22, 34], 293: [367, 755, 22, 33], 124: [3, 287, 41, 15] };
+    const TINTAS_PX = {};
+    function spritePx(id, cor) {
+        const chave = id + cor; if (TINTAS_PX[chave]) return TINTAS_PX[chave];
+        if (!ATLAS.complete || !ATLAS.naturalWidth) return null;
+        const q = SOLD_PX[id], c = document.createElement('canvas'); c.width = q[2] + 2; c.height = q[3] + 2;
+        const g = c.getContext('2d'); g.imageSmoothingEnabled = false; g.drawImage(ATLAS, q[0], q[1], q[2], q[3], 1, 1, q[2], q[3]);
+        g.globalCompositeOperation = 'source-atop'; g.globalAlpha = 0.34; g.fillStyle = cor; g.fillRect(0, 0, c.width, c.height); g.globalAlpha = 1;   // farda na cor do lado
+        const t = document.createElement('canvas'); t.width = c.width; t.height = c.height; const tg = t.getContext('2d'); tg.drawImage(c, 0, 0);
+        tg.globalCompositeOperation = 'source-in'; tg.fillStyle = FL_PAL.contorno; tg.fillRect(0, 0, c.width, c.height);                               // contorno escuro de 1 px
+        g.globalCompositeOperation = 'destination-over'; [[-1, 0], [1, 0], [0, -1], [0, 1]].forEach(([dx, dy]) => g.drawImage(t, dx, dy)); g.globalCompositeOperation = 'source-over';
+        return TINTAS_PX[chave] = c;
+    }
+    function soldadoPx(ctx, id, x, y, cor) {
+        const c = spritePx(id, cor); if (!c) return false;
+        ctx.save(); ctx.imageSmoothingEnabled = false;
+        ctx.fillStyle = FL_PAL.sombra; ctx.fillRect(Math.round(x - 8), Math.round(y), 16, 2);   // sombra sob os pés
+        // escala inteira de pixels do aparelho e posição alinhada à grade: pixels uniformes, sem borrão
+        const e = ctx.getTransform().a || 1, S = Math.max(1, Math.round(e)) / e, al = (n) => Math.round(n * e) / e;
+        ctx.drawImage(c, al(x - (c.width * S) / 2), al(y - c.height * S + S), c.width * S, c.height * S); ctx.restore(); return true;
+    }
     const corCond = (c) => (c <= 0 ? '#555' : c < 35 ? '#e0533f' : c < 65 ? '#e3b04b' : '#7bc96f');
     const COR_EU = '#9fd08f', COR_ELE = '#e0533f';
     function ajustarCanvas(cv) {
@@ -665,9 +685,8 @@
         est.soldados.forEach((s, i) => {
             const p = pos[i]; if (!p) return;
             if (s.funcao === 'fora' || s.cond <= 0) { ctx.fillStyle = '#4a4a44'; ctx.fillRect(p.x - 9, p.y - 4, 18, 4); ctx.fillStyle = '#7a7a70'; ctx.font = '8px monospace'; ctx.fillText('✝', p.x - 3, p.y - 6); return; }
-            const spr = s.funcao === 'vigia' ? 'mira' : s.funcao === 'obras' ? 'trabalho' : 'come', F = (s.funcao === 'descanso' ? 0.11 : 0.15) * k;
-            if (o.defEu) { const im = IMGS[spr], a = SPR[spr]; if (im.complete && im.naturalWidth) ctx.drawImage(im, p.x - a.ax * F, p.y - a.ay * F, im.naturalWidth * F, im.naturalHeight * F); }
-            else boneco(ctx, p.x, p.y, corDef, s.funcao === 'descanso' ? 0.7 : 1, false, campo.t);
+            const id = s.funcao === 'vigia' ? 265 : s.funcao === 'obras' ? [290, 291, 292, 293][Math.floor(campo.t * 8) % 4] : 124;
+            if (!soldadoPx(ctx, id, p.x, p.y, corDef)) boneco(ctx, p.x, p.y, corDef, s.funcao === 'descanso' ? 0.7 : 1, false, campo.t);
             ctx.fillStyle = corCond(s.cond); ctx.beginPath(); ctx.arc(p.x, p.y - (s.funcao === 'descanso' ? 26 : 36) * k, 2.4, 0, Math.PI * 2); ctx.fill();
             if (o.previa) { ctx.fillStyle = 'rgba(214,227,209,.8)'; ctx.font = '8px monospace'; ctx.textAlign = 'center'; ctx.fillText(s.nome, p.x, Math.min(H - 3, p.y + 9)); ctx.textAlign = 'left'; }
         });
@@ -682,8 +701,7 @@
         campo.inimigos.slice().sort((a, b) => b.dist - a.dist).forEach((x, k) => {
             const y = yDoInimigo(x.dist); x._y = y;
             if (x.tipo === 'blindado') tanque(ctx, x.x, y, corAtq, o.atqEu);
-            else if (o.atqEu) { const im = IMGS.andando, a = SPR.andando, F = 0.13; if (im.complete && im.naturalWidth) ctx.drawImage(im, x.x - a.ax * F, y - a.ay * F + Math.sin(campo.t * 9 + k) * 0.8, im.naturalWidth * F, im.naturalHeight * F); }
-            else boneco(ctx, x.x, y, corAtq, 0.85, true, campo.t + k);
+            else if (!soldadoPx(ctx, [290, 291, 292, 293][Math.floor(campo.t * 9 + k) % 4], x.x, y, corAtq)) boneco(ctx, x.x, y, corAtq, 0.85, true, campo.t + k);
             if (campo.t - (x.alvejado || -9) < 0.15 && vig.length) { const v = vig[k % vig.length]; ctx.strokeStyle = 'rgba(255,224,138,.75)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(v.x + 8 * k, v.y - 26 * k); ctx.lineTo(x.x, y - 10); ctx.stroke(); }
         });
         // efeitos recentes
