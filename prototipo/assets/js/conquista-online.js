@@ -275,9 +275,9 @@ dispensar = function (exId, n, dono = 'jogador') {
     return dispensarOriginal(exId, n, dono);
 };
 const ordemOriginal = ordem, construirOriginal = construir, pesquisarOriginal = pesquisar, fortificarOriginal = fortificar, espionarOriginal = espionar, recrutarOriginal = recrutar, pararOriginal = cancelarMarcha;
-ordem = function (exId, destId, qtd, missao) {
+ordem = function (exId, destId, qtd, missao, aptos) {
     if (G && G.cliente) { const e = G.ex.find(x => x.id === exId); if (!e || e.dono !== 'jogador') return false; enviarAcao({ tipo: 'ordem', exId, destId, qtd, missao }); noticia(`📡 Ordem enviada: ${G.prov[destId].nome}.`); som('ordem'); return e; }
-    return ordemOriginal(exId, destId, qtd, missao);
+    return ordemOriginal(exId, destId, qtd, missao, aptos);
 };
 recrutar = function (id, n = 1, tipo = 'inf') {
     if (G && G.cliente) { enviarAcao({ tipo: 'recrutar', prov: id, n, tropa: tipo }); noticia(`📡 Pedido de recrutamento enviado (${n} ${TROPAS[tipo].nome.toLowerCase()}).`); som('recrutar'); return n; }
