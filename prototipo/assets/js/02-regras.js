@@ -4,6 +4,7 @@
            SALVAMENTO NO NAVEGADOR (progresso fica no próprio aparelho)
            ========================================================================== */
         const SAVE_KEY = 'frontline-ponto-alpha-v1';
+        const DIRETO_KEY = 'frontline-entrar-direto'; // marca da sessão: depois de recarregar para uma partida nova, entra direto no Trincheiras (sem passar pelo menu de modos)
         const NOVA_KEY = 'frontline-nova-partida'; // quando o jogador começou a última partida nova (a nuvem mais velha que isso é ignorada)
         let skipPageHideSave = false; // depois de "Nova partida"/apagar progresso, nada regrava a partida antiga
 
@@ -115,7 +116,7 @@
         async function novaPartida() {
             if (!await confirmarJogo({ icone: '🪖', titulo: 'Nova partida', texto: 'Começar uma nova partida? A partida atual será apagada e você volta ao dia 1, com o esquadrão descansado e alimentado.', ok: 'Começar de novo', perigo: true })) return;
             skipPageHideSave = true; // trava qualquer salvamento (a pausa ao sair da página regravava a partida antiga)
-            try { localStorage.removeItem(SAVE_KEY); localStorage.setItem(NOVA_KEY, String(Date.now())); } catch (e) {}
+            try { localStorage.removeItem(SAVE_KEY); localStorage.setItem(NOVA_KEY, String(Date.now())); sessionStorage.setItem(DIRETO_KEY, '1'); } catch (e) {}
             // Apaga também a cópia da conta e espera terminar (até 3 s); senão ela voltava ao reabrir
             try { await Promise.race([enviarNuvem(true), new Promise(r => setTimeout(r, 3000))]); } catch (e) {}
             location.reload();

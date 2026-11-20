@@ -340,7 +340,7 @@ novaPartida = async function () { abrirModalOp('nova'); };
 async function comecarOperacao(tipo) {
     gravarJSON(OP_KEY, { tipo });
     skipPageHideSave = true;
-    try { localStorage.removeItem(SAVE_KEY); localStorage.setItem(NOVA_KEY, String(Date.now())); } catch (e) {}
+    try { localStorage.removeItem(SAVE_KEY); localStorage.setItem(NOVA_KEY, String(Date.now())); sessionStorage.setItem(DIRETO_KEY, '1'); } catch (e) {}   // depois de recarregar, entra direto na partida nova
     try { await Promise.race([enviarNuvem(true), new Promise(r => setTimeout(r, 3000))]); } catch (e) {}
     location.reload();
 }

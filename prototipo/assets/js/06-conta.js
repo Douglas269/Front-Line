@@ -224,6 +224,13 @@
         }
 
         // Começo do jogo: sessão salva, convidado ou tela de login
+        // Depois de "Nova partida" a página recarrega: a pessoa já escolheu jogar, então entra direto no Trincheiras
+        // (a marca é da sessão e é gasta aqui; abrir o site normalmente continua mostrando o menu de modos)
+        function entrarDiretoSeMarcado() {
+            let marcado = false; try { marcado = sessionStorage.getItem(DIRETO_KEY) === '1'; sessionStorage.removeItem(DIRETO_KEY); } catch (e) {}
+            if (!marcado || !menuAberto || loginAberto) return false;
+            escolherModo('trincheiras'); return true;
+        }
         async function iniciarConta() {
             // Sem escolha anterior e sem sinal de sessão salva: a tela de entrada abre já, antes do menu aparecer
             const temSessaoSalva = (() => { try { return Object.keys(localStorage).some(k => /^sb-.*-auth-token$/.test(k)); } catch (e) { return false; } })();
@@ -237,14 +244,14 @@
                         carregarDaConta();
                         atualizarConta();
                         await baixarNuvem();
-                        mostrarTutorialSePrimeiraVez();
+                        if (!entrarDiretoSeMarcado()) mostrarTutorialSePrimeiraVez();
                         return;
                     }
                 } catch (e) { /* sem rede: segue como convidado ou login */ }
             }
             atualizarConta();
             // Sem sessão: precisa escolher entre entrar na conta e jogar como convidado (a escolha fica salva neste aparelho)
-            if (lerLocal(MODE_KEY) === 'convidado') mostrarTutorialSePrimeiraVez(); else abrirLogin(true);
+            if (lerLocal(MODE_KEY) === 'convidado') { if (!entrarDiretoSeMarcado()) mostrarTutorialSePrimeiraVez(); } else abrirLogin(true);
         }
 
         async function entrarNaConta(criar) {
@@ -555,7 +562,7 @@
            Ao abrir, ao voltar para o app e a cada minuto o jogo compara as duas. Se o site
            tiver uma versão diferente, o jogo trava numa tela que só sai atualizando.
            (tools/nova-versao.sh troca as duas juntas a cada atualização publicada.) */
-        const VERSAO_JOGO = '20261120.2320';
+        const VERSAO_JOGO = '20261120.2330';
         const ATUALIZOU_KEY = 'frontline-atualizou-para';
         async function verificarVersao() {
             if (!location.protocol.startsWith('http') || atualizacaoPendente) return;
