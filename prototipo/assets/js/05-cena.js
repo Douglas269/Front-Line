@@ -316,9 +316,12 @@
             const pele = { 1: '#c99a74', 2: '#7a4f33', 3: '#e2b996', 4: '#a8714c', 5: '#d9a988', 6: '#b98159' }[s.id] || '#c99a74';
             const POSE_SILHUETA = { mira: 'mira', ninho: 'ninho', come: 'come', trabalho: 'trabalho', deitado: 'deitado', encolhido: 'panico', panico: 'panico', 'em pé': 'arrastado' };
             const post = posturaSoldado(s, t), emPe = pose !== 'deitado' && pose !== 'encolhido' && pose !== 'panico';
+            // postura: o sprite é deslocado por linhas de pixels inteiros (nada de rotação, que serrilharia o pixel art)
             cctx.save();
-            if (emPe && (post.inc || post.dy)) { cctx.translate(x, y + post.dy); cctx.rotate(post.inc); cctx.scale(1, 1 - Math.max(0, post.inc) * 0.35); cctx.translate(-x, -y); }
+            if (emPe && post.dy) cctx.translate(0, post.dy);
+            pxInclinacao = emPe ? Math.round(post.inc * 34) : 0;
             const usouBoneco = !!desenharSilhueta(s, x, y, POSE_SILHUETA[pose] || 'mira', t);
+            pxInclinacao = 0;
             cctx.restore();
             if (usouBoneco) sinaisDoCorpo(s, x, y, pose, t);
             if (usouBoneco && pose === 'deitado' && mentalDe(s) !== 'panico') txtC(x - 16 + Math.sin(t / 500) * 2, y - 16 - (t / 60) % 10, 'z', '#b3c4ae', 9, 700);
