@@ -7,7 +7,7 @@ const { chromium } = require('playwright');
 const fs = require('fs');
 const path = require('path');
 const GAME = path.resolve(__dirname, '..', 'prototipo', 'ponto-alpha.html'); const LEVELS = (process.argv[2] || '1,13,25').split(',').map(Number); const N = +(process.argv[3] || 20);
-const AJUSTE = process.argv[4] || ''; const DIF = process.env.DIF_MODO || ''; const USA_DEF = process.env.DEF === '1'; const ESCALA = process.env.ESCALA === '1';
+const AJUSTE = process.argv[4] || ''; const DIF = process.env.DIF_MODO || ''; const USA_DEF = process.env.DEF === '1'; const ESCALA = process.env.ESCALA === '1'; const NOTREINO = process.env.NOTREINO === '1';
 const src = fs.readFileSync(path.join(__dirname, 'niveis.js'), 'utf8');
 const INIT = eval(src.slice(src.indexOf('const INITIAL_SQUAD = ') + 22, src.indexOf('];', src.indexOf('const INITIAL_SQUAD')) + 1));
 
@@ -15,7 +15,7 @@ const INIT = eval(src.slice(src.indexOf('const INITIAL_SQUAD = ') + 22, src.inde
   const b = await chromium.launch();
   for (const level of LEVELS) {
     const p = await b.newPage(); await p.goto('file://' + GAME, { waitUntil: 'load' });
-    const r = await p.evaluate(({ init, level, N, AJUSTE, USA_DEF, DIF, ESCALA }) => {
+    const r = await p.evaluate(({ init, level, N, AJUSTE, USA_DEF, DIF, ESCALA, NOTREINO }) => {
       const msgs = [];
       logFeed = (m) => msgs.push(m); updateUI = () => {}; addDiaryEntry = () => {};
       entrarComoConvidado(); fecharTutorial(); clearInterval(relogioId);
@@ -58,6 +58,8 @@ const INIT = eval(src.slice(src.indexOf('const INITIAL_SQUAD = ') + 22, src.inde
         // Gás (nível 6+): veste as máscaras no aviso; lança-chamas (nível 7+): fogo de supressão enquanto ele se aproxima
         if (gameState.gas && !gameState.gas.mascaras && gameState.prestige >= custo(GAS.MASCARA_CUSTO)) vestirMascaras();
         if (gameState.enemies.some(e => e.type === 'sapador' && e.distance < 260) && est.ammoRifle > 60) { o.SUPPRESSION = true; o.CONSERVE = false; }
+        // Treinamento: com prestígio sobrando (>800, sem faltar para os apoios), treina Tiro e depois Resistência (NOTREINO=1 desliga, para comparar)
+        if (!NOTREINO && typeof treinar === 'function' && gameState.prestige > 800) { for (const id of ['tiro', 'resist']) { const s = vivos.find(x => podeTreinar(x, id)); if (s && gameState.prestige - custoTreino(s, id) > 650) { treinar(s.id, id); break; } } }
         o.SIGNAL_JAM = droneObservando();
         if (USA_DEF) defesas(vivos, ameaca);
         // Sabotagem (nível 8+): nos últimos segundos do aviso, põe alguém na sala mirada (cozinha ou oficina)
@@ -157,7 +159,7 @@ const INIT = eval(src.slice(src.indexOf('const INITIAL_SQUAD = ') + 22, src.inde
         ondas: +(A.ondas / N).toFixed(1), invasoes: +(A.invasoes / N).toFixed(1), prestigioFinal: Math.round(A.prestigio / N),
         pedidosPorPartida: Object.fromEntries(Object.entries(pedidos).map(([k, v]) => [k, +(v / N).toFixed(1)])), mortes: A.mortes,
         estoqueMedio: Object.fromEntries(Object.entries(A.estoque).map(([k, e]) => [k, { leve: Math.round(e.leve / e.n), pesada: Math.round(e.pesada / e.n), morteiro: Math.round(e.morteiro / e.n), at: Math.round(e.at / e.n) }])) };
-    }, { init: INIT, level, N, AJUSTE, USA_DEF, DIF, ESCALA });
+    }, { init: INIT, level, N, AJUSTE, USA_DEF, DIF, ESCALA, NOTREINO });
     console.log(JSON.stringify(r));
     await p.close();
   }
