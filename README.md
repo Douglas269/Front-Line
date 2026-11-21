@@ -61,6 +61,7 @@ Toda tarefa (Correção, Melhoria ou Nova função) tem uma **issue**, e todo de
 - **Painel tático:** cada sala ganha cantoneiras de terminal e um LED de estado (verde = ocupada; o posto de vigília vazio pisca em vermelho), e o soldado em trânsito mostra uma linha tracejada até o destino, com um ponto de chegada piscando.
 - **Silêncio (nível 3+, `08-campo-ameacas.js`):** nova ordem tática. Por 10 s reais ninguém atira (o esquadrão não gasta munição e os inimigos, inclusive drones, não disparam), mas o inimigo continua avançando e a invasão acontece se ele chegar; artilharia e franco-atirador seguem. Depois recarrega por 30 s. Ligar Fogo Supressão ou Vigília Total rompe o silêncio, e ligar o silêncio desliga as de fogo. A cena ganha um tom azulado e a faixa mostra o tempo. Teste: `node tests/silencio.js`.
 - **Mira da artilharia na cena:** durante o aviso, cada alvo (depósito, ninhos e soldados marcados) ganha um anel vermelho que fecha até o impacto e pisca mais rápido; nos últimos 2 s um projétil risca o céu até ele. Some no impacto ou se a contra-bateria chegar.
+- **Reforços do Alto Comando (`11-reforcos.js`):** nos dias 5, 10, 15, 20 e 25 o jogo pausa e oferece 3 reforços sorteados (11 no total, sem repetir); o jogador escolhe 1. Cada um tem um bônus (▲) e um preço (▼), por exemplo Instrução de tiro (+10% de precisão, comboio −6%) ou Paiol ampliado (+350 de munição leve e +70 pesada na hora, inimigos com +8% de vida). Os efeitos entram por embrulhos de `diff()`, `chanceDeAcerto`, `trenchDamage`, `eatInKitchen` e `processSquadNeeds`. A oferta pendente e os reforços ficam no save (recarregar reabre a janela), aparecem em fichas no topo e no relatório final. Em teste automático o robô escolhe sozinho (a janela abre só com `?reforcos=1`). Teste: `node tests/reforcos.js`.
 - **Por que perdi (`10-diagnostico.js`):** o jogo guarda um retrato por dia (ração, água, munição, trincheira, vivos) e a causa de cada morte (fome e sede, gás, lança-chamas, artilharia ou combate). Na tela de fim aparece a causa principal, uma linha do tempo curta e até 3 dicas ligadas ao que aconteceu; na vitória, um resumo de como o esquadrão segurou. Teste: `node tests/diagnostico.js`.
 - **Layout de computador (1100 px ou mais):** o Trincheiras ganha dois painéis laterais ao vivo, o diário à esquerda e a logística à direita, que espelham as abas (sem ids duplicados; os botões copiados continuam funcionando). No celular e em telas menores nada muda. Teste: `node tests/layout-pc.js`.
 - **Paleta única do pixel art:** `assets/js/paleta.js` (`FL_PAL`) e `tokens.css` (`--px-*`) com 18 cores (pele, farda, bota, sangue, contorno e a cor de cada soldado), iguais nos três modos; `node tests/paleta.js` confere. Os soldados têm contorno escuro de 1 px (feito uma vez no cache), sombra no chão, inclinação por deslocamento de linhas (sem rotação), olham para onde andam e recuam ao atirar.
@@ -255,17 +256,21 @@ Modo a mais: o jogo de um jogador continua igual. Escolha **⚔️ Trincheiras o
 - 25 níveis. Cada vitória sobe um nível; derrota mantém o nível. O nível fica salvo no navegador, mesmo com "Nova partida".
 - Cada nível define uma dificuldade que aumenta a frequência de eventos, a vida e o dano dos inimigos e o tamanho das ondas, e diminui a entrega diária de suprimentos e o prestígio ganho; os apoios da Central ficam mais caros.
 - Além disso, cada nível acima do 1 aperta de forma visível (bloco `PRESSURE`): −0,4% de ração e água no comboio (nível 25: −10%), modificadores de nível (veja **Jogabilidade**) e ataques do general 0,3% mais rápidos (nível 25: +7%). Antes eram −1,5%, +1 soldado por onda a cada 6 níveis e 2%: no nível 25 o esquadrão morria de fome mesmo jogando bem, e o soldado extra por onda derrubava a vitória de uma vez.
-- Vitórias do jogador automático **usando as defesas** (`DIF_MODO=<modo> DEF=1 node tests/balanco.js 1,7,13,19,25 20`; 20 partidas por nível, margem de uns 20 pontos), **medidas em 2026-11-19**, já com o desbloqueio gradual por nível (clima, ofensivas, gás, incursão, lança-chamas e sabotagem entram nos níveis 2 a 8):
+- Vitórias do jogador automático **usando as defesas** (`DIF_MODO=<modo> DEF=1 node tests/balanco.js 1,4,7,10,13,16,19,22,25 40`; 40 partidas por nível, margem de uns 15 pontos), **medidas em 2026-11-21**, já com o desbloqueio gradual por nível, os reforços do Alto Comando (o robô escolhe ao acaso) e `ENEMY_HP_PER_LEVEL` = 0,007:
 
 | Nível | Recruta | Soldado | Veterano |
 |---|---|---|---|
 | 1 | 100% | 100% | 100% |
-| 7 | 10% | 0% | 0% |
-| 13 | 15% | 0% | 0% |
-| 19 | 10% | 5% | 0% |
-| 25 | 5% | 0% | 0% |
+| 4 | 100% | 100% | 38% |
+| 7 | 100% | 45% | 35% |
+| 10 | 95% | 73% | 43% |
+| 13 | 98% | 80% | 43% |
+| 16 | 98% | 80% | 18% |
+| 19 | 90% | 83% | 5% |
+| 22 | 80% | 45% | 5% |
+| 25 | 48% | 23% | 3% |
 
-**Atenção:** a tabela antiga (100% no nível 7 e 93% no 13 no Soldado) já não se repete: do nível 7 em diante o robô quase nunca vence (o código anterior ao desbloqueio gradual dava o mesmo resultado nos níveis 8 e 13). O robô não usa máscaras contra gás nem reage a lança-chamas, então não dá para saber ainda se o problema é o robô ou o equilíbrio do jogo; isso está na issue #17. O robô só reage à sabotagem (cozinha e oficina).
+**O que mudou na leitura (issue #76):** a "parede" do nível 7 em diante era do **robô**, não do jogo: ele não vestia máscaras no ataque químico nem reagia ao lança-chamas. Com o robô corrigido (máscaras no aviso e fogo de supressão contra o lança-chamas, em `tests/balanco.js`) ele vence 70–100% do nível 5 ao 19 no Soldado, o que mostrava o outro problema: sem pressão extra, a curva era plana até o nível 25. A resistência dos inimigos por nível (`ENEMY_HP_PER_LEVEL`, antes desligada) agora é 0,007 (nível 25: +17%) e a curva desce aos poucos: Soldado ~100% nos níveis 1 a 4, ~75–85% no meio e ~25% no 25. O Veterano é de propósito bem mais duro. O nível 7 (entrada do lança-chamas) é o único degrau que sobra; as medições de 50 partidas variam uns 20 pontos de uma rodada para outra, então só mexa nele com mais amostras. Sem os reforços o robô vence menos (nos níveis 5 a 12 a diferença medida foi de 10 a 30 pontos).
 
 Medido com o comboio maior (850 de munição leve, 160 de pesada, 10 granadas de morteiro e 4 foguetes anticarro por comboio) e a metralhadora .50 gastando meia munição pesada por disparo. O robô decide a cada segundo, sem cansar; um jogador de verdade tende a ir um pouco pior, por isso o Soldado ficou folgado para o robô.
 
