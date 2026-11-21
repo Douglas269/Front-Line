@@ -40,11 +40,11 @@
   body.textoGrande .info, body.textoGrande .acao, body.textoGrande .sub, body.textoGrande .lista, body.textoGrande .linha-tropa .txt { font-size: 15px; }
   body.textoGrande .acao small, body.textoGrande .linha-tropa .txt small { font-size: 12.5px; }
   #bSom { background: var(--painel); border: 1px solid var(--borda); border-radius: 6px; padding: 1px 6px; font-size: 13px; }
-  #bPausa { background: var(--painel); border: 1px solid var(--borda); border-radius: 6px; padding: 1px 8px; font-weight: 700; font-size: 13px; }
+  #bPausa { background: var(--painel); border: 1px solid var(--borda); border-radius: 6px; padding: 1px 4px; min-width: 32px; min-height: 32px; font-weight: 700; font-size: 13px; }
   #bPausa.on { border-color: var(--ambar); background: #2a2214; color: #ffd28a; }
   #faixaPausa { display: none; position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); padding: 6px 12px; border-radius: 8px; background: rgba(42,34,20,.92); border: 1px solid var(--ambar); color: #ffd28a; font-weight: 700; font-size: 12px; pointer-events: none; white-space: nowrap; }
-  #bVelMapa { background: var(--painel); border: 1px solid var(--borda); border-radius: 6px; padding: 1px 6px; font-weight: 700; font-size: 12px; }
-  #fase { color: var(--ambar); letter-spacing: 1px; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  #bVelMapa { background: var(--painel); border: 1px solid var(--borda); border-radius: 6px; padding: 1px 4px; min-width: 32px; min-height: 32px; font-weight: 700; font-size: 12px; }
+  #fase { color: var(--ambar); letter-spacing: 0; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
   #l1 .esq { min-width: 0; flex: 1; margin-right: 6px; }
   #l1 .dir { flex: none; }
   #bMenu { background: var(--painel); border: 1px solid var(--ambar); border-radius: 6px; padding: 4px 9px; min-height: 32px; color: #ffd28a; font-weight: 700; font-size: 12px; white-space: nowrap; }
@@ -163,9 +163,9 @@
   button.fase::after { content: ''; display: block; clear: both; }
   button.fase.trancada { border-color: var(--borda); background: var(--painel); color: var(--mudo); }
 </style>
-    <link rel="stylesheet" href="assets/css/fontes.css?v=20261121.0800">
-    <link rel="stylesheet" href="assets/css/tokens.css?v=20261121.0800">
-    <link rel="stylesheet" href="assets/css/polimento-visual.css?v=20261121.0800">
+    <link rel="stylesheet" href="assets/css/fontes.css?v=20261121.0830">
+    <link rel="stylesheet" href="assets/css/tokens.css?v=20261121.0830">
+    <link rel="stylesheet" href="assets/css/polimento-visual.css?v=20261121.0830">
 </head>
 <body>
 <div id="app">
@@ -190,17 +190,17 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
 <script src="vendor/game-icons.js"></script>
 <script>document.querySelectorAll('[data-icone]').forEach(el => { if (!el.innerHTML) el.innerHTML = icone(el.dataset.icone); });</script>
-<script src="assets/js/paleta.js?v=20261121.0800"></script>
-<script src="assets/js/som-ui.js?v=20261121.0800"></script>
-<script src="assets/js/conquista-unidades.js?v=20261121.0800"></script>
-<script src="assets/js/conquista-mapa.js?v=20261121.0800"></script>
-<script src="assets/js/conquista-extra.js?v=20261121.0800"></script>
-<script src="assets/js/conquista.js?v=20261121.0800"></script>
-<script src="assets/js/conquista-situacao.js?v=20261121.0800"></script>
-<script src="assets/js/conquista-online.js?v=20261121.0800"></script>
-<script src="assets/js/conquista-config.js?v=20261121.0800"></script>
-<script src="assets/js/guia-tutorial.js?v=20261121.0800"></script>
-<script src="assets/js/conquista-guia.js?v=20261121.0800"></script>
+<script src="assets/js/paleta.js?v=20261121.0830"></script>
+<script src="assets/js/som-ui.js?v=20261121.0830"></script>
+<script src="assets/js/conquista-unidades.js?v=20261121.0830"></script>
+<script src="assets/js/conquista-mapa.js?v=20261121.0830"></script>
+<script src="assets/js/conquista-extra.js?v=20261121.0830"></script>
+<script src="assets/js/conquista.js?v=20261121.0830"></script>
+<script src="assets/js/conquista-situacao.js?v=20261121.0830"></script>
+<script src="assets/js/conquista-online.js?v=20261121.0830"></script>
+<script src="assets/js/conquista-config.js?v=20261121.0830"></script>
+<script src="assets/js/guia-tutorial.js?v=20261121.0830"></script>
+<script src="assets/js/conquista-guia.js?v=20261121.0830"></script>
 
 </body>
 </html>

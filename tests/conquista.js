@@ -457,7 +457,7 @@ function jogar({ N, FASE, EST }) {
         await t.goto(JOGO, { waitUntil: 'load' });
         const menuTrinch = await t.evaluate(() => { fecharMenuModos(); document.getElementById('btn-menu-topo').click(); return menuAberto && !document.getElementById('tela-modos').classList.contains('hidden'); });
         await t.goto('file://' + require('path').join(RAIZ, 'duelo.html'), { waitUntil: 'load' }); await t.waitForTimeout(1200);
-        const menuDuelo = !!(await t.$('a.menuRodape'));
+        const menuDuelo = !!(await t.$('a.menu-principal'));
         if (!menuTrinch) falhas.push('menu: botão 🏠 do Trincheiras não abre os modos');
         if (!menuDuelo) falhas.push('menu: duelo sem botão de menu principal');
         info.menuPrincipal = { trincheiras: menuTrinch, duelo: menuDuelo };

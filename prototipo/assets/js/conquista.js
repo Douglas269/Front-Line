@@ -1216,9 +1216,9 @@ function atualizarTopo() {
     else av.style.display = 'none';
 }
 const linkMenu = () => (location.protocol.startsWith('http') ? '/' : 'ponto-alpha.html');
-const botaoMenu = () => `<a class="voltarMenu" href="${linkMenu()}">← Modos de jogo</a>`;
+const botaoMenu = () => ''; // o "Menu principal" fica no topo de toda tela cheia (mostrarTela), igual ao Duelo
 function voltarAoMenu() { salvarPartida(); location.href = linkMenu(); } // a partida fica salva
-function mostrarTela(html) { document.getElementById('telaCaixa').innerHTML = html; document.getElementById('tela').style.display = 'flex'; }
+function mostrarTela(html) { document.getElementById('telaCaixa').innerHTML = `<div class="barra-menu"><a class="menu-principal" href="${linkMenu()}">🏠 Menu principal</a></div>` + html; document.getElementById('tela').style.display = 'flex'; }
 function esconderTela() { document.getElementById('tela').style.display = 'none'; }
 function comecarFase(n) { apagarSalvamento(); novoJogo(n); G.semSalvar = false; esconderTela(); renderPainel(); salvarPartida(); }
 function continuarPartida() { if (carregarPartida()) { esconderTela(); renderPainel(); } else mostrarInicio(); }

@@ -441,7 +441,7 @@ function renderOrdens(forcar) {
     const o = gameState.ordens, ass = JSON.stringify(o);
     if (!forcar && ass === assinaturaOrdens) return;
     assinaturaOrdens = ass;
-    const passo = (k, txt, v) => `<div class="flex items-center justify-between gap-1"><span class="text-mil-textMuted">${txt}</span><span class="flex items-center gap-1"><button onclick="mudarOrdem('${k}',${k === 'reparo' ? -10 : -1})" class="w-6 h-6 btn-tactical rounded font-bold">−</button><b class="w-12 text-center text-mil-textGlow">${v}</b><button onclick="mudarOrdem('${k}',${k === 'reparo' ? 10 : 1})" class="w-6 h-6 btn-tactical rounded font-bold">+</button></span></div>`;
+    const passo = (k, txt, v) => `<div class="flex items-center justify-between gap-1"><span class="text-mil-textMuted">${txt}</span><span class="flex items-center gap-1"><button onclick="mudarOrdem('${k}',${k === 'reparo' ? -10 : -1})" class="w-8 h-8 btn-tactical rounded font-bold">−</button><b class="w-12 text-center text-mil-textGlow">${v}</b><button onclick="mudarOrdem('${k}',${k === 'reparo' ? 10 : 1})" class="w-8 h-8 btn-tactical rounded font-bold">+</button></span></div>`;
     el.innerHTML = `<div class="text-mil-amberMuted font-bold mb-1">📋 ORDENS PERMANENTES <span class="text-mil-textMuted font-normal">(o esquadrão segue sozinho)</span></div>
         ${passo('vigiaMin', 'Mínimo de vigias', o.vigiaMin ? o.vigiaMin : 'livre')}
         ${passo('reparo', 'Reparar se a trincheira cair abaixo de', o.reparo ? o.reparo + '%' : 'livre')}

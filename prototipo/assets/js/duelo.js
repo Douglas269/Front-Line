@@ -115,7 +115,7 @@
     // Cabeçalho em painel, igual ao "Seleção de fase" da Conquista e ao "Seleção de operação" do menu
     const cabeca = (k, titulo, dir) => `<div class="menu-brief"><div class="k">${k}</div><h2>${titulo}</h2>${dir ? `<div class="dir">${dir}</div>` : ''}</div>`;
     const comoJogar = (txt) => `<details class="regras"><summary>Como jogar</summary><div class="lista">${txt}</div></details>`;
-    function mostrar(html, semMenu) { document.body.classList.remove('emReplay'); $app.innerHTML = (semMenu ? '' : `<a class="voltar menuRodape menuTopo" href="${linkDoJogo()}" onclick="return confirmarSaida()">🏠 Menu principal</a>`) + html; window.scrollTo(0, 0); }
+    function mostrar(html, semMenu) { document.body.classList.remove('emReplay'); $app.innerHTML = (semMenu ? '' : `<div class="barra-menu"><a class="menu-principal" href="${linkDoJogo()}" onclick="return confirmarSaida()">🏠 Menu principal</a>${window.FLSom ? FLSom.botaoHTML() : ''}</div>`) + html; window.scrollTo(0, 0); }
     // sair no meio de um duelo: o duelo continua no servidor (dá para voltar pelo lobby)
     window.confirmarSaida = () => !(duelo && duelo.id && !String(duelo.id).startsWith('bot-') && duelo.estado === 'jogando' && tela !== 'fim') || confirm('Sair para o menu? O duelo continua: volte pelo lobby antes do tempo acabar.');
     function nomeDoUsuario(u) {
@@ -503,7 +503,7 @@
         const nm = o.nomes, eu = o.eu;
         const abaDef = eu ? '🛡 SUA DEFESA' : '🛡 ' + esc(nm.meu).toUpperCase(), abaAtq = eu ? '⚔ SEU ATAQUE' : '🛡 ' + esc(nm.dele).toUpperCase();
         mostrar(`<div class="replayTela">
-            <a class="menuTopo menuReplay" href="${linkDoJogo()}" onclick="return confirmarSaida()">🏠 Menu principal</a>
+            <a class="menu-principal menuReplay" href="${linkDoJogo()}" onclick="return confirmarSaida()">🏠 Menu principal</a>
             <div class="placar"><span>${esc(nm.meu)}</span><span class="sub">RODADA ${r.rodada}</span><span>${esc(nm.dele)}</span></div>
             <div class="abas"><button data-aba="0" class="on">${abaDef}<small>dano <b id="dano0">0</b></small></button><button data-aba="1">${abaAtq}<small>dano <b id="dano1">0</b></small></button></div>
             <div class="rpCampo"><canvas id="cvReplay"></canvas>
