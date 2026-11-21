@@ -89,9 +89,9 @@ function jogar({ N, FASE, EST }) {
         }));
         const t0 = await p.evaluate(() => { const t = gameState.timeSeconds; for (let i = 0; i < 20; i++) updateGameTick(); return gameState.timeSeconds - t; });
         // primeira vez: a tela de entrada vem antes do menu e obriga a escolher (conta ou convidado)
-        const porta = await p.evaluate(() => ({ aberta: loginAberto && document.getElementById('tela-login').classList.contains('porta') && !document.getElementById('tela-login').classList.contains('hidden'), convidado: !!document.getElementById('btn-convidado') }));
+        const porta = await p.evaluate(() => ({ aberta: loginAberto && !document.getElementById('tela-titulo').classList.contains('hidden'), convidado: !!document.getElementById('btn-jogar-titulo') }));
         if (!porta.aberta || !porta.convidado) falhas.push('a tela de entrada (login ou convidado) não abriu antes do menu: ' + JSON.stringify(porta));
-        await p.click('#btn-convidado');
+        await p.click('#btn-jogar-titulo');
         const aposPorta = await p.evaluate(() => ({ fechou: !loginAberto, modo: localStorage.getItem('frontline-modo'), menuAindaAberto: menuAberto }));
         if (!aposPorta.fechou || aposPorta.modo !== 'convidado' || !aposPorta.menuAindaAberto) falhas.push('convidado deveria ir para o menu principal: ' + JSON.stringify(aposPorta));
         await p.click('#modo-trincheiras');

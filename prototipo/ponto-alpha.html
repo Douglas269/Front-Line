@@ -22,7 +22,7 @@
     <script src="vendor/game-icons.js"></script>
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="assets/css/fontes.css?v=20261121.0210">
+    <link rel="stylesheet" href="assets/css/fontes.css?v=20261121.0220">
     <style>
         /* Visual em corte lateral: abas presas embaixo, como num app */
         body.modo-corte #barra-abas { border-top: 1px solid var(--fl-borda); border-bottom: none; background: #0a0d0b; flex-shrink: 0; z-index: 30; }
@@ -180,9 +180,9 @@
         @media (max-width: 379px) { header .animate-pulse { display: none; } header #lbl-level { display: none; } }
     </style>
     <!-- Tailwind: CSS fixo gerado por tools/gerar-css.sh (antes era montado no celular pelo CDN) -->
-    <link rel="stylesheet" href="assets/css/tokens.css?v=20261121.0210">
-    <link rel="stylesheet" href="assets/css/tailwind.css?v=20261121.0210">
-    <link rel="stylesheet" href="assets/css/polimento-visual.css?v=20261121.0210">
+    <link rel="stylesheet" href="assets/css/tokens.css?v=20261121.0220">
+    <link rel="stylesheet" href="assets/css/tailwind.css?v=20261121.0220">
+    <link rel="stylesheet" href="assets/css/polimento-visual.css?v=20261121.0220">
 </head>
 <body class="h-screen w-screen overflow-hidden flex justify-center bg-black">
 
@@ -576,6 +576,19 @@
             </div>
         </div>
 
+        <!-- TELA DE TÍTULO: primeira coisa que a pessoa vê (JOGAR entra como convidado; a conta é opcional) -->
+        <div id="tela-titulo" class="hidden titulo absolute inset-0 z-[90]">
+            <div class="titulo-fundo" aria-hidden="true"></div>
+            <div class="titulo-veu" aria-hidden="true"></div>
+            <div class="titulo-conteudo">
+                <img src="icons/escudo-160.png" alt="" class="titulo-escudo">
+                <h1 class="titulo-marca">FRONT<span>LINE</span></h1>
+                <p class="titulo-lema">Segure a linha. Trinta dias de trincheira.</p>
+                <button id="btn-jogar-titulo" type="button" onclick="jogarDoTitulo()" class="titulo-jogar btn-tactical">▶ JOGAR</button>
+                <button id="btn-conta-titulo" type="button" onclick="contaDoTitulo()" class="titulo-conta">Entrar ou criar conta para salvar na nuvem</button>
+            </div>
+        </div>
+
         <!-- TELA DE LOGIN -->
         <div id="tela-login" class="hidden porta absolute inset-0 bg-mil-bg z-[85] flex flex-col overflow-y-auto">
             <div class="menu-bar so-sheet"><button type="button" onclick="fecharLogin()" class="btn-tactical menu-voltar"><i class="fa-solid fa-arrow-left"></i> Voltar ao menu</button></div>
@@ -730,17 +743,17 @@
 
     <!-- JAVASCRIPT GAME ENGINE -->
     <!-- Código do jogo, dividido por assunto (a ordem importa) -->
-    <script src="assets/js/paleta.js?v=20261121.0210"></script>
-    <script src="assets/js/01-base.js?v=20261121.0210"></script>
-    <script src="assets/js/02-regras.js?v=20261121.0210"></script>
-    <script src="assets/js/03-defesas-crises.js?v=20261121.0210"></script>
-    <script src="assets/js/04-interface.js?v=20261121.0210"></script>
-    <script src="assets/js/05-cena.js?v=20261121.0210"></script>
-    <script src="assets/js/05b-cena-pixel.js?v=20261121.0210"></script>
-    <script src="assets/js/guia-tutorial.js?v=20261121.0210"></script>
-    <script src="assets/js/06-conta.js?v=20261121.0210"></script>
-    <script src="assets/js/07-operacoes.js?v=20261121.0210"></script>
-    <script src="assets/js/08-campo-ameacas.js?v=20261121.0210"></script>
-    <script src="assets/js/08b-particulas.js?v=20261121.0210"></script>
+    <script src="assets/js/paleta.js?v=20261121.0220"></script>
+    <script src="assets/js/01-base.js?v=20261121.0220"></script>
+    <script src="assets/js/02-regras.js?v=20261121.0220"></script>
+    <script src="assets/js/03-defesas-crises.js?v=20261121.0220"></script>
+    <script src="assets/js/04-interface.js?v=20261121.0220"></script>
+    <script src="assets/js/05-cena.js?v=20261121.0220"></script>
+    <script src="assets/js/05b-cena-pixel.js?v=20261121.0220"></script>
+    <script src="assets/js/guia-tutorial.js?v=20261121.0220"></script>
+    <script src="assets/js/06-conta.js?v=20261121.0220"></script>
+    <script src="assets/js/07-operacoes.js?v=20261121.0220"></script>
+    <script src="assets/js/08-campo-ameacas.js?v=20261121.0220"></script>
+    <script src="assets/js/08b-particulas.js?v=20261121.0220"></script>
 </body>
 </html>

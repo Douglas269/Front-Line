@@ -183,6 +183,12 @@
             atualizarConta();
         }
 
+        // Tela de título: JOGAR entra como convidado (progresso só neste aparelho); a conta é um caminho opcional
+        function abrirTitulo() { loginAberto = true; document.getElementById('tela-titulo').classList.remove('hidden'); }
+        function fecharTitulo() { loginAberto = false; document.getElementById('tela-titulo').classList.add('hidden'); }
+        function jogarDoTitulo() { gravarLocal(MODE_KEY, 'convidado'); fecharTitulo(); atualizarConta(); }
+        function contaDoTitulo() { fecharTitulo(); abrirLogin(false); }
+
         function fecharLogin() {
             loginAberto = false;
             document.getElementById('tela-login').classList.add('hidden');
@@ -234,13 +240,14 @@
         async function iniciarConta() {
             // Sem escolha anterior e sem sinal de sessão salva: a tela de entrada abre já, antes do menu aparecer
             const temSessaoSalva = (() => { try { return Object.keys(localStorage).some(k => /^sb-.*-auth-token$/.test(k)); } catch (e) { return false; } })();
-            if (!lerLocal(MODE_KEY) && !temSessaoSalva) abrirLogin(true);
+            if (!lerLocal(MODE_KEY) && !temSessaoSalva) abrirTitulo();
             if (window.supabase && window.supabase.createClient) {
                 sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
                 try {
                     const { data } = await sb.auth.getSession();
                     if (data && data.session) {
                         usuario = data.session.user;
+                        if (!document.getElementById('tela-titulo').classList.contains('hidden')) fecharTitulo();
                         carregarDaConta();
                         atualizarConta();
                         await baixarNuvem();
@@ -251,7 +258,7 @@
             }
             atualizarConta();
             // Sem sessão: precisa escolher entre entrar na conta e jogar como convidado (a escolha fica salva neste aparelho)
-            if (lerLocal(MODE_KEY) === 'convidado') { if (!entrarDiretoSeMarcado()) mostrarTutorialSePrimeiraVez(); } else abrirLogin(true);
+            if (lerLocal(MODE_KEY) === 'convidado') { if (!entrarDiretoSeMarcado()) mostrarTutorialSePrimeiraVez(); } else if (!loginAberto) abrirTitulo();
         }
 
         async function entrarNaConta(criar) {
@@ -562,7 +569,7 @@
            Ao abrir, ao voltar para o app e a cada minuto o jogo compara as duas. Se o site
            tiver uma versão diferente, o jogo trava numa tela que só sai atualizando.
            (tools/nova-versao.sh troca as duas juntas a cada atualização publicada.) */
-        const VERSAO_JOGO = '20261121.0210';
+        const VERSAO_JOGO = '20261121.0220';
         const ATUALIZOU_KEY = 'frontline-atualizou-para';
         async function verificarVersao() {
             if (!location.protocol.startsWith('http') || atualizacaoPendente) return;
