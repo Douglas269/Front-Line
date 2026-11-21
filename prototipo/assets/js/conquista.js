@@ -1207,15 +1207,14 @@ function pausar(v) { if (!G || G.fim) return; G.pausado = v === undefined ? !G.p
 function mostrarInicio() {
     const sv = lerSalvamento(), m = lerMeta(), tot = totalEstrelas(m);
     const continuar = sv ? `<button class="grande" onclick="continuarPartida()">▶ CONTINUAR · FASE ${sv.fase} (${String(Math.floor(sv.t / 60)).padStart(2, '0')}:${String(Math.floor(sv.t % 60)).padStart(2, '0')} jogados)</button>` : '';
-    const estrelas = (n) => '★'.repeat(n) + '☆'.repeat(3 - n);
+    const estrelas = (n) => [0, 1, 2].map(i => `<i class="est${i < n ? '' : ' off'}" aria-hidden="true"></i>`).join('') + `<span class="sr-so"> ${n} de 3 estrelas</span>`;
     const fases = CAPITULOS.map((nome, c) => `<div class="capitulo">${nome}</div><div class="fases-grid">` + FASES.filter(F => F.cap === c).map(F => {
         const lib = faseLiberada(F.n), est = m.estrelas[F.n] || 0;
-        return `<button class="fase${lib ? '' : ' trancada'}" ${lib ? '' : 'disabled'} onclick="comecarFase(${F.n})"><b>Fase ${F.n} · ${F.nome}</b><span class="estrelas">${lib ? estrelas(est) : '🔒'}</span>
+        return `<button class="fase${lib ? '' : ' trancada'}" ${lib ? '' : 'disabled'} onclick="comecarFase(${F.n})"><span class="fnum">${F.n}</span><b>${F.nome}</b><span class="estrelas">${lib ? estrelas(est) : '<span aria-hidden="true">🔒</span><span class="sr-so"> bloqueada</span>'}</span>
             <small>${lib ? `${F.bots.length} inimigos · ${Math.round(F.tempo / 60)} min${F.regraTxt ? ' · ' + F.regraTxt : ''}<br>★★★ ${OBJETIVOS[F.objetivo].txt}` : 'vença a fase anterior'}</small></button>`;
     }).join('') + '</div>').join('');
     mostrarTela(`<div class="menu-brief"><div class="k">CAMPANHA DE CONQUISTA · ${CAPITULOS.length} CAPÍTULOS</div><h2>SELEÇÃO DE FASE</h2><div class="dir"><div>⭐ ${tot} ESTRELAS</div><div class="ok">STATUS: PRONTO</div></div></div>${continuar}
-        <div class="sub">Você comanda um país pequeno. Em volta, países de bots com personalidades diferentes e terras livres com milícia. Os bots brigam entre si; com você, dá para negociar.</div>
-        <details class="regras"><summary>Como jogar</summary><div class="lista">🪖 <b>Exércitos:</b> toque num exército seu, em <b>Mover / Atacar</b> e no destino. Você escolhe quantos vão.<br>
+        <details class="regras"><summary>Como jogar</summary><div class="lista">Você comanda um país pequeno. Em volta, países de bots com personalidades diferentes e terras livres com milícia. Os bots brigam entre si; com você, dá para negociar.<br><br>🪖 <b>Exércitos:</b> toque num exército seu, em <b>Mover / Atacar</b> e no destino. Você escolhe quantos vão.<br>
         🐎 <b>Tropas:</b> infantaria, metralhadora (segura a trincheira), artilharia (fura trincheira), cavalaria (rápida) e blindado. As 4 últimas saem da 🔬 pesquisa.<br>
         💰 <b>Economia:</b> 🪙 dinheiro cria a tropa e paga a <b>manutenção</b> de cada soldado a cada ciclo (faltando, o soldo atrasa: a tropa rende menos e até deserta). ⚙ aço vai em tropa pesada e obras. 👥 mão de obra é o máximo de soldados que suas províncias sustentam (a tropa morta ou dispensada devolve a vaga). 🍞 comida alimenta a tropa e 🔫 munição vai nas batalhas. Toque nos recursos do topo para ver a economia.<br>
         🏴 Entrar em província sem defesa conquista. Com defesa, tem batalha de até 2 minutos.<br>

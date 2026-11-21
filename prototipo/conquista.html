@@ -141,11 +141,18 @@
   .grande.secundaria { border-color: var(--borda); background: var(--painel); color: var(--texto); }
   button.fase { display: block; width: 100%; text-align: left; padding: 12px; margin-top: 8px; border-radius: 10px; border: 1px solid var(--ambar); background: #2a2214; color: #ffd28a; font-size: 14px; }
   button.fase small { display: block; color: var(--mudo); font-size: 11px; margin-top: 3px; }
+  .sr-so { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .fnum { float: left; width: 44px; height: 44px; margin: 0 10px 0 0; display: flex; align-items: center; justify-content: center; border: 2px solid currentColor; border-radius: 6px; font-family: var(--fl-fonte-marca); font-size: 26px; background: rgba(0,0,0,.25); }
+  button.fase.trancada .fnum { opacity: .55; border-style: dashed; }
+  .est { display: inline-block; width: 15px; height: 15px; margin-left: 3px; vertical-align: -2px; background: #ffd28a; clip-path: polygon(50% 0, 62% 35%, 98% 36%, 69% 58%, 80% 94%, 50% 72%, 20% 94%, 31% 58%, 2% 36%, 38% 35%); }
+  .est.off { background: #4a3f2a; }
+  button.fase small { overflow: hidden; }
+  button.fase::after { content: ''; display: block; clear: both; }
   button.fase.trancada { border-color: var(--borda); background: var(--painel); color: var(--mudo); }
 </style>
-    <link rel="stylesheet" href="assets/css/fontes.css?v=20261121.0235">
-    <link rel="stylesheet" href="assets/css/tokens.css?v=20261121.0235">
-    <link rel="stylesheet" href="assets/css/polimento-visual.css?v=20261121.0235">
+    <link rel="stylesheet" href="assets/css/fontes.css?v=20261121.0250">
+    <link rel="stylesheet" href="assets/css/tokens.css?v=20261121.0250">
+    <link rel="stylesheet" href="assets/css/polimento-visual.css?v=20261121.0250">
 </head>
 <body>
 <div id="app">
@@ -170,16 +177,16 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
 <script src="vendor/game-icons.js"></script>
 <script>document.querySelectorAll('[data-icone]').forEach(el => { if (!el.innerHTML) el.innerHTML = icone(el.dataset.icone); });</script>
-<script src="assets/js/paleta.js?v=20261121.0235"></script>
-<script src="assets/js/som-ui.js?v=20261121.0235"></script>
-<script src="assets/js/conquista-unidades.js?v=20261121.0235"></script>
-<script src="assets/js/conquista-mapa.js?v=20261121.0235"></script>
-<script src="assets/js/conquista-extra.js?v=20261121.0235"></script>
-<script src="assets/js/conquista.js?v=20261121.0235"></script>
-<script src="assets/js/conquista-online.js?v=20261121.0235"></script>
-<script src="assets/js/conquista-config.js?v=20261121.0235"></script>
-<script src="assets/js/guia-tutorial.js?v=20261121.0235"></script>
-<script src="assets/js/conquista-guia.js?v=20261121.0235"></script>
+<script src="assets/js/paleta.js?v=20261121.0250"></script>
+<script src="assets/js/som-ui.js?v=20261121.0250"></script>
+<script src="assets/js/conquista-unidades.js?v=20261121.0250"></script>
+<script src="assets/js/conquista-mapa.js?v=20261121.0250"></script>
+<script src="assets/js/conquista-extra.js?v=20261121.0250"></script>
+<script src="assets/js/conquista.js?v=20261121.0250"></script>
+<script src="assets/js/conquista-online.js?v=20261121.0250"></script>
+<script src="assets/js/conquista-config.js?v=20261121.0250"></script>
+<script src="assets/js/guia-tutorial.js?v=20261121.0250"></script>
+<script src="assets/js/conquista-guia.js?v=20261121.0250"></script>
 
 </body>
 </html>

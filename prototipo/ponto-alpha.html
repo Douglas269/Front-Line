@@ -22,7 +22,7 @@
     <script src="vendor/game-icons.js"></script>
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="assets/css/fontes.css?v=20261121.0235">
+    <link rel="stylesheet" href="assets/css/fontes.css?v=20261121.0250">
     <style>
         /* Visual em corte lateral: abas presas embaixo, como num app */
         body.modo-corte #barra-abas { border-top: 1px solid var(--fl-borda); border-bottom: none; background: #0a0d0b; flex-shrink: 0; z-index: 30; }
@@ -158,6 +158,20 @@
         .modo-card { min-height: 130px; }
         .modo-card .md { display: block; margin-top: 6px; font-size: 12px; line-height: 1.4; color: var(--fl-texto-mudo); font-weight: 400; }
         @media (min-width: 640px) { .modo-arte { position: static; width: 100%; height: 84px; object-fit: cover; margin-bottom: 6px; } .modo-card .md { margin-right: 0; } .modo-tag { position: static; order: -1; align-self: flex-start; margin-bottom: 5px; font-size: 8px; } .modo-card .md { font-size: 10px; margin-top: 5px; line-height: 1.35; } }
+        /* Trincheiras é o modo principal (cartão grande); os outros dois são extras */
+        #modo-trincheiras { min-height: 176px; border-color: #5c4a26; }
+        #modo-trincheiras .mt { font-size: 19px; font-family: var(--fl-fonte-marca); font-weight: 400; letter-spacing: 1px; color: var(--fl-destaque); }
+        #modo-trincheiras .modo-arte { width: 150px; height: 116px; top: 40px; }
+        #modo-trincheiras .md { margin-right: 168px; font-size: 13px; }
+        .modo-cta { display: inline-block; align-self: flex-start; margin-top: 12px; padding: 7px 12px; border: 2px solid var(--fl-destaque); border-radius: 4px; color: var(--fl-destaque); font-weight: 700; letter-spacing: 2px; font-size: 13px; }
+        .modo-card:not(#modo-trincheiras) { opacity: .92; }
+        @media (min-width: 640px) {
+            .menu-cards { grid-template-columns: repeat(2, 1fr); }
+            #modo-trincheiras { grid-column: 1 / -1; min-height: 210px; flex-direction: column; }
+            #modo-trincheiras .modo-arte { position: absolute; right: 14px; top: 14px; width: 220px; height: 140px; margin: 0; }
+            #modo-trincheiras .md { margin-right: 250px; }
+            #modo-trincheiras .modo-tag { position: absolute; order: 0; top: auto; bottom: 10px; right: 14px; }
+        }
         .modo-rodape { display: flex; justify-content: space-between; gap: 4px; margin-top: 10px; padding-top: 7px; border-top: 1px dashed #334237; font-size: 10.5px; color: var(--fl-texto-mudo); font-weight: 400; }
         @media (min-width: 640px) { .modo-rodape { margin-top: auto; font-size: 10px; padding-top: 6px; } }
         /* Faixa de dia/hora/tempo: cabe em celular estreito (antes o botão Pausar/Continuar saía da tela) */
@@ -180,9 +194,9 @@
         @media (max-width: 379px) { header .animate-pulse { display: none; } header #lbl-level { display: none; } }
     </style>
     <!-- Tailwind: CSS fixo gerado por tools/gerar-css.sh (antes era montado no celular pelo CDN) -->
-    <link rel="stylesheet" href="assets/css/tokens.css?v=20261121.0235">
-    <link rel="stylesheet" href="assets/css/tailwind.css?v=20261121.0235">
-    <link rel="stylesheet" href="assets/css/polimento-visual.css?v=20261121.0235">
+    <link rel="stylesheet" href="assets/css/tokens.css?v=20261121.0250">
+    <link rel="stylesheet" href="assets/css/tailwind.css?v=20261121.0250">
+    <link rel="stylesheet" href="assets/css/polimento-visual.css?v=20261121.0250">
 </head>
 <body class="h-screen w-screen overflow-hidden flex justify-center bg-black">
 
@@ -548,8 +562,9 @@
                     <button id="modo-trincheiras" type="button" onclick="escolherModo('trincheiras')" class="modo-card btn-tactical">
                         <img class="modo-arte" src="assets/pixel/modo-trincheiras-real.png" alt="" width="104" height="80">
                         <span class="mt">🪖 Trincheiras</span>
-                        <span class="modo-tag">SOLO</span>
+                        <span class="modo-tag">PRINCIPAL</span>
                         <span class="md">Segure a sua trincheira por 30 dias. Um jogador.</span>
+                        <span class="modo-cta">▶ JOGAR AGORA</span>
                         <span class="modo-rodape"><span>30 dias</span><span>6 soldados</span></span>
                     </button>
                     <a id="modo-online" href="duelo.html" class="modo-card btn-tactical">
@@ -743,18 +758,18 @@
 
     <!-- JAVASCRIPT GAME ENGINE -->
     <!-- Código do jogo, dividido por assunto (a ordem importa) -->
-    <script src="assets/js/paleta.js?v=20261121.0235"></script>
-<script src="assets/js/som-ui.js?v=20261121.0235"></script>
-    <script src="assets/js/01-base.js?v=20261121.0235"></script>
-    <script src="assets/js/02-regras.js?v=20261121.0235"></script>
-    <script src="assets/js/03-defesas-crises.js?v=20261121.0235"></script>
-    <script src="assets/js/04-interface.js?v=20261121.0235"></script>
-    <script src="assets/js/05-cena.js?v=20261121.0235"></script>
-    <script src="assets/js/05b-cena-pixel.js?v=20261121.0235"></script>
-    <script src="assets/js/guia-tutorial.js?v=20261121.0235"></script>
-    <script src="assets/js/06-conta.js?v=20261121.0235"></script>
-    <script src="assets/js/07-operacoes.js?v=20261121.0235"></script>
-    <script src="assets/js/08-campo-ameacas.js?v=20261121.0235"></script>
-    <script src="assets/js/08b-particulas.js?v=20261121.0235"></script>
+    <script src="assets/js/paleta.js?v=20261121.0250"></script>
+<script src="assets/js/som-ui.js?v=20261121.0250"></script>
+    <script src="assets/js/01-base.js?v=20261121.0250"></script>
+    <script src="assets/js/02-regras.js?v=20261121.0250"></script>
+    <script src="assets/js/03-defesas-crises.js?v=20261121.0250"></script>
+    <script src="assets/js/04-interface.js?v=20261121.0250"></script>
+    <script src="assets/js/05-cena.js?v=20261121.0250"></script>
+    <script src="assets/js/05b-cena-pixel.js?v=20261121.0250"></script>
+    <script src="assets/js/guia-tutorial.js?v=20261121.0250"></script>
+    <script src="assets/js/06-conta.js?v=20261121.0250"></script>
+    <script src="assets/js/07-operacoes.js?v=20261121.0250"></script>
+    <script src="assets/js/08-campo-ameacas.js?v=20261121.0250"></script>
+    <script src="assets/js/08b-particulas.js?v=20261121.0250"></script>
 </body>
 </html>
