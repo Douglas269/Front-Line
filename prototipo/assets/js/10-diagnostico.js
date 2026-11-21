@@ -15,7 +15,7 @@ function registrarRetratoDoDia() {
     gameState.hist = gameState.hist || [];
     gameState.hist.push({
         dia: gameState.day, ra: Math.round(r.rations), ag: Math.round(r.water), mL: Math.round(r.ammoRifle), mP: Math.round(r.ammoHeavy),
-        tr: Math.round(gameState.trench), vivos: gameState.squad.filter(s => s.hp > 0).length
+        tr: Math.round(gameState.trench), pr: Math.round(gameState.prestige), vivos: gameState.squad.filter(s => s.hp > 0).length
     });
     if (gameState.hist.length > HIST_MAX) gameState.hist.shift();
 }
