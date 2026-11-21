@@ -39,7 +39,7 @@
                     nextWaveBoost: gameState.nextWaveBoost,
                     general: gameState.general,
                     op: gameState.op, obrasT: gameState.obrasT, ordens: gameState.ordens, cartas: gameState.cartas, // operações, obras, ordens e cartas (07-operacoes.js)
-                    campo: gameState.campo, gas: gameState.gas, sabotagem: gameState.sabotagem, silencio: gameState.silencio, silencioRecarga: gameState.silencioRecarga, mecVistas: gameState.mecVistas, acamp: gameState.acamp, // crateras, gás em curso e acampamento (08 e 09)
+                    campo: gameState.campo, gas: gameState.gas, sabotagem: gameState.sabotagem, silencio: gameState.silencio, silencioRecarga: gameState.silencioRecarga, mecVistas: gameState.mecVistas, hist: gameState.hist, mortes: gameState.mortes, acamp: gameState.acamp, // crateras, gás em curso e acampamento (08 e 09)
                     feed: document.getElementById('feed-log').innerHTML,
                     diary: document.getElementById('diary-entries').innerHTML
                 }));
@@ -85,7 +85,7 @@
                 nextWaveBoost: data.nextWaveBoost || 0,
                 general: data.general || newGeneral(),
                 op: data.op, obrasT: data.obrasT, ordens: data.ordens, cartas: data.cartas, // 07-operacoes.js
-                campo: data.campo || null, gas: data.gas || null, sabotagem: data.sabotagem || null, silencio: data.silencio || null, silencioRecarga: data.silencioRecarga || 0, mecVistas: data.mecVistas || {}, acamp: data.acamp || null // 08 e 09
+                campo: data.campo || null, gas: data.gas || null, sabotagem: data.sabotagem || null, silencio: data.silencio || null, silencioRecarga: data.silencioRecarga || 0, mecVistas: data.mecVistas || {}, hist: data.hist || [], mortes: data.mortes || [], acamp: data.acamp || null // 08 e 09
             });
             document.getElementById('feed-log').innerHTML = data.feed;
             document.getElementById('diary-entries').innerHTML = data.diary;
