@@ -211,6 +211,8 @@
             document.getElementById('chip-sub').textContent = usuario ? 'progresso na nuvem' : 'salve o progresso na nuvem';
             document.getElementById('chip-av').innerHTML = usuario ? esc2(nome.charAt(0).toUpperCase()) : '<i class="fa-solid fa-user"></i>';
             chip.classList.toggle('logado', !!usuario);
+            const bt = document.getElementById('btn-conta-titulo'); if (bt) bt.classList.toggle('hidden', !!usuario); // conta conectada: o título só tem JOGAR
+            const it = document.getElementById('titulo-logado'); if (it) { it.textContent = usuario ? 'Conectado como ' + nome : ''; it.classList.toggle('hidden', !usuario); }
             const v = document.getElementById('menu-versao'); if (v) v.textContent = 'v' + VERSAO_JOGO;
         }
 
@@ -241,7 +243,11 @@
         async function iniciarConta() {
             // Sem escolha anterior e sem sinal de sessão salva: a tela de entrada abre já, antes do menu aparecer
             const temSessaoSalva = (() => { try { return Object.keys(localStorage).some(k => /^sb-.*-auth-token$/.test(k)); } catch (e) { return false; } })();
-            if (!lerLocal(MODE_KEY) && !temSessaoSalva) abrirTitulo();
+            // A tela de título abre sempre que o jogo é aberto (menos ao recarregar de "Nova partida"/Atualizar, que entram direto).
+            // Em teste automático só na primeira vez (sem escolha salva) ou com ?titulo=1, para não cobrir o menu em todo teste.
+            let direto = false; try { direto = sessionStorage.getItem(DIRETO_KEY) === '1'; } catch (e) {}
+            const emTeste = navigator.webdriver && !/[?&]titulo=1/.test(location.search) && !!lerLocal(MODE_KEY);
+            if (!direto && !emTeste) { document.getElementById('btn-conta-titulo').classList.toggle('hidden', temSessaoSalva); abrirTitulo(); }
             if (window.supabase && window.supabase.createClient) {
                 sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
                 try {
@@ -259,7 +265,7 @@
             }
             atualizarConta();
             // Sem sessão: precisa escolher entre entrar na conta e jogar como convidado (a escolha fica salva neste aparelho)
-            if (lerLocal(MODE_KEY) === 'convidado') { if (!entrarDiretoSeMarcado()) mostrarTutorialSePrimeiraVez(); } else if (!loginAberto) abrirTitulo();
+            if (lerLocal(MODE_KEY) === 'convidado') { if (!entrarDiretoSeMarcado()) mostrarTutorialSePrimeiraVez(); }
         }
 
         async function entrarNaConta(criar) {
@@ -570,7 +576,7 @@
            Ao abrir, ao voltar para o app e a cada minuto o jogo compara as duas. Se o site
            tiver uma versão diferente, o jogo trava numa tela que só sai atualizando.
            (tools/nova-versao.sh troca as duas juntas a cada atualização publicada.) */
-        const VERSAO_JOGO = '20261121.0250';
+        const VERSAO_JOGO = '20261121.0300';
         const ATUALIZOU_KEY = 'frontline-atualizou-para';
         async function verificarVersao() {
             if (!location.protocol.startsWith('http') || atualizacaoPendente) return;

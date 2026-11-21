@@ -98,3 +98,5 @@ canvas { image-rendering: crisp-edges; image-rendering: pixelated; }
 .fl-tremendo { animation: fl-treme .34s linear; }
 .fl-som-flutuante { position: fixed; top: 8px; right: 8px; z-index: 50; width: 40px; height: 40px; border-radius: 50%; background: var(--fl-panel); border: 1px solid var(--fl-borda); color: var(--fl-texto); font-size: 18px; }
 @media (prefers-reduced-motion: reduce) { #tela-modos, #tela-login, [id^="modal-"] { animation: none !important; } }
+.titulo-logado { margin-top: 16px; font-family: var(--fl-fonte-leitura); font-size: 14px; color: #8fd17f; }
+.titulo-logado.hidden, .titulo-conta.hidden { display: none; }
