@@ -100,3 +100,8 @@ canvas { image-rendering: crisp-edges; image-rendering: pixelated; }
 @media (prefers-reduced-motion: reduce) { #tela-modos, #tela-login, [id^="modal-"] { animation: none !important; } }
 .titulo-logado { margin-top: 16px; font-family: var(--fl-fonte-leitura); font-size: 14px; color: #8fd17f; }
 .titulo-logado.hidden, .titulo-conta.hidden { display: none; }
+
+/* ---- Reforços ativos ---- */
+.reforcos-chip { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; padding: 3px 10px; font-size: 11px; background: var(--fl-panel); border-bottom: 1px solid var(--fl-borda); }
+.reforcos-chip.hidden { display: none; }
+.reforco-pill { padding: 0 6px; border: 1px solid #5c4a26; border-radius: 3px; color: var(--fl-destaque); background: #2a2214; white-space: nowrap; }

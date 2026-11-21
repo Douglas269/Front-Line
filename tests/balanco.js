@@ -55,6 +55,9 @@ const INIT = eval(src.slice(src.indexOf('const INITIAL_SQUAD = ') + 22, src.inde
         if (!cg.water && est.water < 12 && gameState.prestige >= custo(45) + 50) requestSupport('SUPPLY', 'water');
         if (!cg.ammoRifle && est.ammoRifle < 250 && gameState.prestige >= custo(50) + 50) requestSupport('SUPPLY', 'ammoRifle');
         if (vivos.some(s => s.hp < 30) && gameState.prestige >= custo(150) && gameState.supplyLineEff >= 30) requestSupport('MEDEVAC');
+        // Gás (nível 6+): veste as máscaras no aviso; lança-chamas (nível 7+): fogo de supressão enquanto ele se aproxima
+        if (gameState.gas && !gameState.gas.mascaras && gameState.prestige >= custo(GAS.MASCARA_CUSTO)) vestirMascaras();
+        if (gameState.enemies.some(e => e.type === 'sapador' && e.distance < 260) && est.ammoRifle > 60) { o.SUPPRESSION = true; o.CONSERVE = false; }
         o.SIGNAL_JAM = droneObservando();
         if (USA_DEF) defesas(vivos, ameaca);
         // Sabotagem (nível 8+): nos últimos segundos do aviso, põe alguém na sala mirada (cozinha ou oficina)

@@ -522,12 +522,28 @@ function chegarAqui(e, p) {
     }
     if (!e.rota.length) parar(e);
 }
+// Resolver rápido: roda o mesmo combate (mesmas regras, posturas e tropas) sem esperar a animação.
+// Só na campanha contra bots: no online a batalha é de todos e roda no servidor da sala.
+function podeResolverRapido(b) { return !!b && !b.terminou && !G.online && !G.cliente && !G.fim; }
+function resolverBatalhaAgora(b) {
+    if (!podeResolverRapido(b)) return false;
+    b.audivel = false;
+    for (let i = 0; i < 1500 && !b.terminou; i++) passoBatalha(b, 0.2);
+    return b.terminou;
+}
+function resolverRapido(provId) {
+    const b = (G.batalhas || []).find(x => x.alvo.id === provId && !x.terminou); if (!b) return;
+    if (resolverBatalhaAgora(b)) noticia(`⏩ Batalha de ${b.alvo.nome} resolvida: ${b.vencedor === 'atq' ? FACCOES[b.atqDono].nome + ' venceu' : FACCOES[b.defDono].nome + ' segurou'}.`);
+    avancarBatalhas(0); // conclui já: conquista ou recuo
+    renderPainel();
+}
 // Começa uma batalha: o atacante contra os defensores parados na província
 function abrirBatalha(e, p, defensores) {
     const b = criarBatalha(e, p, defensores);
     e.emBatalha = true; defensores.forEach(d => { d.emBatalha = true; });
     b.audivel = e.dono === 'jogador' || p.dono === 'jogador';
     G.batalhas.push(b);
+    if (b.audivel && typeof CONFIG_CONQ !== 'undefined' && CONFIG_CONQ.batalhaRapida && podeResolverRapido(b)) { resolverBatalhaAgora(b); return b; } // preferência: resolver sempre rápido
     if (e.dono === 'jogador') noticia(`⚔ Seus ${e.s.length} soldados atacam ${p.nome} (${b.def.length} defendendo).`);
     else if (p.dono === 'jogador') noticia(`⚔ ${FACCOES[e.dono].nome} ataca ${p.nome} com ${e.s.length} soldados!`, true);
     return b;
@@ -1057,6 +1073,7 @@ function painelBatalha(b) {
     const atual = souAtq ? b.postAtq : b.postDef, f = G.fac.jogador;
     return `<div class="info"><b style="color:#ff9f6a">⚔ Batalha em ${b.alvo.nome}</b>: você ${souAtq ? nA : nD} × ${souAtq ? nD : nA} ${FACCOES[outro].nome} · ${Math.ceil(resta / C.BAT_RITMO)}s no máximo</div>
         <div class="acoes">${posts.map(([id, t, d]) => botao(t, d, `acaoBatalha('${b.alvo.id}','${id}')`, { forte: atual === id })).join('')}
+        ${podeResolverRapido(b) ? botao('⏩ Resolver rápido', 'termina já, mesmas regras', `resolverRapido('${b.alvo.id}')`) : ''}
         ${botao('💥 Artilharia', b.usouArt ? 'já usada' : `${C.ARTILHARIA_MUN} 🔫 · fere todos do outro lado`, `acaoBatalha('${b.alvo.id}','art')`, { off: b.usouArt || f.mun < C.ARTILHARIA_MUN })}</div>`;
 }
 const contarTipos = (lista) => { const r = {}; lista.forEach(x => { if (x.s.vida > 0) { const t = x.s.tipo || 'inf'; r[t] = (r[t] || 0) + 1; } }); return r; };

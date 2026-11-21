@@ -3,7 +3,7 @@
 // Tudo fica em 'frontline-config', o mesmo lugar do Trincheiras: mudar aqui muda lá também.
 
 let configConqAberta = false, configConqAba = 'som', pausaAntesConfig = false;
-function lerConfigConq() { try { return Object.assign({ volMusica: 45, volEfeitos: 80, vibracao: true, textoGrande: false, apelido: '', dificuldade: 'soldado' }, JSON.parse(localStorage.getItem('frontline-config')) || {}); } catch (e) { return { volMusica: 45, volEfeitos: 80, vibracao: true, textoGrande: false, apelido: '', dificuldade: 'soldado' }; } }
+function lerConfigConq() { try { return Object.assign({ volMusica: 45, volEfeitos: 80, vibracao: true, textoGrande: false, batalhaRapida: false, apelido: '', dificuldade: 'soldado' }, JSON.parse(localStorage.getItem('frontline-config')) || {}); } catch (e) { return { volMusica: 45, volEfeitos: 80, vibracao: true, textoGrande: false, apelido: '', dificuldade: 'soldado' }; } }
 function gravarConfigConq(mudancas) {
     const c = Object.assign(lerConfigConq(), mudancas);
     try { localStorage.setItem('frontline-config', JSON.stringify(c)); } catch (e) {}
@@ -60,6 +60,7 @@ function renderConfigConq() {
         corpo = `<div class="sub" style="margin-bottom:6px">Dificuldade dos bots (vale na campanha; no online, a do anfitrião):</div>` +
             Object.entries(DIF_TXT).map(([id, d]) => `<button class="cfgOpcao${c.dificuldade === id ? ' on' : ''}" onclick="gravarConfigConq({ dificuldade: '${id}' });renderConfigConq()"><b>${d.nome}</b><small>${d.desc}</small></button>`).join('')
             + `<div class="cfgLinha"><div><b>Tutorial da Fase 1</b><small>mostra de novo as dicas ao começar a Fase 1</small></div><button class="mini" onclick="guiaReiniciar();this.textContent='Feito'">Rever</button></div>`
+            + linhaTog('Resolver batalhas rápido', 'sem assistir: o resultado vem na hora (campanha)', c.batalhaRapida, `gravarConfigConq({ batalhaRapida: ${!c.batalhaRapida} });renderConfigConq()`)
             + linhaTog('Texto maior', 'letras maiores no painel e nas telas', c.textoGrande, `gravarConfigConq({ textoGrande: ${!c.textoGrande} });renderConfigConq()`);
     } else if (a === 'conta') {
         const email = emailDaConta(), vencidas = Object.values(meta.estrelas).filter(v => v > 0).length;
