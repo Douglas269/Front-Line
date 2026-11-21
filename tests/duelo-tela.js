@@ -3,6 +3,8 @@
 // Uso: node tests/duelo-tela.js
 const path = require('path');
 const { chromium } = require('playwright');
+const auditoria = require('./layout-audit.js'); const problemasDeLayout = [];
+async function auditar(p, nome) { const r = await p.evaluate(`(${auditoria.toString()})()`).catch(() => []); r.forEach(x => problemasDeLayout.push(nome + ' → ' + x.join(' | '))); }
 const PAGINA = 'file://' + path.resolve(__dirname, '..', 'prototipo', 'duelo.html');
 
 // ---------- Servidor falso (mesmas regras das funções do banco) ----------
@@ -85,6 +87,7 @@ async function jogarAteOFim(jogadores) {
                 if (/REFORÇO DO ALTO COMANDO/.test(txt)) { J.viuReforco = true; const b = await J.p.$('[data-ref]'); if (b) { await b.click().catch(() => {}); J.escolheuReforco = true; } }
                 if (/(^|\D)0\s*×\s*2(\D|$)/.test(txt.slice(0, 160)) && /RODADA [34]\/5/.test(txt)) { J.atras = true; J.viuVirada = /REFORÇO DE VIRADA/.test(txt); const b2 = await J.p.$('[data-ref2]'); if (b2) await b2.click().catch(() => {}); }
                 if (/🔎/.test(txt) && /Placar \d×\d: faltam/.test(txt)) J.viuLeitura = true;
+                if (J.escolheuReforco && !J.auditouPlano) { J.auditouPlano = true; await auditar(J.p, 'Duelo: preparação da rodada'); }
                 if (process.env.SHOT && J.escolheuReforco && J.viuLeitura && !J.fotoPlano) { J.fotoPlano = true; await J.p.screenshot({ path: process.env.SHOT + '-plano.png' }); await J.p.evaluate(() => window.scrollTo(0, 0)); }
                 await J.p.click('#bOk').catch(() => {});
             }
@@ -174,6 +177,7 @@ const telaDe = (p) => p.evaluate(() => window.__duelo && window.__duelo.estado()
     if (process.env.PRINTS) await A.p.screenshot({ path: process.env.PRINTS + '/d4-fim.png', fullPage: true });
     // ---- Liga e temporada no lobby, ranking ----
     await A.p.click('#bLobby'); await A.p.waitForSelector('#bFila');
+    await auditar(A.p, 'Duelo: lobby');
     const lobbyTxt = await A.p.textContent('#app');
     checks.lobbyTemUmSoLinkDeMenu = await A.p.evaluate(() => document.querySelectorAll('#app a[href]').length === 1 && /Menu principal/.test(document.querySelector('#app a[href]').textContent));
     checks.lobbyMostraLigaETemporada = /Liga (Bronze|Prata|Ouro|Platina|Diamante)/.test(lobbyTxt) && /Temporada de/.test(lobbyTxt) && /🥇 out/.test(lobbyTxt);
@@ -211,6 +215,8 @@ const telaDe = (p) => p.evaluate(() => window.__duelo && window.__duelo.estado()
     checks.treinoContraBotTermina = await jogarAteOFim([A]);
     if (process.env.SHOT) await A.p.screenshot({ path: process.env.SHOT + '-fim.png', fullPage: true });
     checks.viradaOferecidaQuandoAtras = !A.atras || !!A.viuVirada; // se o jogador ficou 0×2, a escolha de virada apareceu
+    await auditar(A.p, 'Duelo: fim do duelo');
+    checks.layoutDoDueloSemProblemas = problemasDeLayout.length === 0; if (problemasDeLayout.length) console.log([...new Set(problemasDeLayout)].join('\n'));
     checks.reforcoOferecidoNoTreino = !!A.viuReforco && !!A.escolheuReforco;
     checks.leituraDoAdversarioNoTreino = !!A.viuLeitura;
     checks.analiseNoFimDoTreino = /(POR QUE VOCÊ PERDEU|COMO VOCÊ VENCEU)/.test(await A.p.textContent('#app'));

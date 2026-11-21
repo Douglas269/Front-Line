@@ -67,13 +67,16 @@
         FLSom.tocar(/jogar|confirm|ok|iniciar|começar|continuar/i.test(b.id + ' ' + b.className) ? 'confirma' : 'clique');
     }, true);
 
-    // Duelo não tem controle de som próprio: um botão pequeno no canto
-    document.addEventListener('DOMContentLoaded', () => {
-        if (typeof isAudioMuted !== 'undefined' || document.getElementById('bSom') || !/duelo/.test(location.pathname)) return;
-        const b = document.createElement('button');
-        b.id = 'bSomDuelo'; b.type = 'button'; b.className = 'fl-som-flutuante';
-        const pinta = () => { const on = ligado(); b.textContent = on ? '🔊' : '🔇'; b.title = on ? 'Desligar o som' : 'Ligar o som'; b.setAttribute('aria-label', b.title); };
-        b.onclick = () => { try { localStorage.setItem(CHAVE_DUELO, ligado() ? '0' : '1'); } catch (e) {} pinta(); if (ligado()) FLSom.tocar('confirma'); };
-        pinta(); document.body.appendChild(b);
+    // Duelo não tem controle de som próprio: o botão fica na barra do topo (ao lado de "Menu principal"), nunca flutuando sobre o conteúdo
+    FLSom.botaoHTML = function () {
+        const on = ligado();
+        return `<button type="button" class="fl-som-btn" aria-label="${on ? 'Desligar o som' : 'Ligar o som'}" title="${on ? 'Desligar o som' : 'Ligar o som'}">${on ? '🔊' : '🔇'}</button>`;
+    };
+    document.addEventListener('click', (e) => {
+        const b = e.target.closest && e.target.closest('.fl-som-btn'); if (!b) return;
+        try { localStorage.setItem(CHAVE_DUELO, ligado() ? '0' : '1'); } catch (er) {}
+        const on = ligado();
+        document.querySelectorAll('.fl-som-btn').forEach(x => { x.textContent = on ? '🔊' : '🔇'; x.title = x.ariaLabel = on ? 'Desligar o som' : 'Ligar o som'; });
+        if (on) FLSom.tocar('confirma');
     });
 })();

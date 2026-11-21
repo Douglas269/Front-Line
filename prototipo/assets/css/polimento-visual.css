@@ -96,7 +96,6 @@ canvas { image-rendering: crisp-edges; image-rendering: pixelated; }
 #tela-modos:not(.hidden), #tela-login:not(.hidden), [id^="modal-"]:not(.hidden), #tela-titulo:not(.hidden) { animation: fl-entra .22s ease-out; }
 @keyframes fl-treme { 0%, 100% { transform: none; } 20% { transform: translate(var(--fl-tremor), calc(var(--fl-tremor) * -.6)); } 40% { transform: translate(calc(var(--fl-tremor) * -1), calc(var(--fl-tremor) * .5)); } 60% { transform: translate(calc(var(--fl-tremor) * .6), var(--fl-tremor)); } 80% { transform: translate(calc(var(--fl-tremor) * -.5), calc(var(--fl-tremor) * -.4)); } }
 .fl-tremendo { animation: fl-treme .34s linear; }
-.fl-som-flutuante { position: fixed; top: 8px; right: 8px; z-index: 50; width: 40px; height: 40px; border-radius: 50%; background: var(--fl-panel); border: 1px solid var(--fl-borda); color: var(--fl-texto); font-size: 18px; }
 @media (prefers-reduced-motion: reduce) { #tela-modos, #tela-login, [id^="modal-"] { animation: none !important; } }
 .titulo-logado { margin-top: 16px; font-family: var(--fl-fonte-leitura); font-size: 14px; color: #8fd17f; }
 .titulo-logado.hidden, .titulo-conta.hidden { display: none; }
@@ -117,3 +116,8 @@ details.regras .lista { font-size: 12.5px; line-height: 1.5; color: var(--fl-tex
 #app .grande::before, #app .grande::after { border-color: var(--fl-destaque); }
 #app .barraOk .grande::before, #app .barraOk .grande::after { display: none; }
 #app .menu-brief { margin: 2px 0 10px; }
+
+/* ---- "Menu principal": mesma barra, no topo, em todo modo (com o botão de som ao lado, quando o modo não tem o seu) ---- */
+.barra-menu { display: flex; gap: 8px; align-items: stretch; margin: 0 0 10px; }
+.menu-principal { flex: 1; display: flex; justify-content: center; align-items: center; min-height: 40px; padding: 8px; border: 1px solid var(--fl-destaque); border-radius: 10px; background: #2a2214; color: var(--fl-destaque); font-weight: 700; font-size: 13px; text-decoration: none; }
+.fl-som-btn { flex: none; width: 44px; min-height: 40px; border-radius: 10px; border: 1px solid var(--fl-borda); background: var(--fl-panel); color: var(--fl-texto); font-size: 18px; }
