@@ -941,7 +941,7 @@
            De tempos em tempos o general marca um ataque grande para um dia e hora. O rádio intercepta a
            ordem na véspera; no dia ele fica quieto juntando forças e, na hora, vem tudo junto: onda maior,
            artilharia e (a partir do dia 10) blindado. Quem resiste ganha prestígio e moral. */
-        const OFENSIVA = { PRIMEIRA: [6, 8], INTERVALO: [6, 8], HORA: [66, 96], EXTRA_BASE: 6, EXTRA_POR_DIAS: 8, PREMIO: 40, MORAL: 4 };
+        const OFENSIVA = { PRIMEIRA: [6, 8], INTERVALO: [6, 8], HORA: [66, 96], ONDA_1: 30, ONDA_2: 60, ONDA_DIST: 240, EXTRA_BASE: 6, EXTRA_POR_DIAS: 8, PREMIO: 40, MORAL: 4 };
         const sorteiaEntre = ([a, b]) => a + Math.floor(Math.random() * (b - a + 1));
         function agendarOfensiva() {
             if (!modAtivo('ofensivas')) { gameState.ofensiva = null; return; }
@@ -970,7 +970,15 @@
                 spawnEnemyAssault(270);
                 if (gameState.day >= 10) executarPasso('blindado');
                 if (!gameState.barrage) executarPasso('artilharia');
+                // ondas extras que chegam de verdade perto da trincheira: 1 a partir do dia 8, 2 a partir do nível 12
+                o.dec = [OFENSIVA.ONDA_1, OFENSIVA.ONDA_2].slice(0, (gameState.day >= 8 ? 1 : 0) + (Math.min(MAX_LEVEL, gameState.level || 1) >= 12 ? 1 : 0));
+                if (o.dec.length) logFeed('📻 O general não vai parar na primeira investida: vêm mais ondas atrás desta. Segurem a munição.', 'text-red-400 font-bold');
                 impacto('ofensiva');
+                return;
+            }
+            if (o.ativa && o.dec && o.dec.length) {
+                o.dec = o.dec.map(x => x - 1);
+                if (o.dec[0] <= 0) { o.dec.shift(); spawnEnemyAssault(OFENSIVA.ONDA_DIST); logFeed('⚔ NOVA ONDA da ofensiva avança sobre a trincheira!', 'text-red-500 font-bold'); impacto('ofensiva'); }
                 return;
             }
             // Repelida: ninguém mais avançando e sem bombardeio pendente
