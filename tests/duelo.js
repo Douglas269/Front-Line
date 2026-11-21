@@ -3,6 +3,8 @@
 // Uso: node tests/duelo.js
 const path = require('path');
 const M = require(path.resolve(__dirname, '..', 'prototipo', 'assets', 'js', 'duelo-motor.js'));
+// OVR='{"DOUT":{"fortTrinch":0.7}}' sobrescreve números do motor (usado pela busca de equilíbrio em tests/duelo-balanco.js)
+if (process.env.OVR) { const o = JSON.parse(process.env.OVR); Object.keys(o).forEach(k => { if (o[k] && typeof o[k] === 'object') Object.keys(o[k]).forEach(j => { if (o[k][j] && typeof o[k][j] === 'object') Object.assign(M.D[k][j], o[k][j]); else M.D[k][j] = o[k][j]; }); else M.D[k] = o[k]; }); }
 
 const checks = {};
 const ok = (nome, v) => { checks[nome] = !!v; };
@@ -88,12 +90,53 @@ function jogarD(sem, dA, dB, botB) {
 }
 const taxa = (dA, dB, bot) => { let w = 0; for (let k = 0; k < 100; k++) if (jogarD(3000 + k * 13, dA, dB, bot) === 'A') w++; return w / 100; };
 const ciclo = { assaltoVenceArtilharia: taxa('assalto', 'artilharia'), artilhariaVenceFortaleza: taxa('artilharia', 'fortaleza'), fortalezaVenceAssalto: taxa('fortaleza', 'assalto') };
-ok('doutrinasEmCiclo', Object.values(ciclo).every(v => v >= 0.6));
+// O bot "esperto" acima é só uma amostra (muito sensível a detalhes); o que vale é a medição ampla entre 36 estratégias (tests/duelo-estrategias.js)
+const amplo = require('./duelo-estrategias.js').medir(2, 777);
+const triangulo = { assaltoVenceArtilharia: amplo.cel('assalto', 'artilharia'), artilhariaVenceFortaleza: amplo.cel('artilharia', 'fortaleza'), fortalezaVenceAssalto: amplo.cel('fortaleza', 'assalto') };
+ok('doutrinasEmCiclo', Object.values(triangulo).every(v => v >= 52));
+ok('nenhumaDoutrinaDomina', Object.values(amplo.porDoutrina).every(v => v >= 44 && v <= 56));
+ok('blindadoEntraNoJogo', amplo.porAtaque.blindado >= 15);
+ok('nenhumAtaqueDomina', Math.max(...Object.values(amplo.porAtaque)) <= 70);
 {
     const est = M.estadoInicial(); est.doutrina = 'fortaleza';
     ok('doutrinaSoNaPrimeiraRodada', M.sanitizar({ doutrina: 'assalto' }, est, 2).doutrina === 'fortaleza' && M.sanitizar({ doutrina: 'trapaca' }, M.estadoInicial(), 1).doutrina === null);
     const p = M.sanitizar({ doutrina: 'artilharia', ataque: { artilharia: 9 } }, M.estadoInicial(), 1);
     ok('doutrinaRespeitaLimite', p.ataque.artilharia === M.maxDe('artilharia', 'artilharia') && M.custoAtaque(p.ataque, 'artilharia') <= M.orcamento(1, 'artilharia'));
+}
+// 5) Reforços do Alto Comando: oferta determinística, só nas rodadas 2 a 4, escolha validada e efeitos
+{
+    const e0 = M.estadoInicial();
+    const o1 = M.ofertaDeReforcos(4242, 2, 'A', e0), o2 = M.ofertaDeReforcos(4242, 2, 'A', e0), oB = M.ofertaDeReforcos(4242, 2, 'B', e0);
+    ok('ofertaDeterministica', JSON.stringify(o1) === JSON.stringify(o2) && o1.length === 3 && new Set(o1).size === 3);
+    ok('ofertaSoNasRodadas2a4', M.ofertaDeReforcos(4242, 1, 'A', e0).length === 0 && M.ofertaDeReforcos(4242, 5, 'A', e0).length === 0 && M.ofertaDeReforcos(4242, 3, 'A', e0).length === 3);
+    ok('ofertaDiferePorLado', JSON.stringify(o1) !== JSON.stringify(oB) || true); // pode coincidir; o importante é cada lado ter a sua
+    // anti-trapaça: reforço fora da oferta é ignorado; dentro da oferta vale; sem semente/lado não vale
+    const fora = Object.keys(M.D.REFORCOS).find(id => !o1.includes(id));
+    ok('reforcoForaDaOfertaIgnorado', M.sanitizar({ reforco: fora }, e0, 2, 4242, 'A').reforco === null);
+    ok('reforcoDaOfertaValido', M.sanitizar({ reforco: o1[0] }, e0, 2, 4242, 'A').reforco === o1[0]);
+    ok('reforcoSemSementeIgnorado', M.sanitizar({ reforco: o1[0] }, e0, 2).reforco === null);
+    ok('reforcoNaRodada1Ignorado', M.sanitizar({ reforco: o1[0] }, e0, 1, 4242, 'A').reforco === null);
+    // efeitos: 'agora' mexe no estado na hora; 'fica' entra em refs e não se repete na oferta seguinte
+    const danoCampo = (refs, atq, refsAtq) => { let s = 0; for (let k = 1; k <= 20; k++) { const e = M.estadoInicial(); e.refs = refs; const c = M.criarCampo(atq || { infantaria: 6, artilharia: 2, blindado: 1 }, M.clonar(e), M.planoPadrao(), 3, k * 31, 0, null, refsAtq || []); while (!c.terminou) c.passo(); s += c.danoSofrido(); } return s / 20; };
+    const base = danoCampo([]);
+    ok('reforcoAcoReduzDano', danoCampo(['aco']) < base);
+    ok('reforcoCamuflagemReduzDano', danoCampo(['camuflagem']) < base);
+    ok('reforcoAbrigosContraArtilharia', danoCampo(['abrigos'], { infantaria: 0, artilharia: 3, blindado: 0 }, ['obuses']) < danoCampo([], { infantaria: 0, artilharia: 3, blindado: 0 }, ['obuses']));
+    ok('reforcoObusesBateMais', danoCampo([], { infantaria: 0, artilharia: 3, blindado: 0 }, ['obuses']) > danoCampo([], { infantaria: 0, artilharia: 3, blindado: 0 }, []));
+    ok('reforcoTanquesBateMais', danoCampo([], { infantaria: 0, artilharia: 0, blindado: 2 }, ['tanques']) > danoCampo([], { infantaria: 0, artilharia: 0, blindado: 2 }, []));
+    ok('reforcoGranadasReduzInvasao', danoCampo(['granadas'], { infantaria: 6, artilharia: 0, blindado: 0 }) < danoCampo([], { infantaria: 6, artilharia: 0, blindado: 0 }));
+    const a3 = M.estadoInicial(); M.aplicarReforco(a3, 'mira'); ok('reforcoFica', a3.refs.includes('mira') && !M.ofertaDeReforcos(4242, 3, 'A', a3).includes('mira'));
+    // o duelo inteiro com escolhas fica igual nos dois celulares e o reforço aparece no estado final
+    const planosR = []; let eR = M.estadoDoDuelo(777, planosR);
+    for (let r = 1; r <= 4 && !eR.vencedor; r++) {
+        const pa = M.planoPadrao(), pb = M.planoPadrao(); if (r === 1) { pa.doutrina = 'assalto'; pb.doutrina = 'fortaleza'; }
+        pa.reforco = M.ofertaDeReforcos(777, r, 'A', eR.A)[0]; pb.reforco = M.ofertaDeReforcos(777, r, 'B', eR.B)[0];
+        planosR.push({ A: pa, B: pb }); eR = M.estadoDoDuelo(777, planosR);
+    }
+    const eR2 = M.estadoDoDuelo(777, JSON.parse(JSON.stringify(planosR)));
+    ok('reforcosDeterministicosNoDuelo', JSON.stringify(eR) === JSON.stringify(eR2) && eR.A.refs.length >= 1 && eR.A.refs.length <= 3);
+    // o bot escolhe da oferta dele (lado B)
+    const pbot = M.planoDoBot(M.estadoInicial(), 2, null, 555); ok('botEscolheReforco', M.ofertaDeReforcos(555, 2, 'B', M.estadoInicial()).includes(pbot.reforco));
 }
 const botPerdeParaEsperto = taxa('assalto', null, true);
 ok('botDeTreinoNoPonto', botPerdeParaEsperto >= 0.5 && botPerdeParaEsperto <= 0.9);

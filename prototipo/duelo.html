@@ -65,6 +65,13 @@
   .barraOk { position: sticky; bottom: 0; z-index: 3; display: flex; gap: 10px; align-items: center; margin: 14px -12px 0; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); background: var(--bg); border-top: 1px solid var(--borda); }
   .barraOk .relogio { width: 70px; text-align: center; } .barraOk .relogio b { font-size: 20px; color: #ffd28a; }
   .barraOk .grande { margin-top: 0; flex: 1; background: #d39a45; color: #1a1408; border-color: #ffd28a; font-size: 16px; }
+  .intelSug { margin: 6px 0 0; padding: 0 0 0 16px; font-size: 12px; color: #ffd28a; }
+  .intelSug li { margin-bottom: 3px; }
+  .analise { background: #151a16; border: 1px solid #5c4a26; border-radius: 8px; padding: 8px 10px; margin: 10px 0; font-size: 12px; line-height: 1.45; text-align: left; }
+  .analise b { color: #ffd28a; }
+  .anaPrincipal { margin: 4px 0; color: #e8d3a5; }
+  .anaTab { margin: 4px 0; }
+  .anaLinha { display: grid; grid-template-columns: 50px 1fr auto; gap: 6px; padding: 2px 0; border-top: 1px dashed #2a352c; }
   .intelLinha { display: flex; justify-content: space-between; gap: 8px; margin-top: 3px; flex-wrap: wrap; }
   /* replay em tela cheia */
   body.emReplay { overflow: hidden; }
@@ -110,17 +117,18 @@
   .euRank { background: #2a2214; border-radius: 6px; padding-left: 6px; }
   .pisca { animation: pisca 1s infinite alternate; } @keyframes pisca { to { opacity: .4; } }
 </style>
-    <link rel="stylesheet" href="assets/css/fontes.css?v=20261121.0540">
-    <link rel="stylesheet" href="assets/css/tokens.css?v=20261121.0540">
-    <link rel="stylesheet" href="assets/css/polimento-visual.css?v=20261121.0540">
+    <link rel="stylesheet" href="assets/css/fontes.css?v=20261121.0600">
+    <link rel="stylesheet" href="assets/css/tokens.css?v=20261121.0600">
+    <link rel="stylesheet" href="assets/css/polimento-visual.css?v=20261121.0600">
 </head>
 <body>
 <div id="app"><div class="espera"><div class="icone">⚔</div><div class="sub">Carregando Trincheiras online…</div></div></div>
 <!-- Supabase: contas e partidas online -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
-<script src="assets/js/paleta.js?v=20261121.0540"></script>
-<script src="assets/js/som-ui.js?v=20261121.0540"></script>
-<script src="assets/js/duelo-motor.js?v=20261121.0540"></script>
-<script src="assets/js/duelo.js?v=20261121.0540"></script>
+<script src="assets/js/paleta.js?v=20261121.0600"></script>
+<script src="assets/js/som-ui.js?v=20261121.0600"></script>
+<script src="assets/js/duelo-motor.js?v=20261121.0600"></script>
+<script src="assets/js/duelo-analise.js?v=20261121.0600"></script>
+<script src="assets/js/duelo.js?v=20261121.0600"></script>
 </body>
 </html>

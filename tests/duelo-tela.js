@@ -80,7 +80,13 @@ async function jogarAteOFim(jogadores) {
         for (let k = 0; k < jogadores.length; k++) {
             const J = jogadores[k], t = telas[k];
             if (t === 'replay') { if (await J.p.$('#bPular:visible')) await J.p.click('#bPular').catch(() => {}); if (await J.p.$('#bProx')) await J.p.click('#bProx').catch(() => {}); }
-            else if (t === 'plano' && await J.p.$('#bOk')) await J.p.click('#bOk').catch(() => {});
+            else if (t === 'plano' && await J.p.$('#bOk')) {
+                const txt = await J.p.textContent('#app').catch(() => '');
+                if (/REFORÇO DO ALTO COMANDO/.test(txt)) { J.viuReforco = true; const b = await J.p.$('[data-ref]'); if (b) { await b.click().catch(() => {}); J.escolheuReforco = true; } }
+                if (/🔎/.test(txt) && /Placar \d×\d: faltam/.test(txt)) J.viuLeitura = true;
+                if (process.env.SHOT && J.escolheuReforco && J.viuLeitura && !J.fotoPlano) { J.fotoPlano = true; await J.p.screenshot({ path: process.env.SHOT + '-plano.png' }); await J.p.evaluate(() => window.scrollTo(0, 0)); }
+                await J.p.click('#bOk').catch(() => {});
+            }
         }
         await jogadores[0].p.waitForTimeout(250);
     }
@@ -200,6 +206,10 @@ const telaDe = (p) => p.evaluate(() => window.__duelo && window.__duelo.estado()
     await A.p.click('#bLobby'); await A.p.waitForSelector('#bTreino'); await A.p.click('#bTreino');
     await A.p.waitForFunction(() => window.__duelo.estado().tela === 'plano', null, { timeout: 8000 });
     checks.treinoContraBotTermina = await jogarAteOFim([A]);
+    if (process.env.SHOT) await A.p.screenshot({ path: process.env.SHOT + '-fim.png', fullPage: true });
+    checks.reforcoOferecidoNoTreino = !!A.viuReforco && !!A.escolheuReforco;
+    checks.leituraDoAdversarioNoTreino = !!A.viuLeitura;
+    checks.analiseNoFimDoTreino = /(POR QUE VOCÊ PERDEU|COMO VOCÊ VENCEU)/.test(await A.p.textContent('#app'));
     checks.treinoNaoValeTrofeus = servidor.trofeus('a').trofeus === trofeusAntes && /não vale/.test(await A.p.textContent('#app'));
     // ---- Ninguém na fila: cai no bot sozinho ----
     await A.p.click('#bLobby'); await A.p.waitForSelector('#bFila'); await A.p.click('#bFila');
