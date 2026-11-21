@@ -308,12 +308,31 @@
     }
 
     // ---------- Preparação: 1 minuto ----------
+    // O que este adversário já escolheu contra você (guardado só neste aparelho; o bot de treino não entra)
+    const HIST_KEY = 'frontline-duelo-hist';
+    const lerHist = () => { try { return JSON.parse(localStorage.getItem(HIST_KEY) || '{}'); } catch (e) { return {}; } };
+    const idAdversario = () => (lado() === 'A' ? duelo.jogador_b : duelo.jogador_a);
+    function gravarHistorico() {
+        if (API.bot || !duelo || !jogo || !jogo.rodadas.length) return;
+        const m = mem(duelo.id); if (m.histGravado) return;
+        const op = idAdversario(), r1 = jogo.rodadas[0], dd = (lado() === 'A' ? r1.planoB : r1.planoA).doutrina; if (!op || !dd) return;
+        const h = lerHist(); h[op] = h[op] || {}; h[op][dd] = (h[op][dd] || 0) + 1;
+        try { localStorage.setItem(HIST_KEY, JSON.stringify(h)); } catch (e) {}
+        m.histGravado = true; gravarMem(duelo.id, m);
+    }
+    function dicaHistorico() {
+        if (API.bot || !duelo) return '';
+        const h = lerHist()[idAdversario()]; if (!h) return '';
+        const lista = Object.entries(h).sort((a, b) => b[1] - a[1]); if (!lista.length) return '';
+        const maisUsada = lista[0][0], contra = Object.keys(VENCE).find(k => VENCE[k] === maisUsada), D = M.D.DOUTRINAS;
+        return `<div class="dica">🔎 Já enfrentou ${esc(nomeAdv())}: ${lista.map(([k, n]) => `${D[k].icone} ${D[k].nome} ${n}×`).join(' · ')}. A que vence ${D[maisUsada].icone} ${D[maisUsada].nome} é ${D[contra].icone} ${D[contra].nome}.</div>`;
+    }
     const minhaInfo = () => (lado() === 'A' ? jogo.A : jogo.B);
     function telaPlano(rodada) {
         tela = 'plano'; enviando = false;
         const ultimo = jogo.rodadas[jogo.rodadas.length - 1];
         const base = ultimo ? (lado() === 'A' ? ultimo.planoA : ultimo.planoB) : M.planoPadrao();
-        plano = { rodada, escala: base.escala.slice(), postura: base.postura, compras: [], contra: false, reforco: null, ataque: { ...(ultimo ? base.ataque : M.planoPadrao().ataque) }, doutrina: rodada === 1 ? (mem(duelo.id).doutrina || 'assalto') : undefined };
+        plano = { rodada, escala: base.escala.slice(), postura: base.postura, compras: [], contra: false, reforco: null, reforco2: null, ataque: { ...(ultimo ? base.ataque : M.planoPadrao().ataque) }, doutrina: rodada === 1 ? (mem(duelo.id).doutrina || 'assalto') : undefined };
         // o relógio de 1 minuto conta a partir da primeira vez que esta rodada apareceu (sobrevive a recarregar a página)
         const m = mem(duelo.id);
         if (!m.prazo || m.prazo.rodada !== rodada) { m.prazo = { rodada, inicio: Date.now() }; gravarMem(duelo.id, m); }
@@ -334,7 +353,7 @@
     let reforcosAbertos = false;
     function desenharPlano() {
         const est = minhaInfo(), r = plano.rodada;
-        const okPlano = M.sanitizar(plano, est, r, duelo.semente, lado());
+        const okPlano = M.sanitizar(plano, est, r, duelo.semente, lado(), M.estaAtras(jogo.placar, lado()));
         const dout = okPlano.doutrina, cmdUsado = M.custoDefesa(okPlano), orc = M.orcamento(r, dout), gastoAtq = M.custoAtaque(okPlano.ataque, dout), cmdLivre = est.cmd - cmdUsado;
         const infoDele = lado() === 'A' ? jogo.B : jogo.A;
         const ultimo = jogo.rodadas[jogo.rodadas.length - 1];
@@ -354,11 +373,15 @@
         // doutrina: só na rodada 1, em três cartões
         const doutrinas = r === 1 ? `<div class="secTit">🎖 DOUTRINA <small>vale o duelo inteiro</small></div>
             <div class="cartoes c3">${Object.entries(M.D.DOUTRINAS).map(([id, d]) => `<button class="cartao ${dout === id ? 'on' : ''}" data-dout="${id}"><span class="icG">${d.icone}</span><b>${d.nome}</b><small>vence ${M.D.DOUTRINAS[VENCE[id]].icone}</small></button>`).join('')}</div>
-            <div class="dica">${M.D.DOUTRINAS[dout].desc}</div>` : '';
+            <div class="dica">${M.D.DOUTRINAS[dout].desc}</div>${dicaHistorico()}` : '';
         // reforço do Alto Comando: antes das rodadas 2, 3 e 4, 1 entre 3 (os mesmos nos dois celulares)
         const oferta = M.ofertaDeReforcos(duelo.semente, r, lado(), est);
         const reforcoSec = oferta.length ? `<div class="secTit">🎁 REFORÇO DO ALTO COMANDO <small>escolha 1 · ${plano.reforco ? '✔ escolhido' : 'ainda sem escolha'}</small></div>
             <div class="cartoes c3">${oferta.map(id => { const R = M.D.REFORCOS[id]; return `<button class="cartao ${plano.reforco === id ? 'on' : ''}" data-ref="${id}"><span class="icG">${R.icone}</span><b>${R.nome}</b><small>${R.tipo === 'agora' ? 'agora' : 'fica'} · ${R.desc}</small></button>`; }).join('')}</div>` : '';
+        // reforço de virada: perdendo por 2 rodadas (rodadas 3 e 4) vale escolher um segundo
+        const atras = M.estaAtras(jogo.placar, lado()) && oferta.length;
+        const virada = atras ? `<div class="secTit">🔁 REFORÇO DE VIRADA <small>você está atrás por 2 · escolha mais 1 · ${plano.reforco2 ? '✔ escolhido' : 'ainda sem escolha'}</small></div>
+            <div class="cartoes c3">${oferta.filter(id => id !== plano.reforco).map(id => { const R = M.D.REFORCOS[id]; return `<button class="cartao ${plano.reforco2 === id ? 'on' : ''}" data-ref2="${id}"><span class="icG">${R.icone}</span><b>${R.nome}</b><small>fica · ${R.desc}</small></button>`; }).join('')}</div>` : '';
         const contagem = { vigia: 0, obras: 0, descanso: 0 };
         const sold = est.soldados.map((s, i) => {
             const f = s.cond <= 0 ? 'fora' : plano.escala[i]; if (contagem[f] !== undefined) contagem[f]++;
@@ -380,7 +403,7 @@
         mostrar(`<div class="placar"><span>${esc(meuNome)}${dout ? ' ' + M.D.DOUTRINAS[dout].icone : ''}</span><span><span class="num">${jogo.placar[lado()]}</span>×<span class="num">${jogo.placar[outro()]}</span></span><span>${esc(nomeAdv())}</span></div>
             <div class="barraPrep"><b>RODADA ${r}/${M.D.RODADAS}</b><span>🎯 ${Math.round(est.mun)}</span><span>★ ${cmdLivre}</span><span>🧱 ${Math.round(est.trinch)}%</span>${(est.refs || []).length ? `<span title="Seus reforços">🎁 ${est.refs.map(id => M.D.REFORCOS[id] ? M.D.REFORCOS[id].icone : '').join(' ')}</span>` : ''}</div>
             <div class="prevBox"><canvas id="cvPrev"></canvas><div class="prevRot">🛡 SUA TRINCHEIRA</div></div>
-            ${intel}${reforcoSec}${doutrinas}
+            ${intel}${reforcoSec}${virada}${doutrinas}
             <div class="secTit">🛡 DEFESA <small>toque no soldado para trocar · 🔭${contagem.vigia} 🔨${contagem.obras} 💤${contagem.descanso}</small></div>
             <div class="esq">${sold}</div>
             <div class="dica">🔭 atira e cansa · 🔨 conserta a trincheira · 💤 recupera, protegido</div>
@@ -391,7 +414,8 @@
             <div class="cartoes c3">${atq}</div>
             <div class="barraOk"><div class="relogio"><b id="seg">${PRAZO}s</b><div class="tempo"><div id="barraTempo" style="width:100%"></div></div></div><button class="grande" id="bOk">✔ PRONTO</button></div>`);
         $app.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { const i = +b.dataset.s; plano.escala[i] = M.FUNCOES[(M.FUNCOES.indexOf(plano.escala[i]) + 1) % 3]; desenharPlano(); });
-        $app.querySelectorAll('[data-ref]').forEach(b => b.onclick = () => { plano.reforco = plano.reforco === b.dataset.ref ? null : b.dataset.ref; desenharPlano(); });
+        $app.querySelectorAll('[data-ref2]').forEach(b => b.onclick = () => { plano.reforco2 = plano.reforco2 === b.dataset.ref2 ? null : b.dataset.ref2; desenharPlano(); });
+        $app.querySelectorAll('[data-ref]').forEach(b => b.onclick = () => { plano.reforco = plano.reforco === b.dataset.ref ? null : b.dataset.ref; if (plano.reforco2 === plano.reforco) plano.reforco2 = null; desenharPlano(); });
         $app.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { plano.postura = b.dataset.p; desenharPlano(); });
         $app.querySelectorAll('[data-compra]').forEach(b => b.onclick = () => { plano.compras.push(b.dataset.compra); desenharPlano(); });
         $app.querySelectorAll('[data-desfaz]').forEach(b => b.onclick = () => { const i = plano.compras.lastIndexOf(b.dataset.desfaz); if (i >= 0) plano.compras.splice(i, 1); desenharPlano(); });
@@ -419,7 +443,7 @@
     async function enviarPlano(automatico) {
         if (enviando || tela !== 'plano') return;
         enviando = true; clearInterval(timerPrazo);
-        const final = M.sanitizar(plano, minhaInfo(), plano.rodada, duelo.semente, lado());
+        const final = M.sanitizar(plano, minhaInfo(), plano.rodada, duelo.semente, lado(), M.estaAtras(jogo.placar, lado()));
         try {
             await API.enviar(duelo.id, plano.rodada, final);
             const m = mem(duelo.id); m.enviadoEm = Date.now(); gravarMem(duelo.id, m);
@@ -783,6 +807,7 @@
             if (!m.informado && duelo.estado !== 'fim') { try { duelo = await API.informar(duelo.id, vencedorUid); m.informado = true; gravarMem(duelo.id, m); } catch (e) {} }
         }
         const venci = vencedorUid === eu.id, treino = !!API.bot;
+        gravarHistorico();
         if (window.FLSom) FLSom.tocar(venci ? 'vitoria' : 'derrota');
         let t = null; if (!treino) try { t = await API.trofeus(); } catch (e) {}
         const pl = jogo ? jogo.placar : { A: 0, B: 0 };

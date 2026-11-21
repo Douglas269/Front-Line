@@ -83,6 +83,7 @@ async function jogarAteOFim(jogadores) {
             else if (t === 'plano' && await J.p.$('#bOk')) {
                 const txt = await J.p.textContent('#app').catch(() => '');
                 if (/REFORÇO DO ALTO COMANDO/.test(txt)) { J.viuReforco = true; const b = await J.p.$('[data-ref]'); if (b) { await b.click().catch(() => {}); J.escolheuReforco = true; } }
+                if (/(^|\D)0\s*×\s*2(\D|$)/.test(txt.slice(0, 160)) && /RODADA [34]\/5/.test(txt)) { J.atras = true; J.viuVirada = /REFORÇO DE VIRADA/.test(txt); const b2 = await J.p.$('[data-ref2]'); if (b2) await b2.click().catch(() => {}); }
                 if (/🔎/.test(txt) && /Placar \d×\d: faltam/.test(txt)) J.viuLeitura = true;
                 if (process.env.SHOT && J.escolheuReforco && J.viuLeitura && !J.fotoPlano) { J.fotoPlano = true; await J.p.screenshot({ path: process.env.SHOT + '-plano.png' }); await J.p.evaluate(() => window.scrollTo(0, 0)); }
                 await J.p.click('#bOk').catch(() => {});
@@ -190,6 +191,8 @@ const telaDe = (p) => p.evaluate(() => window.__duelo && window.__duelo.estado()
     if (process.env.PRINTS) await A.p.screenshot({ path: process.env.PRINTS + '/d6-doutrina.png', fullPage: true });
     await A.p.click('#bOk'); await B.p.click('#bOk');
     checks.duelDaFilaChegaAoFim = await jogarAteOFim([A, B]);
+    // histórico: no fim do duelo contra gente, a doutrina do adversário fica guardada neste aparelho
+    { const hA = await A.p.evaluate(() => JSON.parse(localStorage.getItem('frontline-duelo-hist') || '{}')); checks.historicoDeDoutrinaGravado = !!hA['uuid-b'] && Object.keys(hA['uuid-b']).length >= 1; }
     const dFila = db.duelos.find(x => x.publico && x.estado === 'fim');
     const p1 = db.planos.filter(x => x.duelo_id === dFila.id && x.rodada === 1);
     checks.doutrinasGravadas = p1.some(x => x.plano.doutrina === 'fortaleza') && p1.some(x => x.plano.doutrina === 'artilharia');
@@ -207,6 +210,7 @@ const telaDe = (p) => p.evaluate(() => window.__duelo && window.__duelo.estado()
     await A.p.waitForFunction(() => window.__duelo.estado().tela === 'plano', null, { timeout: 8000 });
     checks.treinoContraBotTermina = await jogarAteOFim([A]);
     if (process.env.SHOT) await A.p.screenshot({ path: process.env.SHOT + '-fim.png', fullPage: true });
+    checks.viradaOferecidaQuandoAtras = !A.atras || !!A.viuVirada; // se o jogador ficou 0×2, a escolha de virada apareceu
     checks.reforcoOferecidoNoTreino = !!A.viuReforco && !!A.escolheuReforco;
     checks.leituraDoAdversarioNoTreino = !!A.viuLeitura;
     checks.analiseNoFimDoTreino = /(POR QUE VOCÊ PERDEU|COMO VOCÊ VENCEU)/.test(await A.p.textContent('#app'));

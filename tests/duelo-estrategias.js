@@ -27,8 +27,10 @@ function duelo(eA, eB, semente) {
         planos.push({ A: plano(eA, est.A, r), B: plano(eB, est.B, r) });
         est = M.estadoDoDuelo(semente, planos);
     }
+    est.rodadas.forEach(r => { CONT.rodadas++; if (!r.vencedor) CONT.empates++; });
     return est.vencedor || 'A';
 }
+const CONT = { rodadas: 0, empates: 0 };
 
 function medir(N, semente0 = 1234) {
     const estrats = []; DOUT.forEach(d => ATQ.forEach(a => DEF.forEach(f => estrats.push({ dout: d, atq: a, def: f, nome: `${d}/${a}/${f}` }))));
@@ -49,6 +51,6 @@ function medir(N, semente0 = 1234) {
     const taxa = (f) => { const t = {}; estrats.forEach(e => { const k = f(e); t[k] = t[k] || [0, 0]; t[k][0] += vit[e.nome]; t[k][1] += jogos[e.nome]; }); return Object.fromEntries(Object.entries(t).map(([k, [v, n]]) => [k, Math.round(1000 * v / n) / 10])); };
     const cel = (a, b) => Math.round(1000 * matriz[a][b][0] / matriz[a][b][1]) / 10;
     const rank = estrats.map(e => ({ n: e.nome, p: Math.round(1000 * vit[e.nome] / jogos[e.nome]) / 10 })).sort((x, y) => y.p - x.p);
-    return { porDoutrina: taxa(e => e.dout), porAtaque: taxa(e => e.atq), porPostura: taxa(e => e.def), cel, rank, DOUT };
+    return { empates: CONT.rodadas ? CONT.empates / CONT.rodadas : 0, rodadas: CONT.rodadas, porDoutrina: taxa(e => e.dout), porAtaque: taxa(e => e.atq), porPostura: taxa(e => e.def), cel, rank, DOUT };
 }
 module.exports = { medir, M };
