@@ -112,6 +112,9 @@
     const nomeAdv = () => (duelo ? (souA() ? duelo.nome_b : duelo.nome_a) || 'Adversário' : 'Adversário');
     function pararTudo() { clearInterval(timerPoll); clearInterval(timerPrazo); if (animacao) cancelAnimationFrame(animacao); timerPoll = timerPrazo = animacao = null; }
     // um único caminho para o menu: o rodapé (o replay em tela cheia não tem, e volta sozinho para cá)
+    // Cabeçalho em painel, igual ao "Seleção de fase" da Conquista e ao "Seleção de operação" do menu
+    const cabeca = (k, titulo, dir) => `<div class="menu-brief"><div class="k">${k}</div><h2>${titulo}</h2>${dir ? `<div class="dir">${dir}</div>` : ''}</div>`;
+    const comoJogar = (txt) => `<details class="regras"><summary>Como jogar</summary><div class="lista">${txt}</div></details>`;
     function mostrar(html, semMenu) { document.body.classList.remove('emReplay'); $app.innerHTML = (semMenu ? '' : `<a class="voltar menuRodape menuTopo" href="${linkDoJogo()}" onclick="return confirmarSaida()">🏠 Menu principal</a>`) + html; window.scrollTo(0, 0); }
     // sair no meio de um duelo: o duelo continua no servidor (dá para voltar pelo lobby)
     window.confirmarSaida = () => !(duelo && duelo.id && !String(duelo.id).startsWith('bot-') && duelo.estado === 'jogando' && tela !== 'fim') || confirm('Sair para o menu? O duelo continua: volte pelo lobby antes do tempo acabar.');
@@ -137,7 +140,7 @@
     // ---------- Login ----------
     function telaLogin(msg) {
         pararTudo(); tela = 'login';
-        mostrar(`<h1>⚔ TRINCHEIRAS ONLINE</h1>
+        mostrar(`${cabeca('TRINCHEIRAS ONLINE · DUELO 1×1', 'ENTRAR NA CONTA', '<div>MELHOR DE 5</div><div class="ok">STATUS: PRONTO</div>')}
             <div class="sub">Para duelar com um amigo, entre na sua conta do FrontLine (a mesma do jogo).</div>
             <div class="caixa">
                 <input id="email" class="campo" type="email" placeholder="E-mail" autocomplete="email">
@@ -170,8 +173,8 @@
             const adv = d.jogador_a === eu.id ? (d.nome_b || 'esperando amigo') : d.nome_a;
             return `<button class="secundario" data-id="${esc(d.id)}">${d.estado === 'aguardando' ? '⏳' : '⚔'} ${esc(d.codigo)} · contra ${esc(adv)} · rodada ${d.rodada}</button>`;
         }).join('');
-        mostrar(`<h1>⚔ TRINCHEIRAS ONLINE</h1>
-            <div class="sub">Duelo 1×1, melhor de 5: contra alguém da fila, um amigo ou o bot. A cada rodada, 1 minuto para montar a defesa e o ataque em segredo; quando os dois dão OK, a batalha acontece. Vitória: <b>3 troféus</b> e +3 pontos na temporada.</div>
+        mostrar(`${cabeca('TRINCHEIRAS ONLINE · DUELO 1×1', 'SELEÇÃO DE PARTIDA', '<div>MELHOR DE 5</div><div class="ok">STATUS: PRONTO</div>')}
+            ${comoJogar('Duelo 1×1, melhor de 5: contra alguém da fila, um amigo ou o bot. A cada rodada, 1 minuto para montar a defesa e o ataque em segredo; quando os dois dão OK, a batalha acontece. Vitória: <b>3 troféus</b> e +3 pontos na temporada.')}
             <div class="caixa topoLinha"><div><div class="sub">Comandante</div><b>${esc(meuNome)}</b></div><div style="text-align:right"><div class="trofeus">🏆 ${t.trofeus}</div><div class="sub">${t.vitorias} vitória${t.vitorias === 1 ? '' : 's'} · ${t.derrotas} derrota${t.derrotas === 1 ? '' : 's'}</div></div></div>
             <div class="caixa liga"><div class="topoLinha"><div><div class="sub">Temporada de ${MESES[agora.getMonth()]} · acaba em ${dias} dia${dias > 1 ? 's' : ''}</div><b class="nomeLiga">${liga.icone} Liga ${liga.nome}</b></div>
                 <div style="text-align:right"><div class="trofeus">${temp.pontos || 0}</div><div class="sub">pontos${temp.posicao ? ` · ${temp.posicao}º de ${temp.jogadores}` : ''}</div></div></div>
@@ -202,7 +205,7 @@
     // ---------- Fila: adversário de qualquer lugar; ninguém apareceu → bot de treino ----------
     async function telaFila() {
         pararTudo(); tela = 'fila';
-        mostrar(`<h1>📡 PROCURANDO ADVERSÁRIO…</h1><div class="espera"><div class="icone pisca">⚔</div><div class="sub">Assim que alguém entrar na fila, o duelo começa.</div><div class="trofeus" id="filaSeg">0s</div>
+        mostrar(`${cabeca('TRINCHEIRAS ONLINE · FILA', 'PROCURANDO ADVERSÁRIO', '<div>AGUARDE</div>')}<div class="espera"><div class="icone pisca">⚔</div><div class="sub">Assim que alguém entrar na fila, o duelo começa.</div><div class="trofeus" id="filaSeg">0s</div>
             <div class="sub" id="filaBot" style="margin-top:6px">Se ninguém aparecer em ${FILA_BOT}s, você treina contra o bot.</div></div>
             <button class="secundario" id="bBotJa">🤖 Jogar contra o bot agora</button><button class="secundario" id="bSairFila">Sair da fila</button>`);
         let d;
@@ -232,7 +235,7 @@
         let lista = [];
         try { lista = await API.ranking(); } catch (e) {}
         const linhas = (lista || []).map(x => `<div class="item${x.eu ? ' euRank' : ''}"><div class="txt"><b>${x.posicao}º</b> ${esc(x.nome)}<small>${ligaDe(x.pontos).icone} ${ligaDe(x.pontos).nome}</small></div><b>${x.pontos}</b></div>`).join('');
-        mostrar(`<div class="topoLinha"><h1>🏆 RANKING</h1><a class="voltar" href="#" id="bVoltarR">← voltar</a></div>
+        mostrar(`${cabeca('TRINCHEIRAS ONLINE · TEMPORADA', 'RANKING', '<div>TOP 20 DO MÊS</div>')}<div class="topoLinha"><span></span><a class="voltar" href="#" id="bVoltarR">← voltar</a></div>
             <div class="sub">Os 20 melhores da temporada deste mês (vitória +3, derrota −1).</div>
             <div class="caixa">${linhas || '<div class="sub">Ninguém pontuou ainda neste mês. Seja o primeiro!</div>'}</div>`);
         document.getElementById('bVoltarR').onclick = (ev) => { ev.preventDefault(); telaLobby(); };
@@ -254,7 +257,7 @@
     function telaSala() {
         if (tela !== 'sala') {
             tela = 'sala';
-            mostrar(`<h1>⏳ ESPERANDO SEU AMIGO</h1>
+            mostrar(`${cabeca('TRINCHEIRAS ONLINE · SALA', 'ESPERANDO SEU AMIGO', '<div>CÓDIGO ABAIXO</div>')}
                 <div class="sub">Mande este código ou o link. Quando ele entrar, a primeira rodada começa.</div>
                 <div class="caixa"><div class="codigo">${esc(duelo.codigo)}</div>
                     <button class="grande" id="bComp">📤 COMPARTILHAR O LINK</button>
@@ -853,7 +856,7 @@
         pararTudo(); tela = 'replayPublico';
         let r = null;
         try { r = await API.replay(id); } catch (e) {}
-        if (!r) { mostrar(`<h1>🎬 REPLAY</h1><div class="espera"><div class="icone">🔎</div><div class="sub">Replay não encontrado. O duelo pode ainda não ter terminado.</div></div>`); return; }
+        if (!r) { mostrar(`${cabeca('TRINCHEIRAS ONLINE · REPLAY', 'REPLAY DO DUELO', '')}<div class="espera"><div class="icone">🔎</div><div class="sub">Replay não encontrado. O duelo pode ainda não ter terminado.</div></div>`); return; }
         const lista = [];
         for (let k = 1; k <= M.D.RODADAS; k++) { const a = r.planos.find(p => p.rodada === k && p.lado === 'A'), b = r.planos.find(p => p.rodada === k && p.lado === 'B'); if (!a || !b) break; lista.push({ A: a.plano, B: b.plano }); }
         const est = M.estadoDoDuelo(r.semente, lista);
@@ -861,7 +864,7 @@
         const mostrarRodada = (i) => {
             if (i >= est.rodadas.length) {
                 const v = r.vencedor || est.vencedor;
-                mostrar(`<h1>🎬 REPLAY</h1>
+                mostrar(`${cabeca('TRINCHEIRAS ONLINE · REPLAY', 'REPLAY DO DUELO', '')}
                     <div class="espera"><div class="icone">🏆</div><h2 style="text-align:center">${esc(nome[v] || '')} venceu</h2><div class="sub">${r.wo ? 'Por W.O.' : `Placar: ${esc(nome.A)} ${est.placar.A} × ${est.placar.B} ${esc(nome.B)}`}</div></div>
                     <button class="grande" id="bDeNovo">▶ VER DE NOVO</button><a class="grande" style="display:block;text-align:center;text-decoration:none;box-sizing:border-box" href="${location.pathname}">⚔ JOGAR TRINCHEIRAS ONLINE</a>`);
                 document.getElementById('bDeNovo').onclick = () => mostrarRodada(0);
