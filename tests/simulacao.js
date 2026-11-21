@@ -26,12 +26,12 @@ async function run() {
   // Entrada obrigatória: sem conta nem escolha anterior, a tela de login abre antes do menu e pausa o relógio; só sai entrando ou jogando como convidado.
   // Depois, a conta fica no menu principal (cartão de conta, configurações e créditos) e o login passa a ser uma folha opcional.
   const login = await page.evaluate(() => {
-    const t = document.getElementById('tela-login');
-    const portaAberta = loginAberto && !t.classList.contains('hidden') && t.classList.contains('porta');
-    const semVoltar = getComputedStyle(t.querySelector('.so-sheet')).display === 'none' && getComputedStyle(document.getElementById('btn-convidado')).display !== 'none';
+    const t = document.getElementById('tela-login'), ti = document.getElementById('tela-titulo');
+    const portaAberta = loginAberto && !ti.classList.contains('hidden') && getComputedStyle(document.getElementById('btn-jogar-titulo')).display !== 'none'; // tela de título, sem muro de login
+    const semVoltar = t.classList.contains('hidden') && /Entrar ou criar conta/.test(document.getElementById('btn-conta-titulo').textContent);
     const t0 = gameState.timeSeconds; updateGameTick(); const pausou = gameState.timeSeconds === t0;
-    continuarComoConvidado();
-    const fechou = !loginAberto && t.classList.contains('hidden') && localStorage.getItem('frontline-modo') === 'convidado' && menuAberto === true; // segue para o menu
+    jogarDoTitulo();
+    const fechou = !loginAberto && ti.classList.contains('hidden') && t.classList.contains('hidden') && localStorage.getItem('frontline-modo') === 'convidado' && menuAberto === true; // segue para o menu
     const cartao = !!document.getElementById('chip-conta') && /Entrar/.test(document.getElementById('chip-nome').textContent) && !!document.getElementById('btn-config-menu') && /Créditos/.test(document.querySelector('#tela-modos .menu-util').textContent);
     const foraDoJogo = !document.getElementById('btn-conta') && !document.querySelector('header [onclick*="abrirCreditos"]');
     botaoConta();
