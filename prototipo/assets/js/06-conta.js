@@ -78,6 +78,7 @@
             const venceu = gameState.day > GAME_CONFIG.TOTAL_DAYS;
             somarCarreira({ partidas: 1, vitorias: venceu ? 1 : 0, derrotas: venceu ? 0 : 1, melhorDia: Math.min(gameState.day, GAME_CONFIG.TOTAL_DAYS) }, true);
             stopAllAudio();
+            if (window.FLSom) FLSom.tocar(venceu ? 'vitoria' : 'derrota');
             clearSave();
             document.getElementById('end-icon').innerHTML = icon;
             document.getElementById('end-title').textContent = title;
@@ -569,7 +570,7 @@
            Ao abrir, ao voltar para o app e a cada minuto o jogo compara as duas. Se o site
            tiver uma versão diferente, o jogo trava numa tela que só sai atualizando.
            (tools/nova-versao.sh troca as duas juntas a cada atualização publicada.) */
-        const VERSAO_JOGO = '20261121.0220';
+        const VERSAO_JOGO = '20261121.0235';
         const ATUALIZOU_KEY = 'frontline-atualizou-para';
         async function verificarVersao() {
             if (!location.protocol.startsWith('http') || atualizacaoPendente) return;

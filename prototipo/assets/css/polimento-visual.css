@@ -90,3 +90,11 @@ canvas { image-rendering: crisp-edges; image-rendering: pixelated; }
 @keyframes titulo-pulsa { 50% { box-shadow: 0 0 18px rgba(211,154,69,.45); } }
 .titulo-conta { margin-top: 18px; background: none; border: 0; color: #b9c4a0; font-family: var(--fl-fonte-leitura); font-size: 14px; text-decoration: underline; padding: 8px; }
 @media (prefers-reduced-motion: reduce) { .titulo-fundo, .titulo-escudo, .titulo-jogar { animation: none; } }
+
+/* ---- Transições e tremida ---- */
+@keyframes fl-entra { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+#tela-modos:not(.hidden), #tela-login:not(.hidden), [id^="modal-"]:not(.hidden), #tela-titulo:not(.hidden) { animation: fl-entra .22s ease-out; }
+@keyframes fl-treme { 0%, 100% { transform: none; } 20% { transform: translate(var(--fl-tremor), calc(var(--fl-tremor) * -.6)); } 40% { transform: translate(calc(var(--fl-tremor) * -1), calc(var(--fl-tremor) * .5)); } 60% { transform: translate(calc(var(--fl-tremor) * .6), var(--fl-tremor)); } 80% { transform: translate(calc(var(--fl-tremor) * -.5), calc(var(--fl-tremor) * -.4)); } }
+.fl-tremendo { animation: fl-treme .34s linear; }
+.fl-som-flutuante { position: fixed; top: 8px; right: 8px; z-index: 50; width: 40px; height: 40px; border-radius: 50%; background: var(--fl-panel); border: 1px solid var(--fl-borda); color: var(--fl-texto); font-size: 18px; }
+@media (prefers-reduced-motion: reduce) { #tela-modos, #tela-login, [id^="modal-"] { animation: none !important; } }
