@@ -1302,6 +1302,7 @@ function som(tipo, forca = 1) {
     const agora = SOM.ctx.currentTime, minimo = { tiro: 0.07, abate: 0.15, alerta: 1.2, recrutar: 0.08 }[tipo] || 0.05;
     if (agora - (SOM.ultimo[tipo] || 0) < minimo) return;
     SOM.ultimo[tipo] = agora;
+    if (tipo === 'explosao' && window.FLSom) FLSom.tremer(document.getElementById('mapaBox'), 4);
     const c = SOM.ctx, saida = SOM.efeitos;
     const ruido = (dur, filtro, freq, vol, q = 1) => {
         const src = c.createBufferSource(); src.buffer = SOM.ruido; src.playbackRate.value = 0.8 + Math.random() * 0.4;

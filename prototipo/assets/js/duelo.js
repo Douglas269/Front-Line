@@ -758,6 +758,7 @@
             if (!m.informado && duelo.estado !== 'fim') { try { duelo = await API.informar(duelo.id, vencedorUid); m.informado = true; gravarMem(duelo.id, m); } catch (e) {} }
         }
         const venci = vencedorUid === eu.id, treino = !!API.bot;
+        if (window.FLSom) FLSom.tocar(venci ? 'vitoria' : 'derrota');
         let t = null; if (!treino) try { t = await API.trofeus(); } catch (e) {}
         const pl = jogo ? jogo.placar : { A: 0, B: 0 };
         mostrar(`<div class="espera"><div class="icone">${venci ? '🏆' : '🎖'}</div>
