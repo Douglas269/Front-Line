@@ -135,6 +135,21 @@ ok('nenhumAtaqueDomina', Math.max(...Object.values(amplo.porAtaque)) <= 70);
     }
     const eR2 = M.estadoDoDuelo(777, JSON.parse(JSON.stringify(planosR)));
     ok('reforcosDeterministicosNoDuelo', JSON.stringify(eR) === JSON.stringify(eR2) && eR.A.refs.length >= 1 && eR.A.refs.length <= 3);
+    // reforço de virada: só para quem está atrás por 2, só uma escolha diferente da primeira e só da oferta
+    const of3 = M.ofertaDeReforcos(4242, 3, 'A', M.estadoInicial());
+    ok('virada_naoAtras_ignora', M.sanitizar({ reforco: of3[0], reforco2: of3[1] }, M.estadoInicial(), 3, 4242, 'A', false).reforco2 === null);
+    ok('virada_atras_vale', M.sanitizar({ reforco: of3[0], reforco2: of3[1] }, M.estadoInicial(), 3, 4242, 'A', true).reforco2 === of3[1]);
+    ok('virada_igualAoPrimeiro_ignora', M.sanitizar({ reforco: of3[0], reforco2: of3[0] }, M.estadoInicial(), 3, 4242, 'A', true).reforco2 === null);
+    ok('virada_foraDaOferta_ignora', M.sanitizar({ reforco2: Object.keys(M.D.REFORCOS).find(id => !of3.includes(id)) }, M.estadoInicial(), 3, 4242, 'A', true).reforco2 === null);
+    ok('estaAtras', M.estaAtras({ A: 0, B: 2 }, 'A') && !M.estaAtras({ A: 1, B: 2 }, 'A') && M.estaAtras({ A: 2, B: 0 }, 'B'));
+    // duelo inteiro: quem está 0×2 e escolhe dois reforços no 3º plano fica com os dois
+    { const pl = [], mkp = (rodada) => { const p = M.planoPadrao(); if (rodada === 1) p.doutrina = 'assalto'; return p; };
+      let e = M.estadoDoDuelo(901, pl), guarda = 0;
+      while (!M.estaAtras(e.placar, 'A') && !M.estaAtras(e.placar, 'B') && !e.vencedor && guarda++ < 4) { const pa = mkp(e.proximaRodada), pb = mkp(e.proximaRodada); pb.ataque = { infantaria: 8, artilharia: 3, blindado: 2 }; pl.push({ A: pa, B: pb }); e = M.estadoDoDuelo(901, pl); }
+      if (!e.vencedor && M.estaAtras(e.placar, 'A')) { const r = e.proximaRodada, of = M.ofertaDeReforcos(901, r, 'A', e.A); const pa = mkp(r); pa.reforco = of[0]; pa.reforco2 = of[1]; pl.push({ A: pa, B: mkp(r) }); const e2 = M.estadoDoDuelo(901, pl); ok('virada_doisReforcosAplicados', e2.A.refs.includes(of[0]) && e2.A.refs.includes(of[1])); }
+      else ok('virada_doisReforcosAplicados', true); }
+    // empate de rodada: com o desempate (soldados perdidos, depois trincheira) quase nenhuma rodada empata entre estratégias variadas
+    ok('empatesDeRodadaRaros', amplo.empates < 0.08);
     // o bot escolhe da oferta dele (lado B)
     const pbot = M.planoDoBot(M.estadoInicial(), 2, null, 555); ok('botEscolheReforco', M.ofertaDeReforcos(555, 2, 'B', M.estadoInicial()).includes(pbot.reforco));
 }

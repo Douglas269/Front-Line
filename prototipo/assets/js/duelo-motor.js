@@ -117,13 +117,15 @@
         return { escala: ESCALA_PADRAO.slice(), postura: 'equilibrado', compras: [], contra: false, ataque: { infantaria: 2, artilharia: 1, blindado: 0 } };
     }
     // Valida e corrige o plano recebido (um plano trapaceado não ganha nada além do permitido)
-    function sanitizar(plano, estado, rodada, semente, lado) {
+    function sanitizar(plano, estado, rodada, semente, lado, atras) {
         const p = planoPadrao(), q = plano && typeof plano === 'object' ? plano : {};
         // a doutrina só se escolhe na 1ª rodada; depois vale a do estado
         p.doutrina = rodada === 1 ? (D.DOUTRINAS[q.doutrina] ? q.doutrina : null) : (estado.doutrina || null);
         const dout = p.doutrina;
         // reforço: só dos 3 sorteados para este lado nesta rodada (sem semente/lado não há como validar: ignorado)
         p.reforco = semente !== undefined && lado !== undefined && q.reforco && ofertaDeReforcos(semente, rodada, lado, estado).includes(q.reforco) ? q.reforco : null;
+        // reforço de virada: quem perde por 2 rodadas de diferença (rodadas 3 e 4) escolhe um segundo, diferente do primeiro
+        p.reforco2 = atras && semente !== undefined && lado !== undefined && q.reforco2 && q.reforco2 !== p.reforco && ofertaDeReforcos(semente, rodada, lado, estado).includes(q.reforco2) ? q.reforco2 : null;
         if (Array.isArray(q.escala)) p.escala = SOLDADOS.map((_, i) => (FUNCOES.includes(q.escala[i]) ? q.escala[i] : ESCALA_PADRAO[i]));
         if (D.POSTURA[q.postura]) p.postura = q.postura;
         // compras na ordem pedida, enquanto houver Comando e não passar do máximo
@@ -259,7 +261,7 @@
         if (rodada === 1) { a.doutrina = planoA.doutrina || null; b.doutrina = planoB.doutrina || null; }
         // compras e contra-bateria saem do Comando de cada um
         [[a, planoA], [b, planoB]].forEach(([e, p]) => { p.compras.forEach(id => e.melh[id]++); e.cmd -= custoDefesa(p); });
-        [[a, planoA], [b, planoB]].forEach(([e, p]) => { if (!e.refs) e.refs = []; if (p.reforco) aplicarReforco(e, p.reforco); });
+        [[a, planoA], [b, planoB]].forEach(([e, p]) => { if (!e.refs) e.refs = []; if (p.reforco) aplicarReforco(e, p.reforco); if (p.reforco2) aplicarReforco(e, p.reforco2); });
         const campoA = criarCampo(planoB.ataque, a, planoA, rodada, semente, 0, b.doutrina, b.refs); // defesa de A
         const campoB = criarCampo(planoA.ataque, b, planoB, rodada, semente, 1, a.doutrina, a.refs); // defesa de B
         return { a, b, campoA, campoB };
@@ -272,6 +274,11 @@
         let vencedor = null;
         if (caiuA !== caiuB) vencedor = caiuA ? 'B' : 'A';
         else if (Math.abs(danoA - danoB) >= 1) vencedor = danoA < danoB ? 'A' : 'B';
+        else { // dano praticamente igual: decide quem perdeu menos soldados e, se igual, quem ficou com mais trincheira (só empata se tudo igual)
+            const perdeuA = vivos(estA).length - vivos(a).length, perdeuB = vivos(estB).length - vivos(b).length;
+            if (perdeuA !== perdeuB) vencedor = perdeuA < perdeuB ? 'A' : 'B';
+            else if (Math.abs(a.trinch - b.trinch) >= 1) vencedor = a.trinch > b.trinch ? 'A' : 'B';
+        }
         // noite: descanso, cansaço e reforços para a próxima rodada
         [[a, planoA], [b, planoB]].forEach(([e, p]) => {
             const medica = e.soldados.some(s => s.medica && s.cond > 0);
@@ -297,7 +304,7 @@
         let vitA = 0, vitB = 0, totalA = 0, totalB = 0, fim = null;
         for (let i = 0; i < planos.length && !fim; i++) {
             const rodada = i + 1;
-            const pA = sanitizar(planos[i].A, A, rodada, semente, 0), pB = sanitizar(planos[i].B, B, rodada, semente, 1);
+            const pA = sanitizar(planos[i].A, A, rodada, semente, 0, vitB - vitA >= 2), pB = sanitizar(planos[i].B, B, rodada, semente, 1, vitA - vitB >= 2);
             const res = resolverRodada(A, B, pA, pB, rodada, semente);
             rodadas.push({ rodada, planoA: pA, planoB: pB, antesA: A, antesB: B, ...res });
             A = res.novoA; B = res.novoB;
@@ -340,7 +347,8 @@
         return { escala, postura, compras, contra, ataque, doutrina: dout, reforco };
     }
 
-    const api = { ofertaDeReforcos, aplicarReforco, D, SOLDADOS, FUNCOES, orcamento, custoDe, maxDe, planoDoBot, estadoInicial, planoPadrao, sanitizar, custoAtaque, custoDefesa, criarCampo, prepararRodada, resolverRodada, estadoDoDuelo, rng, clonar, vivos };
+    const estaAtras = (placar, lado) => (lado === 'A' ? placar.B - placar.A : placar.A - placar.B) >= 2;
+    const api = { estaAtras, ofertaDeReforcos, aplicarReforco, D, SOLDADOS, FUNCOES, orcamento, custoDe, maxDe, planoDoBot, estadoInicial, planoPadrao, sanitizar, custoAtaque, custoDefesa, criarCampo, prepararRodada, resolverRodada, estadoDoDuelo, rng, clonar, vivos };
     if (typeof module !== 'undefined' && module.exports) module.exports = api;
     else raiz.DueloMotor = api;
 })(typeof window !== 'undefined' ? window : globalThis);
