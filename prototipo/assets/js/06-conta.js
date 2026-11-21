@@ -155,13 +155,16 @@
             menuAberto = false;
             document.getElementById('tela-modos').classList.add('hidden');
         }
-        function escolherModo(modo) {
+        // Trincheiras: toda vez que se entra pelo menu, abre a escolha da operação (com "Continuar" se há partida em andamento).
+        // Recarregar de "Nova partida"/Atualizar entra direto (semEscolha). Em teste automático só com ?escolha=1.
+        function escolherModo(modo, semEscolha) {
             if (modo === 'online') { location.href = 'duelo.html'; return; }
             if (modo === 'conquista') { location.href = 'conquista.html'; return; }
             fecharMenuModos(); // Trincheiras: sem conta, joga como convidado (o progresso fica só neste aparelho)
             if (!usuario) gravarLocal(MODE_KEY, 'convidado');
             atualizarConta();
-            mostrarTutorialSePrimeiraVez();
+            const querEscolha = !semEscolha && typeof abrirModalOp === 'function' && (!navigator.webdriver || /[?&]escolha=1/.test(location.search));
+            if (querEscolha) abrirModalOp('nova'); else mostrarTutorialSePrimeiraVez();
         }
 
         // porta = true: tela de entrada, obrigatória (entrar na conta OU jogar como convidado). porta = false: folha opcional aberta pelo cartão de conta do menu.
@@ -238,7 +241,7 @@
         function entrarDiretoSeMarcado() {
             let marcado = false; try { marcado = sessionStorage.getItem(DIRETO_KEY) === '1'; sessionStorage.removeItem(DIRETO_KEY); } catch (e) {}
             if (!marcado || !menuAberto || loginAberto) return false;
-            escolherModo('trincheiras'); return true;
+            escolherModo('trincheiras', true); return true;
         }
         async function iniciarConta() {
             // Sem escolha anterior e sem sinal de sessão salva: a tela de entrada abre já, antes do menu aparecer
@@ -576,7 +579,7 @@
            Ao abrir, ao voltar para o app e a cada minuto o jogo compara as duas. Se o site
            tiver uma versão diferente, o jogo trava numa tela que só sai atualizando.
            (tools/nova-versao.sh troca as duas juntas a cada atualização publicada.) */
-        const VERSAO_JOGO = '20261121.0300';
+        const VERSAO_JOGO = '20261121.0320';
         const ATUALIZOU_KEY = 'frontline-atualizou-para';
         async function verificarVersao() {
             if (!location.protocol.startsWith('http') || atualizacaoPendente) return;
