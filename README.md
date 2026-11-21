@@ -255,17 +255,21 @@ Modo a mais: o jogo de um jogador continua igual. Escolha **⚔️ Trincheiras o
 - 25 níveis. Cada vitória sobe um nível; derrota mantém o nível. O nível fica salvo no navegador, mesmo com "Nova partida".
 - Cada nível define uma dificuldade que aumenta a frequência de eventos, a vida e o dano dos inimigos e o tamanho das ondas, e diminui a entrega diária de suprimentos e o prestígio ganho; os apoios da Central ficam mais caros.
 - Além disso, cada nível acima do 1 aperta de forma visível (bloco `PRESSURE`): −0,4% de ração e água no comboio (nível 25: −10%), modificadores de nível (veja **Jogabilidade**) e ataques do general 0,3% mais rápidos (nível 25: +7%). Antes eram −1,5%, +1 soldado por onda a cada 6 níveis e 2%: no nível 25 o esquadrão morria de fome mesmo jogando bem, e o soldado extra por onda derrubava a vitória de uma vez.
-- Vitórias do jogador automático **usando as defesas** (`DIF_MODO=<modo> DEF=1 node tests/balanco.js 1,7,13,19,25 20`; 20 partidas por nível, margem de uns 20 pontos), **medidas em 2026-11-19**, já com o desbloqueio gradual por nível (clima, ofensivas, gás, incursão, lança-chamas e sabotagem entram nos níveis 2 a 8):
+- Vitórias do jogador automático **usando as defesas** (`DIF_MODO=<modo> DEF=1 node tests/balanco.js 1,4,7,10,13,16,19,22,25 40`; 40 partidas por nível, margem de uns 15 pontos), **medidas em 2026-11-21**, já com o desbloqueio gradual por nível, os reforços do Alto Comando (o robô escolhe ao acaso) e `ENEMY_HP_PER_LEVEL` = 0,007:
 
 | Nível | Recruta | Soldado | Veterano |
 |---|---|---|---|
 | 1 | 100% | 100% | 100% |
-| 7 | 10% | 0% | 0% |
-| 13 | 15% | 0% | 0% |
-| 19 | 10% | 5% | 0% |
-| 25 | 5% | 0% | 0% |
+| 4 | 100% | 100% | 38% |
+| 7 | 100% | 45% | 35% |
+| 10 | 95% | 73% | 43% |
+| 13 | 98% | 80% | 43% |
+| 16 | 98% | 80% | 18% |
+| 19 | 90% | 83% | 5% |
+| 22 | 80% | 45% | 5% |
+| 25 | 48% | 23% | 3% |
 
-**Atenção:** a tabela antiga (100% no nível 7 e 93% no 13 no Soldado) já não se repete: do nível 7 em diante o robô quase nunca vence (o código anterior ao desbloqueio gradual dava o mesmo resultado nos níveis 8 e 13). O robô não usa máscaras contra gás nem reage a lança-chamas, então não dá para saber ainda se o problema é o robô ou o equilíbrio do jogo; isso está na issue #17. O robô só reage à sabotagem (cozinha e oficina).
+**O que mudou na leitura (issue #76):** a "parede" do nível 7 em diante era do **robô**, não do jogo: ele não vestia máscaras no ataque químico nem reagia ao lança-chamas. Com o robô corrigido (máscaras no aviso e fogo de supressão contra o lança-chamas, em `tests/balanco.js`) ele vence 70–100% do nível 5 ao 19 no Soldado, o que mostrava o outro problema: sem pressão extra, a curva era plana até o nível 25. A resistência dos inimigos por nível (`ENEMY_HP_PER_LEVEL`, antes desligada) agora é 0,007 (nível 25: +17%) e a curva desce aos poucos: Soldado ~100% nos níveis 1 a 4, ~75–85% no meio e ~25% no 25. O Veterano é de propósito bem mais duro. O nível 7 (entrada do lança-chamas) é o único degrau que sobra; as medições de 50 partidas variam uns 20 pontos de uma rodada para outra, então só mexa nele com mais amostras. Sem os reforços o robô vence menos (nos níveis 5 a 12 a diferença medida foi de 10 a 30 pontos).
 
 Medido com o comboio maior (850 de munição leve, 160 de pesada, 10 granadas de morteiro e 4 foguetes anticarro por comboio) e a metralhadora .50 gastando meia munição pesada por disparo. O robô decide a cada segundo, sem cansar; um jogador de verdade tende a ir um pouco pior, por isso o Soldado ficou folgado para o robô.
 

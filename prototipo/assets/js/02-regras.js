@@ -531,7 +531,7 @@
             // A cada nível acima do 1:
             FOOD_LOSS_PER_LEVEL: 0.004,   // −0,4% de ração e água no comboio (nível 25: −10%)
             WAVE_PLUS_EVERY_LEVELS: 99,   // soldados extras por onda por nível: desligado (o +1 no nível 25 derrubava a vitória de 55% para 15% de uma vez)
-            ENEMY_HP_PER_LEVEL: 0,        // resistência extra por nível: desligada (agora os modificadores de nível fazem esse papel)
+            ENEMY_HP_PER_LEVEL: 0.007,    // resistência extra por nível (nível 25: +17%). Ligada para a curva descer aos poucos: sem ela o robô vencia 70–100% até o nível 25
             ATTACK_RATE_PER_LEVEL: 0.003, // general ataca 0,3% mais rápido por nível (nível 25: +7%)
             AMMO_SPEND: 2,              // gasto de munição pesada na supressão ×2 (era ×3)
             MG_AMMO_PER_SHOT: 0.5,      // munição pesada por disparo da metralhadora .50 (era 1: ela esvaziava o paiol por volta do dia 15)
