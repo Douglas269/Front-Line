@@ -579,7 +579,7 @@
            Ao abrir, ao voltar para o app e a cada minuto o jogo compara as duas. Se o site
            tiver uma versão diferente, o jogo trava numa tela que só sai atualizando.
            (tools/nova-versao.sh troca as duas juntas a cada atualização publicada.) */
-        const VERSAO_JOGO = '20261121.0830';
+        const VERSAO_JOGO = '20261121.2322';
         const ATUALIZOU_KEY = 'frontline-atualizou-para';
         async function verificarVersao() {
             if (!location.protocol.startsWith('http') || atualizacaoPendente) return;
@@ -626,7 +626,7 @@
         document.addEventListener('visibilitychange', () => { if (!document.hidden) verificarVersao(); });
 
         if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-            window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
+            window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(() => {}); });
         }
 
         let installPrompt = null;

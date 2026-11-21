@@ -47,6 +47,33 @@
   ],
   "headers": [
     {
+      "source": "/(assets|prototipo/assets)/(pixel|soldados|medals|cena)/:path*",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400"
+        }
+      ]
+    },
+    {
+      "source": "/(icons|prototipo/icons)/:path*",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400"
+        }
+      ]
+    },
+    {
+      "source": "/(vendor|prototipo/vendor)/:path*",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=604800"
+        }
+      ]
+    },
+    {
       "source": "/prototipo/assets/music/:path*",
       "headers": [
         {
