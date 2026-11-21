@@ -28,19 +28,51 @@
         },
         DPS: 9, ALCANCE: 260, PERTO: 150,
         INF_VIDA: (rodada) => 60 + 10 * rodada, INF_VEL: 13, INF_FOGO: 1.1, INF_INVASAO: 12, INF_TRINCH: 4,
-        BLI_VIDA: 400, BLI_VEL: 7, BLI_BLINDAGEM: 0.3, BLI_TRINCH: 15, BLI_DANO: 15,
+        BLI_VIDA: 400, BLI_VEL: 11, BLI_BLINDAGEM: 0.3, BLI_TRINCH: 26, BLI_DANO: 24, BLI_ESCALA: 0.1, // blindado cresce 10% por rodada (a infantaria também ganha vida a cada rodada)
         ART_DANO: 26, ART_TRINCH: 8,
         REPARO: 0.6, REPARO_ENG: 1.2, GASTO_MUN: 2.2,
         NOITE: { descanso: 20, vigia: -10, obras: -5, medica: 5 },
         // Doutrina: escolhida na 1ª rodada, vale o duelo inteiro (planos sem doutrina jogam sem bônus)
         // calibrado em pedra-papel-tesoura: Assalto vence Artilharia, Artilharia vence Fortaleza, Fortaleza vence Assalto
-        DOUT: { assaltoPts: 2, assaltoVida: 1.08, artForca: 1.05, artCusto: 2, artMax: 3, fortRepara: 2.2, fortTrinch: 0.55, fortCmd: 2 },
+        DOUT: { assaltoPts: 3, assaltoVida: 1.1, artForca: 1.2, artCusto: 2, artMax: 3, fortRepara: 1.4, fortTrinch: 0.3, fortCmd: 1, artFura: 1.0 }, // artFura: parte do escudo da Fortaleza que a Artilharia atravessa (1 = ignora o escudo)
         DOUTRINAS: {
-            assalto:    { nome: 'Assalto', icone: '🗡', desc: '+2 pontos de ataque por rodada e infantaria mais resistente · forte contra Artilharia' },
-            artilharia: { nome: 'Artilharia', icone: '💥', desc: 'artilharia custa 2 pontos (até 3) e bate mais forte · forte contra Fortaleza' },
-            fortaleza:  { nome: 'Fortaleza', icone: '🏰', desc: 'trincheira conserta 2× mais rápido, sofre bem menos e +2 Comando por rodada · forte contra Assalto' }
+            assalto:    { nome: 'Assalto', icone: '🗡', desc: '+3 pontos de ataque por rodada e infantaria mais resistente · forte contra Artilharia' },
+            artilharia: { nome: 'Artilharia', icone: '💥', desc: 'artilharia custa 2 pontos (até 3), bate mais forte e atravessa o escudo da Fortaleza · forte contra Fortaleza' },
+            fortaleza:  { nome: 'Fortaleza', icone: '🏰', desc: 'trincheira conserta mais rápido, sofre bem menos de infantaria e blindado e +1 Comando por rodada · forte contra Assalto' }
         }
     };
+    // Reforços: antes das rodadas 2, 3 e 4 cada um escolhe 1 entre 3 (sorteados pela semente, iguais nos dois celulares)
+    // 'agora' = efeito imediato; 'fica' = vale até o fim do duelo (lado: def = na sua defesa, atq = no seu ataque)
+    D.REFORCO_RODADAS = [2, 3, 4];
+    D.REFORCOS = {
+        mira:        { nome: 'Instrução de tiro', icone: '🎯', tipo: 'fica', desc: 'seu esquadrão causa +15% de dano' },
+        sapadores:   { nome: 'Sapadores', icone: '🔨', tipo: 'fica', desc: 'conserto da trincheira +80%' },
+        aco:         { nome: 'Capacetes de aço', icone: '🪖', tipo: 'fica', desc: 'seus soldados sofrem −18% de dano' },
+        minas:       { nome: 'Campo minado', icone: '〰', tipo: 'fica', desc: 'inimigos 3% mais lentos' },
+        abrigos:     { nome: 'Abrigos profundos', icone: '🏚', tipo: 'fica', desc: 'artilharia inimiga bate −25%' },
+        camuflagem:  { nome: 'Camuflagem', icone: '🌿', tipo: 'fica', desc: 'o ataque inimigo demora 1,2 s a mais para chegar' },
+        granadas:    { nome: 'Granadas de mão', icone: '💣', tipo: 'fica', desc: 'infantaria que chega à sua trincheira causa −30% de dano' },
+        obuses:      { nome: 'Obuses novos', icone: '💥', tipo: 'fica', desc: 'sua artilharia bate +40%' },
+        choque:      { nome: 'Tropa de choque', icone: '🗡', tipo: 'fica', desc: 'sua infantaria atacante +55% de vida' },
+        tanques:     { nome: 'Blindagem extra', icone: '🚛', tipo: 'fica', desc: 'seus blindados +50% de vida e dano' }
+    };
+    function ofertaDeReforcos(semente, rodada, lado, estado) {
+        if (!D.REFORCO_RODADAS.includes(rodada)) return [];
+        const li = typeof lado === 'string' ? (lado === 'A' ? 0 : 1) : lado;
+        const ja = (estado && estado.refs) || [], livres = Object.keys(D.REFORCOS).filter(id => !ja.includes(id));
+        const r = rng(misturar(semente, rodada, li + 31));
+        for (let i = livres.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [livres[i], livres[j]] = [livres[j], livres[i]]; }
+        return livres.slice(0, 3);
+    }
+    function aplicarReforco(e, id) {
+        const R = D.REFORCOS[id]; if (!R) return;
+        if (R.tipo === 'fica') { if (!e.refs.includes(id)) e.refs.push(id); return; }
+        if (id === 'suprimentos') e.mun += 350;
+        else if (id === 'comando') e.cmd += 3;
+        else if (id === 'veteranos') e.soldados.forEach(s => { if (s.cond > 0) s.cond = Math.min(100, s.cond + 25); });
+        else if (id === 'concreto') e.trinch = Math.min(100, e.trinch + 25);
+        e.refs.push(id);
+    }
     const orcamento = (rodada, dout) => D.ORCAMENTO(rodada) + (dout === 'assalto' ? D.DOUT.assaltoPts : 0);
     const custoDe = (id, dout) => (id === 'artilharia' && dout === 'artilharia' ? D.DOUT.artCusto : D.ATAQUE[id].custo);
     const maxDe = (id, dout) => (id === 'artilharia' && dout === 'artilharia' ? D.DOUT.artMax : D.ATAQUE[id].max);
@@ -74,7 +106,7 @@
         return {
             soldados: SOLDADOS.map(s => ({ ...s, cond: 100 })),
             trinch: 100, mun: D.MUN_INICIAL, cmd: D.CMD_INICIAL,
-            melh: { ninho: 0, arame: 0, bunker: 0 }
+            melh: { ninho: 0, arame: 0, bunker: 0 }, refs: []
         };
     }
     const clonar = (e) => JSON.parse(JSON.stringify(e));
@@ -85,11 +117,13 @@
         return { escala: ESCALA_PADRAO.slice(), postura: 'equilibrado', compras: [], contra: false, ataque: { infantaria: 2, artilharia: 1, blindado: 0 } };
     }
     // Valida e corrige o plano recebido (um plano trapaceado não ganha nada além do permitido)
-    function sanitizar(plano, estado, rodada) {
+    function sanitizar(plano, estado, rodada, semente, lado) {
         const p = planoPadrao(), q = plano && typeof plano === 'object' ? plano : {};
         // a doutrina só se escolhe na 1ª rodada; depois vale a do estado
         p.doutrina = rodada === 1 ? (D.DOUTRINAS[q.doutrina] ? q.doutrina : null) : (estado.doutrina || null);
         const dout = p.doutrina;
+        // reforço: só dos 3 sorteados para este lado nesta rodada (sem semente/lado não há como validar: ignorado)
+        p.reforco = semente !== undefined && lado !== undefined && q.reforco && ofertaDeReforcos(semente, rodada, lado, estado).includes(q.reforco) ? q.reforco : null;
         if (Array.isArray(q.escala)) p.escala = SOLDADOS.map((_, i) => (FUNCOES.includes(q.escala[i]) ? q.escala[i] : ESCALA_PADRAO[i]));
         if (D.POSTURA[q.postura]) p.postura = q.postura;
         // compras na ordem pedida, enquanto houver Comando e não passar do máximo
@@ -118,19 +152,22 @@
 
     // ---------- Um campo de batalha: o ataque de um contra a defesa do outro ----------
     // Retorna um objeto com passo() para dar para animar (replay) ou rodar até o fim.
-    function criarCampo(ataque, defesaEstado, defesaPlano, rodada, semente, lado, doutAtq) {
+    function criarCampo(ataque, defesaEstado, defesaPlano, rodada, semente, lado, doutAtq, refsAtq) {
         const r = rng(misturar(semente, rodada, lado));
         const est = defesaEstado; // já é uma cópia (resolverRodada clona)
         const fortaleza = est.doutrina === 'fortaleza';
-        const vidaInf = D.INF_VIDA(rodada) * (doutAtq === 'assalto' ? D.DOUT.assaltoVida : 1), forcaArt = doutAtq === 'artilharia' ? D.DOUT.artForca : 1;
-        const trinchDano = (v) => (fortaleza ? v * D.DOUT.fortTrinch : v);
+        const R = (id) => (est.refs || []).includes(id), RA = (id) => (refsAtq || []).includes(id);
+        const kBli = (1 + D.BLI_ESCALA * (rodada - 1)) * (RA('tanques') ? 1.5 : 1);
+        const vidaInf = D.INF_VIDA(rodada) * (doutAtq === 'assalto' ? D.DOUT.assaltoVida : 1) * (RA('choque') ? 1.55 : 1), forcaArt = (doutAtq === 'artilharia' ? D.DOUT.artForca : 1) * (RA('obuses') ? 1.4 : 1) * (R('abrigos') ? 0.75 : 1);
+        const trinchDano = (v, art) => (fortaleza ? v * (art && doutAtq === 'artilharia' ? D.DOUT.artFura : D.DOUT.fortTrinch) : v);
         est.soldados.forEach((s, i) => { s.funcao = s.cond > 0 ? defesaPlano.escala[i] : 'fora'; });
-        const P = D.POSTURA[defesaPlano.postura];
-        const lentidao = 1 - 0.2 * est.melh.arame;
+        const P0 = D.POSTURA[defesaPlano.postura], P = { ...P0, recebido: P0.recebido * (R('aco') ? 0.82 : 1) };
+        const lentidao = (1 - 0.2 * est.melh.arame) * (R('minas') ? 0.97 : 1);
         const agenda = [];
         for (let i = 0; i < ataque.infantaria; i++) agenda.push({ t: 2 + i * (20 / Math.max(1, ataque.infantaria)) + r() * 2, tipo: 'infantaria' });
-        for (let i = 0; i < ataque.blindado; i++) agenda.push({ t: 5 + i * 11 + r() * 2, tipo: 'blindado' });
+        for (let i = 0; i < ataque.blindado; i++) agenda.push({ t: 3 + i * 6 + r() * 2, tipo: 'blindado' });
         for (let i = 0; i < ataque.artilharia; i++) agenda.push({ t: 8 + i * 9 + r() * 2, tipo: 'artilharia' });
+        if (R('camuflagem')) agenda.forEach(x => { x.t += 1.2; });
         agenda.sort((x, y) => x.t - y.t);
         const c = {
             t: 0, est, inimigos: [], eventos: [], contraDisponivel: defesaPlano.contra,
@@ -152,14 +189,14 @@
                     for (let k = 0; k < 4; k++) c.inimigos.push({ tipo: 'infantaria', x: 30 + r() * 340, dist: 300 + r() * 30, vida: vidaInf, vel: D.INF_VEL * (0.9 + 0.2 * r()) });
                     evento('onda');
                 } else if (a.tipo === 'blindado') {
-                    c.inimigos.push({ tipo: 'blindado', x: 80 + r() * 240, dist: 310, vida: D.BLI_VIDA, vel: D.BLI_VEL });
+                    c.inimigos.push({ tipo: 'blindado', x: 80 + r() * 240, dist: 310, vida: D.BLI_VIDA * kBli, vel: D.BLI_VEL });
                     evento('blindado');
                 } else if (a.tipo === 'artilharia') {
                     if (c.contraDisponivel) { c.contraDisponivel = false; evento('contra'); }
                     else {
                         const ex = expostos();
                         for (let k = 0; k < 2 && ex.length; k++) { const s = sorteia(ex); s.cond -= D.ART_DANO * forcaArt * P.recebido * (est.melh.bunker ? 0.6 : 1); evento('artilharia', { soldado: est.soldados.indexOf(s) }); }
-                        est.trinch = Math.max(0, est.trinch - trinchDano(D.ART_TRINCH * forcaArt));
+                        est.trinch = Math.max(0, est.trinch - trinchDano(D.ART_TRINCH * forcaArt, true));
                         if (!ex.length) evento('artilharia', { soldado: -1 });
                     }
                 }
@@ -173,7 +210,7 @@
                 const alvo = lista[0];
                 const temMun = est.mun > 0;
                 let dano = 0;
-                vig.forEach(s => { dano += D.DPS * s.dano * P.dano * (1 + 0.3 * est.melh.ninho) * (0.55 + s.cond / 220) * (temMun ? 1 : 0.3) * dt; });
+                vig.forEach(s => { dano += D.DPS * s.dano * P.dano * (R('mira') ? 1.15 : 1) * (1 + 0.3 * est.melh.ninho) * (0.55 + s.cond / 220) * (temMun ? 1 : 0.3) * dt; });
                 alvo.vida -= alvo.tipo === 'blindado' ? dano * (D.BLI_BLINDAGEM + 0.2 * est.melh.ninho) : dano;
                 alvo.alvejado = c.t;
                 if (temMun) est.mun = Math.max(0, est.mun - vig.length * D.GASTO_MUN * P.gasto * dt);
@@ -192,11 +229,11 @@
                 if (e.dist <= 0) {
                     const ex = expostos();
                     if (e.tipo === 'blindado') {
-                        est.trinch = Math.max(0, est.trinch - trinchDano(D.BLI_TRINCH));
-                        for (let k = 0; k < 2 && ex.length; k++) sorteia(ex).cond -= D.BLI_DANO * P.recebido;
+                        est.trinch = Math.max(0, est.trinch - trinchDano(D.BLI_TRINCH * kBli));
+                        for (let k = 0; k < 2 && ex.length; k++) sorteia(ex).cond -= D.BLI_DANO * kBli * P.recebido;
                     } else {
-                        est.trinch = Math.max(0, est.trinch - trinchDano(D.INF_TRINCH));
-                        if (ex.length) sorteia(ex).cond -= D.INF_INVASAO * P.recebido;
+                        est.trinch = Math.max(0, est.trinch - trinchDano(D.INF_TRINCH) * (R('granadas') ? 0.7 : 1));
+                        if (ex.length) sorteia(ex).cond -= D.INF_INVASAO * P.recebido * (R('granadas') ? 0.7 : 1);
                     }
                     evento('invasao', { x: e.x, alvo: e.tipo });
                     return false;
@@ -204,7 +241,7 @@
                 return true;
             });
             // obras consertam
-            est.soldados.forEach(s => { if (s.cond > 0 && s.funcao === 'obras') est.trinch = Math.min(100, est.trinch + (s.engenheiro ? D.REPARO_ENG : D.REPARO) * (fortaleza ? D.DOUT.fortRepara : 1) * dt); });
+            est.soldados.forEach(s => { if (s.cond > 0 && s.funcao === 'obras') est.trinch = Math.min(100, est.trinch + (s.engenheiro ? D.REPARO_ENG : D.REPARO) * (fortaleza ? D.DOUT.fortRepara : 1) * (R('sapadores') ? 1.8 : 1) * dt); });
             est.soldados.forEach(s => { if (s.cond <= 0 && s.funcao !== 'fora') { s.cond = 0; s.funcao = 'fora'; evento('baixa', { nome: s.nome }); } });
             if (c.t >= D.DURACAO || est.trinch <= 0 || !vivos(est).length) c.terminou = true;
         };
@@ -222,8 +259,9 @@
         if (rodada === 1) { a.doutrina = planoA.doutrina || null; b.doutrina = planoB.doutrina || null; }
         // compras e contra-bateria saem do Comando de cada um
         [[a, planoA], [b, planoB]].forEach(([e, p]) => { p.compras.forEach(id => e.melh[id]++); e.cmd -= custoDefesa(p); });
-        const campoA = criarCampo(planoB.ataque, a, planoA, rodada, semente, 0, b.doutrina); // defesa de A
-        const campoB = criarCampo(planoA.ataque, b, planoB, rodada, semente, 1, a.doutrina); // defesa de B
+        [[a, planoA], [b, planoB]].forEach(([e, p]) => { if (!e.refs) e.refs = []; if (p.reforco) aplicarReforco(e, p.reforco); });
+        const campoA = criarCampo(planoB.ataque, a, planoA, rodada, semente, 0, b.doutrina, b.refs); // defesa de A
+        const campoB = criarCampo(planoA.ataque, b, planoB, rodada, semente, 1, a.doutrina, a.refs); // defesa de B
         return { a, b, campoA, campoB };
     }
     function resolverRodada(estA, estB, planoA, planoB, rodada, semente) {
@@ -252,13 +290,14 @@
 
     // ---------- O duelo inteiro a partir dos planos (os dois celulares chegam ao mesmo lugar) ----------
     // planos: [{ A, B }, ...] por rodada completa, na ordem
-    function estadoDoDuelo(semente, planos) {
+    function estadoDoDuelo(semente, planos, ajusteInicial) { // ajusteInicial: só para testes de equilíbrio (muda os estados de partida)
         let A = estadoInicial(), B = estadoInicial();
+        if (ajusteInicial) ajusteInicial(A, B);
         const rodadas = [];
         let vitA = 0, vitB = 0, totalA = 0, totalB = 0, fim = null;
         for (let i = 0; i < planos.length && !fim; i++) {
             const rodada = i + 1;
-            const pA = sanitizar(planos[i].A, A, rodada), pB = sanitizar(planos[i].B, B, rodada);
+            const pA = sanitizar(planos[i].A, A, rodada, semente, 0), pB = sanitizar(planos[i].B, B, rodada, semente, 1);
             const res = resolverRodada(A, B, pA, pB, rodada, semente);
             rodadas.push({ rodada, planoA: pA, planoB: pB, antesA: A, antesB: B, ...res });
             A = res.novoA; B = res.novoB;
@@ -296,10 +335,12 @@
         const nArt = Math.min(maxDe('artilharia', dout), Math.floor((orc * (dout === 'artilharia' ? 0.6 : 0.35)) / custoDe('artilharia', dout)));
         ataque.artilharia = nArt; orc -= nArt * custoDe('artilharia', dout);
         ataque.infantaria = Math.min(D.ATAQUE.infantaria.max, Math.floor(orc / 2));
-        return { escala, postura, compras, contra, ataque, doutrina: dout };
+        const oferta = ofertaDeReforcos(semente, rodada, 1, estado); // o bot é sempre o lado B
+        const reforco = oferta.length ? oferta[Math.floor(r() * oferta.length)] : null;
+        return { escala, postura, compras, contra, ataque, doutrina: dout, reforco };
     }
 
-    const api = { D, SOLDADOS, FUNCOES, orcamento, custoDe, maxDe, planoDoBot, estadoInicial, planoPadrao, sanitizar, custoAtaque, custoDefesa, criarCampo, prepararRodada, resolverRodada, estadoDoDuelo, rng, clonar, vivos };
+    const api = { ofertaDeReforcos, aplicarReforco, D, SOLDADOS, FUNCOES, orcamento, custoDe, maxDe, planoDoBot, estadoInicial, planoPadrao, sanitizar, custoAtaque, custoDefesa, criarCampo, prepararRodada, resolverRodada, estadoDoDuelo, rng, clonar, vivos };
     if (typeof module !== 'undefined' && module.exports) module.exports = api;
     else raiz.DueloMotor = api;
 })(typeof window !== 'undefined' ? window : globalThis);

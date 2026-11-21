@@ -313,7 +313,7 @@
         tela = 'plano'; enviando = false;
         const ultimo = jogo.rodadas[jogo.rodadas.length - 1];
         const base = ultimo ? (lado() === 'A' ? ultimo.planoA : ultimo.planoB) : M.planoPadrao();
-        plano = { rodada, escala: base.escala.slice(), postura: base.postura, compras: [], contra: false, ataque: { ...(ultimo ? base.ataque : M.planoPadrao().ataque) }, doutrina: rodada === 1 ? (mem(duelo.id).doutrina || 'assalto') : undefined };
+        plano = { rodada, escala: base.escala.slice(), postura: base.postura, compras: [], contra: false, reforco: null, ataque: { ...(ultimo ? base.ataque : M.planoPadrao().ataque) }, doutrina: rodada === 1 ? (mem(duelo.id).doutrina || 'assalto') : undefined };
         // o relógio de 1 minuto conta a partir da primeira vez que esta rodada apareceu (sobrevive a recarregar a página)
         const m = mem(duelo.id);
         if (!m.prazo || m.prazo.rodada !== rodada) { m.prazo = { rodada, inicio: Date.now() }; gravarMem(duelo.id, m); }
@@ -334,7 +334,7 @@
     let reforcosAbertos = false;
     function desenharPlano() {
         const est = minhaInfo(), r = plano.rodada;
-        const okPlano = M.sanitizar(plano, est, r);
+        const okPlano = M.sanitizar(plano, est, r, duelo.semente, lado());
         const dout = okPlano.doutrina, cmdUsado = M.custoDefesa(okPlano), orc = M.orcamento(r, dout), gastoAtq = M.custoAtaque(okPlano.ataque, dout), cmdLivre = est.cmd - cmdUsado;
         const infoDele = lado() === 'A' ? jogo.B : jogo.A;
         const ultimo = jogo.rodadas[jogo.rodadas.length - 1];
@@ -342,12 +342,23 @@
         let intel = '';
         if (ultimo) {
             const ele = lado() === 'A' ? ultimo.planoB : ultimo.planoA, vig = ele.escala.filter(f => f === 'vigia').length, dd = infoDele.doutrina && M.D.DOUTRINAS[infoDele.doutrina];
-            intel = `<div class="intel"><b>🔎 ${esc(nomeAdv())}${dd ? ` · ${dd.icone} ${dd.nome}` : ''}</b><div class="intelLinha"><span>atacou ${ICO.infantaria}${ele.ataque.infantaria} ${ICO.artilharia}${ele.ataque.artilharia} ${ICO.blindado}${ele.ataque.blindado}</span><span>defendeu 🔭${vig} ${POST[ele.postura].ic}${ele.contra ? ' 📡' : ''}</span></div></div>`;
+            const L = window.DueloAnalise ? DueloAnalise.leituraDoAdversario(jogo, lado()) : null, est2 = L && L.estado;
+            const falta = Math.max(0, M.D.VITORIAS_PARA_GANHAR - jogo.placar[lado()]), faltaEle = Math.max(0, M.D.VITORIAS_PARA_GANHAR - jogo.placar[outro()]);
+            const dv = L && L.doutrinas ? { vantagem: '▲ doutrina com vantagem', desvantagem: '▼ doutrina em desvantagem', empate: '■ doutrinas neutras' }[L.doutrinas] : '';
+            intel = `<div class="intel"><b>🔎 ${esc(nomeAdv())}${dd ? ` · ${dd.icone} ${dd.nome}` : ''}</b><div class="intelLinha"><span>atacou ${ICO.infantaria}${ele.ataque.infantaria} ${ICO.artilharia}${ele.ataque.artilharia} ${ICO.blindado}${ele.ataque.blindado}</span><span>defendeu 🔭${vig} ${POST[ele.postura].ic}${ele.contra ? ' 📡' : ''}</span></div>
+                ${est2 ? `<div class="intelLinha"><span>🧱 ${est2.trinch}%</span><span>🪖 ${est2.soldados}/6 · ${est2.cond}% de vida</span><span>🎯 ${est2.mun}</span><span>★ ${est2.cmd}</span>${est2.refs && est2.refs.length ? `<span title="Reforços dele">🎁 ${est2.refs.map(id => M.D.REFORCOS[id] ? M.D.REFORCOS[id].icone : '').join(' ')}</span>` : ''}</div>
+                <div class="intelLinha"><span>Placar ${jogo.placar[lado()]}×${jogo.placar[outro()]}: faltam ${falta} para você e ${faltaEle} para ele</span>${dv ? `<span>${dv}</span>` : ''}</div>
+                ${L.estilo.length ? `<div class="intelLinha"><span>Estilo dele: ${L.estilo.join(', ')}</span></div>` : ''}
+                ${L.sugestoes.length ? `<ul class="intelSug">${L.sugestoes.map(s => `<li>${esc(s)}</li>`).join('')}</ul>` : ''}` : ''}</div>`;
         }
         // doutrina: só na rodada 1, em três cartões
         const doutrinas = r === 1 ? `<div class="secTit">🎖 DOUTRINA <small>vale o duelo inteiro</small></div>
             <div class="cartoes c3">${Object.entries(M.D.DOUTRINAS).map(([id, d]) => `<button class="cartao ${dout === id ? 'on' : ''}" data-dout="${id}"><span class="icG">${d.icone}</span><b>${d.nome}</b><small>vence ${M.D.DOUTRINAS[VENCE[id]].icone}</small></button>`).join('')}</div>
             <div class="dica">${M.D.DOUTRINAS[dout].desc}</div>` : '';
+        // reforço do Alto Comando: antes das rodadas 2, 3 e 4, 1 entre 3 (os mesmos nos dois celulares)
+        const oferta = M.ofertaDeReforcos(duelo.semente, r, lado(), est);
+        const reforcoSec = oferta.length ? `<div class="secTit">🎁 REFORÇO DO ALTO COMANDO <small>escolha 1 · ${plano.reforco ? '✔ escolhido' : 'ainda sem escolha'}</small></div>
+            <div class="cartoes c3">${oferta.map(id => { const R = M.D.REFORCOS[id]; return `<button class="cartao ${plano.reforco === id ? 'on' : ''}" data-ref="${id}"><span class="icG">${R.icone}</span><b>${R.nome}</b><small>${R.tipo === 'agora' ? 'agora' : 'fica'} · ${R.desc}</small></button>`; }).join('')}</div>` : '';
         const contagem = { vigia: 0, obras: 0, descanso: 0 };
         const sold = est.soldados.map((s, i) => {
             const f = s.cond <= 0 ? 'fora' : plano.escala[i]; if (contagem[f] !== undefined) contagem[f]++;
@@ -367,9 +378,9 @@
         const atq = Object.entries(M.D.ATAQUE).map(([id, a]) => `<div class="cartao atq ${okPlano.ataque[id] ? 'on' : ''}"><span class="icG">${ICO[id]}</span><b>${a.nome.replace('Grupo de i', 'I')}</b><small>${M.custoDe(id, dout)} pts · ${a.desc}</small>
             <div class="passos"><button class="passo" data-menos="${id}" ${okPlano.ataque[id] ? '' : 'disabled'}>−</button><span class="qtd">${okPlano.ataque[id]}</span><button class="passo" data-mais="${id}" ${gastoAtq + M.custoDe(id, dout) > orc || okPlano.ataque[id] >= M.maxDe(id, dout) ? 'disabled' : ''}>+</button></div></div>`).join('');
         mostrar(`<div class="placar"><span>${esc(meuNome)}${dout ? ' ' + M.D.DOUTRINAS[dout].icone : ''}</span><span><span class="num">${jogo.placar[lado()]}</span>×<span class="num">${jogo.placar[outro()]}</span></span><span>${esc(nomeAdv())}</span></div>
-            <div class="barraPrep"><b>RODADA ${r}/${M.D.RODADAS}</b><span>🎯 ${Math.round(est.mun)}</span><span>★ ${cmdLivre}</span><span>🧱 ${Math.round(est.trinch)}%</span></div>
+            <div class="barraPrep"><b>RODADA ${r}/${M.D.RODADAS}</b><span>🎯 ${Math.round(est.mun)}</span><span>★ ${cmdLivre}</span><span>🧱 ${Math.round(est.trinch)}%</span>${(est.refs || []).length ? `<span title="Seus reforços">🎁 ${est.refs.map(id => M.D.REFORCOS[id] ? M.D.REFORCOS[id].icone : '').join(' ')}</span>` : ''}</div>
             <div class="prevBox"><canvas id="cvPrev"></canvas><div class="prevRot">🛡 SUA TRINCHEIRA</div></div>
-            ${intel}${doutrinas}
+            ${intel}${reforcoSec}${doutrinas}
             <div class="secTit">🛡 DEFESA <small>toque no soldado para trocar · 🔭${contagem.vigia} 🔨${contagem.obras} 💤${contagem.descanso}</small></div>
             <div class="esq">${sold}</div>
             <div class="dica">🔭 atira e cansa · 🔨 conserta a trincheira · 💤 recupera, protegido</div>
@@ -380,6 +391,7 @@
             <div class="cartoes c3">${atq}</div>
             <div class="barraOk"><div class="relogio"><b id="seg">${PRAZO}s</b><div class="tempo"><div id="barraTempo" style="width:100%"></div></div></div><button class="grande" id="bOk">✔ PRONTO</button></div>`);
         $app.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { const i = +b.dataset.s; plano.escala[i] = M.FUNCOES[(M.FUNCOES.indexOf(plano.escala[i]) + 1) % 3]; desenharPlano(); });
+        $app.querySelectorAll('[data-ref]').forEach(b => b.onclick = () => { plano.reforco = plano.reforco === b.dataset.ref ? null : b.dataset.ref; desenharPlano(); });
         $app.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { plano.postura = b.dataset.p; desenharPlano(); });
         $app.querySelectorAll('[data-compra]').forEach(b => b.onclick = () => { plano.compras.push(b.dataset.compra); desenharPlano(); });
         $app.querySelectorAll('[data-desfaz]').forEach(b => b.onclick = () => { const i = plano.compras.lastIndexOf(b.dataset.desfaz); if (i >= 0) plano.compras.splice(i, 1); desenharPlano(); });
@@ -407,7 +419,7 @@
     async function enviarPlano(automatico) {
         if (enviando || tela !== 'plano') return;
         enviando = true; clearInterval(timerPrazo);
-        const final = M.sanitizar(plano, minhaInfo(), plano.rodada);
+        const final = M.sanitizar(plano, minhaInfo(), plano.rodada, duelo.semente, lado());
         try {
             await API.enviar(duelo.id, plano.rodada, final);
             const m = mem(duelo.id); m.enviadoEm = Date.now(); gravarMem(duelo.id, m);
@@ -748,6 +760,19 @@
     }
 
     // ---------- Fim do duelo ----------
+
+    // "Por que perdi/ganhei": causa principal, rodada a rodada e dicas (duelo-analise.js)
+    function analiseHTML() {
+        try {
+            if (!window.DueloAnalise || !jogo || !jogo.rodadas.length || !jogo.vencedor) return '';
+            const A = DueloAnalise.analiseDoDuelo(jogo, lado());
+            const linhas = A.rodadas.map(r => `<div class="anaLinha"><span>R${r.rodada} ${r.empate ? '■' : r.venci ? '▲' : '▼'}</span><span>você sofreu ${Math.round(r.meuDano)} · ele ${Math.round(r.delDano)}</span><span>${r.defEu.art ? '💥' + r.defEu.art + ' ' : ''}${r.defEu.invInf + r.defEu.invBli ? '⚔' + (r.defEu.invInf + r.defEu.invBli) + ' ' : ''}${r.semMun ? '🎯0' : ''}</span></div>`).join('');
+            return `<div class="analise"><b>${A.venceu ? 'COMO VOCÊ VENCEU' : 'POR QUE VOCÊ PERDEU'}</b>
+                ${A.principal ? `<div class="anaPrincipal">Maior dano sofrido: ${esc(A.principal.nome)} (${A.principal.parte}%)</div>` : ''}
+                <div class="anaTab">${linhas}</div>
+                ${A.dicas.length ? `<ul class="intelSug">${A.dicas.map(s => `<li>${esc(s)}</li>`).join('')}</ul>` : ''}</div>`;
+        } catch (e) { return ''; }
+    }
     async function telaFim() {
         if (tela === 'fim') return;
         pararTudo(); tela = 'fim';
@@ -767,6 +792,7 @@
             ${treino ? '<div class="sub" style="margin-top:10px">🤖 Treino contra o bot: não vale troféus nem pontos.</div>' : venci ? '<div class="trofeus" style="margin-top:10px">+3 troféus · +3 pontos na temporada</div>' : '<div class="sub" style="margin-top:10px">−1 ponto na temporada</div>'}
             <div class="sub" id="totalTrofeus" style="margin-top:6px">${t && duelo.estado === 'fim' ? `Você tem 🏆 ${t.trofeus} troféus (${t.vitorias} vitórias)` : ''}</div>
             <div class="sub pisca" id="confirmando" style="margin-top:6px">${duelo.estado !== 'fim' ? 'Confirmando o resultado com o outro celular…' : ''}</div></div>
+            ${analiseHTML()}
             <button class="grande" id="bRevanche">${treino ? '🤖 TREINAR DE NOVO' : '⚔ REVANCHE'}</button>
             ${treino ? '' : '<button class="secundario" id="bShare">📤 Compartilhar o replay</button><div class="sub" id="shareInfo" style="text-align:center"></div>'}
             <button class="secundario" id="bLobby">Voltar ao lobby</button>`);
