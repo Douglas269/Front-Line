@@ -48,10 +48,10 @@ const C = {
 };
 const CAPITULOS = ['Capítulo 1 · A Fronteira', 'Capítulo 2 · O Coração do País'];
 const FASES = [
-    { n: 1, cap: 0, nome: 'Fronteira', semente: 1101, celulas: 52, mar: 0.05, W: 860, H: 1120, bots: ['bravo', 'charlie', 'delta'], tempo: 900, extra: 1, milicia: 0, objetivo: 'semPerder' },
-    { n: 2, cap: 0, nome: 'O Rio', semente: 4409, celulas: 56, mar: 0.12, W: 900, H: 1160, bots: ['bravo', 'charlie'], tempo: 840, extra: 1, milicia: 0, botFacil: 0.75, objetivo: 'pesquisa', regra: 'industria', regraTxt: 'região industrial: obras custam metade' },
-    { n: 3, cap: 0, nome: 'Região central', semente: 2207, celulas: 66, mar: 0.05, W: 980, H: 1280, bots: ['bravo', 'charlie', 'delta', 'echo'], tempo: 1080, extra: 2, milicia: 1, objetivo: 'capitais' },
-    { n: 4, cap: 1, nome: 'Inverno', semente: 5521, celulas: 70, mar: 0.06, W: 1000, H: 1300, bots: ['bravo', 'delta', 'echo'], tempo: 1140, extra: 2, milicia: 0, objetivo: 'baixas', regra: 'inverno', regraTxt: 'inverno: campos produzem 40% menos comida' },
+    { n: 1, cap: 0, nome: 'Fronteira', semente: 1101, celulas: 52, mar: 0.05, W: 860, H: 1120, bots: ['bravo', 'charlie', 'delta'], tempo: 900, extra: 1, milicia: 0, graca: 60, objetivo: 'semPerder' },
+    { n: 2, cap: 0, nome: 'O Rio', semente: 4409, celulas: 56, mar: 0.12, W: 900, H: 1160, bots: ['bravo', 'charlie'], tempo: 1020, extra: 1, milicia: 0, botFacil: 0.7, objetivo: 'pesquisa', regra: 'industria', regraTxt: 'região industrial: obras custam metade' },
+    { n: 3, cap: 0, nome: 'Região central', semente: 2207, celulas: 66, mar: 0.05, W: 980, H: 1280, bots: ['bravo', 'charlie', 'delta', 'echo'], tempo: 1080, extra: 2, milicia: 1, botFacil: 0.85, objetivo: 'capitais' },
+    { n: 4, cap: 1, nome: 'Inverno', semente: 5521, celulas: 70, mar: 0.06, W: 1000, H: 1300, bots: ['bravo', 'delta', 'echo'], tempo: 1140, extra: 2, milicia: 0, botFacil: 1.15, objetivo: 'baixas', regra: 'inverno', regraTxt: 'inverno: campos produzem 40% menos comida' },
     { n: 5, cap: 1, nome: 'Aliança frágil', semente: 6637, celulas: 76, mar: 0.05, W: 1040, H: 1360, bots: ['bravo', 'charlie', 'delta', 'echo'], tempo: 1260, extra: 3, milicia: 0, objetivo: 'rebeldes', regra: 'paz', regraTxt: 'começa em paz com Charlie (que pode virar aliado… ou não)' },
     { n: 6, cap: 1, nome: 'A capital', semente: 3301, celulas: 86, mar: 0.05, W: 1100, H: 1440, bots: ['bravo', 'charlie', 'delta', 'echo'], tempo: 1200, extra: 2, milicia: 1, capitalForte: 'delta', objetivo: 'capitais' }
 ];
@@ -420,6 +420,7 @@ function defesaEm(p) { // força que defende a província (com trincheira e capi
     return def * (1 + p.trinch / 250) * (p.capital ? C.CAPITAL_DEFESA : 1) * (p.obras && p.obras.forte ? 1.25 : 1);
 }
 function pensarBot(dono) {
+    if (G.fase.graca && G.t < G.fase.graca) return; // fase de aprendizado: os bots esperam o começo da partida (fase 1)
     const FX = FACCOES[dono], f = G.fac[dono], provs = provDe(dono);
     if (!provs.length || G.eliminados[dono]) return;
     const capital = provs.find(p => p.capital && p.dono === dono);
