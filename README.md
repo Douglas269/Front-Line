@@ -43,6 +43,7 @@ Toda tarefa (Correção, Melhoria ou Nova função) tem uma **issue**, e todo de
 - **Nomes do exército:** III (regimento), X (brigada), XX (divisão), XXX (corpo de exército), XXXX (exército) pela quantidade.
 - **Painel da unidade:** nome editável, vida, moral, estado, combate por classe, logística por ciclo e composição, com "separar 1 regimento".
 - **Terreno em batalha:** infantaria defendendo em cidade (+30%), floresta (+25%) ou morro (+15%); blindado atacando em campo (+25%).
+- **Resolver rápido (Conquista, campanha):** no painel de toda batalha em que você está aparece **⏩ Resolver rápido**, que roda o mesmo combate (mesmas regras, posturas e tropas) sem esperar a animação e já conclui a conquista ou o recuo. Em Configurações → Jogo há **Resolver batalhas rápido**, que faz isso sozinho em toda batalha sua. No online não existe (a batalha é de todos). A chance de vitória é a mesma da batalha animada (medida: 22,5% × 23,5% e 74% × 76% em 200 batalhas cada). Teste: `node tests/batalha-rapida.js`.
 - Módulo de estruturas `conquista-unidades.js` (ainda sem uso direto no jogo); teste `node tests/combustivel.js`.
 
 - **Bots e combustível:** só recrutam blindado com pelo menos 8 de reserva, constroem a fábrica primeiro quando o combustível cai abaixo de 6 e têm blindados, e deixam em casa os blindados quando o combustível acaba (a função `ordem` aceita uma lista de aptos para a divisão; o wrapper online repassa o parâmetro). Teste em `tests/combustivel.js`.
