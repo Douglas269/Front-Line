@@ -2,6 +2,11 @@
    Sintetizados na hora (sem arquivos). Respeitam o controle de som de cada modo:
    Trincheiras (isAudioMuted), Conquista (SOM.ligado) e Duelo (chave própria + botão). */
 (function () {
+  // Cache do jogo: as três páginas registram o mesmo service worker (/sw.js) para abrir mais rápido
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+    window.addEventListener('load', function () { navigator.serviceWorker.register('/sw.js').catch(function () {}); });
+  }
+
     const FLSom = window.FLSom = { ctx: null, saida: null };
     const CHAVE_DUELO = 'frontline-duelo-som';
     let ultimo = 0;
