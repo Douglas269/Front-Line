@@ -63,6 +63,30 @@ function riscosEChances() {
     return { riscos, chances };
 }
 
+// Ataques a caminho de uma província sua, só de exércitos que o jogador já vê (ou que um espião mostra): quem, quantos, quando chega
+function ataquesACaminho() {
+    if (!G || G.cliente) return [];
+    return G.ex.filter(e => e.dono !== 'jogador' && e.dono !== 'neutro' && e.rota.length && !e.emBatalha && emGuerra('jogador', e.dono) && exVisivel(e)).map(e => {
+        const idx = e.rota.findIndex(id => G.prov[id].dono === 'jogador'); if (idx < 0) return null;
+        const alvo = G.prov[e.rota[idx]]; let d = 0, x = e.x, y = e.y;
+        for (let i = 0; i <= idx; i++) { const q = G.prov[e.rota[i]]; d += Math.hypot(q.x - x, q.y - y); x = q.x; y = q.y; }
+        return { id: e.id, dono: e.dono, n: e.s.length, poder: Math.round(poderDeLista([e])), alvo, eta: Math.max(1, Math.ceil(d / Math.max(0.1, velEx(e)))), meus: Math.round(poderDeLista(exParadosEm(alvo.id, 'jogador'))) };
+    }).filter(Boolean).sort((a, b) => a.eta - b.eta);
+}
+function textoAtaque(a) { return `${FACCOES[a.dono].nome} (${a.n} soldados, poder ${a.poder}) chega em ${a.alvo.nome} em ~${a.eta}s · sua defesa ${a.meus}`; }
+// Faixa fixa no mapa: some quando não há ataque; tocar nela leva à província ameaçada
+function atualizarAlertaAtaque() {
+    let el = document.getElementById('alertaAtq');
+    if (!el) { const box = document.getElementById('mapaBox'); if (!box) return; el = document.createElement('button'); el.id = 'alertaAtq'; el.type = 'button'; box.appendChild(el); }
+    const lista = G && !G.fim ? ataquesACaminho() : [];
+    if (!lista.length) { el.style.display = 'none'; el.dataset.alvo = ''; return; }
+    const a = lista[0], risco = a.poder > a.meus * 0.8;
+    el.style.display = 'block'; el.dataset.alvo = a.alvo.id; el.className = risco ? 'perigo' : '';
+    el.textContent = `${risco ? '▼' : '■'} ${lista.length > 1 ? lista.length + ' ataques a caminho · ' : ''}${textoAtaque(a)} · toque para ver`;
+    el.onclick = () => { irParaProvincia(a.alvo.id); try { centralizar(a.alvo.x, a.alvo.y); } catch (e) {} };
+}
+setInterval(() => { try { atualizarAlertaAtaque(); } catch (e) {} }, 500);
+
 function painelSituacao() {
     try {
         const pl = placar(), total = Object.keys(G.prov).length, donos = ['jogador'].concat(G.fase.bots.filter(b => !G.eliminados[b]));
@@ -86,6 +110,7 @@ function painelSituacao() {
         <div class="info" style="color:${veredito.c}"><b>${veredito.s} ${veredito.t}</b> ${proj}</div>
         <div class="sit"><div class="sit-h"><span></span><span>Províncias</span><span>Soldados</span><span>Poder</span></div>${linhas}</div>
         <div class="info">Economia por ciclo: ${eco('🍞', sd.comida)} · ${eco('🪙', sd.moedas)}${sd.comida < 0 || sd.moedas < 0 ? ' · <b style="color:#ffb36b">saldo negativo: a tropa passa fome ou o soldo atrasa</b>' : ''}</div>
+        ${ataquesACaminho().length ? `<div class="info"><b>⚠ Ataques a caminho</b></div>${ataquesACaminho().slice(0, 4).map(a => `<div class="sit-r"><span class="sit-t"><span style="color:${a.poder > a.meus * 0.8 ? '#ff8a7a' : '#ffd28a'}">${a.poder > a.meus * 0.8 ? '▼' : '■'}</span> ${textoAtaque(a)}</span><button class="mini" onclick="irParaProvincia('${a.alvo.id}')">ver</button></div>`).join('')}` : ''}
         <div class="info"><b>Onde você está em risco</b> (fronteira com quem está em guerra)</div>
         ${riscosAlto.length ? riscosAlto.map(rLinha).join('') : '<div class="info">● Nenhuma fronteira ameaçada agora.</div>'}
         <div class="info"><b>Chances de ataque</b> (vizinhas à vista)</div>

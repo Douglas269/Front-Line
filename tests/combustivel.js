@@ -33,7 +33,7 @@ const { chromium } = require('playwright');
     // 6) save antigo sem combustível é migrado
     novo(); { G.pausado = false; salvarPartida(); const d = JSON.parse(localStorage.getItem(SAVE_CONQ)); Object.values(d.fac).forEach(f => { delete f.comb; }); localStorage.setItem(SAVE_CONQ, JSON.stringify(d)); carregarPartida(); r.saveAntigo = G.fac.jogador.comb === C.COMB_INICIAL; }
     // 7) bots e combustível (issue #10): só recrutam blindado com reserva, fabricam quando falta e deixam blindado sem combustível em casa
-    { novo(); const bot = G.fase.bots[0], f = G.fac[bot];
+    { novo(); G.t = 1000; const bot = G.fase.bots[0], f = G.fac[bot]; // G.t alto: fora da graça da fase 1
       const contaBlind = () => G.ex.filter(e => e.dono === bot).reduce((t, e) => t + e.s.filter(x => x.tipo === 'blind').length, 0);
       const orig = Math.random; Math.random = () => 0.5;
       f.comb = 0; f.moedas = 400; f.aco = 400; const antes = contaBlind();
@@ -47,7 +47,7 @@ const { chromium } = require('playwright');
       const novoEx = ordem(ex.id, viz.id, 3, 'ataque', aptos);
       r.ordemDeixaBlindado = !!novoEx && !novoEx.s.includes(tanque) && ex.s.includes(tanque);
       // fábrica passa na frente quando o combustível está baixo e há blindado
-      novo(); const bot2 = G.fase.bots[0], f2 = G.fac[bot2]; f2.comb = 1;
+      novo(); G.t = 1000; const bot2 = G.fase.bots[0], f2 = G.fac[bot2]; f2.comb = 1;
       const capB = provDe(bot2).find(q => q.capital); const ex2 = exParadosEm(capB.id, bot2)[0] || criarExercito(bot2, capB.id, 3); ex2.s.push(soldado('Tanque', 'blind'));
       const o2 = Math.random; Math.random = () => 0.1; f2.moedas = 900; capB.obras = {}; capB.obra = null;
       pensarBot(bot2); Math.random = o2;
