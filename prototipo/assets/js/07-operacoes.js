@@ -358,7 +358,7 @@ function abrirModalOp(aba) {
     m.classList.remove('hidden');
     renderModalOp(aba);
 }
-function fecharModalOp() { const m = document.getElementById('modal-op'); if (m) m.classList.add('hidden'); perfilAberto = false; }
+function fecharModalOp() { const m = document.getElementById('modal-op'); if (m) m.classList.add('hidden'); perfilAberto = false; if (typeof mostrarTutorialSePrimeiraVez === 'function') mostrarTutorialSePrimeiraVez(); }
 function abrirQuartel() { document.getElementById('modal-end') && document.getElementById('modal-end').classList.add('hidden'); abrirModalOp('quartel'); }
 function comprarQuartel(id) {
     const q = lerQuartel(), it = QUARTEL[id];
@@ -373,7 +373,9 @@ async function renderModalOp(aba) {
     const abas = [['nova', '🪖 Nova partida'], ['quartel', '🎖 Quartel'], ['memorial', '🕯 Memorial'], ['desafio', '📅 Desafio']];
     let corpo = '';
     if (aba === 'nova') {
-        corpo = `<div class="text-mil-textMuted mb-2">A partida atual será apagada. Escolha a próxima operação:</div>` +
+        const andamento = gameState.day > 1 || gameState.timeSeconds > 60;
+        corpo = (andamento ? `<button onclick="fecharModalOp()" class="w-full text-center p-3 mb-3 btn-tactical rounded font-bold text-sm border-2 border-mil-amberMuted text-mil-amberMuted">▶ CONTINUAR PARTIDA · DIA ${gameState.day}/${GAME_CONFIG.TOTAL_DAYS}</button>` : '') +
+            `<div class="text-mil-textMuted mb-2">${andamento ? 'Ou comece outra (a partida atual será apagada):' : 'Escolha a operação:'}</div>` +
             Object.entries(OPERACOES).map(([id, o]) => `<button onclick="comecarOperacao('${id}')" class="w-full text-left p-2.5 mb-2 btn-tactical rounded">
                 <div class="font-bold text-sm">${o.icone} ${o.nome}${id === 'desafio' ? ' · ' + hojeBR().split('-').reverse().join('/') : ''}</div>
                 <div class="text-mil-textMuted font-normal mt-0.5">${o.desc}</div>
