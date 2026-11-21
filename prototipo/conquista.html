@@ -123,6 +123,10 @@
   #zoom { position: absolute; right: 8px; bottom: 8px; display: flex; flex-direction: column; gap: 6px; }
   #zoom button { width: 38px; height: 38px; border-radius: 8px; border: 1px solid var(--borda); background: rgba(19,24,21,.9); font-size: 18px; font-weight: 700; }
   #aviso { display: none; pointer-events: none; position: absolute; left: 8px; right: 8px; top: 8px; padding: 5px 8px; border-radius: 8px; font-size: 11px; font-weight: 700; text-align: center; background: rgba(19,24,21,.88); border: 1px solid var(--borda); color: var(--mudo); }
+  #alertaAtq { display: none; position: absolute; left: 8px; right: 8px; top: 44px; z-index: 5; padding: 6px 8px; border-radius: 8px; border: 1px solid #8a6a2b; background: rgba(42,34,20,.94); color: #ffd28a; font: inherit; font-size: 12px; text-align: left; line-height: 1.35; }
+  #alertaAtq.perigo { background: rgba(74,23,23,.94); border-color: #8a2b2b; color: #ffd6cf; animation: pulsaAtq 1.2s ease-in-out infinite; }
+  @keyframes pulsaAtq { 50% { box-shadow: 0 0 10px rgba(255,120,100,.6); } }
+  @media (prefers-reduced-motion: reduce) { #alertaAtq.perigo { animation: none; } }
   #aviso.alerta { background: rgba(74,23,23,.92); border-color: #8a2b2b; color: #ffd6cf; }
   #painel { border-top: 1px solid var(--borda); padding: 8px 10px calc(10px + env(safe-area-inset-bottom)); min-height: 150px; max-height: 44%; overflow-y: auto; }
   .titulo { display: flex; justify-content: space-between; align-items: baseline; font-weight: 700; }
@@ -159,9 +163,9 @@
   button.fase::after { content: ''; display: block; clear: both; }
   button.fase.trancada { border-color: var(--borda); background: var(--painel); color: var(--mudo); }
 </style>
-    <link rel="stylesheet" href="assets/css/fontes.css?v=20261121.0600">
-    <link rel="stylesheet" href="assets/css/tokens.css?v=20261121.0600">
-    <link rel="stylesheet" href="assets/css/polimento-visual.css?v=20261121.0600">
+    <link rel="stylesheet" href="assets/css/fontes.css?v=20261121.0700">
+    <link rel="stylesheet" href="assets/css/tokens.css?v=20261121.0700">
+    <link rel="stylesheet" href="assets/css/polimento-visual.css?v=20261121.0700">
 </head>
 <body>
 <div id="app">
@@ -186,17 +190,17 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
 <script src="vendor/game-icons.js"></script>
 <script>document.querySelectorAll('[data-icone]').forEach(el => { if (!el.innerHTML) el.innerHTML = icone(el.dataset.icone); });</script>
-<script src="assets/js/paleta.js?v=20261121.0600"></script>
-<script src="assets/js/som-ui.js?v=20261121.0600"></script>
-<script src="assets/js/conquista-unidades.js?v=20261121.0600"></script>
-<script src="assets/js/conquista-mapa.js?v=20261121.0600"></script>
-<script src="assets/js/conquista-extra.js?v=20261121.0600"></script>
-<script src="assets/js/conquista.js?v=20261121.0600"></script>
-<script src="assets/js/conquista-situacao.js?v=20261121.0600"></script>
-<script src="assets/js/conquista-online.js?v=20261121.0600"></script>
-<script src="assets/js/conquista-config.js?v=20261121.0600"></script>
-<script src="assets/js/guia-tutorial.js?v=20261121.0600"></script>
-<script src="assets/js/conquista-guia.js?v=20261121.0600"></script>
+<script src="assets/js/paleta.js?v=20261121.0700"></script>
+<script src="assets/js/som-ui.js?v=20261121.0700"></script>
+<script src="assets/js/conquista-unidades.js?v=20261121.0700"></script>
+<script src="assets/js/conquista-mapa.js?v=20261121.0700"></script>
+<script src="assets/js/conquista-extra.js?v=20261121.0700"></script>
+<script src="assets/js/conquista.js?v=20261121.0700"></script>
+<script src="assets/js/conquista-situacao.js?v=20261121.0700"></script>
+<script src="assets/js/conquista-online.js?v=20261121.0700"></script>
+<script src="assets/js/conquista-config.js?v=20261121.0700"></script>
+<script src="assets/js/guia-tutorial.js?v=20261121.0700"></script>
+<script src="assets/js/conquista-guia.js?v=20261121.0700"></script>
 
 </body>
 </html>
