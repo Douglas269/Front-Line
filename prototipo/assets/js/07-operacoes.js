@@ -20,16 +20,16 @@ const QUARTEL = {
     racao:      { nome: 'Despensa cheia', icone: '🥫', desc: '+25% de ração e água no começo', custo: 3 },
     paiol:      { nome: 'Paiol reforçado', icone: '🧰', desc: '+30% de munição no começo', custo: 3 },
     prestigio:  { nome: 'Verba do QG', icone: '💰', desc: '+60 de prestígio no começo', custo: 4 },
-    oficial:    { nome: 'Ten. Prado, oficial de ligação', icone: '🎖️', desc: 'todos começam com +10 de moral', custo: 4 },
+    oficial:    { nome: 'Ten. Prado, oficial de ligação', icone: '🎖', desc: 'todos começam com +10 de moral', custo: 4 },
     engenharia: { nome: 'Curso de engenharia', icone: '🔨', desc: 'reparo e obras 25% mais rápidos', custo: 5 },
     treino:     { nome: 'Treino de tiro', icone: '🎯', desc: '+8% de acerto para todo o esquadrão', custo: 6 }
 };
 const OBRAS_T = {
     sacos:      { nome: 'Sacos de areia', icone: '🧱', custo: 60, trabalho: 100, nivel: 1, desc: 'a trincheira perde 25% menos conservação' },
     cozinha:    { nome: 'Cozinha de campanha', icone: '🍲', custo: 50, trabalho: 80, nivel: 1, desc: 'comer gasta 20% menos ração e água' },
-    abrigo:     { nome: 'Abrigo profundo', icone: '🛏️', custo: 90, trabalho: 140, nivel: 2, req: 'sacos', desc: 'quem descansa recupera vida e cansaço mais rápido' },
+    abrigo:     { nome: 'Abrigo profundo', icone: '🛏', custo: 90, trabalho: 140, nivel: 2, req: 'sacos', desc: 'quem descansa recupera vida e cansaço mais rápido' },
     enfermaria: { nome: 'Enfermaria', icone: '🏥', custo: 80, trabalho: 120, nivel: 2, req: 'cozinha', desc: 'todo ferido se recupera aos poucos' },
-    tuneis:     { nome: 'Túneis', icone: '🕳️', custo: 130, trabalho: 180, nivel: 3, req: 'abrigo', desc: 'invasões ferem 40% menos' },
+    tuneis:     { nome: 'Túneis', icone: '🕳', custo: 130, trabalho: 180, nivel: 3, req: 'abrigo', desc: 'invasões ferem 40% menos' },
     periscopio: { nome: 'Periscópio', icone: '🔭', custo: 110, trabalho: 150, nivel: 3, req: 'enfermaria', desc: 'quem está de vigília acerta 10% mais' }
 };
 const APELIDOS = [
@@ -101,7 +101,7 @@ function novaOperacao() {
         logFeed(txt, 'text-mil-amberMuted font-bold');
         addDiaryEntry(txt);
     }
-    if (op.bonus.length) logFeed(`🎖️ Quartel: ${op.bonus.map(b => QUARTEL[b].nome).join(', ')}.`, 'text-mil-greenMuted');
+    if (op.bonus.length) logFeed(`🎖 Quartel: ${op.bonus.map(b => QUARTEL[b].nome).join(', ')}.`, 'text-mil-greenMuted');
 }
 /* ---------- Desafio do dia: a lógica do jogo usa um sorteio próprio, igual para todo mundo ----------
    (os efeitos visuais da cena continuam com o sorteio comum, para não mudar a sorte da partida) */
@@ -144,7 +144,7 @@ function darApelidos() {
         const a = APELIDOS.find(x => x.cond(s));
         if (!a || s.apelido === a.nome || (s.apelido && APELIDOS.findIndex(x => x.nome === s.apelido) <= APELIDOS.indexOf(a))) return;
         s.apelido = a.nome;
-        logFeed(`🏷️ O esquadrão agora chama ${s.rank} ${s.name} de "${a.nome}".`, 'text-mil-amberMuted font-bold');
+        logFeed(`🏷 O esquadrão agora chama ${s.rank} ${s.name} de "${a.nome}".`, 'text-mil-amberMuted font-bold');
         addDiaryEntry(`Os homens passaram a chamar ${s.rank} ${s.name} de "${a.nome}". Esse apelido vai ficar.`);
     });
 }
@@ -166,8 +166,8 @@ function escreverCarta() {
     const texto = `${pega(abertura)} ${pega(meio)} ${pega(fecho)}`;
     const carta = { dia: gameState.day, id: s.id, texto };
     gameState.cartas = (gameState.cartas || []).concat(carta).slice(-30);
-    logFeed(`✉️ ${s.rank} ${s.name} escreveu uma carta ${DESTINO_CARTA[s.id] || 'para casa'} (veja no Diário).`, 'text-mil-textMuted');
-    addDiaryEntry(`✉️ Carta de ${s.rank} ${s.name} ${DESTINO_CARTA[s.id] || 'para casa'}: “${texto}”`);
+    logFeed(`✉ ${s.rank} ${s.name} escreveu uma carta ${DESTINO_CARTA[s.id] || 'para casa'} (veja no Diário).`, 'text-mil-textMuted');
+    addDiaryEntry(`✉ Carta de ${s.rank} ${s.name} ${DESTINO_CARTA[s.id] || 'para casa'}: “${texto}”`);
 }
 function registrarMemorial() {
     const lista = lerJSON(MEMORIAL_KEY, []);
@@ -188,7 +188,7 @@ function comecarObraT(id) {
     const c = custo(o.custo);
     if (gameState.prestige < c) { logFeed('Prestígio insuficiente!', 'text-red-400'); return false; }
     gameState.prestige -= c; ob.atual = id; ob.progresso = 0;
-    logFeed(`🏗️ Obra começou: ${o.nome}. Quem está na Manutenção trabalha nela.`, 'text-mil-greenMuted');
+    logFeed(`🏗 Obra começou: ${o.nome}. Quem está na Manutenção trabalha nela.`, 'text-mil-greenMuted');
     playTacticalBeep(900, 0.04); renderMelhorias(true); updateUI();
     return true;
 }
@@ -201,7 +201,7 @@ trabalharNaObra = function (soldier) {
     const o = OBRAS_T[ob.atual];
     if (ob.progresso >= o.trabalho) {
         ob.feitas[ob.atual] = true;
-        logFeed(`🏗️ Obra pronta: ${o.nome}. ${o.desc[0].toUpperCase() + o.desc.slice(1)}.`, 'text-mil-greenMuted font-bold');
+        logFeed(`🏗 Obra pronta: ${o.nome}. ${o.desc[0].toUpperCase() + o.desc.slice(1)}.`, 'text-mil-greenMuted font-bold');
         addDiaryEntry(`Terminamos ${o.nome.toLowerCase()}. A trincheira está melhor do que quando chegamos.`);
         ob.atual = null; ob.progresso = 0;
         aplicarEfeitosPassivos(); renderMelhorias(true);
@@ -281,7 +281,7 @@ checkWinLoss = function () {
     const op = opAtual();
     if (op.tipo !== 'longa' && gameState.squad.some(s => s.hp > 0) && gameState.day > op.dias) {
         gameEnded = true;
-        endGame('🎖️', op.tipo === 'desafio' ? 'DESAFIO CUMPRIDO' : 'OPERAÇÃO CUMPRIDA', 'text-mil-greenMuted',
+        endGame('🎖', op.tipo === 'desafio' ? 'DESAFIO CUMPRIDO' : 'OPERAÇÃO CUMPRIDA', 'text-mil-greenMuted',
             `Você segurou a trincheira por ${op.dias} dias${op.situacao ? ` (${SITUACOES[op.situacao].nome})` : ''}. ${op.tipo === 'desafio' ? 'Veja sua posição no ranking de hoje.' : 'As insígnias vão para o Quartel.'}`);
         return;
     }
@@ -303,10 +303,10 @@ endGame = function (icon, title, titleClass, body) {
     const caidos = gameState.squad.filter(s => s.hp <= 0 && !s.deserted);
     const apelidos = gameState.squad.filter(s => s.apelido).map(s => `${s.rank} ${s.name} "${s.apelido}"`);
     let extra = `<div class="bg-mil-panel border border-mil-border rounded p-2 mt-2 text-left">
-        <div class="flex justify-between"><span class="text-mil-amberMuted font-bold">🎖️ +${ganhas} insígnia${ganhas === 1 ? '' : 's'} para o Quartel</span><span class="text-mil-textMuted">total ${q.insignias}</span></div>
-        ${apelidos.length ? `<div class="text-mil-textMuted mt-1">🏷️ ${apelidos.join(' · ')}</div>` : ''}
-        ${caidos.length ? `<div class="text-mil-textMuted mt-1">🕯️ Entraram para o Memorial: ${caidos.map(s => s.rank + ' ' + s.name).join(', ')}</div>` : ''}
-        <button onclick="abrirQuartel()" class="w-full mt-2 py-1.5 btn-tactical rounded font-bold text-xs">🎖️ Abrir o Quartel</button></div>`;
+        <div class="flex justify-between"><span class="text-mil-amberMuted font-bold">🎖 +${ganhas} insígnia${ganhas === 1 ? '' : 's'} para o Quartel</span><span class="text-mil-textMuted">total ${q.insignias}</span></div>
+        ${apelidos.length ? `<div class="text-mil-textMuted mt-1">🏷 ${apelidos.join(' · ')}</div>` : ''}
+        ${caidos.length ? `<div class="text-mil-textMuted mt-1">🕯 Entraram para o Memorial: ${caidos.map(s => s.rank + ' ' + s.name).join(', ')}</div>` : ''}
+        <button onclick="abrirQuartel()" class="w-full mt-2 py-1.5 btn-tactical rounded font-bold text-xs">🎖 Abrir o Quartel</button></div>`;
     if (op.tipo === 'desafio') {
         const r = pontosDoDesafio(venceu);
         extra += `<div class="bg-mil-panel border border-mil-amberMuted rounded p-2 mt-2 text-left"><div class="text-mil-amberMuted font-bold">📅 DESAFIO DE ${op.dia.split('-').reverse().join('/')}: ${r.pontos} pontos</div>
@@ -364,13 +364,13 @@ function comprarQuartel(id) {
     const q = lerQuartel(), it = QUARTEL[id];
     if (!it || q.compras[id] || q.insignias < it.custo) return;
     q.insignias -= it.custo; q.compras[id] = true; gravarJSON(QUARTEL_KEY, q);
-    logFeed(`🎖️ Quartel: ${it.nome} liberado. Vale a partir da próxima partida.`, 'text-mil-greenMuted font-bold');
+    logFeed(`🎖 Quartel: ${it.nome} liberado. Vale a partir da próxima partida.`, 'text-mil-greenMuted font-bold');
     playTacticalBeep(1200, 0.08); renderModalOp('quartel');
 }
 async function renderModalOp(aba) {
     const m = document.getElementById('modal-op'); if (!m) return;
     const q = lerQuartel(), memorial = lerJSON(MEMORIAL_KEY, []);
-    const abas = [['nova', '🪖 Nova partida'], ['quartel', '🎖️ Quartel'], ['memorial', '🕯️ Memorial'], ['desafio', '📅 Desafio']];
+    const abas = [['nova', '🪖 Nova partida'], ['quartel', '🎖 Quartel'], ['memorial', '🕯 Memorial'], ['desafio', '📅 Desafio']];
     let corpo = '';
     if (aba === 'nova') {
         corpo = `<div class="text-mil-textMuted mb-2">A partida atual será apagada. Escolha a próxima operação:</div>` +
@@ -380,14 +380,14 @@ async function renderModalOp(aba) {
                 <div class="text-mil-amberMuted font-normal mt-0.5">Vitória: +${o.insignias} insígnias${id === 'longa' ? ' e sobe o nível' : ''}</div></button>`).join('') +
             (Object.keys(q.compras).length ? `<div class="text-mil-greenMuted">Bônus do Quartel que valem (menos no desafio): ${Object.keys(q.compras).map(k => QUARTEL[k].icone + ' ' + QUARTEL[k].nome).join(', ')}</div>` : '');
     } else if (aba === 'quartel') {
-        corpo = `<div class="flex justify-between items-center mb-2"><span class="text-mil-textMuted">Insígnias vêm de cada partida: vitória vale mais; derrota dá 1 a cada 3 dias resistidos.</span><span class="text-mil-amberMuted font-bold text-base ml-2 whitespace-nowrap">🎖️ ${q.insignias}</span></div>` +
+        corpo = `<div class="flex justify-between items-center mb-2"><span class="text-mil-textMuted">Insígnias vêm de cada partida: vitória vale mais; derrota dá 1 a cada 3 dias resistidos.</span><span class="text-mil-amberMuted font-bold text-base ml-2 whitespace-nowrap">🎖 ${q.insignias}</span></div>` +
             Object.entries(QUARTEL).map(([id, it]) => `<div class="flex items-center gap-2 p-2 mb-1.5 bg-mil-panel border border-mil-border rounded">
                 <div class="flex-1"><div class="font-bold">${it.icone} ${it.nome}</div><div class="text-mil-textMuted">${it.desc}</div></div>
-                ${q.compras[id] ? '<span class="text-mil-greenMuted font-bold">✔ seu</span>' : `<button onclick="comprarQuartel('${id}')" class="px-2 py-1.5 btn-tactical rounded font-bold ${q.insignias < it.custo ? 'opacity-50' : ''}" ${q.insignias < it.custo ? 'disabled' : ''}>${it.custo} 🎖️</button>`}</div>`).join('') +
+                ${q.compras[id] ? '<span class="text-mil-greenMuted font-bold">✔ seu</span>' : `<button onclick="comprarQuartel('${id}')" class="px-2 py-1.5 btn-tactical rounded font-bold ${q.insignias < it.custo ? 'opacity-50' : ''}" ${q.insignias < it.custo ? 'disabled' : ''}>${it.custo} 🎖</button>`}</div>`).join('') +
             `<div class="text-mil-textMuted mt-1">As melhorias valem a partir da próxima partida (campanha ou operação curta).</div>`;
     } else if (aba === 'memorial') {
         corpo = memorial.length ? `<div class="text-mil-textMuted mb-2">Os que caíram defendendo a trincheira, em todas as partidas.</div>` + memorial.slice(0, 60).map(x => `<div class="p-2 mb-1.5 bg-mil-panel border-l-2 border-mil-redAlert rounded">
-                <div class="font-bold">🕯️ ${escHtml(x.posto)} ${escHtml(x.nome)}${x.apelido ? ` "${escHtml(x.apelido)}"` : ''}</div>
+                <div class="font-bold">🕯 ${escHtml(x.posto)} ${escHtml(x.nome)}${x.apelido ? ` "${escHtml(x.apelido)}"` : ''}</div>
                 <div class="text-mil-textMuted">Caiu no dia ${x.dia} (${x.causa}) · ${x.abates} abates · ${OPERACOES[x.op] ? OPERACOES[x.op].nome : ''}, nível ${x.nivel} · ${String(x.data).split('-').reverse().join('/')}</div></div>`).join('')
             : '<div class="text-mil-textMuted">Ninguém caiu ainda. Que continue assim.</div>';
     } else if (aba === 'desafio') {
@@ -456,7 +456,7 @@ abrirPerfil = function (id) {
     const dados = document.getElementById('perfil-dados');
     if (s.apelido) document.getElementById('perfil-nome').textContent += ` "${s.apelido}"`;
     const cartas = (gameState.cartas || []).filter(c => c.id === id).slice(-3);
-    if (cartas.length && dados) dados.innerHTML += `<div class="mt-1"><span class="text-mil-amberMuted">✉️ Cartas ${DESTINO_CARTA[id] || 'para casa'}:</span>${cartas.map(c => `<div class="font-typewriter mt-0.5">Dia ${c.dia}: “${escHtml(c.texto)}”</div>`).join('')}</div>`;
+    if (cartas.length && dados) dados.innerHTML += `<div class="mt-1"><span class="text-mil-amberMuted">✉ Cartas ${DESTINO_CARTA[id] || 'para casa'}:</span>${cartas.map(c => `<div class="font-typewriter mt-0.5">Dia ${c.dia}: “${escHtml(c.texto)}”</div>`).join('')}</div>`;
 };
 
 /* ---------- Rodapé: botão do Quartel ---------- */
@@ -465,7 +465,7 @@ abrirPerfil = function (id) {
     if (!nova || document.getElementById('btn-quartel')) return;
     const b = document.createElement('button');
     b.id = 'btn-quartel'; b.className = 'text-xs px-2 py-1 btn-tactical rounded font-bold whitespace-nowrap';
-    b.textContent = `🎖️ Quartel`; b.onclick = () => abrirModalOp('quartel');
+    b.textContent = `🎖 Quartel`; b.onclick = () => abrirModalOp('quartel');
     nova.parentElement.insertBefore(b, nova);
 })();
 renderMelhorias(true); renderOrdens(true);

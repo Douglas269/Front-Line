@@ -96,7 +96,7 @@ const JOGO = 'file://' + path.resolve(__dirname, '..', 'prototipo', 'ponto-alpha
         const r = {};
         gameState.day = 1; gameState.squad.forEach(s => { s.hp = 100; });
         endTurn(); // dia 2: chega uma carta
-        r.cartaNoDiario = (gameState.cartas || []).length === 1 && /✉️ Carta de/.test(document.getElementById('diary-entries').textContent);
+        r.cartaNoDiario = (gameState.cartas || []).length === 1 && /✉ Carta de/.test(document.getElementById('diary-entries').textContent);
         const s = gameState.squad[0]; s.stats = { tiros: 50, acertos: 20, abates: 12 };
         endTurn();
         r.apelidoGanho = s.apelido === 'Olho de Águia';

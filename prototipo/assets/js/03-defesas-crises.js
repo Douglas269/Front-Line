@@ -186,7 +186,7 @@
             p.obra = Math.min(100, p.obra + (soldier.class === 'Engenheiro' ? DEF.OBRA_ENGENHEIRO : DEF.OBRA_SOLDADO) * (mentalDe(soldier) === 'apatia' ? MENTAL.APATIA_RITMO : 1));
             if (p.obra >= 100) {
                 p.construindo = false;
-                logFeed(`🏗️ Ponto defensivo pronto: ${p.nome}. Monte uma arma na aba Defesas.`, 'text-mil-greenMuted font-bold');
+                logFeed(`🏗 Ponto defensivo pronto: ${p.nome}. Monte uma arma na aba Defesas.`, 'text-mil-greenMuted font-bold');
                 lastDefSignature = '';
             }
             return true;
@@ -214,7 +214,7 @@
             if (ars.posicoes.some(x => x.construindo)) return logFeed('Já há um ponto defensivo em obra. Termine aquele primeiro.', 'text-mil-amberMuted');
             p.construindo = true;
             const naManut = gameState.squad.some(s => s.hp > 0 && s.duty === 'MAINTENANCE');
-            logFeed(`🏗️ Obra iniciada: ${p.nome}. ${naManut ? 'A Manutenção vai trabalhar nela.' : 'Coloque alguém na Manutenção para a obra andar.'}`, 'text-mil-amberMuted');
+            logFeed(`🏗 Obra iniciada: ${p.nome}. ${naManut ? 'A Manutenção vai trabalhar nela.' : 'Coloque alguém na Manutenção para a obra andar.'}`, 'text-mil-amberMuted');
             updateUI(); playTacticalBeep(700, 0.03);
         }
         function montarArma(i, arma) {
@@ -285,7 +285,7 @@
             document.getElementById('def-posicoes').innerHTML = ars.posicoes.map((p, i) => {
                 let corpo = '';
                 if (p.arma && p.obra < 100) {
-                    corpo = `<div class="text-red-400 font-bold">⚠️ Ninho danificado (${Math.floor(p.obra)}%): ${EQUIP[p.arma].nome} parada</div>` + (p.construindo
+                    corpo = `<div class="text-red-400 font-bold">⚠ Ninho danificado (${Math.floor(p.obra)}%): ${EQUIP[p.arma].nome} parada</div>` + (p.construindo
                         ? `<div class="text-mil-amberMuted">Em reparo · ${naManut ? `${naManut} na Manutenção trabalhando` : 'parado: ninguém na Manutenção'}</div><div class="h-1.5 bg-black/60 rounded mt-1"><div class="h-1.5 bg-mil-amberMuted rounded" style="width:${p.obra}%"></div></div>`
                         : `<button onclick="construirPonto(${i})" class="mt-1 w-full py-1.5 btn-tactical rounded font-bold"><span class="text-mil-amberMuted">${icone('wrench')}</span> Reparar ninho</button>`);
                 } else if (p.obra < 100 && !p.construindo) {
@@ -459,7 +459,7 @@
             tremer(5, 350); vibrar(120);
             cenaEfeito('explosao', { comodo: 'posto' });
             if (trincheiraRompida() && infantaria) {
-                logFeed('☠️ A INFANTARIA ENTROU PELA TRINCHEIRA ROMPIDA! MASSACRE NA LINHA!', 'text-red-500 font-bold');
+                logFeed('☠ A INFANTARIA ENTROU PELA TRINCHEIRA ROMPIDA! MASSACRE NA LINHA!', 'text-red-500 font-bold');
             } else {
                 logFeed(`🚨 ${infantaria ? 'INVASÃO DE TRINCHEIRA!' : 'PATRULHA NA TRINCHEIRA!'} COMBATE A CURTA DISTÂNCIA!`, 'text-red-500 font-bold');
             }
@@ -480,7 +480,7 @@
                 statusEl.textContent = '💥 BOMBARDEIO PREVISTO';
                 statusEl.className = 'text-red-400 font-bold animate-pulse';
             } else if (emCombate) {
-                statusEl.textContent = '⚠️ ENGAJAMENTO DE COMBATE';
+                statusEl.textContent = '⚠ ENGAJAMENTO DE COMBATE';
                 statusEl.className = 'text-red-400 font-bold animate-pulse';
             } else {
                 statusEl.textContent = 'SETORES LIMPOS';
@@ -565,7 +565,7 @@
                 texto: () => 'A umidade estragou parte da ração. Comer assim pode derrubar homens.',
                 opcoes: [
                     { texto: () => 'Descartar a parte estragada (−30% das rações)',
-                      efeito: (s) => { const perda = Math.round(s.resources.rations * 0.3); s.resources.rations -= perda; logFeed(`🗑️ ${perda} rações descartadas.`, 'text-mil-amberMuted'); } },
+                      efeito: (s) => { const perda = Math.round(s.resources.rations * 0.3); s.resources.rations -= perda; logFeed(`🗑 ${perda} rações descartadas.`, 'text-mil-amberMuted'); } },
                     { texto: () => `Servir assim mesmo (2 soldados adoecem: −${Math.round(20 * gravidade())} de vida cada)`,
                       efeito: () => {
                           const doentes = embaralhar(vivosAgora()).slice(0, 2);
@@ -614,9 +614,9 @@
                 texto: () => 'Batedores avisam: o inimigo está vigiando a estrada do próximo comboio de suprimentos.',
                 opcoes: [
                     { texto: () => `Pedir rota alternativa à Central (−${custo(40)} de prestígio)`, pode: (s) => s.prestige >= custo(40),
-                      efeito: (s) => { s.prestige -= custo(40); logFeed('🛣️ A Central desviou o comboio por outra rota.', 'text-mil-greenMuted'); } },
+                      efeito: (s) => { s.prestige -= custo(40); logFeed('🛣 A Central desviou o comboio por outra rota.', 'text-mil-greenMuted'); } },
                     { texto: () => 'Arriscar a rota normal (50% de chance de perder a próxima entrega)',
-                      efeito: (s) => { s.convoyAmbush = true; logFeed('⚠️ O próximo comboio vai pela estrada vigiada.', 'text-mil-amberMuted'); } }
+                      efeito: (s) => { s.convoyAmbush = true; logFeed('⚠ O próximo comboio vai pela estrada vigiada.', 'text-mil-amberMuted'); } }
                 ]
             },
             interceptacao: {

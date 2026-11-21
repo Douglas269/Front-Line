@@ -155,7 +155,7 @@ function abastecido(e) {
 }
 
 /* ---------- Diplomacia (você com cada bot; os bots brigam sempre entre si) ---------- */
-const DIPLO_TXT = { guerra: '⚔️ Guerra', paz: '🕊 Paz', alianca: '🤝 Aliança' };
+const DIPLO_TXT = { guerra: '⚔ Guerra', paz: '🕊 Paz', alianca: '🤝 Aliança' };
 function novaRelacao() { return { estado: 'guerra', ate: 0, recusaAte: 0, atacadoEm: -999 }; }
 function chanceAceitar(bot, tipo) {
     const FX = FACCOES[bot], pl = placar(), meu = pl.jogador || 0, dele = pl[bot] || 0, r = G.rel[bot];
@@ -192,7 +192,7 @@ function declararGuerra(bot, porQuem) {
     const r = G.rel[bot]; if (!r || r.estado === 'guerra') return;
     r.estado = 'guerra'; r.ate = 0;
     if (porQuem === 'bot') noticia(`🗡 ${FACCOES[bot].nome} rompeu o acordo e declarou guerra!`, true);
-    else noticia(`⚔️ Você declarou guerra a ${FACCOES[bot].nome}.`);
+    else noticia(`⚔ Você declarou guerra a ${FACCOES[bot].nome}.`);
     resolverOcupacoes();
 }
 // depois de uma guerra declarada: exército parado em terra do inimigo ataca ali mesmo
@@ -328,10 +328,10 @@ function painelVidaTropas(e) {
     return h + '</div>';
 }
 // Custo de uma tropa em texto: dinheiro, aço e a vaga de mão de obra
-const custoTxt = (t, n = 1) => `${TROPAS[t].custo * n}🪙${TROPAS[t].aco ? ' ' + TROPAS[t].aco * n + '⚙️' : ''}`;
+const custoTxt = (t, n = 1) => `${TROPAS[t].custo * n}🪙${TROPAS[t].aco ? ' ' + TROPAS[t].aco * n + '⚙' : ''}`;
 function painelRecrutar(provId) {
     const p = G.prov[provId];
-    let h = `<div class="titulo"><span>🪖 Recrutar em ${p.nome}</span><span class="dono">👥 ${maoDeObraUsada('jogador')}/${maoDeObraMax('jogador')} · ${G.fac.jogador.moedas | 0}🪙 ${G.fac.jogador.aco | 0}⚙️</span></div><div class="lista-tropas">`;
+    let h = `<div class="titulo"><span>🪖 Recrutar em ${p.nome}</span><span class="dono">👥 ${maoDeObraUsada('jogador')}/${maoDeObraMax('jogador')} · ${G.fac.jogador.moedas | 0}🪙 ${G.fac.jogador.aco | 0}⚙</span></div><div class="lista-tropas">`;
     Object.entries(TROPAS).forEach(([t, T]) => {
         const lib = tropaLiberada('jogador', t), m1 = motivoSemRecrutar('jogador', t, 1), m5 = motivoSemRecrutar('jogador', t, 5);
         const sub = lib ? `${custoTxt(t)} · 1 👥 · paga ${T.manut.toFixed(2).replace(/0$/, '')}🪙/ciclo${m1 ? ` · <span style="color:#e3a37b">${m1}</span>` : ''}` : '🔒 pesquise ' + PESQUISAS[T.pesquisa].nome;
@@ -346,7 +346,7 @@ function painelObras(provId) {
     Object.entries(OBRAS).forEach(([id, O]) => {
         const feito = p.obras[id], c = custoObra('jogador', id), ca = custoObraAco('jogador', id), f = G.fac.jogador;
         h += `<div class="linha-tropa${feito ? ' trancada' : ''}"><div class="txt"><b>${O.icone} ${O.nome}</b><small>${feito ? '✔ pronto' : O.txt + ` · ${Math.round(O.tempo * (temPesq('jogador', 'concreto') ? 0.7 : 1))}s`}</small></div>
-            ${feito ? '' : `<button class="mini" onclick="construir('${p.id}','${id}');renderPainel()" ${p.obra || f.moedas < c || (f.aco || 0) < ca ? 'disabled' : ''}>Construir<small>${c}🪙 ${ca}⚙️</small></button>`}</div>`;
+            ${feito ? '' : `<button class="mini" onclick="construir('${p.id}','${id}');renderPainel()" ${p.obra || f.moedas < c || (f.aco || 0) < ca ? 'disabled' : ''}>Construir<small>${c}🪙 ${ca}⚙</small></button>`}</div>`;
     });
     return h + `</div><div class="acoes">${botao('← Voltar', '', `G.sel={tipo:'prov',id:'${p.id}'};renderPainel()`)}</div>`;
 }

@@ -17,7 +17,7 @@ const ACAMP_TAREFAS = {
     curativos: { icone: '🩺', nome: 'Curativos', desc: () => { const f = maisFerido(); return f ? `cura ${f.rank} ${f.name} (+${typeof obraFeita === 'function' && obraFeita('enfermaria') ? 45 : 35} de vida) · gasta 1 kit médico` : 'ninguém ferido'; },
         pode: () => gameState.resources.medkits >= 1 && !!maisFerido(),
         faz: () => { const f = maisFerido(), cura = typeof obraFeita === 'function' && obraFeita('enfermaria') ? 45 : 35; gameState.resources.medkits--; f.hp = Math.min(100, f.hp + cura); logFeed(`🩺 ${f.rank} ${f.name} foi tratado no escuro (+${cura} de vida).`, 'text-mil-greenMuted'); } },
-    cartas: { icone: '✉️', nome: 'Cartas para casa', desc: () => 'todos: +6 de moral · uma carta vai para o Diário',
+    cartas: { icone: '✉', nome: 'Cartas para casa', desc: () => 'todos: +6 de moral · uma carta vai para o Diário',
         pode: () => true,
         faz: () => { vivosAcamp().forEach(s => { s.moral = Math.min(100, s.moral + 6); }); if (typeof escreverCarta === 'function') escreverCarta(); } },
     armas: { icone: '🔧', nome: 'Limpar as armas', desc: () => '+8% de acerto até a noite seguinte',

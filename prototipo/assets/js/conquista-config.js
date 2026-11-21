@@ -1,4 +1,4 @@
-// FrontLine · Conquista: Configurações (⚙️ no topo), as mesmas preferências do modo Trincheiras
+// FrontLine · Conquista: Configurações (⚙ no topo), as mesmas preferências do modo Trincheiras
 // Som (ligado, música, efeitos, vibração), Jogo (dificuldade dos bots, texto maior), Conta (apelido e progresso) e Dados.
 // Tudo fica em 'frontline-config', o mesmo lugar do Trincheiras: mudar aqui muda lá também.
 
@@ -73,7 +73,7 @@ function renderConfigConq() {
             <div class="cfgLinha"><div><b>Recomeçar a campanha</b><small>apaga estrelas, fases liberadas e a experiência dos generais</small></div><button class="mini perigo" onclick="if(confirm('Apagar TODO o progresso da campanha da Conquista? Não tem volta.')){try{localStorage.removeItem('frontline-conquista-meta');localStorage.removeItem('frontline-conquista-fase');}catch(e){} apagarSalvamento(); renderConfigConq();}">Apagar</button></div>`;
     }
     const abas = [['som', '🔊 Som'], ['jogo', '🎮 Jogo'], ['conta', '👤 Conta'], ['dados', '🗂 Dados']];
-    m.innerHTML = `<div class="cfgCaixa"><div class="cfgTitulo"><b>⚙️ CONFIGURAÇÕES</b><button class="mini" onclick="fecharConfigConq()">✖</button></div>
+    m.innerHTML = `<div class="cfgCaixa"><div class="cfgTitulo"><b>⚙ CONFIGURAÇÕES</b><button class="mini" onclick="fecharConfigConq()">✖</button></div>
         <div class="cfgAbas">${abas.map(([id, t]) => `<button class="${a === id ? 'on' : ''}" onclick="configConqAba='${id}';renderConfigConq()">${t}</button>`).join('')}</div>
         <div class="cfgCorpo">${corpo}</div>
         <a class="voltarMenu" href="${linkMenu()}" onclick="salvarPartida()">🏠 Menu principal</a></div>`;

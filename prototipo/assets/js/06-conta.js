@@ -285,7 +285,7 @@
                     fecharLogin();
                     atualizarConta();
                     await baixarNuvem();
-                    logFeed(`☁️ Conectado como ${email}. O progresso é salvo na sua conta.`, 'text-mil-greenMuted');
+                    logFeed(`☁ Conectado como ${email}. O progresso é salvo na sua conta.`, 'text-mil-greenMuted');
                     mostrarTutorialSePrimeiraVez();
                 }
             } catch (e) {
@@ -343,7 +343,7 @@
                 resposta = await sb.from('saves').select('nivel, partida, tutorial_visto, updated_at').eq('user_id', usuario.id).maybeSingle();
             } catch (e) { resposta = { error: e }; }
             if (resposta.error) {
-                logFeed('☁️ Não foi possível baixar o progresso da conta agora. Seguindo com o salvamento do aparelho.', 'text-mil-amberMuted');
+                logFeed('☁ Não foi possível baixar o progresso da conta agora. Seguindo com o salvamento do aparelho.', 'text-mil-amberMuted');
                 return;
             }
             const nuvem = resposta.data;
@@ -361,7 +361,7 @@
                 if (nuvemMaisNova && loadGame()) {
                     normalizeOrders();
                     if (gameState.activeCrisis) openCrisis(gameState.activeCrisis.id, gameState.activeCrisis.ctx);
-                    logFeed('☁️ Progresso da conta carregado.', 'text-mil-greenMuted');
+                    logFeed('☁ Progresso da conta carregado.', 'text-mil-greenMuted');
                 }
                 updateClockAndUI();
                 updateUI();
@@ -538,7 +538,7 @@
         // Partida nova: avisa as regras extras do nível (modificadores)
         if (!localStorage.getItem(SAVE_KEY)) {
             const mods = modificadoresAtivos();
-            if (mods.length) logFeed(`⚙️ Nível ${gameState.level}: ${mods.map(m => m.nome).join(', ')}. Detalhes em Configurações → Jogo.`, 'text-mil-amberMuted font-bold');
+            if (mods.length) logFeed(`⚙ Nível ${gameState.level}: ${mods.map(m => m.nome).join(', ')}. Detalhes em Configurações → Jogo.`, 'text-mil-amberMuted font-bold');
             const novas = mods.filter(m => m.nivel === gameState.level);
             if (novas.length) logFeed(`🆕 NOVIDADE DESTE NÍVEL: ${novas.map(m => `${m.nome} — ${m.desc}`).join(' ')}`, 'text-mil-greenMuted font-bold');
         }
@@ -562,7 +562,7 @@
            Ao abrir, ao voltar para o app e a cada minuto o jogo compara as duas. Se o site
            tiver uma versão diferente, o jogo trava numa tela que só sai atualizando.
            (tools/nova-versao.sh troca as duas juntas a cada atualização publicada.) */
-        const VERSAO_JOGO = '20261120.2340';
+        const VERSAO_JOGO = '20261121.0210';
         const ATUALIZOU_KEY = 'frontline-atualizou-para';
         async function verificarVersao() {
             if (!location.protocol.startsWith('http') || atualizacaoPendente) return;
