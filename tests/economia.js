@@ -47,7 +47,7 @@ const { chromium } = require('playwright');
     novo(); { abrirEconomia(); const t = document.getElementById('painel').textContent; r.painelEco = /Economia/.test(t) && /Mão de obra/.test(t) && /Aço/.test(t) && /Dinheiro/.test(t) && /Soldo em dia/.test(t);
         atualizarTopo(); r.chips = ['rCom', 'rMun', 'rMoe', 'rAco', 'rMO', 'rProv'].every(id => !!document.getElementById(id)); r.chipMO = /^\d+\/\d+$/.test(document.getElementById('rMO').querySelector('b').textContent);
         G.sel = { tipo: 'prov', id: G.capitalJogador }; renderPainel(); r.provMostraMO = /sustenta \d+👥/.test(document.getElementById('painel').textContent) && /Recrutar 1/.test(document.getElementById('painel').textContent);
-        G.sel = { tipo: 'recrutar', id: G.capitalJogador }; renderPainel(); const pr = document.getElementById('painel').textContent; r.recrutarMostraCusto = /⚙️/.test(pr) && /👥/.test(pr) && /\/ciclo/.test(pr);
+        G.sel = { tipo: 'recrutar', id: G.capitalJogador }; renderPainel(); const pr = document.getElementById('painel').textContent; r.recrutarMostraCusto = /⚙/.test(pr) && /👥/.test(pr) && /\/ciclo/.test(pr);
         const ex = G.ex.find(e => e.dono === 'jogador'); G.sel = { tipo: 'dispensar', id: ex.id }; renderPainel(); r.painelDispensar = /Dispensar/.test(document.getElementById('painel').textContent) && /manutenção/.test(document.getElementById('painel').textContent); }
     // 9) save antigo (sem aço e sem soldo) é migrado
     novo(); { G.pausado = false; salvarPartida(); const d = JSON.parse(localStorage.getItem(SAVE_CONQ)); Object.values(d.fac).forEach(f => { delete f.aco; delete f.atraso; }); localStorage.setItem(SAVE_CONQ, JSON.stringify(d)); carregarPartida(); r.saveAntigo = G.fac.jogador.aco === C.ACO_INICIAL && G.fac.jogador.atraso === 0; }
@@ -58,9 +58,9 @@ const { chromium } = require('playwright');
   });
   const ck = (ok, msg) => { if (!ok) falhas.push(msg); };
   ck(R.inf.moedas === 15 && R.inf.aco === 0 && R.inf.mo === 1, 'infantaria: custo e vaga ' + JSON.stringify(R.inf));
-  ck(R.metr.moedas === 25 && R.metr.aco === 2, 'metralhadora: 25🪙 + 2⚙️ ' + JSON.stringify(R.metr));
-  ck(R.art.moedas === 35 && R.art.aco === 6, 'artilharia: 35🪙 + 6⚙️ ' + JSON.stringify(R.art));
-  ck(R.blind.moedas === 50 && R.blind.aco === 12, 'blindado: 50🪙 + 12⚙️ ' + JSON.stringify(R.blind));
+  ck(R.metr.moedas === 25 && R.metr.aco === 2, 'metralhadora: 25🪙 + 2⚙ ' + JSON.stringify(R.metr));
+  ck(R.art.moedas === 35 && R.art.aco === 6, 'artilharia: 35🪙 + 6⚙ ' + JSON.stringify(R.art));
+  ck(R.blind.moedas === 50 && R.blind.aco === 12, 'blindado: 50🪙 + 12⚙ ' + JSON.stringify(R.blind));
   ck(/aço/.test(R.motivoAco || ''), 'motivo: falta aço ' + R.motivoAco);
   ck(/moedas/.test(R.motivoMoedas || ''), 'motivo: faltam moedas ' + R.motivoMoedas);
   ck(/pesquisada/.test(R.motivoPesq || ''), 'motivo: tropa ainda não pesquisada ' + R.motivoPesq);
@@ -73,7 +73,7 @@ const { chromium } = require('playwright');
   ck(R.desertou, 'déficit extremo: soldados desertam');
   ck(R.recuperou, 'pagando em dia, o atraso some');
   ck(!R.obra.semAco && R.obra.ok && R.obra.moedas === 40 && R.obra.aco === R.obra.custoAco && R.obra.aco === 6, 'obra gasta dinheiro e aço ' + JSON.stringify(R.obra));
-  ck(!R.fortSemAco && R.fort.ok && R.fort.moedas === 15 && R.fort.aco === 2, 'fortificar gasta 15🪙 e 2⚙️ ' + JSON.stringify([R.fortSemAco, R.fort]));
+  ck(!R.fortSemAco && R.fort.ok && R.fort.moedas === 15 && R.fort.aco === 2, 'fortificar gasta 15🪙 e 2⚙ ' + JSON.stringify([R.fortSemAco, R.fort]));
   ck(Math.abs(R.fabricaAco - 1) < 0.01, 'fábrica produz +1 aço');
   ck(R.painelEco && R.chips && R.chipMO && R.provMostraMO && R.recrutarMostraCusto && R.painelDispensar, 'telas da economia: ' + JSON.stringify([R.painelEco, R.chips, R.chipMO, R.provMostraMO, R.recrutarMostraCusto, R.painelDispensar]));
   ck(R.saveAntigo, 'save antigo sem aço é migrado');

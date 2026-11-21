@@ -50,7 +50,7 @@ function telaOnline(msg) {
         <div class="sub">Até 4 comandantes no mesmo mapa (36 províncias, 18 minutos). Quem cria a sala hospeda o jogo no celular dele; as vagas que sobrarem ficam com bots. Batalhas se resolvem sozinhas, sem diplomacia e sem generais. Vence quem tomar todas as capitais, ou quem tiver mais províncias no fim.</div>
         <input id="onNome" class="campoOn" maxlength="18" placeholder="Seu apelido" value="${escO(meuApelido())}">
         <div class="erroOn">${escO(msg || '')}</div>
-        <button class="grande" onclick="criarSalaOnline()">🏳️ CRIAR UMA SALA</button>
+        <button class="grande" onclick="criarSalaOnline()">🏳 CRIAR UMA SALA</button>
         <div class="sub" style="margin-top:12px">Recebeu um código?</div>
         <input id="onCodigo" class="campoOn" maxlength="5" placeholder="CÓDIGO" style="text-transform:uppercase;letter-spacing:4px" value="${escO(sala)}">
         <button class="grande secundaria" onclick="entrarSalaOnline()">ENTRAR NA SALA</button>
@@ -79,7 +79,7 @@ function mostrarSalaOnline(msg) {
         <div class="lista-tropas">${lista || '<div class="sub">Conectando…</div>'}${[...Array(Math.max(0, bots))].map((_, i) => `<div class="linha-tropa trancada"><div class="txt">🤖 ${i < 4 - Math.min(4, ON.jogadores.length) ? 'vaga livre (fica com um bot)' : 'bot'}</div></div>`).join('')}</div>
         ${cheia ? '<div class="erroOn">A sala já tem 4 comandantes: quem entrou por último vai assistir.</div>' : ''}
         <div class="erroOn">${escO(msg || '')}</div>
-        ${souHost ? `<button class="grande" onclick="comecarOnline()" ${ON.jogadores.length < 2 ? 'disabled' : ''}>⚔️ COMEÇAR (${Math.min(4, ON.jogadores.length)} comandantes + ${bots} bot${bots === 1 ? '' : 's'})</button>` : '<div class="sub pisca" style="text-align:center;margin-top:10px">📡 aguardando…</div>'}
+        ${souHost ? `<button class="grande" onclick="comecarOnline()" ${ON.jogadores.length < 2 ? 'disabled' : ''}>⚔ COMEÇAR (${Math.min(4, ON.jogadores.length)} comandantes + ${bots} bot${bots === 1 ? '' : 's'})</button>` : '<div class="sub pisca" style="text-align:center;margin-top:10px">📡 aguardando…</div>'}
         <button class="grande secundaria" onclick="sairDaSala()">SAIR DA SALA</button>`);
 }
 async function compartilharSala() {
@@ -242,7 +242,7 @@ function aplicarEstado(m) {
         const meu = a === 'jogador' || b === 'jogador', ver = meu || (prov && provVisivel(prov.id));
         if (!ver) return;
         if (ev.k === 'conquista') noticia(`🏴 ${nome(a)} ${a === 'jogador' ? 'conquistou' : 'conquistou'} ${prov.nome}${b && b !== 'neutro' ? ' de ' + nome(b) : ''}.`, b === 'jogador');
-        else if (ev.k === 'segurou') noticia(`🛡️ ${nome(b)} segurou ${prov.nome} contra ${nome(a)}.`, a === 'jogador');
+        else if (ev.k === 'segurou') noticia(`🛡 ${nome(b)} segurou ${prov.nome} contra ${nome(a)}.`, a === 'jogador');
         else if (ev.k === 'saque') noticia(`💰 ${nome(a)} saqueou ${prov.nome}: ${ev.v} moedas.`, b === 'jogador');
         else if (ev.k === 'eliminado') noticia(`☠ ${nome(a)} perdeu a capital e saiu do jogo.`, a === 'jogador');
         if (ev.k === 'conquista' && a === 'jogador') som('conquista'); else if (ev.k === 'conquista' && b === 'jogador') som('perda');

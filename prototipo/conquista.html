@@ -10,7 +10,7 @@
 <style>
   :root { --verde: var(--fl-verde-vivo); } /* demais cores: assets/css/tokens.css */
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--texto); font-family: "Courier New", ui-monospace, monospace; overflow: hidden; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--texto); font-family: var(--fl-fonte-titulo); overflow: hidden; }
   body { display: flex; justify-content: center; }
   #app { width: 100%; max-width: 480px; height: 100%; display: flex; flex-direction: column; }
   button { font-family: inherit; color: inherit; cursor: pointer; }
@@ -143,13 +143,14 @@
   button.fase small { display: block; color: var(--mudo); font-size: 11px; margin-top: 3px; }
   button.fase.trancada { border-color: var(--borda); background: var(--painel); color: var(--mudo); }
 </style>
-    <link rel="stylesheet" href="assets/css/tokens.css?v=20261120.2340">
-    <link rel="stylesheet" href="assets/css/polimento-visual.css?v=20261120.2340">
+    <link rel="stylesheet" href="assets/css/fontes.css?v=20261121.0210">
+    <link rel="stylesheet" href="assets/css/tokens.css?v=20261121.0210">
+    <link rel="stylesheet" href="assets/css/polimento-visual.css?v=20261121.0210">
 </head>
 <body>
 <div id="app">
   <div id="topo">
-    <div id="l1"><span class="esq"><button id="bMenu" onclick="voltarAoMenu()" title="Modos de jogo">🏠 Menu</button><span id="fase">CONQUISTA</span></span><span class="dir"><button id="bConfig" onclick="abrirConfigConq()" title="Configurações">⚙️</button><button id="bSom" onclick="alternarSom()" title="Som">🔊</button><button id="bPausa" onclick="pausar()" title="Pausar">⏸</button><button id="bVelMapa" onclick="G.velocidade = G.velocidade === 1 ? 2 : 1" title="Velocidade do mapa">1×</button><span id="relogio">00:00</span></span></div>
+    <div id="l1"><span class="esq"><button id="bMenu" onclick="voltarAoMenu()" title="Modos de jogo">🏠 Menu</button><span id="fase">CONQUISTA</span></span><span class="dir"><button id="bConfig" onclick="abrirConfigConq()" title="Configurações">⚙</button><button id="bSom" onclick="alternarSom()" title="Som">🔊</button><button id="bPausa" onclick="pausar()" title="Pausar">⏸</button><button id="bVelMapa" onclick="G.velocidade = G.velocidade === 1 ? 2 : 1" title="Velocidade do mapa">1×</button><span id="relogio">00:00</span></span></div>
     <div id="recs" title="Toque para ver a economia">
       <button class="rec" id="rCom" onclick="abrirEconomia()" title="Comida"><span data-icone="bread" style="color:#d9a35a"></span><b>0</b></button>
       <button class="rec" id="rMun" onclick="abrirEconomia()" title="Munição"><span data-icone="bullets" style="color:#c8d0c4"></span><b>0</b></button>
@@ -169,15 +170,15 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
 <script src="vendor/game-icons.js"></script>
 <script>document.querySelectorAll('[data-icone]').forEach(el => { if (!el.innerHTML) el.innerHTML = icone(el.dataset.icone); });</script>
-<script src="assets/js/paleta.js?v=20261120.2340"></script>
-<script src="assets/js/conquista-unidades.js?v=20261120.2340"></script>
-<script src="assets/js/conquista-mapa.js?v=20261120.2340"></script>
-<script src="assets/js/conquista-extra.js?v=20261120.2340"></script>
-<script src="assets/js/conquista.js?v=20261120.2340"></script>
-<script src="assets/js/conquista-online.js?v=20261120.2340"></script>
-<script src="assets/js/conquista-config.js?v=20261120.2340"></script>
-<script src="assets/js/guia-tutorial.js?v=20261120.2340"></script>
-<script src="assets/js/conquista-guia.js?v=20261120.2340"></script>
+<script src="assets/js/paleta.js?v=20261121.0210"></script>
+<script src="assets/js/conquista-unidades.js?v=20261121.0210"></script>
+<script src="assets/js/conquista-mapa.js?v=20261121.0210"></script>
+<script src="assets/js/conquista-extra.js?v=20261121.0210"></script>
+<script src="assets/js/conquista.js?v=20261121.0210"></script>
+<script src="assets/js/conquista-online.js?v=20261121.0210"></script>
+<script src="assets/js/conquista-config.js?v=20261121.0210"></script>
+<script src="assets/js/guia-tutorial.js?v=20261121.0210"></script>
+<script src="assets/js/conquista-guia.js?v=20261121.0210"></script>
 
 </body>
 </html>

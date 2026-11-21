@@ -381,7 +381,7 @@
             if (s.medalhas.includes(id)) return;
             s.medalhas.push(id);
             const m = MEDALHAS[id];
-            logFeed(`🎖️ ${s.rank} ${s.name} recebeu a ${m.nome} (${m.desc}).`, 'text-mil-amberMuted font-bold');
+            logFeed(`🎖 ${s.rank} ${s.name} recebeu a ${m.nome} (${m.desc}).`, 'text-mil-amberMuted font-bold');
             addDiaryEntry(`${s.rank} ${s.name} foi condecorado com a ${m.nome}: ${m.desc}.`);
             playTacticalBeep(1200, 0.15);
         }
@@ -510,7 +510,7 @@
             const texto = usuario
                 ? 'Apagar a partida em andamento e voltar ao nível 1, neste aparelho e na sua conta? Isso não pode ser desfeito.'
                 : 'Apagar a partida em andamento e voltar ao nível 1 neste aparelho? Isso não pode ser desfeito.';
-            if (!await confirmarJogo({ icone: '🗑️', titulo: 'Apagar progresso', texto, ok: 'Apagar', perigo: true })) return;
+            if (!await confirmarJogo({ icone: '🗑', titulo: 'Apagar progresso', texto, ok: 'Apagar', perigo: true })) return;
             skipPageHideSave = true;
             [SAVE_KEY, LEVEL_KEY].forEach(k => { try { localStorage.removeItem(k); } catch (e) {} });
             try { localStorage.setItem(NOVA_KEY, String(Date.now())); } catch (e) {}

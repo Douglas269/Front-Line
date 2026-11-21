@@ -137,7 +137,7 @@
     // ---------- Login ----------
     function telaLogin(msg) {
         pararTudo(); tela = 'login';
-        mostrar(`<h1>⚔️ TRINCHEIRAS ONLINE</h1>
+        mostrar(`<h1>⚔ TRINCHEIRAS ONLINE</h1>
             <div class="sub">Para duelar com um amigo, entre na sua conta do FrontLine (a mesma do jogo).</div>
             <div class="caixa">
                 <input id="email" class="campo" type="email" placeholder="E-mail" autocomplete="email">
@@ -168,9 +168,9 @@
         const medalhas = (passadas || []).filter(x => x.pontos > 0).map(x => { const l = ligaDe(x.pontos), m = new Date(x.mes + 'T12:00:00'); return `<span class="medalha" title="${l.nome}">${l.icone} ${MESES[m.getMonth()].slice(0, 3)}</span>`; }).join('');
         const lista = ativos.map(d => {
             const adv = d.jogador_a === eu.id ? (d.nome_b || 'esperando amigo') : d.nome_a;
-            return `<button class="secundario" data-id="${esc(d.id)}">${d.estado === 'aguardando' ? '⏳' : '⚔️'} ${esc(d.codigo)} · contra ${esc(adv)} · rodada ${d.rodada}</button>`;
+            return `<button class="secundario" data-id="${esc(d.id)}">${d.estado === 'aguardando' ? '⏳' : '⚔'} ${esc(d.codigo)} · contra ${esc(adv)} · rodada ${d.rodada}</button>`;
         }).join('');
-        mostrar(`<h1>⚔️ TRINCHEIRAS ONLINE</h1>
+        mostrar(`<h1>⚔ TRINCHEIRAS ONLINE</h1>
             <div class="sub">Duelo 1×1, melhor de 5: contra alguém da fila, um amigo ou o bot. A cada rodada, 1 minuto para montar a defesa e o ataque em segredo; quando os dois dão OK, a batalha acontece. Vitória: <b>3 troféus</b> e +3 pontos na temporada.</div>
             <div class="caixa topoLinha"><div><div class="sub">Comandante</div><b>${esc(meuNome)}</b></div><div style="text-align:right"><div class="trofeus">🏆 ${t.trofeus}</div><div class="sub">${t.vitorias} vitória${t.vitorias === 1 ? '' : 's'} · ${t.derrotas} derrota${t.derrotas === 1 ? '' : 's'}</div></div></div>
             <div class="caixa liga"><div class="topoLinha"><div><div class="sub">Temporada de ${MESES[agora.getMonth()]} · acaba em ${dias} dia${dias > 1 ? 's' : ''}</div><b class="nomeLiga">${liga.icone} Liga ${liga.nome}</b></div>
@@ -180,7 +180,7 @@
                 ${medalhas ? `<div class="medalhas">${medalhas}</div>` : ''}
                 <button class="secundario" id="bRanking">🏆 Ranking da temporada</button></div>
             <div class="erro">${esc(msg || '')}</div>
-            <button class="grande" id="bFila">⚔️ JOGAR AGORA<small style="display:block;font-size:11px;font-weight:400;margin-top:2px">contra um adversário de qualquer lugar</small></button>
+            <button class="grande" id="bFila">⚔ JOGAR AGORA<small style="display:block;font-size:11px;font-weight:400;margin-top:2px">contra um adversário de qualquer lugar</small></button>
             <button class="secundario" id="bNovo">👥 Desafiar um amigo (código)</button>
             <button class="secundario" id="bTreino">🤖 Treinar contra o bot (não vale pontos)</button>
             <div class="caixa"><div class="sub">Recebeu um código?</div>
@@ -202,7 +202,7 @@
     // ---------- Fila: adversário de qualquer lugar; ninguém apareceu → bot de treino ----------
     async function telaFila() {
         pararTudo(); tela = 'fila';
-        mostrar(`<h1>📡 PROCURANDO ADVERSÁRIO…</h1><div class="espera"><div class="icone pisca">⚔️</div><div class="sub">Assim que alguém entrar na fila, o duelo começa.</div><div class="trofeus" id="filaSeg">0s</div>
+        mostrar(`<h1>📡 PROCURANDO ADVERSÁRIO…</h1><div class="espera"><div class="icone pisca">⚔</div><div class="sub">Assim que alguém entrar na fila, o duelo começa.</div><div class="trofeus" id="filaSeg">0s</div>
             <div class="sub" id="filaBot" style="margin-top:6px">Se ninguém aparecer em ${FILA_BOT}s, você treina contra o bot.</div></div>
             <button class="secundario" id="bBotJa">🤖 Jogar contra o bot agora</button><button class="secundario" id="bSairFila">Sair da fila</button>`);
         let d;
@@ -329,7 +329,7 @@
     }
     const ICO = { infantaria: '🪖', artilharia: '💥', blindado: '🚛' };
     const FUNC = { vigia: { ic: '🔭', nome: 'Vigia' }, obras: { ic: '🔨', nome: 'Obras' }, descanso: { ic: '💤', nome: 'Descanso' }, fora: { ic: '✝', nome: 'Fora' } };
-    const POST = { atacar: { ic: '🔥', nome: 'Atacar', d: '+dano, +perigo' }, equilibrado: { ic: '⚖️', nome: 'Equilíbrio', d: 'padrão' }, abrigar: { ic: '🧱', nome: 'Abrigar', d: 'resiste, atira menos' } };
+    const POST = { atacar: { ic: '🔥', nome: 'Atacar', d: '+dano, +perigo' }, equilibrado: { ic: '⚖', nome: 'Equilíbrio', d: 'padrão' }, abrigar: { ic: '🧱', nome: 'Abrigar', d: 'resiste, atira menos' } };
     const VENCE = { assalto: 'artilharia', artilharia: 'fortaleza', fortaleza: 'assalto' };
     let reforcosAbertos = false;
     function desenharPlano() {
@@ -358,7 +358,7 @@
         const escolhidos = plano.compras.map(id => M.D.MELHORIAS[id].nome.split(' ')[0]).concat(okPlano.contra ? ['Contra-bateria'] : []);
         const cartaoMelh = ([id, m]) => {
             const tem = est.melh[id], aqui = plano.compras.filter(x => x === id).length, cheio = tem + aqui >= m.max;
-            const ic = { ninho: '🔫', arame: '〰️', bunker: '🏚' }[id];
+            const ic = { ninho: '🔫', arame: '〰', bunker: '🏚' }[id];
             return aqui ? `<button class="cartao on" data-desfaz="${id}"><span class="icG">${ic}</span><b>${m.nome}</b><small>✔ ${m.custo}★ · desfazer</small></button>`
                 : `<button class="cartao" data-compra="${id}" ${cheio || cmdLivre < m.custo ? 'disabled' : ''}><span class="icG">${ic}</span><b>${m.nome}${tem ? ` ${tem}/${m.max}` : ''}</b><small>${cheio ? 'máximo' : m.custo + '★ · ' + m.desc}</small></button>`;
         };
@@ -376,7 +376,7 @@
             <div class="linhaBtns" style="margin-top:8px">${posturas}</div>
             <button class="reforcos ${reforcosAbertos ? 'aberto' : ''}" id="bReforcos"><span>🔧 Reforços <small>${escolhidos.length ? escolhidos.join(', ') : `★${cmdLivre} para gastar`}</small></span><span>${reforcosAbertos ? '▲' : '▼'}</span></button>
             ${reforcos}
-            <div class="secTit">⚔️ ATAQUE <small><b class="pts">${orc - gastoAtq}</b> de ${orc} pontos sobrando</small></div>
+            <div class="secTit">⚔ ATAQUE <small><b class="pts">${orc - gastoAtq}</b> de ${orc} pontos sobrando</small></div>
             <div class="cartoes c3">${atq}</div>
             <div class="barraOk"><div class="relogio"><b id="seg">${PRAZO}s</b><div class="tempo"><div id="barraTempo" style="width:100%"></div></div></div><button class="grande" id="bOk">✔ PRONTO</button></div>`);
         $app.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { const i = +b.dataset.s; plano.escala[i] = M.FUNCOES[(M.FUNCOES.indexOf(plano.escala[i]) + 1) % 3]; desenharPlano(); });
@@ -462,7 +462,7 @@
     function montarReplay(o) {
         const { r, meu } = o, dele = meu === 'A' ? 'B' : 'A';
         const nm = o.nomes, eu = o.eu;
-        const abaDef = eu ? '🛡 SUA DEFESA' : '🛡 ' + esc(nm.meu).toUpperCase(), abaAtq = eu ? '⚔️ SEU ATAQUE' : '🛡 ' + esc(nm.dele).toUpperCase();
+        const abaDef = eu ? '🛡 SUA DEFESA' : '🛡 ' + esc(nm.meu).toUpperCase(), abaAtq = eu ? '⚔ SEU ATAQUE' : '🛡 ' + esc(nm.dele).toUpperCase();
         mostrar(`<div class="replayTela">
             <a class="menuTopo menuReplay" href="${linkDoJogo()}" onclick="return confirmarSaida()">🏠 Menu principal</a>
             <div class="placar"><span>${esc(nm.meu)}</span><span class="sub">RODADA ${r.rodada}</span><span>${esc(nm.dele)}</span></div>
@@ -587,7 +587,7 @@
         if (a.contra) l.push(`📡 ${eu ? 'Sua' : 'A'} contra-bateria${eu ? '' : ' de ' + voce} cancelou uma artilharia de ${ele}.`);
         // ataque do primeiro lado (= defesa do outro)
         if (!b.total && !r['plano' + meu].ataque.artilharia) l.push(`😴 ${voce} não ${eu ? 'mandou' : 'mandou'} ataque nesta rodada.`);
-        else if (b.inv >= 2) l.push(`⚔️ ${b.inv} atacantes ${eu ? 'seus' : 'de ' + voce} chegaram à trincheira de ${ele}.`);
+        else if (b.inv >= 2) l.push(`⚔ ${b.inv} atacantes ${eu ? 'seus' : 'de ' + voce} chegaram à trincheira de ${ele}.`);
         else if (b.total && b.abates >= 0.8 * b.total) l.push(`✖ A defesa de ${ele} abateu ${b.abates} de ${b.total} atacantes${eu ? ' seus — tente 💥 artilharia ou 🚛 blindado' : ''}.`);
         else if (b.art) l.push(`💥 ${eu ? 'Sua artilharia' : 'A artilharia de ' + voce} acertou ${b.art}× os soldados de ${ele}.`);
         if (b.contra) l.push(`📡 ${ele} usou contra-bateria e cancelou ${eu ? 'sua' : 'uma'} artilharia.`);
@@ -711,12 +711,12 @@
                 const p = ev.soldado >= 0 && pos[ev.soldado] ? pos[ev.soldado] : { x: ev.x || W / 2, y: yT };
                 ctx.fillStyle = `rgba(255,160,60,${a})`; ctx.beginPath(); ctx.arc(p.x, p.y - 14, 20 * (1.3 - a), 0, Math.PI * 2); ctx.fill();
                 ctx.fillStyle = `rgba(90,80,60,${a * 0.6})`; ctx.beginPath(); ctx.arc(p.x + 6, p.y - 26, 14 * (1.4 - a), 0, Math.PI * 2); ctx.fill();
-            } else if (ev.tipo === 'contra') { ctx.fillStyle = `rgba(160,220,150,${a})`; ctx.font = 'bold 15px "Courier New", monospace'; ctx.textAlign = 'center'; ctx.fillText('📡 CONTRA-BATERIA!', W / 2, yTopo + 40); ctx.textAlign = 'left'; }
+            } else if (ev.tipo === 'contra') { ctx.fillStyle = `rgba(160,220,150,${a})`; ctx.font = 'bold 15px "Chakra Petch", "FL Emoji", monospace'; ctx.textAlign = 'center'; ctx.fillText('📡 CONTRA-BATERIA!', W / 2, yTopo + 40); ctx.textAlign = 'left'; }
         });
         if (campo.terminou && !o.previa) {
             const caiu = est.trinch <= 0 || !M.vivos(est).length, txt = caiu ? '🏳 TRINCHEIRA CAIU' : '🛡 TRINCHEIRA MANTIDA', yt = (yTopo + yBeira) / 2;
             ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(40, yt - 20, W - 80, 32);
-            ctx.font = 'bold 18px "Courier New", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = caiu ? '#ff8a7a' : '#a9d39f'; ctx.fillText(txt, W / 2, yt + 2); ctx.textAlign = 'left';
+            ctx.font = 'bold 18px "Chakra Petch", "FL Emoji", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = caiu ? '#ff8a7a' : '#a9d39f'; ctx.fillText(txt, W / 2, yt + 2); ctx.textAlign = 'left';
         }
     }
     // onde cada soldado fica: vigias nos sacos de areia, obras na vala, descanso no abrigo
@@ -760,13 +760,13 @@
         const venci = vencedorUid === eu.id, treino = !!API.bot;
         let t = null; if (!treino) try { t = await API.trofeus(); } catch (e) {}
         const pl = jogo ? jogo.placar : { A: 0, B: 0 };
-        mostrar(`<div class="espera"><div class="icone">${venci ? '🏆' : '🎖️'}</div>
+        mostrar(`<div class="espera"><div class="icone">${venci ? '🏆' : '🎖'}</div>
             <h1 style="text-align:center">${venci ? 'VOCÊ VENCEU O DUELO!' : esc(nomeAdv()).toUpperCase() + ' VENCEU'}</h1>
             <div class="sub">${duelo.wo ? 'Vitória por W.O.: o adversário não deu OK a tempo.' : `Placar final: ${pl[lado()]} × ${pl[outro()]}`}</div>
             ${treino ? '<div class="sub" style="margin-top:10px">🤖 Treino contra o bot: não vale troféus nem pontos.</div>' : venci ? '<div class="trofeus" style="margin-top:10px">+3 troféus · +3 pontos na temporada</div>' : '<div class="sub" style="margin-top:10px">−1 ponto na temporada</div>'}
             <div class="sub" id="totalTrofeus" style="margin-top:6px">${t && duelo.estado === 'fim' ? `Você tem 🏆 ${t.trofeus} troféus (${t.vitorias} vitórias)` : ''}</div>
             <div class="sub pisca" id="confirmando" style="margin-top:6px">${duelo.estado !== 'fim' ? 'Confirmando o resultado com o outro celular…' : ''}</div></div>
-            <button class="grande" id="bRevanche">${treino ? '🤖 TREINAR DE NOVO' : '⚔️ REVANCHE'}</button>
+            <button class="grande" id="bRevanche">${treino ? '🤖 TREINAR DE NOVO' : '⚔ REVANCHE'}</button>
             ${treino ? '' : '<button class="secundario" id="bShare">📤 Compartilhar o replay</button><div class="sub" id="shareInfo" style="text-align:center"></div>'}
             <button class="secundario" id="bLobby">Voltar ao lobby</button>`);
         document.getElementById('bRevanche').onclick = async () => { if (treino) return iniciarBot(); try { duelo = await API.criar(meuNome); tela = ''; telaSala(); } catch (e) { telaLobby(e.message); } };
@@ -811,7 +811,7 @@
                 const v = r.vencedor || est.vencedor;
                 mostrar(`<h1>🎬 REPLAY</h1>
                     <div class="espera"><div class="icone">🏆</div><h2 style="text-align:center">${esc(nome[v] || '')} venceu</h2><div class="sub">${r.wo ? 'Por W.O.' : `Placar: ${esc(nome.A)} ${est.placar.A} × ${est.placar.B} ${esc(nome.B)}`}</div></div>
-                    <button class="grande" id="bDeNovo">▶ VER DE NOVO</button><a class="grande" style="display:block;text-align:center;text-decoration:none;box-sizing:border-box" href="${location.pathname}">⚔️ JOGAR TRINCHEIRAS ONLINE</a>`);
+                    <button class="grande" id="bDeNovo">▶ VER DE NOVO</button><a class="grande" style="display:block;text-align:center;text-decoration:none;box-sizing:border-box" href="${location.pathname}">⚔ JOGAR TRINCHEIRAS ONLINE</a>`);
                 document.getElementById('bDeNovo').onclick = () => mostrarRodada(0);
                 return;
             }

@@ -22,8 +22,7 @@
     <script src="vendor/game-icons.js"></script>
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Monospace & Tactical Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Special+Elite&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/fontes.css?v=20261121.0210">
     <style>
         /* Visual em corte lateral: abas presas embaixo, como num app */
         body.modo-corte #barra-abas { border-top: 1px solid var(--fl-borda); border-bottom: none; background: #0a0d0b; flex-shrink: 0; z-index: 30; }
@@ -41,7 +40,7 @@
             user-select: none;
             -webkit-user-select: none;
             touch-action: manipulation;
-            font-family: 'Courier Prime', monospace;
+            font-family: var(--fl-fonte-titulo);
             font-weight: 700;
         }
 
@@ -181,9 +180,9 @@
         @media (max-width: 379px) { header .animate-pulse { display: none; } header #lbl-level { display: none; } }
     </style>
     <!-- Tailwind: CSS fixo gerado por tools/gerar-css.sh (antes era montado no celular pelo CDN) -->
-    <link rel="stylesheet" href="assets/css/tokens.css?v=20261120.2340">
-    <link rel="stylesheet" href="assets/css/tailwind.css?v=20261120.2340">
-    <link rel="stylesheet" href="assets/css/polimento-visual.css?v=20261120.2340">
+    <link rel="stylesheet" href="assets/css/tokens.css?v=20261121.0210">
+    <link rel="stylesheet" href="assets/css/tailwind.css?v=20261121.0210">
+    <link rel="stylesheet" href="assets/css/polimento-visual.css?v=20261121.0210">
 </head>
 <body class="h-screen w-screen overflow-hidden flex justify-center bg-black">
 
@@ -555,14 +554,14 @@
                     </button>
                     <a id="modo-online" href="duelo.html" class="modo-card btn-tactical">
                         <img class="modo-arte" src="assets/pixel/modo-online-real.png" alt="" width="104" height="80">
-                        <span class="mt">⚔️ Trincheiras online</span>
+                        <span class="mt">⚔ Trincheiras online</span>
                         <span class="modo-tag">1×1</span>
                         <span class="md">Duelo 1×1 com um amigo, por código. Precisa de conta.</span>
                         <span class="modo-rodape"><span>por código</span><span>com conta</span></span>
                     </a>
                     <a id="modo-conquista" href="conquista.html" class="modo-card btn-tactical">
                         <img class="modo-arte" src="assets/pixel/modo-conquista-real.png" alt="" width="104" height="80">
-                        <span class="mt">🗺️ Conquista <span class="text-mil-amberMuted">· novo</span></span>
+                        <span class="mt">🗺 Conquista <span class="text-mil-amberMuted">· novo</span></span>
                         <span class="modo-tag">ESTRATÉGICO</span>
                         <span class="md">Mapa de províncias contra 3 bots. Alimente a tropa, espione e conquiste.</span>
                         <span class="modo-rodape"><span>3 bots</span><span>6 fases</span></span>
@@ -613,7 +612,7 @@
         <!-- CONFIRMAÇÃO no estilo do jogo (no lugar da caixa do navegador) -->
         <div id="modal-confirmar" class="hidden fixed inset-0 bg-black/85 z-[110] flex items-center justify-center p-4" onclick="responderConfirmacao(false)">
             <div class="bg-mil-panel border-2 border-mil-amberMuted rounded p-4 max-w-sm w-full space-y-3 shadow-2xl text-center" onclick="event.stopPropagation()">
-                <div id="conf-icone" class="text-3xl">⚠️</div>
+                <div id="conf-icone" class="text-3xl">⚠</div>
                 <div id="conf-titulo" class="text-mil-amberMuted font-bold text-sm uppercase tracking-wider"></div>
                 <p id="conf-texto" class="text-[13px] text-mil-textGlow leading-relaxed font-normal"></p>
                 <div class="flex gap-2 pt-1">
@@ -731,17 +730,17 @@
 
     <!-- JAVASCRIPT GAME ENGINE -->
     <!-- Código do jogo, dividido por assunto (a ordem importa) -->
-    <script src="assets/js/paleta.js?v=20261120.2340"></script>
-    <script src="assets/js/01-base.js?v=20261120.2340"></script>
-    <script src="assets/js/02-regras.js?v=20261120.2340"></script>
-    <script src="assets/js/03-defesas-crises.js?v=20261120.2340"></script>
-    <script src="assets/js/04-interface.js?v=20261120.2340"></script>
-    <script src="assets/js/05-cena.js?v=20261120.2340"></script>
-    <script src="assets/js/05b-cena-pixel.js?v=20261120.2340"></script>
-    <script src="assets/js/guia-tutorial.js?v=20261120.2340"></script>
-    <script src="assets/js/06-conta.js?v=20261120.2340"></script>
-    <script src="assets/js/07-operacoes.js?v=20261120.2340"></script>
-    <script src="assets/js/08-campo-ameacas.js?v=20261120.2340"></script>
-    <script src="assets/js/08b-particulas.js?v=20261120.2340"></script>
+    <script src="assets/js/paleta.js?v=20261121.0210"></script>
+    <script src="assets/js/01-base.js?v=20261121.0210"></script>
+    <script src="assets/js/02-regras.js?v=20261121.0210"></script>
+    <script src="assets/js/03-defesas-crises.js?v=20261121.0210"></script>
+    <script src="assets/js/04-interface.js?v=20261121.0210"></script>
+    <script src="assets/js/05-cena.js?v=20261121.0210"></script>
+    <script src="assets/js/05b-cena-pixel.js?v=20261121.0210"></script>
+    <script src="assets/js/guia-tutorial.js?v=20261121.0210"></script>
+    <script src="assets/js/06-conta.js?v=20261121.0210"></script>
+    <script src="assets/js/07-operacoes.js?v=20261121.0210"></script>
+    <script src="assets/js/08-campo-ameacas.js?v=20261121.0210"></script>
+    <script src="assets/js/08b-particulas.js?v=20261121.0210"></script>
 </body>
 </html>

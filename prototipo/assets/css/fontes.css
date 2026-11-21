@@ -1,0 +1,10 @@
+/* Fontes locais (licença OFL: Noto Emoji, Chakra Petch, Black Ops One, Barlow Condensed) */
+@font-face { font-family: 'Barlow Condensed'; font-style: normal; font-weight: 500; font-display: swap; src: url('../../vendor/fontes/BarlowCondensed-500.ttf') format('truetype'); }
+@font-face { font-family: 'Barlow Condensed'; font-style: normal; font-weight: 600; font-display: swap; src: url('../../vendor/fontes/BarlowCondensed-600.ttf') format('truetype'); }
+@font-face { font-family: 'Barlow Condensed'; font-style: normal; font-weight: 700; font-display: swap; src: url('../../vendor/fontes/BarlowCondensed-700.ttf') format('truetype'); }
+@font-face { font-family: 'Black Ops One'; font-style: normal; font-weight: 400; font-display: swap; src: url('../../vendor/fontes/BlackOpsOne-400.ttf') format('truetype'); }
+@font-face { font-family: 'Chakra Petch'; font-style: normal; font-weight: 500; font-display: swap; src: url('../../vendor/fontes/ChakraPetch-500.ttf') format('truetype'); }
+@font-face { font-family: 'Chakra Petch'; font-style: normal; font-weight: 600; font-display: swap; src: url('../../vendor/fontes/ChakraPetch-600.ttf') format('truetype'); }
+@font-face { font-family: 'Chakra Petch'; font-style: normal; font-weight: 700; font-display: swap; src: url('../../vendor/fontes/ChakraPetch-700.ttf') format('truetype'); }
+/* Símbolos e emojis do jogo: um glifo só, monocromático, que pega a cor do texto (em vez dos emojis coloridos de cada sistema) */
+@font-face { font-family: 'FL Emoji'; font-style: normal; font-weight: 400 700; font-display: swap; src: url('../../vendor/fontes/NotoEmoji-sub.woff2') format('woff2'); unicode-range: U+1F300-1FAFF, U+2600-27BF, U+2B50, U+2B06, U+2B07, U+2705, U+274C, U+FE0F, U+200D; }

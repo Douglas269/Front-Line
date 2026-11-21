@@ -94,7 +94,7 @@
 
         // Pergunta de confirmação no estilo do jogo: devolve true se o jogador confirmar
         let respostaConfirmacao = null;
-        function confirmarJogo({ icone = '⚠️', titulo, texto, ok = 'Confirmar', perigo = false }) {
+        function confirmarJogo({ icone = '⚠', titulo, texto, ok = 'Confirmar', perigo = false }) {
             return new Promise(resolve => {
                 if (respostaConfirmacao) respostaConfirmacao(false);
                 respostaConfirmacao = resolve;
@@ -229,7 +229,7 @@
                 if (emboscado) {
                     logFeed('💥 Comboio emboscado na estrada vigiada! A entrega de hoje se perdeu.', 'text-red-500 font-bold');
                 } else if (gameState.supplyLineEff > 30) {
-                    logFeed('🛣️ O comboio passou pela estrada vigiada sem ser atacado.', 'text-mil-greenMuted');
+                    logFeed('🛣 O comboio passou pela estrada vigiada sem ser atacado.', 'text-mil-greenMuted');
                 }
             }
 
@@ -966,7 +966,7 @@
                 o.ativa = true;
                 const extra = OFENSIVA.EXTRA_BASE + Math.floor(gameState.day / OFENSIVA.EXTRA_POR_DIAS);
                 gameState.nextWaveBoost = (gameState.nextWaveBoost || 0) + extra;
-                logFeed(`⚔️ OFENSIVA INIMIGA! Eles vêm com tudo: onda reforçada${gameState.day >= 10 ? ', blindado' : ''} e artilharia.`, 'text-red-500 font-bold');
+                logFeed(`⚔ OFENSIVA INIMIGA! Eles vêm com tudo: onda reforçada${gameState.day >= 10 ? ', blindado' : ''} e artilharia.`, 'text-red-500 font-bold');
                 spawnEnemyAssault(270);
                 if (gameState.day >= 10) executarPasso('blindado');
                 if (!gameState.barrage) executarPasso('artilharia');
@@ -980,7 +980,7 @@
                 if (!vivos.length) return;
                 gameState.prestige += ganho(OFENSIVA.PREMIO);
                 vivos.forEach(s => { s.moral = Math.min(100, s.moral + OFENSIVA.MORAL); });
-                logFeed(`🎖️ OFENSIVA REPELIDA! O Comando reconhece a resistência (+${ganho(OFENSIVA.PREMIO)} Prestígio) e o esquadrão ganha moral.`, 'text-mil-greenMuted font-bold');
+                logFeed(`🎖 OFENSIVA REPELIDA! O Comando reconhece a resistência (+${ganho(OFENSIVA.PREMIO)} Prestígio) e o esquadrão ganha moral.`, 'text-mil-greenMuted font-bold');
                 addDiaryEntry(`Seguramos a ofensiva do dia ${gameState.day}. Ninguém aqui vai esquecer esta tarde.`);
             }
         }
@@ -988,8 +988,8 @@
         function avisoOfensiva() {
             const o = gameState.ofensiva;
             if (!o || !o.anunciada || o.feita || o.ativa) return '';
-            if (o.dia === gameState.day + 1) return '⚔️ OFENSIVA INIMIGA AMANHÃ À TARDE';
-            if (o.dia === gameState.day) return `⚔️ OFENSIVA INIMIGA EM ${seg(Math.max(0, o.hora - gameState.timeSeconds))}s`;
+            if (o.dia === gameState.day + 1) return '⚔ OFENSIVA INIMIGA AMANHÃ À TARDE';
+            if (o.dia === gameState.day) return `⚔ OFENSIVA INIMIGA EM ${seg(Math.max(0, o.hora - gameState.timeSeconds))}s`;
             return '';
         }
 
@@ -1218,7 +1218,7 @@
                     logFeed(`❌ BAIXA NO BOMBARDEIO: ${alvo.rank} ${alvo.name} foi morto!`, 'text-red-500 font-bold');
                     impacto('morte');
                 } else if (noAbrigo) {
-                    logFeed(`🛡️ ${alvo.rank} ${alvo.name} estava no abrigo: ferimento leve.`, 'text-mil-greenMuted');
+                    logFeed(`🛡 ${alvo.rank} ${alvo.name} estava no abrigo: ferimento leve.`, 'text-mil-greenMuted');
                 }
             });
             logFeed('💥 Bombardeio inimigo concluído.', 'text-red-400');

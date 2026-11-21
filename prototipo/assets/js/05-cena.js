@@ -90,7 +90,7 @@
         // ---------- Quadro: tamanho, qualidade adaptativa e camada de fundo em cache ----------
         // O que não muda (céu, terra, paredes, móveis) é pintado uma vez numa imagem guardada e só
         // repintado quando algo que ela mostra muda; por quadro só se desenha o que se mexe.
-        const FONTE_CENA = '"Barlow Condensed", "Arial Narrow", "Roboto Condensed", "Courier Prime", sans-serif';
+        const FONTE_CENA = '"FL Emoji", "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif';
         let corteQualidade = Math.min(3, window.devicePixelRatio || 1); // pixels por pixel de tela (até 3×, igual à tela, senão o navegador estica e embaça); se o aparelho engasgar, cai pela METADE (divisor inteiro: os pixels continuam uniformes)
         let corteLentos = 0, ultimoQuadroCorte = 0;
         const camadaFundo = document.createElement('canvas');
@@ -118,7 +118,7 @@
         }
         if (document.fonts && document.fonts.load) {
             // Quando a fonte condensada chegar, o fundo em cache é repintado com ela
-            ['500', '700'].forEach(w => document.fonts.load(`${w} 12px "Barlow Condensed"`).then(() => { assinaturaFundo = ''; }).catch(() => {}));
+            ['500', '700'].forEach(w => document.fonts.load(`${w} 12px "Barlow Condensed"`).then(() => document.fonts.load('700 12px "Chakra Petch"')).then(() => document.fonts.load('12px "FL Emoji"', '★⚔')).then(() => { assinaturaFundo = ''; }).catch(() => {}));
         }
         function periodoDoDia() { return Math.min(3, Math.floor(gameState.timeSeconds / 60)); } // 0 manhã, 1 tarde, 2 noite, 3 madrugada
 
@@ -359,7 +359,7 @@
             if (m) {
                 const rot = { panico: '😱 PÂNICO', apatia: '😶 APÁTICO', heroismo: '🔥 HEROICO' }[m];
                 const cor = m === 'heroismo' ? 'rgba(60,90,50,0.92)' : 'rgba(160,30,30,0.9)';
-                cctx.font = '700 7.5px "Courier Prime", monospace';
+                cctx.font = '700 7.5px "Chakra Petch", monospace';
                 const wl = cctx.measureText(rot).width + 8;
                 const ty = deitado ? y - 30 : y - 52 * CORTE.ESC;
                 cctx.fillStyle = cor; cctx.fillRect(x - wl / 2, ty, wl, 11);

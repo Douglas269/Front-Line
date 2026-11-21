@@ -33,10 +33,14 @@
     --fl-gap: 8px;
     --fl-gap-pequeno: 4px;
     /* fontes: títulos e números em monoespaçado; textos corridos na condensada de leitura */
-    --fl-fonte-titulo: 'Courier Prime', 'Courier New', monospace;
-    --fl-fonte-leitura: 'Barlow Condensed', 'Courier Prime', monospace;
+    --fl-fonte-titulo: 'FL Emoji', 'Chakra Petch', 'Courier New', monospace;
+    --fl-fonte-marca: 'Black Ops One', 'Chakra Petch', Impact, sans-serif;
+    --fl-fonte-leitura: 'FL Emoji', 'Barlow Condensed', 'Arial Narrow', sans-serif;
 
     /* apelidos antigos (Conquista e Trincheiras online; o --verde de cada página fica na própria página: a Conquista usa --fl-verde-vivo e o duelo usa --fl-verde) */
     --bg: var(--fl-bg); --painel: var(--fl-panel); --borda: var(--fl-borda); --texto: var(--fl-texto); --mudo: var(--fl-texto-mudo);
     --ambar: var(--fl-ambar); --ambarEsc: var(--fl-ambar-escuro); --verm: var(--fl-perigo); --verdeEsc: var(--fl-verde-escuro);
 }
+
+/* emojis como símbolos de texto (monocromáticos, na cor do texto), nunca as figuras coloridas do sistema */
+html, body, button, input { font-variant-emoji: text; }

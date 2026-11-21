@@ -66,7 +66,7 @@ button.fase:not(:disabled):hover::before, button.fase:not(:disabled):hover::afte
 
 /* Textos corridos na fonte de leitura (condensada): o monoespaçado fica para títulos e números */
 #guiaT, #corte-cartao, #corte-dica, #cfg-jogo, #corte-fichas, #panel-diary, #panel-logistics .font-normal,
-.menu-brief, .modo p { font-family: 'Barlow Condensed', 'Courier Prime', monospace; letter-spacing: .1px; }
+.menu-brief, .modo p { font-family: var(--fl-fonte-leitura); letter-spacing: .1px; }
 #guiaT, #corte-cartao, #corte-dica { font-size: 13px; line-height: 1.35; }
 #cfg-jogo .text-mil-textMuted, #corte-fichas, #panel-diary { font-size: 13.5px; }
 #ordem-info { font-family: var(--fl-fonte-leitura); font-size: 13.5px !important; }
