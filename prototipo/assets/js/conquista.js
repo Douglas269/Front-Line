@@ -1091,6 +1091,7 @@ function renderPainel() {
     if (!G.modo && !G.pendente && t === 'recrutar') html = painelRecrutar(G.sel.id);
     else if (!G.modo && !G.pendente && t === 'obras') html = painelObras(G.sel.id);
     else if (!G.modo && !G.pendente && t === 'economia') html = painelEconomia();
+    else if (!G.modo && !G.pendente && t === 'situacao') html = painelSituacao();
     else if (!G.modo && !G.pendente && t === 'dispensar') html = painelDispensar(G.sel.id);
     else if (!G.modo && !G.pendente && t === 'pesquisa') html = painelPesquisa();
     else if (!G.modo && !G.pendente && t === 'diplo') html = painelDiplomacia();
