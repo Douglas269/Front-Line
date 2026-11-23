@@ -56,6 +56,19 @@
         try { SONS[nome](); } catch (e) {}
     };
 
+    // Medidor de tempo de quadro para o celular de verdade: no navegador (ou no console remoto) digite FLMedir(10000) e jogue.
+    // Mostra média, pior 5% e pior 1% do tempo entre quadros (60 fps = 16,7 ms; passou de 33 ms o jogo "engasga").
+    window.FLMedir = function (ms) {
+        return new Promise(function (res) {
+            const t = []; let ult = performance.now(); const ini = ult;
+            (function f(n) { t.push(n - ult); ult = n; if (n - ini < (ms || 10000)) requestAnimationFrame(f); else {
+                const s = t.slice(2).sort(function (a, b) { return a - b; }), q = function (p) { return s[Math.min(s.length - 1, Math.floor(s.length * p))]; };
+                const r = { quadros: s.length, mediaMs: +(s.reduce(function (a, x) { return a + x; }, 0) / s.length).toFixed(1), pior5Ms: +q(0.95).toFixed(1), pior1Ms: +q(0.99).toFixed(1), maiorMs: +s[s.length - 1].toFixed(1) };
+                console.log('FLMedir', r); res(r);
+            } })(ult);
+        });
+    };
+
     // Treme um elemento (tela inteira de jogo) por um instante; respeita "reduzir movimento"
     FLSom.tremer = function (el, forca) {
         if (!el || matchMedia('(prefers-reduced-motion: reduce)').matches) return;

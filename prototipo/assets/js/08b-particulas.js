@@ -1,6 +1,6 @@
 // FrontLine · Trincheiras: sistema de partículas
 // Carregado depois de 08-campo-ameacas.js. Terra, brasas, faíscas, clarões e fumaça nas explosões, nos tiros e nos acertos.
-// - Um só conjunto ("pool") de até 500 partículas, com gravidade, arrasto, quique no chão e esmaecer;
+// - Um só conjunto de até 500 partículas (medido: ~0,7 ms por quadro no máximo, em computador; ver tests/desempenho.js), com gravidade, arrasto, quique no chão e esmaecer;
 // - Desligável em Configurações ("Partículas e fumaça"); em aparelho lento, reduz sozinho a quantidade;
 // - As coordenadas são as da cena (400 de largura), as mesmas dos outros efeitos.
 
