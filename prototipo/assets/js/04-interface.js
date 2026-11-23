@@ -412,9 +412,9 @@
            As preferências ficam no aparelho e, com conta, também na conta (vão junto para outro aparelho). */
         const CONFIG_KEY = 'frontline-config';
         const CARREIRA_KEY = 'frontline-carreira';
-        const CONFIG_PADRAO = { volMusica: 45, volEfeitos: 80, volAmbiente: 50, tremor: true, vibracao: true, rastros: true, particulas: true, textoGrande: false, apelido: '', escalaAuto: true, pausaArtilharia: false, dificuldade: 'soldado', numeros: true };
+        const CONFIG_PADRAO = { volMusica: 45, volEfeitos: 80, volAmbiente: 50, tremor: true, flashes: true, vibracao: true, rastros: true, particulas: true, textoGrande: false, apelido: '', escalaAuto: true, pausaArtilharia: false, dificuldade: 'soldado', numeros: true };
         // Quem pediu "reduzir movimento" no aparelho começa sem tremor da tela e sem vibração (dá para ligar nas Configurações)
-        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) { CONFIG_PADRAO.tremor = false; CONFIG_PADRAO.vibracao = false; }
+        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) { CONFIG_PADRAO.tremor = false; CONFIG_PADRAO.flashes = false; CONFIG_PADRAO.vibracao = false; }
         let CONFIG = Object.assign({}, CONFIG_PADRAO, (() => { try { return JSON.parse(localStorage.getItem(CONFIG_KEY)) || {}; } catch (e) { return {}; } })());
         let configAberto = false, abaConfigAtual = 'conta';
         const volumeEfeitos = () => Math.min(1.5, window.FLSom ? FLSom.curva(CONFIG.volEfeitos ?? 80, 80) : (CONFIG.volEfeitos ?? 80) / 80);
@@ -605,6 +605,7 @@
                 chave('numeros', 'Números flutuantes', 'Mostra na cena o dano que os soldados levam e o prestígio ganho ao abater inimigos') +
                 chave('pausaArtilharia', 'Pausar no aviso de artilharia', 'O jogo pausa sozinho quando a artilharia é anunciada, para decidir quem vai para o abrigo e pedir a contra-bateria') +
                 chave('tremor', 'Tremor da tela', 'O mapa treme com explosões e impactos') +
+                chave('flashes', 'Clarões e piscadas', 'Clarões das explosões e a piscada vermelha de quem é ferido. Desligue se luz piscando incomoda (no máximo 3 por segundo, mesmo ligado)') +
                 chave('vibracao', 'Vibração do celular', 'Vibra nos impactos fortes (só em aparelhos compatíveis)') +
                 chave('rastros', 'Rastros dos tiros', 'Linhas dos tiros do esquadrão no mapa') +
                 chave('particulas', 'Partículas e fumaça', 'Terra, brasas, faíscas, clarões e fumaça nas explosões e nos tiros (desligue se o celular engasgar)') +

@@ -3,7 +3,7 @@
 // Tudo fica em 'frontline-config', o mesmo lugar do Trincheiras: mudar aqui muda lá também.
 
 let configConqAberta = false, configConqAba = 'som', pausaAntesConfig = false;
-function lerConfigConq() { try { return Object.assign({ volMusica: 45, volEfeitos: 80, vibracao: true, textoGrande: false, batalhaRapida: false, apelido: '', dificuldade: 'soldado' }, JSON.parse(localStorage.getItem('frontline-config')) || {}); } catch (e) { return { volMusica: 45, volEfeitos: 80, vibracao: true, textoGrande: false, apelido: '', dificuldade: 'soldado' }; } }
+function lerConfigConq() { try { return Object.assign({ volMusica: 45, volEfeitos: 80, tremor: true, vibracao: true, textoGrande: false, batalhaRapida: false, apelido: '', dificuldade: 'soldado' }, JSON.parse(localStorage.getItem('frontline-config')) || {}); } catch (e) { return { volMusica: 45, volEfeitos: 80, vibracao: true, textoGrande: false, apelido: '', dificuldade: 'soldado' }; } }
 function gravarConfigConq(mudancas) {
     const c = Object.assign(lerConfigConq(), mudancas);
     try { localStorage.setItem('frontline-config', JSON.stringify(c)); } catch (e) {}
@@ -56,6 +56,7 @@ function renderConfigConq() {
     if (a === 'som') {
         corpo = linhaTog('Som', 'música e efeitos', SOM.ligado, 'alternarSom();renderConfigConq()') + barra('Música', 'volMusica', c.volMusica) + barra('Efeitos', 'volEfeitos', c.volEfeitos)
             + linhaTog('Vibração', 'o celular vibra nos alertas de ataque', c.vibracao, `gravarConfigConq({ vibracao: ${!c.vibracao} });renderConfigConq()`)
+            + linhaTog('Tremor da tela', 'o mapa treme nas explosões', c.tremor !== false, `gravarConfigConq({ tremor: ${c.tremor === false} });renderConfigConq()`)
             + '<div class="sub">Os volumes valem também no modo Trincheiras.</div>';
     } else if (a === 'jogo') {
         corpo = `<div class="sub" style="margin-bottom:6px">Dificuldade dos bots (vale na campanha; no online, a do anfitrião):</div>` +

@@ -73,6 +73,7 @@
     // Treme um elemento (tela inteira de jogo) por um instante; respeita "reduzir movimento"
     FLSom.tremer = function (el, forca) {
         if (!el || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        try { if ((JSON.parse(localStorage.getItem('frontline-config')) || {}).tremor === false) return; } catch (e) {} // "Tremor da tela" desligado nas configurações (vale nos três modos)
         el.style.setProperty('--fl-tremor', (forca || 3) + 'px');
         el.classList.remove('fl-tremendo'); void el.offsetWidth; el.classList.add('fl-tremendo');
         setTimeout(() => el.classList.remove('fl-tremendo'), 360);

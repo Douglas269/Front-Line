@@ -11,7 +11,13 @@ const particulasAtivas = () => typeof CONFIG === 'undefined' || CONFIG.particula
 const prt = (a, b) => a + Math.random() * (b - a);
 const qtdPart = (n) => Math.max(1, Math.round(n * (particulasLeve ? 0.5 : 1)));
 
+let ultimoClaraoGrande = 0;
 function emitirParticula(o) {
+    // clarões grandes: no máximo 3 por segundo (WCAG 2.3.1) e bem mais fracos se o jogador desligou "Clarões e piscadas"
+    if (o.t === 'clarao' && (o.r || 0) >= 30) {
+        const agora = performance.now(); if (agora - ultimoClaraoGrande < 330) return; ultimoClaraoGrande = agora;
+        if (typeof CONFIG !== 'undefined' && CONFIG.flashes === false) { o.a = (o.a || 1) * 0.3; o.r *= 0.6; }
+    }
     PARTICULAS.push(Object.assign({ x: 0, y: 0, vx: 0, vy: 0, g: 0, d: 0.97, vida: 30, i: 0, r: 2, cor: [255, 200, 120], t: 'fumaca', cresce: 0, a: 1, giro: 0, ang: 0 }, o));
     const max = particulasLeve ? PART.MAX_LEVE : PART.MAX;
     while (PARTICULAS.length > max) PARTICULAS.shift();
