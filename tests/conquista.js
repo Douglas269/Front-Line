@@ -246,7 +246,7 @@ function jogar({ N, FASE, EST }) {
         await q.click('button.fase'); await q.waitForTimeout(600);
         const so = {};
         so.musicaDoMapa = await q.evaluate(() => SOM.ctx && SOM.ctx.state === 'running' && SOM.faixa === 'mapa' && !SOM.mapa.paused);
-        await q.evaluate(() => { window._ef = {}; const o = som; som = (t, f) => { window._ef[t] = (window._ef[t] || 0) + 1; return o(t, f); };
+        await q.evaluate(() => { pausar(false); window._ef = {}; const o = som; som = (t, f) => { window._ef[t] = (window._ef[t] || 0) + 1; return o(t, f); };
             Object.keys(G.pensar).forEach(k => { G.pensar[k] = 1e9; });
             const c = G.prov[G.capitalJogador], e = exParadosEm(c.id, 'jogador')[0], alvo = c.viz.map(id => G.prov[id]).find(x => x.dono === 'neutro' && exParadosEm(x.id, 'neutro').length);
             G.fac.jogador.moedas = 100; ordem(e.id, alvo.id, 6, 'ataque'); window._alvo = alvo.id;
