@@ -7,12 +7,14 @@ Jogo de estratégia tático com foco em realismo de comando, combate blindado e 
 - `docs/regras.md` — regras do jogo (reutilizáveis entre campanhas)
 - `docs/campanha/cronica.md` — crônica da campanha atual
 - `docs/referencias.md` — referências externas guardadas (skills de Godot para a futura migração)
+- `docs/creditos.md` — origem e licença de toda arte, som, fonte e biblioteca (conferido por `node tests/creditos.js`)
 - `data/estado_batalhao.json` — estado do batalhão no ponto de pausa atual
 - `prototipo/ponto-alpha.html` — a página do jogo (estrutura das telas e estilos próprios)
 - `prototipo/assets/js/` — o código do jogo, dividido por assunto e carregado em ordem pela página (todos compartilham as mesmas variáveis globais):
   `01-base.js` (áudio e estado), `02-regras.js` (salvamento, necessidades, inimigos, general e combate), `03-defesas-crises.js`, `04-interface.js` (interface, sons, medalhas e configurações), `05-cena.js` (trincheira em corte) e `06-conta.js` (rádio, fim de jogo, conta, tutorial, atualização e início do jogo; é o último a carregar e só ele liga o relógio do jogo)
 - `prototipo/assets/css/tailwind.css` — CSS fixo gerado por `tools/gerar-css.sh` (rodar depois de mudar classes no HTML ou no código). Antes o Tailwind vinha de um CDN de desenvolvimento (398 KB, montado no celular a cada abertura); agora são 17 KB
 - `tools/nova-versao.sh` — marca uma versão nova: troca `VERSAO_JOGO` (em `06-conta.js`), o `versao.json` e o `?v=` dos arquivos na página
+- `tools/exportar-itch.sh` — gera `dist/itch/` e `dist/itch.zip` para enviar ao itch.io como jogo HTML5 (não envia nada). Passo a passo na seção "Publicar no itch.io"
 
 ## Como trabalhamos (issues e PRs)
 Toda tarefa (Correção, Melhoria ou Nova função) tem uma **issue**, e todo deploy passa por um **PR** que cita a issue (`Closes #N`). O merge do PR é o deploy. Mudança pequena, o agente testa e faz o merge; mudança grande espera o "pode publicar" do Douglas. O fluxo completo, as regras de branch e a lista do que fazer antes do PR estão no [`AGENTS.md`](AGENTS.md), que vale para qualquer agente e modelo.
@@ -51,6 +53,8 @@ Toda tarefa (Correção, Melhoria ou Nova função) tem uma **issue**, e todo de
 - **Início da Conquista:** a fase 1 começa pausada (faixa "PAUSADO", aviso e botão ▶); o jogador toca em ▶ quando estiver pronto. As outras fases começam rodando. Teste: `node tests/conquista-inicio.js`.
 - **Botão grande de continuar:** com a Conquista pausada aparece um ▶ "PAUSADO" grande embaixo, no centro do mapa (fora de onde ficam as tropas, então dá para continuar dando ordens); tocar nele continua o jogo. Some rodando, no fim da partida, no tutorial, nas configurações e no online. Teste: `node tests/conquista-pausa-grande.js`.
 - **Desempenho (`node tests/desempenho.js`):** mede o tempo de quadro (média e pior 5%) da Trincheiras parada e com explosões em sequência e da Conquista rodando, e o custo das partículas. Em computador (headless) tudo roda travado em 60 fps (16,7 ms) e as 500 partículas no máximo custam ~0,7 ms por quadro, então não mexi nas partículas. Para medir num celular de verdade: no console da página use `FLMedir(10000)` e jogue; ele devolve média, pior 5% e pior 1% (acima de 33 ms o jogo engasga).
+- **Acessibilidade do impacto:** opção "Clarões e piscadas" nas configurações da Trincheiras (começa desligada para quem pediu "reduzir movimento"): clarões grandes no máximo 3 por segundo mesmo ligada, mais fracos quando desligada, e a piscada vermelha de soldado ferido pisca ~3 vezes por segundo (antes ~6) ou fica parada. "Tremor da tela" agora também existe nas configurações da Conquista e vale nos três modos (o Duelo também respeita). Parada rápida no impacto (hit-stop) não foi feita: o relógio da Trincheiras anda em passos de ~125 ms, então uma parada de menos de 0,15 s pularia no máximo um passo. Teste: `node tests/acessibilidade-impacto.js`.
+- **Som (mixer):** efeitos da Trincheiras com tom ±6%, volume ±2 dB, sem repetir a variação anterior e no máximo 6 sons iguais juntos; sons de interface com ±2,5% de tom; controles de volume em curva quadrática (no valor padrão fica como antes, zero é mudo); a música passa por um canal de "duck" que abaixa um instante (~-7 dB) em explosões grandes e volta devagar (Trincheiras e Conquista). Quem já tinha volume diferente do padrão vai ouvir um pouco mais baixo abaixo do padrão. Teste: `node tests/som-mixer.js`.
 - **Painel Situação (Conquista, 📊 nas ferramentas, `conquista-situacao.js`):** diz quem está ganhando e por quê. Veredito de território com estimativa pelo ritmo das últimas amostras (`G.histPlacar`, uma por ciclo), tabela por país (províncias com ▲/■/▼ de tendência, soldados e poder), saldo de comida e dinheiro por ciclo com ▼ quando negativo, **onde você está em risco** (fronteiras com quem está em guerra: sem defesa ou inimigo à vista mais forte) e **chances de ataque** (vizinhas à vista que dá para tomar com a tropa ao lado). Só usa o que o jogador pode saber: tropa de bot fora de visão e sem espião aparece como "N+" (pelo menos o que se viu). Poder = soldados de infantaria equivalentes (tipo e vida). Teste: `node tests/situacao.js`.
 - **Resolver rápido (Conquista, campanha):** no painel de toda batalha em que você está aparece **⏩ Resolver rápido**, que roda o mesmo combate (mesmas regras, posturas e tropas) sem esperar a animação e já conclui a conquista ou o recuo. Em Configurações → Jogo há **Resolver batalhas rápido**, que faz isso sozinho em toda batalha sua. No online não existe (a batalha é de todos). A chance de vitória é a mesma da batalha animada (medida: 22,5% × 23,5% e 74% × 76% em 200 batalhas cada). Teste: `node tests/batalha-rapida.js`.
 - Módulo de estruturas `conquista-unidades.js` (ainda sem uso direto no jogo); teste `node tests/combustivel.js`.
@@ -310,3 +314,12 @@ node tests/simulacao.js
 ```
 
 Faz verificações funcionais e 60 partidas simuladas sem ação do jogador, e mostra as estatísticas. Sai com código 1 se alguma verificação falhar ou houver erro de JavaScript.
+
+## Publicar no itch.io
+O jogo roda no itch.io como HTML5. O script só prepara os arquivos; criar a página e enviar depende da conta do dono do jogo.
+1. `tools/exportar-itch.sh` (gera `dist/itch/` e `dist/itch.zip`: `index.html` na raiz, só caminhos relativos, sem o service worker, que não funciona dentro do iframe do itch; links para "/" viram `index.html`).
+2. No itch.io: **Create new project** → *Kind of project*: **HTML** → enviar o `itch.zip` → marcar **This file will be played in the browser** → definir o tamanho da janela (celular: 390×844 em retrato; ou "fullscreen").
+3. Limites do itch conferidos pelo teste `node tests/exportar-itch.js`: até 1.000 arquivos, 500 MB no total, 200 MB por arquivo, caminhos de até 240 caracteres. Hoje: ~86 arquivos e ~6 MB.
+4. Páginas HTML5 no itch não podem cobrar (só doação); jogo pago teria de ser baixável. Se o jogo usar arte gerada por IA, o itch pede que isso seja informado na página.
+5. Conta, Duelo e Conquista online (Supabase) continuam funcionando se o navegador do jogador permitir o domínio do itch.io; links de convite apontam para a própria página do itch.
+6. Antes de enviar, confira `docs/creditos.md` (as duas imagens "origem a confirmar").

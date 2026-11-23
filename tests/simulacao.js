@@ -432,8 +432,8 @@ async function run() {
       mudarVolume('volMusica', 20); mudarVolume('volEfeitos', 80); mudarVolume('volAmbiente', 50);
       const m1 = canais.musica.gain.value, e1 = canais.efeitos.gain.value, a1 = canais.ambiente.gain.value;
       mudarVolume('volAmbiente', 0);
-      c.mixerCanaisSeparados = Math.abs(m1 - 0.2) < 1e-6 && Math.abs(e1 - 1) < 1e-6 && Math.abs(a1 - 1) < 1e-6
-        && canais.ambiente.gain.value === 0 && Math.abs(canais.musica.gain.value - 0.2) < 1e-6 && Math.abs(canais.efeitos.gain.value - 1) < 1e-6;
+      c.mixerCanaisSeparados = Math.abs(m1 - 0.45 * (20 / 45) ** 2) < 1e-6 && Math.abs(e1 - 1) < 1e-6 && Math.abs(a1 - 1) < 1e-6
+        && canais.ambiente.gain.value === 0 && Math.abs(canais.musica.gain.value - 0.45 * (20 / 45) ** 2) < 1e-6 && Math.abs(canais.efeitos.gain.value - 1) < 1e-6;
       let semErro = true; try { pausarSomAoSair(); retomarSom(); } catch (e) { semErro = false; }
       c.mixerSairVoltarSemErro = semErro && bgmWar.paused;
       CONFIG.volMusica = g.volMusica; CONFIG.volEfeitos = g.volEfeitos; CONFIG.volAmbiente = g.volAmbiente; salvarConfig(); }
@@ -472,8 +472,8 @@ async function run() {
     { const guardaCfg = JSON.stringify(CONFIG);
       abrirConfig('som'); c.configAbre = configAberto && !document.getElementById('modal-config').classList.contains('hidden');
       const tc = gameState.timeSeconds; updateGameTick(); c.configPausaRelogio = gameState.timeSeconds === tc;
-      mudarVolume('volMusica', 30); c.configVolumeMusica = Math.abs((musicaNoMixer ? canais.musica.gain.value : bgmWar.volume) - 0.3) < 1e-6;
-      mudarVolume('volEfeitos', 40); c.configVolumeEfeitos = Math.abs(volumeEfeitos() - 0.5) < 1e-9;
+      mudarVolume('volMusica', 30); c.configVolumeMusica = Math.abs((musicaNoMixer ? canais.musica.gain.value : bgmWar.volume) - 0.45 * (30 / 45) ** 2) < 1e-6;
+      mudarVolume('volEfeitos', 40); c.configVolumeEfeitos = Math.abs(volumeEfeitos() - (40 / 80) ** 2) < 1e-9;
       CONFIG.tremor = false; const ate0 = tremorAte; tremer(5, 100000); c.configSemTremor = tremorAte === ate0;
       CONFIG.rastros = false; renderCorte(true); c.configSemRastros = CONFIG.rastros === false; // as linhas dos tiros da cena respeitam a opção
       salvarConfig(); c.configSalvaNoAparelho = JSON.parse(localStorage.getItem(CONFIG_KEY)).volMusica === 30;

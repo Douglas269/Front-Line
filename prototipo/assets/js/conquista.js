@@ -1292,7 +1292,7 @@ function mostrarFim() {
    O navegador só libera o som depois do primeiro toque na tela. */
 const SOM = {
     ligado: (() => { try { return localStorage.getItem('frontline-conquista-som') !== '0'; } catch (e) { return true; } })(),
-    ctx: null, efeitos: null, musica: null, ruido: null, ultimo: {}, faixa: null,
+    ctx: null, efeitos: null, musica: null, duck: null, ruido: null, ultimo: {}, faixa: null,
     mapa: new Audio('assets/music/war_theme.mp3'), batalha: new Audio('assets/music/to_battle.mp3')
 };
 [SOM.mapa, SOM.batalha].forEach(a => { a.loop = true; a.preload = 'none'; a.volume = 0.35; }); // só baixa quando for tocar
@@ -1301,7 +1301,8 @@ function iniciarSom() {
     try {
         SOM.ctx = new (window.AudioContext || window.webkitAudioContext)();
         SOM.efeitos = SOM.ctx.createGain(); SOM.efeitos.gain.value = 0.55; SOM.efeitos.connect(SOM.ctx.destination);
-        SOM.musica = SOM.ctx.createGain(); SOM.musica.gain.value = 0.35; SOM.musica.connect(SOM.ctx.destination);
+        SOM.musica = SOM.ctx.createGain(); SOM.musica.gain.value = 0.35;
+        if (window.FLSom) { SOM.duck = FLSom.criarDuck(SOM.ctx); SOM.musica.connect(SOM.duck); } else SOM.musica.connect(SOM.ctx.destination); // canal de duck: a música abaixa um instante nas explosões
         try { [SOM.mapa, SOM.batalha].forEach(a => { SOM.ctx.createMediaElementSource(a).connect(SOM.musica); a.volume = 1; }); } catch (e) {}
         // ruído branco guardado (base dos tiros e explosões)
         const n = SOM.ctx.sampleRate, buf = SOM.ctx.createBuffer(1, n, n), d = buf.getChannelData(0);
@@ -1330,7 +1331,7 @@ function som(tipo, forca = 1) {
     const agora = SOM.ctx.currentTime, minimo = { tiro: 0.07, abate: 0.15, alerta: 1.2, recrutar: 0.08 }[tipo] || 0.05;
     if (agora - (SOM.ultimo[tipo] || 0) < minimo) return;
     SOM.ultimo[tipo] = agora;
-    if (tipo === 'explosao' && window.FLSom) FLSom.tremer(document.getElementById('mapaBox'), 4);
+    if (tipo === 'explosao' && window.FLSom) { FLSom.tremer(document.getElementById('mapaBox'), 4); FLSom.duck(SOM.ctx, SOM.duck, 0.45, 0.2); }
     const c = SOM.ctx, saida = SOM.efeitos;
     const ruido = (dur, filtro, freq, vol, q = 1) => {
         const src = c.createBufferSource(); src.buffer = SOM.ruido; src.playbackRate.value = 0.8 + Math.random() * 0.4;

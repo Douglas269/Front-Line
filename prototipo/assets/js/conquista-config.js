@@ -3,18 +3,19 @@
 // Tudo fica em 'frontline-config', o mesmo lugar do Trincheiras: mudar aqui muda lá também.
 
 let configConqAberta = false, configConqAba = 'som', pausaAntesConfig = false;
-function lerConfigConq() { try { return Object.assign({ volMusica: 45, volEfeitos: 80, vibracao: true, textoGrande: false, batalhaRapida: false, apelido: '', dificuldade: 'soldado' }, JSON.parse(localStorage.getItem('frontline-config')) || {}); } catch (e) { return { volMusica: 45, volEfeitos: 80, vibracao: true, textoGrande: false, apelido: '', dificuldade: 'soldado' }; } }
+function lerConfigConq() { try { return Object.assign({ volMusica: 45, volEfeitos: 80, tremor: true, vibracao: true, textoGrande: false, batalhaRapida: false, apelido: '', dificuldade: 'soldado' }, JSON.parse(localStorage.getItem('frontline-config')) || {}); } catch (e) { return { volMusica: 45, volEfeitos: 80, vibracao: true, textoGrande: false, apelido: '', dificuldade: 'soldado' }; } }
 function gravarConfigConq(mudancas) {
     const c = Object.assign(lerConfigConq(), mudancas);
     try { localStorage.setItem('frontline-config', JSON.stringify(c)); } catch (e) {}
     CONFIG_CONQ = c; aplicarConfigConq();
 }
 let CONFIG_CONQ = lerConfigConq();
+const curvaVol = (v, ref) => { const x = Math.max(0, +v || 0) / ref; return x * x; }; // curva quadrática do volume (igual à FLSom.curva)
 function aplicarConfigConq() {
     const c = CONFIG_CONQ;
-    if (SOM.ctx && SOM.musica) SOM.musica.gain.value = 0.35 * Math.max(0, c.volMusica) / 45;
-    if (SOM.ctx && SOM.efeitos) SOM.efeitos.gain.value = 0.55 * Math.max(0, c.volEfeitos) / 80;
-    if (!SOM.ctx) { SOM.mapa.volume = SOM.batalha.volume = Math.min(1, 0.35 * c.volMusica / 45); }
+    if (SOM.ctx && SOM.musica) SOM.musica.gain.value = Math.min(1, 0.35 * curvaVol(c.volMusica, 45));
+    if (SOM.ctx && SOM.efeitos) SOM.efeitos.gain.value = 0.55 * Math.min(1.5, curvaVol(c.volEfeitos, 80));
+    if (!SOM.ctx) { SOM.mapa.volume = SOM.batalha.volume = Math.min(1, 0.35 * curvaVol(c.volMusica, 45)); }
     document.body.classList.toggle('textoGrande', !!c.textoGrande);
 }
 // o som só nasce no primeiro toque: aplica o volume escolhido assim que nascer
@@ -55,6 +56,7 @@ function renderConfigConq() {
     if (a === 'som') {
         corpo = linhaTog('Som', 'música e efeitos', SOM.ligado, 'alternarSom();renderConfigConq()') + barra('Música', 'volMusica', c.volMusica) + barra('Efeitos', 'volEfeitos', c.volEfeitos)
             + linhaTog('Vibração', 'o celular vibra nos alertas de ataque', c.vibracao, `gravarConfigConq({ vibracao: ${!c.vibracao} });renderConfigConq()`)
+            + linhaTog('Tremor da tela', 'o mapa treme nas explosões', c.tremor !== false, `gravarConfigConq({ tremor: ${c.tremor === false} });renderConfigConq()`)
             + '<div class="sub">Os volumes valem também no modo Trincheiras.</div>';
     } else if (a === 'jogo') {
         corpo = `<div class="sub" style="margin-bottom:6px">Dificuldade dos bots (vale na campanha; no online, a do anfitrião):</div>` +

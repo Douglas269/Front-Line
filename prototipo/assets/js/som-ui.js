@@ -20,6 +20,19 @@
     }
     FLSom.ligado = ligado;
 
+    // Controle de volume em curva quadrática: no valor padrão (ref) o nível é o de antes; zero é mudo de verdade
+    // e o meio do controle não fica quase igual ao máximo (o ouvido não escuta o volume de forma linear).
+    FLSom.curva = (v, ref) => { const x = Math.max(0, +v || 0) / ref; return x * x; };
+    // Duck: um canal de ganho entre a música e a saída, que abaixa por um instante quando algo grande explode,
+    // sem mexer no volume que o jogador escolheu. Devolve o nó onde a música deve se ligar.
+    FLSom.criarDuck = function (ctx) { const g = ctx.createGain(); g.connect(ctx.destination); return g; };
+    FLSom.duck = function (ctx, no, fundo, dur) {
+        if (!ctx || !no) return;
+        const t = ctx.currentTime; no.gain.cancelScheduledValues(t);
+        no.gain.setTargetAtTime(fundo || 0.45, t, 0.03);                 // desce rápido (~-7 dB)
+        no.gain.setTargetAtTime(1, t + (dur || 0.35), 0.3);              // volta devagar, sem "pumping"
+    };
+
     function contexto() {
         if (FLSom.ctx) { if (FLSom.ctx.state === 'suspended') FLSom.ctx.resume().catch(() => {}); return FLSom.ctx; }
         try {
@@ -31,6 +44,7 @@
 
     function nota(freq, ini, dur, vol, forma, fim) {
         const c = FLSom.ctx, t = c.currentTime + ini;
+        const v = 1 + (Math.random() - 0.5) * 0.05; freq *= v; if (fim) fim *= v; // ±2,5% de tom a cada toque: o mesmo som nunca soa idêntico
         const o = c.createOscillator(), g = c.createGain();
         o.type = forma || 'square'; o.frequency.setValueAtTime(freq, t);
         if (fim) o.frequency.exponentialRampToValueAtTime(fim, t + dur);
@@ -72,6 +86,7 @@
     // Treme um elemento (tela inteira de jogo) por um instante; respeita "reduzir movimento"
     FLSom.tremer = function (el, forca) {
         if (!el || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        try { if ((JSON.parse(localStorage.getItem('frontline-config')) || {}).tremor === false) return; } catch (e) {} // "Tremor da tela" desligado nas configurações (vale nos três modos)
         el.style.setProperty('--fl-tremor', (forca || 3) + 'px');
         el.classList.remove('fl-tremendo'); void el.offsetWidth; el.classList.add('fl-tremendo');
         setTimeout(() => el.classList.remove('fl-tremendo'), 360);
