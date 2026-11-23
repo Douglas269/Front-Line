@@ -6,6 +6,7 @@ Jogo de estratégia tático com foco em realismo de comando, combate blindado e 
 
 - `docs/regras.md` — regras do jogo (reutilizáveis entre campanhas)
 - `docs/campanha/cronica.md` — crônica da campanha atual
+- `docs/referencias.md` — referências externas guardadas (skills de Godot para a futura migração)
 - `data/estado_batalhao.json` — estado do batalhão no ponto de pausa atual
 - `prototipo/ponto-alpha.html` — a página do jogo (estrutura das telas e estilos próprios)
 - `prototipo/assets/js/` — o código do jogo, dividido por assunto e carregado em ordem pela página (todos compartilham as mesmas variáveis globais):
