@@ -55,7 +55,10 @@ function avancarPesquisas(dt) {
         st.atual.resta -= dt;
         if (st.atual.resta <= 0) {
             st.feitas[st.atual.id] = true;
-            if (dono === 'jogador') { noticia(`🔬 Pesquisa pronta: ${PESQUISAS[st.atual.id].nome}. ${PESQUISAS[st.atual.id].txt}.`); som('conquista'); }
+            if (dono === 'jogador') {
+                const lib = Object.entries(TROPAS).find(([, T]) => T.pesquisa === st.atual.id);
+                noticia(`🔬 Pesquisa pronta: ${PESQUISAS[st.atual.id].nome}. ${PESQUISAS[st.atual.id].txt}.${lib ? ` 🔓 Para criar ${lib[1].icone} ${lib[1].nome}: toque numa província sua → Recrutar…` : ''}`); som('conquista');
+            }
             else if (espiado(dono)) noticia(`👁 Espião: ${FACCOES[dono].nome} terminou a pesquisa ${PESQUISAS[st.atual.id].nome}.`);
             st.atual = null;
         }

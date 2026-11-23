@@ -1152,7 +1152,7 @@ function renderPainel() {
         if (p.dono === 'jogador') {
             const meu = exParadosEm(p.id, 'jogador')[0];
             html += botao('🪖 Recrutar 1', `infantaria · ${custoRecrutar('jogador')} 🪙 · 1 👥`, `recrutar('${p.id}');renderPainel()`, { off: !!motivoSemRecrutar('jogador', 'inf') });
-            html += botao('🪖 Recrutar…', 'escolher tipo e quantidade', `G.sel={tipo:'recrutar',id:'${p.id}'};renderPainel()`);
+            html += botao('🪖 Recrutar…', (() => { const novas = Object.entries(TROPAS).filter(([t, T]) => T.pesquisa && tropaLiberada('jogador', t)).map(([, T]) => T.icone); return novas.length ? 'liberadas: ' + novas.join(' ') + ' · escolher tipo' : 'escolher tipo e quantidade'; })(), `G.sel={tipo:'recrutar',id:'${p.id}'};renderPainel()`);
             html += botao('🏗 Obras', p.obra ? `${OBRAS[p.obra.id].nome}: ${Math.ceil(p.obra.resta)}s` : 'forte, ferrovia, fábrica, hospital', `G.sel={tipo:'obras',id:'${p.id}'};renderPainel()`);
             html += botao('🛡 Fortificar', `${C.FORTIFICAR} 🪙 ${C.FORTIFICAR_ACO} ⚙ · +${C.FORT_GANHO}% de trincheira`, `fortificar('${p.id}');renderPainel()`, { off: f.moedas < C.FORTIFICAR || (f.aco || 0) < C.FORTIFICAR_ACO || p.trinch >= 100 });
             if (meu) html += botao('🪖 Exército daqui', `${meu.s.length} soldados · mover`, `G.sel={tipo:'ex',id:'${meu.id}'};renderPainel()`);
