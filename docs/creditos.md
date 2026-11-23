@@ -23,8 +23,8 @@ um arquivo de imagem, som ou fonte que não esteja coberto aqui.
 
 | Onde | O que é | Origem e licença |
 |---|---|---|
-| `prototipo/assets/music/war_theme.mp3` | trilha do dia | "War Theme", OpenGameArt.org, **CC0** |
-| `prototipo/assets/music/to_battle.mp3` | trilha de combate | "To Battle!", OpenGameArt.org, **CC0** |
+| `prototipo/assets/music/lament_of_the_war.mp3`, `evil_approach.mp3` | trilhas do dia / mapa (em rodízio) | "Laments of the War" e "Evil Approach", OpenGameArt.org, **CC0** |
+| `prototipo/assets/music/battle_theme_a.mp3`, `determined_pursuit.mp3` | trilhas de combate (em rodízio) | "Battle Theme A" e "Determined Pursuit", OpenGameArt.org, **CC0** |
 | `prototipo/vendor/zzfx.js` | gerador dos efeitos sonoros | ZzFX 1.4.0, Frank Force, **MIT** (`prototipo/vendor/LICENSE-zzfx.txt`) |
 | (no código) | sons de interface, vento, tiros da Conquista | sintetizados no navegador pelo próprio jogo |
 

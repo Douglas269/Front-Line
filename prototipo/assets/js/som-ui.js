@@ -70,6 +70,19 @@
         try { SONS[nome](); } catch (e) {}
     };
 
+    // Rodízio de trilhas: toca uma, e quando acaba sorteia outra diferente (em vez de repetir a mesma música sem parar).
+    // Funciona com o <audio> de cada modo (o mesmo elemento muda de arquivo, então continua ligado ao mixer).
+    FLSom.playlist = function (el, urls) {
+        el.removeAttribute('loop'); el.loop = urls.length < 2;
+        let atual = Math.floor(Math.random() * urls.length);
+        el.src = urls[atual];
+        if (urls.length > 1) el.addEventListener('ended', function () {
+            let n; do { n = Math.floor(Math.random() * urls.length); } while (n === atual);
+            atual = n; el.src = urls[n]; const p = el.play(); if (p && p.catch) p.catch(function () {});
+        });
+        return el;
+    };
+
     // Medidor de tempo de quadro para o celular de verdade: no navegador (ou no console remoto) digite FLMedir(10000) e jogue.
     // Mostra média, pior 5% e pior 1% do tempo entre quadros (60 fps = 16,7 ms; passou de 33 ms o jogo "engasga").
     window.FLMedir = function (ms) {
@@ -97,7 +110,7 @@
         const b = e.target.closest && e.target.closest('button, a.modo-card, [role="button"]');
         if (!b) return;
         if (b.disabled || b.classList.contains('opacity-60') || b.getAttribute('aria-disabled') === 'true') { FLSom.tocar('erro'); return; }
-        FLSom.tocar(/jogar|confirm|ok|iniciar|começar|continuar/i.test(b.id + ' ' + b.className) ? 'confirma' : 'clique');
+        FLSom.tocar(b.classList.contains('modo-card') || /jogar|confirm|ok|iniciar|começar|continuar/i.test(b.id + ' ' + b.className) ? 'confirma' : 'clique'); // escolher modo também confirma
     }, true);
 
     // Duelo não tem controle de som próprio: o botão fica na barra do topo (ao lado de "Menu principal"), nunca flutuando sobre o conteúdo

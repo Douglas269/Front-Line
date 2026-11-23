@@ -1293,9 +1293,12 @@ function mostrarFim() {
 const SOM = {
     ligado: (() => { try { return localStorage.getItem('frontline-conquista-som') !== '0'; } catch (e) { return true; } })(),
     ctx: null, efeitos: null, musica: null, duck: null, ruido: null, ultimo: {}, faixa: null,
-    mapa: new Audio('assets/music/war_theme.mp3'), batalha: new Audio('assets/music/to_battle.mp3')
+    mapa: new Audio(), batalha: new Audio()
 };
-[SOM.mapa, SOM.batalha].forEach(a => { a.loop = true; a.preload = 'none'; a.volume = 0.35; }); // só baixa quando for tocar
+// Rodízio de trilhas (as mesmas do modo Trincheiras): nunca a mesma música em seguida
+FLSom.playlist(SOM.mapa, ['lament_of_the_war', 'evil_approach'].map(n => 'assets/music/' + n + '.mp3'));
+FLSom.playlist(SOM.batalha, ['battle_theme_a', 'determined_pursuit'].map(n => 'assets/music/' + n + '.mp3'));
+[SOM.mapa, SOM.batalha].forEach(a => { a.preload = 'none'; a.volume = 0.35; }); // só baixa quando for tocar
 function iniciarSom() {
     if (SOM.ctx) { if (SOM.ctx.state !== 'running') SOM.ctx.resume().catch(() => {}); return; }
     try {

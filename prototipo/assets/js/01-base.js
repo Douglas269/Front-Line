@@ -4,7 +4,10 @@
            AUDIO SYNTHESIZER (WEB AUDIO API)
            ========================================================================== */
         let audioCtx = null;
-        let isAudioMuted = true;
+        // O som começa ligado (a música sobe no primeiro toque, que é quando o navegador deixa) e a escolha do jogador fica salva.
+        // Em teste automático (navigator.webdriver) continua desligado, como sempre foi (a menos que a página abra com ?som=1).
+        const SOM_KEY = 'frontline-som';
+        let isAudioMuted = (() => { try { return (!!navigator.webdriver && !/[?&]som=1/.test(location.search)) || localStorage.getItem(SOM_KEY) === '0'; } catch (e) { return false; } })();
 
         /* Mixagem: cada controle de volume é um canal próprio (efeitos, ambiente, música).
            Todo som passa pelo seu canal; mexer num controle muda só aquele canal,
@@ -40,8 +43,10 @@
         const bgmBattle = document.getElementById('bgm-battle');
         // Caminho das trilhas: a raiz do site (Vercel) mostra este arquivo sem mudar o endereço
         const musicBase = location.pathname.endsWith('.html') ? '' : 'prototipo/';
-        bgmWar.src = musicBase + 'assets/music/war_theme.mp3';
-        bgmBattle.src = musicBase + 'assets/music/to_battle.mp3';
+        // Rodízio: cada trilha toca até o fim e a próxima é sorteada (nunca a mesma em seguida)
+        const faixas = (nomes) => nomes.map(n => musicBase + 'assets/music/' + n + '.mp3');
+        FLSom.playlist(bgmWar, faixas(['lament_of_the_war', 'evil_approach']));
+        FLSom.playlist(bgmBattle, faixas(['battle_theme_a', 'determined_pursuit']));
         bgmWar.volume = 0.45;
         bgmBattle.volume = 0.45; // ajustado pelas Configurações (aplicarConfig)
         let ambientNodes = null;
@@ -119,6 +124,7 @@
             initAudio();
             if (audioCtx.state === 'suspended') audioCtx.resume();
             isAudioMuted = !isAudioMuted;
+            try { localStorage.setItem(SOM_KEY, isAudioMuted ? '0' : '1'); } catch (e) {}
             const ico = document.getElementById('ico-audio');
             if (isAudioMuted) {
                 ico.className = 'fa-solid fa-volume-xmark text-red-400';
@@ -130,6 +136,14 @@
                 playTacticalBeep(800, 0.05);
             }
         }
+
+        // Ícone do alto-falante igual ao estado salvo (começa ligado) e arranque no primeiro toque da tela inicial
+        function iconeDoSom() { const ico = document.getElementById('ico-audio'); if (ico) ico.className = isAudioMuted ? 'fa-solid fa-volume-xmark text-red-400' : 'fa-solid fa-volume-high text-mil-greenMuted'; }
+        document.addEventListener('DOMContentLoaded', iconeDoSom);
+        document.addEventListener('pointerdown', () => {
+            if (isAudioMuted || audioCtx) return;
+            initAudio(); audioCtx.resume().catch(() => {}); startAmbient(); syncMusic();
+        }, { capture: true, passive: true });
 
         function playTacticalBeep(freq = 600, duration = 0.04) {
             if (isAudioMuted || !audioCtx) return;
