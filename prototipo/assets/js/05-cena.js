@@ -311,7 +311,7 @@
             }
         }
         function desenharSoldadoCena(s, x, y, pose, t, rotY = 0) {
-            const flash = (feridosRecentes.get(s.id) || 0) > 0 && Math.floor(t / 80) % 2 === 0;
+            const flash = (feridosRecentes.get(s.id) || 0) > 0 && (CONFIG.flashes === false || Math.floor(t / 170) % 2 === 0); // pisca no máximo ~3 vezes por segundo; com "Clarões e piscadas" desligado fica vermelho parado
             const corpo = flash ? '#a83232' : (s.class === 'Médico' ? FL_PAL.fardaMedico : FL_PAL.farda);
             const pele = FL_PAL.pele[s.id] || FL_PAL.pele[1];
             const POSE_SILHUETA = { mira: 'mira', ninho: 'ninho', come: 'come', trabalho: 'trabalho', deitado: 'deitado', encolhido: 'panico', panico: 'panico', 'em pé': 'arrastado' };
