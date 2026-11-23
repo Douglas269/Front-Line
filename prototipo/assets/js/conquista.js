@@ -1223,7 +1223,11 @@ const botaoMenu = () => ''; // o "Menu principal" fica no topo de toda tela chei
 function voltarAoMenu() { salvarPartida(); location.href = linkMenu(); } // a partida fica salva
 function mostrarTela(html) { document.getElementById('telaCaixa').innerHTML = `<div class="barra-menu"><a class="menu-principal" href="${linkMenu()}">🏠 Menu principal</a></div>` + html; document.getElementById('tela').style.display = 'flex'; }
 function esconderTela() { document.getElementById('tela').style.display = 'none'; }
-function comecarFase(n) { apagarSalvamento(); novoJogo(n); G.semSalvar = false; esconderTela(); renderPainel(); salvarPartida(); }
+function comecarFase(n) {
+    apagarSalvamento(); novoJogo(n); G.semSalvar = false; esconderTela();
+    if (n === 1) { G.pausado = true; noticia('⏸ Fase 1 pausada: olhe o mapa e as suas tropas e toque em ▶ quando estiver pronto.'); } // a primeira fase não corre enquanto o jogador ainda está se orientando
+    renderPainel(); atualizarTopo(); salvarPartida();
+}
 function continuarPartida() { if (carregarPartida()) { esconderTela(); renderPainel(); } else mostrarInicio(); }
 function pausar(v) { if (!G || G.fim) return; G.pausado = v === undefined ? !G.pausado : v; if (G.pausado) salvarPartida(); atualizarTopo(); }
 function mostrarInicio() {
