@@ -10,11 +10,12 @@ function gravarConfigConq(mudancas) {
     CONFIG_CONQ = c; aplicarConfigConq();
 }
 let CONFIG_CONQ = lerConfigConq();
+const curvaVol = (v, ref) => { const x = Math.max(0, +v || 0) / ref; return x * x; }; // curva quadrática do volume (igual à FLSom.curva)
 function aplicarConfigConq() {
     const c = CONFIG_CONQ;
-    if (SOM.ctx && SOM.musica) SOM.musica.gain.value = 0.35 * Math.max(0, c.volMusica) / 45;
-    if (SOM.ctx && SOM.efeitos) SOM.efeitos.gain.value = 0.55 * Math.max(0, c.volEfeitos) / 80;
-    if (!SOM.ctx) { SOM.mapa.volume = SOM.batalha.volume = Math.min(1, 0.35 * c.volMusica / 45); }
+    if (SOM.ctx && SOM.musica) SOM.musica.gain.value = Math.min(1, 0.35 * curvaVol(c.volMusica, 45));
+    if (SOM.ctx && SOM.efeitos) SOM.efeitos.gain.value = 0.55 * Math.min(1.5, curvaVol(c.volEfeitos, 80));
+    if (!SOM.ctx) { SOM.mapa.volume = SOM.batalha.volume = Math.min(1, 0.35 * curvaVol(c.volMusica, 45)); }
     document.body.classList.toggle('textoGrande', !!c.textoGrande);
 }
 // o som só nasce no primeiro toque: aplica o volume escolhido assim que nascer

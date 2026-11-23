@@ -10,11 +10,13 @@
            Todo som passa pelo seu canal; mexer num controle muda só aquele canal,
            na hora, inclusive nos sons que já estão tocando. */
         const canais = { efeitos: null, ambiente: null, musica: null };
-        let musicaNoMixer = false;
+        let musicaNoMixer = false, duckMusica = null;
         function initAudio() {
             if (!audioCtx) {
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 ['efeitos', 'ambiente', 'musica'].forEach(k => { canais[k] = audioCtx.createGain(); canais[k].connect(audioCtx.destination); });
+                // a música passa por um canal de "duck" (abaixa um instante nas explosões grandes, sem mexer no volume escolhido)
+                if (window.FLSom) { duckMusica = FLSom.criarDuck(audioCtx); canais.musica.disconnect(); canais.musica.connect(duckMusica); }
                 // A música (arquivos mp3) entra no mixer também: assim o controle funciona igual em todo aparelho (no iPhone o volume do <audio> é ignorado)
                 try {
                     [bgmWar, bgmBattle].forEach(el => { audioCtx.createMediaElementSource(el).connect(canais.musica); el.volume = 1; });
@@ -25,7 +27,7 @@
         }
         const saidaEfeitos = () => canais.efeitos || audioCtx.destination;
         function aplicarVolumes() {
-            const vm = Math.max(0, Math.min(1, (CONFIG.volMusica ?? 45) / 100));
+            const vm = Math.min(1, 0.45 * (window.FLSom ? FLSom.curva(CONFIG.volMusica ?? 45, 45) : (CONFIG.volMusica ?? 45) / 45));
             if (musicaNoMixer && canais.musica) { canais.musica.gain.value = vm; bgmWar.volume = 1; bgmBattle.volume = 1; }
             else { bgmWar.volume = vm; bgmBattle.volume = vm; }
             if (canais.efeitos) canais.efeitos.gain.value = volumeEfeitos();

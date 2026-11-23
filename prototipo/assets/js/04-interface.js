@@ -339,10 +339,12 @@
             alarme:      [.4, 0, 600, .02, .25, .1, 1, 1, 0, 0, 200, .12],
             queda:       [.9, 0, 80, 0, .1, .5, 0, 1, -2, 0, 0, 0, 0, 0, 0, 0, 0, .3]
         };
-        const cacheSons = {};
+        const cacheSons = {}, ultimoBuf = {}, tocando = {};
+        const MAX_JUNTOS = 6; // no máximo 6 do mesmo som ao mesmo tempo (rajada de tiros não vira barulho)
         function tocarSom(nome, volume = 1, atraso = 0) {
             if (isAudioMuted || !audioCtx || typeof zzfxGerar !== 'function' || !SONS[nome]) return;
             try {
+                if ((tocando[nome] || 0) >= MAX_JUNTOS) return;
                 let lista = cacheSons[nome];
                 if (!lista) lista = cacheSons[nome] = [];
                 if (lista.length < 3) { // até 3 variações de cada som (o ZzFX sorteia um pouco a cada geração)
@@ -351,11 +353,18 @@
                     buf.getChannelData(0).set(amostras);
                     lista.push(buf);
                 }
+                // não repete a mesma variação seguida
+                let i = Math.floor(Math.random() * lista.length);
+                if (lista.length > 1 && i === ultimoBuf[nome]) i = (i + 1) % lista.length;
+                ultimoBuf[nome] = i;
                 const src = audioCtx.createBufferSource();
-                src.buffer = lista[Math.floor(Math.random() * lista.length)];
-                const g = audioCtx.createGain(); g.gain.value = volume;
+                src.buffer = lista[i];
+                src.playbackRate.value = 1 + (Math.random() - 0.5) * 0.12;                 // tom ±6%
+                const g = audioCtx.createGain(); g.gain.value = volume * Math.pow(10, (Math.random() * 4 - 2) / 20); // volume ±2 dB
                 src.connect(g); g.connect(saidaEfeitos());
+                tocando[nome] = (tocando[nome] || 0) + 1; src.onended = () => { tocando[nome] = Math.max(0, (tocando[nome] || 1) - 1); };
                 src.start(audioCtx.currentTime + atraso);
+                if ((nome === 'explosao' || nome === 'foguete') && volume >= 0.8 && window.FLSom && duckMusica) FLSom.duck(audioCtx, duckMusica, 0.45, 0.2 + atraso);
             } catch (e) {}
         }
 
@@ -408,8 +417,8 @@
         if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) { CONFIG_PADRAO.tremor = false; CONFIG_PADRAO.flashes = false; CONFIG_PADRAO.vibracao = false; }
         let CONFIG = Object.assign({}, CONFIG_PADRAO, (() => { try { return JSON.parse(localStorage.getItem(CONFIG_KEY)) || {}; } catch (e) { return {}; } })());
         let configAberto = false, abaConfigAtual = 'conta';
-        const volumeEfeitos = () => Math.max(0, Math.min(1.5, (CONFIG.volEfeitos ?? 80) / 80));
-        const volumeAmbiente = () => Math.max(0, Math.min(2, (CONFIG.volAmbiente ?? 50) / 50));
+        const volumeEfeitos = () => Math.min(1.5, window.FLSom ? FLSom.curva(CONFIG.volEfeitos ?? 80, 80) : (CONFIG.volEfeitos ?? 80) / 80);
+        const volumeAmbiente = () => Math.min(2, window.FLSom ? FLSom.curva(CONFIG.volAmbiente ?? 50, 50) : (CONFIG.volAmbiente ?? 50) / 50);
 
         function aplicarConfig() {
             aplicarVolumes();
