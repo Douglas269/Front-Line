@@ -1010,7 +1010,10 @@ function desenharMapa() {
         cxM.setTransform(d, 0, 0, d, 0, 0); cxM.font = 'bold 10px "Chakra Petch", "FL Emoji", monospace'; cxM.textAlign = 'left';
         const itens = TIPO_COR.map(([, letra, corT, nome]) => ({ letra, corT, nome, w: 17 + cxM.measureText(nome).width }));
         const total = itens.reduce((t, it) => t + it.w, 0) + 6 * (itens.length - 1) + 12;
-        let lx = Math.max(4, (r.width - total) / 2) + 6; const ly = 8;
+        let lx = Math.max(4, (r.width - total) / 2) + 6;
+        // a legenda desce para não ficar por baixo do aviso e da faixa de ataque a caminho (os dois ficam por cima do mapa)
+        const sobre = ['aviso', 'alertaAtq'].map(id => document.getElementById(id)).filter(e => e && e.offsetParent !== null).reduce((m, e) => Math.max(m, e.offsetTop + e.offsetHeight), 0);
+        const ly = Math.max(8, sobre + 8);
         cxM.fillStyle = 'rgba(12,15,13,.78)'; cxM.fillRect(lx - 6, ly - 4, total, 20); cxM.strokeStyle = 'rgba(211,154,69,.5)'; cxM.strokeRect(lx - 6, ly - 4, total, 20);
         itens.forEach(it => { cxM.fillStyle = it.corT; cxM.fillRect(lx, ly, 12, 12); cxM.fillStyle = '#111'; cxM.textAlign = 'center'; cxM.fillText(it.letra, lx + 6, ly + 10); cxM.textAlign = 'left'; cxM.fillStyle = '#d6e3d1'; cxM.fillText(it.nome, lx + 15, ly + 10); lx += it.w + 6; });
     }
