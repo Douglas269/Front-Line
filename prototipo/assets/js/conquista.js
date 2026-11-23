@@ -1214,6 +1214,9 @@ function atualizarTopo() {
     document.getElementById('bVelMapa').textContent = G.velocidade === 1 ? '1×' : '2×';
     const bp = document.getElementById('bPausa'); bp.textContent = G.pausado ? '▶' : '⏸'; bp.classList.toggle('on', !!G.pausado);
     document.getElementById('faixaPausa').style.display = G.pausado && !G.fim ? 'block' : 'none';
+    // botão grande de continuar embaixo, no centro do mapa (fora de onde ficam as tropas; some durante o tutorial, as configurações e as telas cheias; o resto do mapa segue tocável para dar ordens)
+    const pg = document.getElementById('pausaGrande');
+    if (pg) { const tutorial = window.GuiaT && GuiaT.ativo(), telaCheia = document.getElementById('tela').style.display === 'flex'; const mostra = G.pausado && !G.fim && !G.online && !tutorial && !telaCheia && !(typeof configConqAberta !== 'undefined' && configConqAberta); pg.style.display = mostra ? 'flex' : 'none'; if (mostra) document.getElementById('faixaPausa').style.display = 'none'; }
     const av = document.getElementById('aviso'), n = G.noticias[0];
     if (n && G.t - n.t < (n.alerta ? 7 : 4.5)) { av.textContent = n.txt; av.className = n.alerta ? 'alerta' : ''; av.style.display = 'block'; }
     else av.style.display = 'none';
