@@ -285,7 +285,9 @@ function jogar({ N, FASE, EST }) {
             // um exército com os 5 tipos na capital: as 5 cores aparecem no mapa (etiquetas + legenda)
             G.fac.jogador.moedas = 900; ['metr', 'art', 'cav', 'blind'].forEach(id => { G.pesq.jogador.feitas[id] = 1; });
             const c = G.capitalJogador; ['inf', 'metr', 'art', 'cav', 'blind'].forEach(t => recrutarEm(c, 'jogador', t));
-            G.sel = { tipo: 'prov', id: c }; centralizar(G.prov[c].x, G.prov[c].y); desenharMapa();
+            G.sel = { tipo: 'prov', id: c }; centralizar(G.prov[c].x, G.prov[c].y);
+            ['aviso', 'alertaAtq'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; }); // sem aviso na tela a legenda fica no topo (com aviso ela desce para não ficar por baixo)
+            desenharMapa();
             const cv = document.getElementById('mapa'), d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
             // legenda (topo, 12×12 por tipo) e etiquetas dos grupos (resto do mapa, 13×13 por tipo) contadas separadas
             const corte = 36 * (cv.width / cv.getBoundingClientRect().width), leg = {}, tag = {};
