@@ -49,12 +49,12 @@ const C = {
 };
 const CAPITULOS = ['Capítulo 1 · A Fronteira', 'Capítulo 2 · O Coração do País'];
 const FASES = [
-    { n: 1, cap: 0, nome: 'Fronteira', semente: 1101, celulas: 52, mar: 0.05, W: 860, H: 1120, bots: ['bravo', 'charlie', 'delta'], tempo: 900, extra: 1, milicia: 0, graca: 60, objetivo: 'semPerder' },
-    { n: 2, cap: 0, nome: 'O Rio', semente: 4409, celulas: 56, mar: 0.12, W: 900, H: 1160, bots: ['bravo', 'charlie'], tempo: 1020, extra: 1, milicia: 0, botFacil: 0.7, objetivo: 'pesquisa', regra: 'industria', regraTxt: 'região industrial: obras custam metade' },
-    { n: 3, cap: 0, nome: 'Região central', semente: 2207, celulas: 66, mar: 0.05, W: 980, H: 1280, bots: ['bravo', 'charlie', 'delta', 'echo'], tempo: 1080, extra: 2, milicia: 1, botFacil: 0.85, objetivo: 'capitais' },
-    { n: 4, cap: 1, nome: 'Inverno', semente: 5521, celulas: 70, mar: 0.06, W: 1000, H: 1300, bots: ['bravo', 'delta', 'echo'], tempo: 1140, extra: 2, milicia: 0, botFacil: 1.15, objetivo: 'baixas', regra: 'inverno', regraTxt: 'inverno: campos produzem 40% menos comida' },
-    { n: 5, cap: 1, nome: 'Aliança frágil', semente: 6637, celulas: 76, mar: 0.05, W: 1040, H: 1360, bots: ['bravo', 'charlie', 'delta', 'echo'], tempo: 1260, extra: 3, milicia: 0, objetivo: 'rebeldes', regra: 'paz', regraTxt: 'começa em paz com Charlie (que pode virar aliado… ou não)' },
-    { n: 6, cap: 1, nome: 'A capital', semente: 3301, celulas: 86, mar: 0.05, W: 1100, H: 1440, bots: ['bravo', 'charlie', 'delta', 'echo'], tempo: 1200, extra: 2, milicia: 1, capitalForte: 'delta', objetivo: 'capitais' }
+    { n: 1, cap: 0, nome: 'Fronteira', semente: 1101, celulas: 52, mar: 0.05, W: 860, H: 1120, bots: ['bravo', 'charlie', 'delta'], tempo: 600, extra: 1, milicia: 0, graca: 60, objetivo: 'semPerder' },
+    { n: 2, cap: 0, nome: 'O Rio', semente: 4409, celulas: 56, mar: 0.12, W: 900, H: 1160, bots: ['bravo', 'charlie'], tempo: 660, extra: 1, milicia: 0, botFacil: 0.7, objetivo: 'pesquisa', regra: 'industria', regraTxt: 'região industrial: obras custam metade' },
+    { n: 3, cap: 0, nome: 'Região central', semente: 2207, celulas: 66, mar: 0.05, W: 980, H: 1280, bots: ['bravo', 'charlie', 'delta', 'echo'], tempo: 720, extra: 2, milicia: 1, botFacil: 0.85, objetivo: 'capitais' },
+    { n: 4, cap: 1, nome: 'Inverno', semente: 5521, celulas: 70, mar: 0.06, W: 1000, H: 1300, bots: ['bravo', 'delta', 'echo'], tempo: 780, extra: 2, milicia: 0, botFacil: 1.15, objetivo: 'baixas', regra: 'inverno', regraTxt: 'inverno: campos produzem 40% menos comida' },
+    { n: 5, cap: 1, nome: 'Aliança frágil', semente: 6637, celulas: 76, mar: 0.05, W: 1040, H: 1360, bots: ['bravo', 'charlie', 'delta', 'echo'], tempo: 840, extra: 3, milicia: 0, objetivo: 'rebeldes', regra: 'paz', regraTxt: 'começa em paz com Charlie (que pode virar aliado… ou não)' },
+    { n: 6, cap: 1, nome: 'A capital', semente: 3301, celulas: 86, mar: 0.05, W: 1100, H: 1440, bots: ['bravo', 'charlie', 'delta', 'echo'], tempo: 840, extra: 2, milicia: 1, capitalForte: 'delta', objetivo: 'capitais' }
 ];
 const NOMES_JOG = ['Silva', 'Santos', 'Ferreira', 'Costa', 'Oliveira', 'Mendes', 'Rocha', 'Lima', 'Souza', 'Alves', 'Pereira', 'Nunes', 'Barros', 'Dias'];
 const FACCOES = {
@@ -153,7 +153,7 @@ function salvarPartida() {
         prov: Object.fromEntries(Object.values(G.prov).map(p => [p.id, { dono: p.dono, tipo: p.tipo, trinch: p.trinch, capital: p.capital, moral: p.moral, obras: p.obras, obra: p.obra, conquistadaEm: p.conquistadaEm }])),
         ex: G.ex.map(e => ({ id: e.id, dono: e.dono, s: e.s, prov: e.prov, de: e.de, rota: e.rota, x: e.x, y: e.y, missao: e.missao, origem: e.origem, alertado: e.alertado, general: e.general, aguarda: e.aguarda })),
         batalhas: batalhasParaSalvar(),
-        vida: G.vida || null,
+        vida: G.vida || null, reforcos: G.reforcos || [],
         salvoEm: Date.now()
     };
     try { localStorage.setItem(SAVE_CONQ, JSON.stringify(dados)); return true; } catch (e) { return false; }
@@ -195,7 +195,7 @@ function carregarPartida() {
     Object.assign(G, { t: d.t, fac: d.fac, ciclo: d.ciclo, velocidade: d.velocidade || 1, capitalJogador: d.capitalJogador, espiado: d.espiado || {}, revelado: d.revelado || {},
         espioes: d.espioes || [], ultimoAtaque: d.ultimoAtaque || {}, eliminados: d.eliminados || {}, semCapital: d.semCapital || {}, pensar: d.pensar || G.pensar, noticias: d.noticias || [], ultimoRelatorio: d.ultimoRelatorio,
         pesq: d.pesq || G.pesq, rel: d.rel || G.rel, genFerido: d.genFerido || {}, genXp: d.genXp || {}, stats: d.stats || {},
-        vida: d.vida || { proxMissao: d.t + 6, proxEvento: d.t + 40, proxOfensiva: d.t + 90 } });
+        vida: d.vida || { proxMissao: d.t + 6, proxEvento: d.t + 40, proxOfensiva: d.t + 90 }, reforcos: d.reforcos || [] });
     G.ex = d.ex.filter(e => G.prov[e.prov]).map(e => ({ ...e, rota: (e.rota || []).filter(id => G.prov[id]), emBatalha: false, aguarda: null }));
     Object.values(G.fac).forEach(f => { if (f.aco === undefined) f.aco = C.ACO_INICIAL; if (f.atraso === undefined) f.atraso = 0; if (f.comb === undefined) f.comb = C.COMB_INICIAL; }); // partidas salvas antes do aço, do soldo e do combustível
     proxId = Math.max(proxId, d.proxId || 0);
