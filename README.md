@@ -41,6 +41,7 @@ Toda tarefa (Correção, Melhoria ou Nova função) tem uma **issue**, e todo de
 - O navegador usa só a chave pública (publishable) do Supabase; a proteção dos dados vem das políticas RLS.
 
 ### Combustível, excesso de tropas e painel da unidade (Conquista)
+- **Painel do exército no celular:** o resumo e as ordens (ou as ações da batalha) ficam em cima, sem precisar rolar; vida, combate, logística e composição abrem em **▼ Detalhes da tropa**. Teste: `node tests/painel-exercito.js` (PRINTS=pasta salva capturas).
 - **⛽ Combustível:** cada blindado que marcha ou ataca gasta 1 por ciclo. Sai de morro (0,4 por ciclo), capital (0,3) e da obra Fábrica (+0,5). Sem combustível: o blindado anda a 25% da velocidade e atira com metade da chance. Aparece no painel Economia e no painel do exército.
 - **Excesso de tropas:** a partir de 15 regimentos, cada unidade extra tira 3% de eficiência (piso de 60%), na batalha e no exército.
 - **Nomes do exército:** III (regimento), X (brigada), XX (divisão), XXX (corpo de exército), XXXX (exército) pela quantidade.
