@@ -709,6 +709,24 @@ function artilhariaNaBatalha(b, lado) {
     som('explosao');
     alvos.filter(x => x.s.vida > 0).forEach(x => { x.s.vida -= 35; b.efeitos.push({ x: x.x, y: lado === 'atq' ? -1 : x.dist, vida: 0.8, tipo: 'explosao' }); });
 }
+// Para onde recua quem perdeu o ataque à província p. Preferência: de onde veio (se ainda for dele), outra província dele
+// ao lado, de onde veio (se for território em paz ou aliado) e outra em paz ao lado. Sem nenhuma, a tropa está cercada.
+function destinoDoRecuo(e, p) {
+    const veio = e.de !== p.id ? G.prov[e.de] : null, lados = p.viz.map(id => G.prov[id]);
+    const minha = (q) => q.dono === e.dono, passagem = (q) => !emGuerra(e.dono, q.dono);
+    return (veio && minha(veio) && veio) || lados.find(minha) || (veio && passagem(veio) && veio) || lados.find(passagem) || null;
+}
+function recuarSobreviventes(e, p) {
+    const destino = e.s.length ? destinoDoRecuo(e, p) : null;
+    if (!destino) {
+        G.ex = G.ex.filter(x => x !== e);
+        if (e.s.length && e.dono === 'jogador') noticia(`🏳 Tropa cercada em ${p.nome}: sem para onde recuar, os ${e.s.length} sobreviventes se perderam.`, true);
+        return;
+    }
+    if (destino.id !== e.de && e.dono === 'jogador') noticia(`↩ Os sobreviventes de ${p.nome} recuaram para ${destino.nome}.`);
+    Object.assign(e, { x: destino.x, y: destino.y, prov: destino.id, rota: [], missao: 'mover' });
+    parar(e);
+}
 function concluirBatalha(b) {
     const e = b.ex, p = b.alvo;
     e.emBatalha = false;
@@ -730,9 +748,7 @@ function concluirBatalha(b) {
         if (!e.rota.length && G.ex.includes(e)) parar(e);
     } else {
         if (ver) noticia(`🛡 ${FACCOES[b.defDono].nome} segurou ${p.nome} contra ${FACCOES[b.atqDono].nome}${b.recuou ? ' (recuaram)' : b.tempo ? ' (o tempo acabou)' : ''}.`, b.atqDono === 'jogador');
-        // sobreviventes recuam para de onde vieram (se ainda for deles)
-        if (e.s.length && G.prov[e.de] && G.prov[e.de].dono === e.dono) { e.x = G.prov[e.de].x; e.y = G.prov[e.de].y; e.prov = e.de; e.rota = []; e.missao = 'mover'; parar(e); }
-        else G.ex = G.ex.filter(x => x !== e);
+        recuarSobreviventes(e, p);
     }
     limparMortos();
 }
