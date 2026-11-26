@@ -33,8 +33,9 @@ const C = {
     ARTILHARIA_MUN: 40, SAQUE_PARTE: 0.3, // a barragem de artilharia na batalha gasta munição
     ACO_INICIAL: 20,
     COMB_INICIAL: 20,         // combustível inicial de cada país
-    COMB_BLIND_CICLO: 1,      // cada blindado que marcha ou ataca gasta 1 de combustível por ciclo
-    COMB_DEFICIT_VEL: 0.25,   // sem combustível: o blindado anda a 25% da velocidade e atira com metade da chance
+    COMB_DEFICIT_VEL: 0.25,   // sem combustível: blindado e artilharia andam a 25% da velocidade e atiram com metade da chance (consumo em TROPAS)
+    FALTA_ACO_DANO: 0.75,     // sem aço: a tropa que consome aço causa menos dano e não se cura
+    LOTACAO_PISO: 0.7,        // mais soldados do que as províncias sustentam: o exército rende menos em batalha, até este piso
     STACK_LIMITE: 14, STACK_PEN: 0.03, STACK_PISO: 0.6, // excesso de tropas (nomes e penalidade: ver conquista-unidades.js)
     VEL: 12,                  // velocidade dos exércitos (unidades do mapa por segundo)
     BAT_RITMO: 4,             // a batalha corre no próprio mapa, 4× mais rápido que o relógio de 2 minutos
@@ -95,6 +96,13 @@ const maoDeObraUsada = (dono) => tropaDe(dono);
 const maoDeObraLivre = (dono) => Math.max(0, maoDeObraMax(dono) - maoDeObraUsada(dono));
 const manutencaoDe = (dono) => exDe(dono).reduce((t, e) => t + e.s.reduce((u, s) => u + TROPAS[s.tipo || 'inf'].manut, 0), 0); // dinheiro por ciclo
 const rendaDe = (dono, k) => provDe(dono).reduce((t, p) => t + producaoDe(p)[k], 0);                                           // produção por ciclo de um recurso
+const manutencaoAcoDe = (dono) => exDe(dono).reduce((t, e) => t + e.s.reduce((u, s) => u + (TROPAS[s.tipo || 'inf'].manutAco || 0), 0), 0); // aço por ciclo
+const usaComb = (s) => !!TROPAS[s.tipo || 'inf'].comb;
+const gastoComb = (lista) => lista.reduce((t, s) => t + (TROPAS[s.tipo || 'inf'].comb || 0), 0);
+const fatorFaltaAco = (s, dono) => G.fac[dono] && G.fac[dono].faltaAco && TROPAS[s.tipo || 'inf'].manutAco ? C.FALTA_ACO_DANO : 1;
+function fatorLotacao(dono) { if (dono === 'neutro') return 1; const usada = maoDeObraUsada(dono); return usada <= maoDeObraMax(dono) ? 1 : Math.max(C.LOTACAO_PISO, maoDeObraMax(dono) / usada); }
+// o bot só cria tropa que consome aço se o que entra por ciclo paga o consumo dela
+const botSustentaAco = (dono, tipo) => !TROPAS[tipo].manutAco || rendaDe(dono, 'aco') - manutencaoAcoDe(dono) >= TROPAS[tipo].manutAco;
 const custoRecrutarTipo = (dono, tipo) => TROPAS[tipo].custo;
 const custoRecrutar = (dono) => custoRecrutarTipo(dono, 'inf');
 const custoAcoTipo = (tipo) => TROPAS[tipo].aco || 0;
@@ -117,15 +125,15 @@ const bonusTerreno = (tipoSoldado, tipoProv, lado) => {
     if (lado === 'atq' && tipoSoldado === 'blind') return tipoProv === 'campo' ? 1.25 : 1;
     return 1;
 };
-// Blindado sem combustível atira com metade da chance
-const semComb = (s, dono) => s.tipo === 'blind' && (G.fac[dono] && G.fac[dono].comb || 0) <= 0 ? 0.5 : 1;
+// Blindado e artilharia sem combustível atiram com metade da chance
+const semComb = (s, dono) => usaComb(s) && (G.fac[dono] && G.fac[dono].comb || 0) <= 0 ? 0.5 : 1;
 function velEx(e) {
     let v = C.VEL * Math.min(...e.s.map(s => TROPAS[s.tipo || 'inf'].vel), 1.6);
     if (temPesq(e.dono, 'estradas')) v *= 1.2;
     v *= bonusGeneral(e, 'vel');
     const prox = e.rota.length ? G.prov[e.rota[0]] : null;
     if (prox && prox.obras.ferrovia && prox.dono === e.dono) v *= 2;
-    if (e.s.some(s => s.tipo === 'blind') && (G.fac[e.dono].comb || 0) <= 0) v *= C.COMB_DEFICIT_VEL; // sem combustível, o blindado arrasta o exército
+    if (e.s.some(usaComb) && (G.fac[e.dono].comb || 0) <= 0) v *= C.COMB_DEFICIT_VEL; // sem combustível, blindado e artilharia arrastam o exército
     return v;
 }
 const ehCidade = (p) => p.tipo === 'cidade' || p.tipo === 'capital';
@@ -391,13 +399,17 @@ function cicloEconomia() {
         const base = p.capital ? C.TRINCH_CAPITAL : C.TRINCH_BASE;
         if (p.trinch < base) p.trinch = Math.min(base, p.trinch + 2);
     });
-    // Combustível: cada blindado que marcha ou ataca gasta combustível; sem estoque, ele anda devagar e atira menos (ver velEx e passoBatalha)
+    // Combustível: cada blindado ou artilharia que marcha ou luta gasta combustível; sem estoque, ele anda devagar e atira menos (ver velEx e passoBatalha)
     Object.keys(G.fac).filter(d => d !== 'neutro' && vivoNoJogo(d)).forEach(dono => {
         const f = G.fac[dono];
         let gasto = 0;
-        exDe(dono).forEach(e => { if (e.rota.length || e.emBatalha) gasto += e.s.filter(s => s.tipo === 'blind').length * C.COMB_BLIND_CICLO; });
+        exDe(dono).forEach(e => { if (e.rota.length || e.emBatalha) gasto += gastoComb(e.s); });
         f.comb = Math.max(0, (f.comb || 0) - gasto); f.combGasto = gasto;
-        f.combDef = gasto > 0 && f.comb <= 0; // (marca quando o combustível acabou e ainda há blindados em marcha)
+        f.combDef = gasto > 0 && f.comb <= 0; // (marca quando o combustível acabou e ainda há blindados ou artilharia em marcha)
+        // Aço: peças e munição das tropas pesadas, todo ciclo, mesmo paradas
+        const acoGasto = manutencaoAcoDe(dono), falta = acoGasto > 0 && (f.aco || 0) < acoGasto - 1e-9;
+        if (falta && !f.faltaAco && dono === 'jogador') noticia('⚙ Falta de aço! Artilharia e blindados não se curam e causam menos dano.', true);
+        f.aco = Math.max(0, (f.aco || 0) - acoGasto); f.faltaAco = falta;
     });
     // Manutenção: cada soldado custa dinheiro por ciclo. Faltando dinheiro, o soldo atrasa e o efeito cresce aos poucos (como a fome):
     // eficácia cai, a moral das províncias cai e, no extremo, soldados desertam. Pagando em dia, o atraso some.
@@ -425,7 +437,7 @@ function cicloEconomia() {
                 const come = porcao * (log ? 0.5 : 1);
                 if (!esquece && (sup || log) && s.fome >= C.COME_SE && f.comida >= come) { f.comida -= come; s.fome = Math.max(0, s.fome - C.COME_ALIVIA); }
                 if (s.fome >= 90) s.vida -= 4;
-                else if (s.fome < 50) s.vida = Math.min(vidaMax(s), s.vida + cura);
+                else if (s.fome < 50 && fatorFaltaAco(s, dono) === 1) s.vida = Math.min(vidaMax(s), s.vida + cura);
                 s.cansaco = Math.max(0, s.cansaco - 6);
             });
         });
@@ -457,7 +469,7 @@ function pensarBot(dono) {
     // 0) pesquisa e obras (com o dinheiro que sobra depois de separar o da manutenção)
     const manutBot = manutencaoDe(dono), sobra = f.moedas - 4 * manutBot;
     // combustível: o bot só recruta blindado com reserva, constrói fábrica quando falta e deixa blindado sem combustível em casa
-    const combBaixo = (f.comb || 0) < 6, temBlind = exDe(dono).some(e => e.s.some(x => x.tipo === 'blind'));
+    const combBaixo = (f.comb || 0) < 6, temMotor = exDe(dono).some(e => e.s.some(usaComb));
     if (!G.pesq[dono].atual && sobra > FX.reserva + 50 && Math.random() < 0.5) {
         const pref = { agressivo: ['cav', 'estradas', 'metr', 'art', 'blind'], 'ladrão': ['cav', 'radio', 'estradas', 'metr'], defensivo: ['metr', 'concreto', 'art', 'propaganda', 'blind'], oportunista: ['art', 'cav', 'metr', 'racoes', 'blind'] }[FX.perso] || [];
         const id = pref.concat(Object.keys(PESQUISAS)).find(x => pesquisaDisponivel(dono, x) && PESQUISAS[x].custo <= sobra - FX.reserva);
@@ -465,7 +477,7 @@ function pensarBot(dono) {
     }
     if (capital && sobra > FX.reserva + 60 && Math.random() < 0.3) {
         const obra = FX.perso === 'defensivo' ? ['forte', 'hospital', 'fabrica'] : ['fabrica', 'forte', 'ferrovia'];
-        if (combBaixo && temBlind) obra.unshift('fabrica'); // blindado sem combustível não anda: a fábrica passa na frente
+        if ((combBaixo && temMotor) || f.faltaAco) obra.unshift('fabrica'); // sem combustível ou sem aço, a fábrica passa na frente
         const alvoObra = [capital, ...provs.filter(q => q.viz.some(v => G.prov[v].dono !== dono))].find(q => !q.obra && obra.some(o => !q.obras[o]));
         if (alvoObra) construir(alvoObra.id, obra.find(o => !alvoObra.obras[o]), dono);
     }
@@ -475,7 +487,7 @@ function pensarBot(dono) {
     // só recruta se há mão de obra e aço, sobra dinheiro e a renda aguenta a manutenção da nova tropa (senão o soldo atrasa e a tropa deserta)
     let saldoMoedas = rendaDe(dono, 'moedas') - manutBot;
     for (let k = 0; k < 3 && cidades.length; k++) {
-        const tipos = gosto.filter(t => !motivoSemRecrutar(dono, t) && !(t === 'blind' && (f.comb || 0) < 8)), tipo = tipos[Math.floor(Math.random() * tipos.length)] || (motivoSemRecrutar(dono, 'inf') ? null : 'inf');
+        const tipos = gosto.filter(t => !motivoSemRecrutar(dono, t) && botSustentaAco(dono, t) && !(t === 'blind' && (f.comb || 0) < 8)), tipo = tipos[Math.floor(Math.random() * tipos.length)] || (motivoSemRecrutar(dono, 'inf') ? null : 'inf');
         if (!tipo || f.moedas < custoRecrutarTipo(dono, tipo) + FX.reserva || saldoMoedas < TROPAS[tipo].manut + 0.3 || Math.random() < 0.2) break;
         if (recrutarEm(cidades[0].id, dono, tipo)) saldoMoedas -= TROPAS[tipo].manut;
     }
@@ -495,7 +507,7 @@ function pensarBot(dono) {
     exDe(dono).filter(e => parado(e) && e.s.length >= 3).forEach(e => {
         const casa = G.prov[e.prov];
         const deixar = casa.capital ? (FX.perso === 'agressivo' && Math.random() < 0.25 ? 1 : 4) : (ameaca(casa, dono) > 0 ? 2 : 1);
-        const aptos = vivos(e.s).filter(x => !((f.comb || 0) <= 0 && x.tipo === 'blind'));   // sem combustível o blindado fica
+        const aptos = vivos(e.s).filter(x => !((f.comb || 0) <= 0 && usaComb(x)));   // sem combustível, blindado e artilharia ficam
         const manda = Math.min(e.s.length - deixar, aptos.length); if (manda < 2) return;
         const enviados = aptos.slice().sort((a, b) => eficacia(b) - eficacia(a)).slice(0, manda);
         casa.viz.map(id => G.prov[id]).filter(q => q.dono !== dono && emGuerra(dono, q.dono)).forEach(q => {
@@ -699,12 +711,13 @@ function passoBatalha(b, dt) {
     const pd = b.postDef === 'abrigar' ? { dano: 0.5, rec: 0.5 } : b.postDef === 'atacar' ? { dano: 1.4, rec: 1.3 } : { dano: 1, rec: 1 };
     const exposicao = b.postAtq === 'cobertura' ? 0.5 : 1;
     const dano = () => C.DANO_TIRO * (0.7 + 0.6 * Math.random());
+    const lotA = fatorLotacao(b.atqDono), lotD = fatorLotacao(b.defDono); // sublotação (mais soldados que a mão de obra sustenta)
     const noCampo = atqVivos.filter(a => a.dist > 0 && a.dist < 260);
     if (noCampo.length && defVivos.length) {
         const munD = fd.mun > 0 ? 1 : 0.3, cap = b.alvo.capital ? C.CAPITAL_DEFESA : 1;
         defVivos.forEach(d => {
             const T = TROPAS[d.s.tipo || 'inf'];
-            if (Math.random() < C.TIRO_DEF * T.def * eficacia(d.s) * pd.dano * exposicao * munD * cap * b.genDef * b.forte * b.effDef * semComb(d.s, b.defDono) * bonusTerreno(d.s.tipo || 'inf', b.alvo.tipo, 'def') * dt) {
+            if (Math.random() < C.TIRO_DEF * T.def * eficacia(d.s) * pd.dano * exposicao * munD * cap * b.genDef * b.forte * b.effDef * semComb(d.s, b.defDono) * fatorFaltaAco(d.s, b.defDono) * lotD * bonusTerreno(d.s.tipo || 'inf', b.alvo.tipo, 'def') * dt) {
                 const alvo = noCampo[Math.floor(Math.random() * noCampo.length)]; alvo.s.vida -= dano() * danoContra(d.s.tipo || 'inf', alvo.s.tipo || 'inf'); if (b.audivel) som('tiro', 0.35);
             }
         });
@@ -715,14 +728,14 @@ function passoBatalha(b, dt) {
         atqVivos.filter(a => a.dist < (TROPAS[a.s.tipo || 'inf'].longe ? C.DIST + 30 : 220)).forEach(a => { // artilharia atira de longe
             const T = TROPAS[a.s.tipo || 'inf'], corpo = a.dist <= 0;
             const protege = 1 - C.TRINCH_PROTEGE * (T.longe ? 0.4 : 1) * b.alvo.trinch / 100; // artilharia fura a trincheira
-            const chance = corpo ? C.CORPO_A_CORPO * T.corpo * eficacia(a.s) * pd.rec * b.genAtq * (1 - C.TRINCH_PROTEGE_CORPO * b.alvo.trinch / 100)
-                : C.TIRO_ATQ * T.atq * (b.postAtq === 'cobertura' ? 0.6 : 1) * eficacia(a.s) * munA * protege * pd.rec * b.genAtq * b.effAtq * semComb(a.s, b.atqDono) * bonusTerreno(a.s.tipo || 'inf', b.alvo.tipo, 'atq');
+            const chance = corpo ? C.CORPO_A_CORPO * T.corpo * eficacia(a.s) * pd.rec * b.genAtq * lotA * fatorFaltaAco(a.s, b.atqDono) * (1 - C.TRINCH_PROTEGE_CORPO * b.alvo.trinch / 100)
+                : C.TIRO_ATQ * T.atq * (b.postAtq === 'cobertura' ? 0.6 : 1) * eficacia(a.s) * munA * protege * pd.rec * b.genAtq * b.effAtq * semComb(a.s, b.atqDono) * fatorFaltaAco(a.s, b.atqDono) * lotA * bonusTerreno(a.s.tipo || 'inf', b.alvo.tipo, 'atq');
             if (Math.random() < chance * dt) { const alvo = defVivos[Math.floor(Math.random() * defVivos.length)]; alvo.s.vida -= dano() * danoContra(a.s.tipo || 'inf', alvo.s.tipo || 'inf'); if (b.audivel) som('tiro', 0.45); }
         });
         fa.mun = Math.max(0, fa.mun - atqVivos.length * 0.4 * dt);
     }
     const naTrincheira = atqVivos.filter(a => a.dist <= 0);
-    if (naTrincheira.length && defVivos.length) defVivos.forEach(d => { if (Math.random() < C.CORPO_A_CORPO * TROPAS[d.s.tipo || 'inf'].corpo * eficacia(d.s) * b.genDef * dt) { const alvo = naTrincheira[Math.floor(Math.random() * naTrincheira.length)]; alvo.s.vida -= dano() * danoContra(d.s.tipo || 'inf', alvo.s.tipo || 'inf'); } });
+    if (naTrincheira.length && defVivos.length) defVivos.forEach(d => { if (Math.random() < C.CORPO_A_CORPO * TROPAS[d.s.tipo || 'inf'].corpo * eficacia(d.s) * b.genDef * lotD * fatorFaltaAco(d.s, b.defDono) * dt) { const alvo = naTrincheira[Math.floor(Math.random() * naTrincheira.length)]; alvo.s.vida -= dano() * danoContra(d.s.tipo || 'inf', alvo.s.tipo || 'inf'); } });
     b.atq.forEach(a => { if (a.s.vida <= 0 && !a.morto) { a.morto = true; b.efeitos.push({ x: a.x, y: a.dist, vida: 0.6, tipo: 'abate' }); if (b.audivel) som('abate'); } });
     b.def.forEach(d => { if (d.s.vida <= 0 && !d.morto) { d.morto = true; b.efeitos.push({ x: d.x, y: -1, vida: 0.6, tipo: 'abate' }); } });
     const sobraA = b.atq.filter(a => a.s.vida > 0), sobraD = b.def.filter(d => d.s.vida > 0);
@@ -1170,8 +1183,8 @@ function renderPainel() {
         // em cima, o resumo e as ordens (cabem na tela do celular); o resto fica em "Detalhes"
         const vida = Math.round(100 * e.s.reduce((t, x) => t + Math.max(0, x.vida), 0) / Math.max(1, e.s.reduce((t, x) => t + vidaMax(x), 0)));
         html = `<div class="titulo"><span>${nomeFormacao(e.s.length)}</span><span class="dono" style="color:${FACCOES.jogador.cor}">${e.rota.length ? (e.missao === 'saque' ? 'saqueando' : e.missao === 'voltar' ? 'voltando' : 'em marcha') : 'em ' + p.nome}</span></div>
-            <div class="info">${composicao(e.s)} · ❤ ${vida}% · ${e.s.some(x => x.tipo === 'blind') ? `⛽ ${Math.floor(G.fac.jogador.comb || 0)} de combustível${(G.fac.jogador.comb || 0) <= 0 ? ' <b style="color:#ff8a7a">(acabou: blindados a ' + Math.round(C.COMB_DEFICIT_VEL * 100) + '% de velocidade)</b>' : ''} · ` : ''}${fome ? `<b style="color:#e3b04b">${fome} com fome</b>` : 'tropa alimentada'}${cans ? ` · ${cans} cansados` : ''}${e.rota.length ? ` · indo para ${G.prov[e.rota[e.rota.length - 1]].nome}` : ''}
-            ${e.semSuprimento ? '<br><b style="color:#ff9f43">⚠ Sem suprimento: longe do seu território a tropa não come.</b>' : ''}</div>`;
+            <div class="info">${composicao(e.s)} · ❤ ${vida}% · ${e.s.some(usaComb) ? `⛽ ${Math.floor(G.fac.jogador.comb || 0)} de combustível${(G.fac.jogador.comb || 0) <= 0 ? ' <b style="color:#ff8a7a">(acabou: blindados e artilharia a ' + Math.round(C.COMB_DEFICIT_VEL * 100) + '% de velocidade)</b>' : ''} · ` : ''}${fome ? `<b style="color:#e3b04b">${fome} com fome</b>` : 'tropa alimentada'}${cans ? ` · ${cans} cansados` : ''}${e.rota.length ? ` · indo para ${G.prov[e.rota[e.rota.length - 1]].nome}` : ''}
+            ${e.semSuprimento ? '<br><b style="color:#ff9f43">⚠ Sem suprimento: longe do seu território a tropa não come.</b>' : ''}${G.fac.jogador.faltaAco && e.s.some(x => TROPAS[x.tipo || 'inf'].manutAco) ? '<br><b style="color:#ff9f43">⚠ Falta de aço: tropa pesada não se cura e causa menos dano.</b>' : ''}${fatorLotacao('jogador') < 1 ? `<br><b style="color:#ff9f43">⚠ Sublotação: o exército rende ${Math.round(fatorLotacao('jogador') * 100)}%.</b>` : ''}</div>`;
         const btE = e.emBatalha ? (batalhaEm(e.prov) || batalhaEm(e.aguarda)) : null;
         if (btE && (btE.atqDono === 'jogador' || btE.defDono === 'jogador') && !e.aguarda) html += painelBatalha(btE);
         else if (e.aguarda) html += `<div class="info">⏳ Esperando a batalha de ${G.prov[e.aguarda].nome} acabar para entrar.</div>`;
@@ -1255,8 +1268,8 @@ function desenharTropaEspecial(cx, tipo, x, y, cor, amigo, andando, esc = 1, dir
 function atualizarTopo() {
     const f = G.fac.jogador, tropa = tropaDe('jogador');
     const rec = (id, v, baixo) => { const el = document.getElementById(id); el.querySelector('b').textContent = Math.floor(v); el.classList.toggle('baixo', baixo); };
-    rec('rCom', f.comida, f.comida < tropa); rec('rMun', f.mun, f.mun < 60); rec('rMoe', f.moedas, f.moedas < manutencaoDe('jogador') * 2 || (f.atraso || 0) > 0); rec('rAco', f.aco || 0, false);
-    { const temBlind = G.ex.some(e => e.dono === 'jogador' && e.s.some(x => x.tipo === 'blind')); rec('rComb', f.comb || 0, temBlind && (f.comb || 0) < 5); }
+    rec('rCom', f.comida, f.comida < tropa); rec('rMun', f.mun, f.mun < 60); rec('rMoe', f.moedas, f.moedas < manutencaoDe('jogador') * 2 || (f.atraso || 0) > 0); rec('rAco', f.aco || 0, !!f.faltaAco);
+    { const temMotor = G.ex.some(e => e.dono === 'jogador' && e.s.some(usaComb)); rec('rComb', f.comb || 0, temMotor && (f.comb || 0) < 5); }
     { const mo = document.getElementById('rMO'), usada = maoDeObraUsada('jogador'), max = maoDeObraMax('jogador'); mo.querySelector('b').textContent = usada + '/' + max; mo.classList.toggle('baixo', usada >= max); }
     const pl = placar(); document.getElementById('rProv').querySelector('b').textContent = `${pl.jogador || 0}/${Object.keys(G.prov).length}`;
     const resta = Math.max(0, G.fase.tempo - G.t);
