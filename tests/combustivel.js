@@ -73,7 +73,7 @@ const { chromium } = require('playwright');
   ck(T.cidade === 1.3 && T.capital === 1.3 && T.floresta === 1.25 && T.morro === 1.15 && T.campo === 1, 'infantaria defende melhor em cidade/floresta/morro');
   ck(T.blindCampo === 1.25 && T.blindCidade === 1 && T.infAtaca === 1, 'blindado ataca melhor em campo');
   // painel da unidade: cabeçalho, combate, logística, composição; separar e renomear
-  await p.evaluate(() => { comecarFase(1); G.pausado = true; G.fac.jogador.comb = 0; });
+  await p.evaluate(() => { comecarFase(1); G.pausado = true; G.fac.jogador.comb = 0; G.verDetalhes = true; }); // combate, logística e composição ficam em "Detalhes"
   const UD = await p.evaluate(() => {
     const cap = G.prov[G.capitalJogador], e = exParadosEm(cap.id, 'jogador')[0]; e.s.push(soldado('T', 'blind'), soldado('A', 'art'));
     G.sel = { tipo: 'ex', id: e.id }; renderPainel(); const t = document.getElementById('painel').textContent;
