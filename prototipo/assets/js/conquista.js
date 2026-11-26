@@ -50,10 +50,10 @@ const C = {
 const CAPITULOS = ['Capítulo 1 · A Fronteira', 'Capítulo 2 · O Coração do País'];
 const FASES = [
     { n: 1, cap: 0, nome: 'Fronteira', semente: 1101, celulas: 52, mar: 0.05, W: 860, H: 1120, bots: ['bravo', 'charlie', 'delta'], tempo: 600, extra: 1, milicia: 0, graca: 60, objetivo: 'semPerder' },
-    { n: 2, cap: 0, nome: 'O Rio', semente: 4409, celulas: 56, mar: 0.12, W: 900, H: 1160, bots: ['bravo', 'charlie'], tempo: 660, extra: 1, milicia: 0, botFacil: 0.7, objetivo: 'pesquisa', regra: 'industria', regraTxt: 'região industrial: obras custam metade' },
+    { n: 2, cap: 0, nome: 'O Rio', semente: 4409, celulas: 56, mar: 0.12, W: 900, H: 1160, bots: ['bravo', 'charlie'], tempo: 720, extra: 1, milicia: 0, botFacil: 0.7, objetivo: 'pesquisa', regra: 'industria', regraTxt: 'região industrial: obras custam metade' },
     { n: 3, cap: 0, nome: 'Região central', semente: 2207, celulas: 66, mar: 0.05, W: 980, H: 1280, bots: ['bravo', 'charlie', 'delta', 'echo'], tempo: 720, extra: 2, milicia: 1, botFacil: 0.85, objetivo: 'capitais' },
-    { n: 4, cap: 1, nome: 'Inverno', semente: 5521, celulas: 70, mar: 0.06, W: 1000, H: 1300, bots: ['bravo', 'delta', 'echo'], tempo: 780, extra: 2, milicia: 0, botFacil: 1.15, objetivo: 'baixas', regra: 'inverno', regraTxt: 'inverno: campos produzem 40% menos comida' },
-    { n: 5, cap: 1, nome: 'Aliança frágil', semente: 6637, celulas: 76, mar: 0.05, W: 1040, H: 1360, bots: ['bravo', 'charlie', 'delta', 'echo'], tempo: 840, extra: 3, milicia: 0, objetivo: 'rebeldes', regra: 'paz', regraTxt: 'começa em paz com Charlie (que pode virar aliado… ou não)' },
+    { n: 4, cap: 1, nome: 'Inverno', semente: 5521, celulas: 70, mar: 0.06, W: 1000, H: 1300, bots: ['bravo', 'delta', 'echo'], tempo: 780, extra: 2, milicia: 0, botFacil: 1.08, objetivo: 'baixas', regra: 'inverno', regraTxt: 'inverno: campos produzem 40% menos comida' },
+    { n: 5, cap: 1, nome: 'Aliança frágil', semente: 6637, celulas: 76, mar: 0.05, W: 1040, H: 1360, bots: ['bravo', 'charlie', 'delta', 'echo'], tempo: 900, botFacil: 0.75, extra: 3, milicia: 0, objetivo: 'rebeldes', regra: 'paz', regraTxt: 'começa em paz com Charlie (que pode virar aliado… ou não)' },
     { n: 6, cap: 1, nome: 'A capital', semente: 3301, celulas: 86, mar: 0.05, W: 1100, H: 1440, bots: ['bravo', 'charlie', 'delta', 'echo'], tempo: 840, extra: 2, milicia: 1, capitalForte: 'delta', objetivo: 'capitais' }
 ];
 const NOMES_JOG = ['Silva', 'Santos', 'Ferreira', 'Costa', 'Oliveira', 'Mendes', 'Rocha', 'Lima', 'Souza', 'Alves', 'Pereira', 'Nunes', 'Barros', 'Dias'];
@@ -221,7 +221,7 @@ function novoJogo(numFase) {
         pesq: { jogador: { feitas: {}, atual: null } }, rel: {}, genFerido: {}, genXp: {}, stats: {}
     };
     F.bots.forEach((b, i) => { G.fac[b] = { comida: 40, mun: 150, moedas: b === 'delta' ? 70 : 50, aco: C.ACO_INICIAL, comb: C.COMB_INICIAL, atraso: 0 }; G.pensar[b] = 60 + i * 12 + r() * 10; G.pesq[b] = { feitas: {}, atual: null }; G.rel[b] = novaRelacao(); });
-    if (F.regra === 'paz' && G.rel.charlie) { G.rel.charlie.estado = 'paz'; G.rel.charlie.ate = 300; }
+    if (F.regra === 'paz' && G.rel.charlie) { G.rel.charlie.estado = 'paz'; G.rel.charlie.ate = 480; }
     MAPA.prov.forEach(pm => {
         const t = r(), tipo = t < 0.38 ? 'campo' : t < 0.58 ? 'floresta' : t < 0.74 ? 'morro' : 'cidade';
         G.prov[pm.id] = { id: pm.id, nome: pm.nome, x: pm.x, y: pm.y, viz: pm.viz, poli: pm.poli, path: caminhoDe(pm.poli), dono: 'neutro', tipo, trinch: C.TRINCH_BASE, capital: false, moral: 60, obras: {}, obra: null };
@@ -1140,11 +1140,11 @@ function painelBatalha(b) {
                          : [['atacar', '🔥 Atacar', '+dano, +risco'], ['equilibrio', '⚖ Equilíbrio', 'padrão'], ['abrigar', '🛡 Abrigar', '−dano recebido']];
     const atual = souAtq ? b.postAtq : b.postDef, f = G.fac.jogador;
     const usada = !!b.usouArt;
-    return `<div class="info"><b style="color:#ff9f6a">⚔ Batalha em ${b.alvo.nome}</b>: você ${souAtq ? nA : nD} × ${souAtq ? nD : nA} ${FACCOES[outro].nome} · ${Math.ceil(resta / C.BAT_RITMO)}s no máximo</div>${typeof barraDaBatalha === 'function' ? barraDaBatalha(b, souAtq) : ''}
+    return `<div class="info"><b style="color:#ff9f6a">⚔ Batalha em ${b.alvo.nome}</b>: você ${souAtq ? nA : nD} × ${souAtq ? nD : nA} ${FACCOES[outro].nome} · ${Math.ceil(resta / C.BAT_RITMO)}s no máximo</div>${typeof barraDaBatalha === 'function' ? barraDaBatalha(b, souAtq) : ''}${artACaminho(b, souAtq ? 'atq' : 'def') ? `<div class="perigo-art" role="alert">💥 ARTILHARIA A CAMINHO · toque em ${souAtq ? '🛡 Cobertura' : '🛡 Abrigar'}</div>` : ''}
         <div class="acoes">${posts.map(([id, t, d]) => botao(t, d, `acaoBatalha('${b.alvo.id}','${id}')`, { forte: atual === id })).join('')}
         ${podeResolverRapido(b) ? botao('⏩ Resolver rápido', 'termina já, mesmas regras', `resolverRapido('${b.alvo.id}')`) : ''}
         ${botao('💥 Artilharia', usada ? (artACaminho(b, souAtq ? 'def' : 'atq') ? 'a caminho…' : 'já usada') : `${custoArtilharia('jogador')} 🔫 · avisa antes de cair`, `acaoBatalha('${b.alvo.id}','art')`, { off: usada || f.mun < custoArtilharia('jogador') })}</div>
-        ${artACaminho(b, souAtq ? 'atq' : 'def') ? `<div class="perigo-art">💥 ARTILHARIA A CAMINHO · toque em ${souAtq ? '🛡 Cobertura' : '🛡 Abrigar'}</div>` : `<div class="info dica-post">${souAtq ? 'Avançar pega quem está abrigado. Cobertura protege do fogo forte e da artilharia.' : 'Atacar pune quem avança. Abrigar protege da artilharia, mas o avanço inimigo bate mais.'}</div>`}`;
+        ${artACaminho(b, souAtq ? 'atq' : 'def') ? '' : `<div class="info dica-post">${souAtq ? 'Avançar pega quem está abrigado. Cobertura protege do fogo forte e da artilharia.' : 'Atacar pune quem avança. Abrigar protege da artilharia, mas o avanço inimigo bate mais.'}</div>`}`;
 }
 const contarTipos = (lista) => { const r = {}; lista.forEach(x => { if (x.s.vida > 0) { const t = x.s.tipo || 'inf'; r[t] = (r[t] || 0) + 1; } }); return r; };
 function batalhasParaDesenho() {

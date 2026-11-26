@@ -141,7 +141,9 @@
   .acao { padding: 10px 6px; border-radius: 8px; border: 1px solid var(--borda); background: var(--painel); font-weight: 700; font-size: 13px; }
   .acao small { display: block; font-weight: 400; font-size: 10px; color: var(--mudo); }
   .acao.forte { border-color: var(--ambar); background: #2a2214; color: #ffd28a; }
-  .perigo-art { margin-top: 6px; padding: 8px; border-radius: 8px; border: 1px solid #c0392b; background: #4a1717; color: #ffd6cf; font-weight: 700; font-size: 12px; text-align: center; animation: pisca .45s infinite alternate; }
+  .perigo-art { margin-top: 6px; padding: 8px; border-radius: 8px; border: 1px solid #c0392b; background: #4a1717; color: #ffd6cf; font-weight: 700; font-size: 12px; text-align: center; animation: perigoArt .45s infinite alternate; }
+  @keyframes perigoArt { to { box-shadow: 0 0 12px #ff6a50; border-color: #ff8a70; } }
+  @media (prefers-reduced-motion: reduce) { .perigo-art { animation: none; } }
   .dica-post { font-size: 11px; }
   .reforco { display: block; width: 100%; text-align: left; padding: 10px 12px; margin-top: 8px; border-radius: 10px; border: 1px solid var(--ambar); background: #2a2214; color: #ffd28a; font-size: 14px; font-family: inherit; }
   .reforco.fixo { border-color: var(--borda); background: var(--painel); }
@@ -197,9 +199,9 @@
   button.fase::after { content: ''; display: block; clear: both; }
   button.fase.trancada { border-color: var(--borda); background: var(--painel); color: var(--mudo); }
 </style>
-    <link rel="stylesheet" href="assets/css/fontes.css?v=20261126.1256">
-    <link rel="stylesheet" href="assets/css/tokens.css?v=20261126.1256">
-    <link rel="stylesheet" href="assets/css/polimento-visual.css?v=20261126.1256">
+    <link rel="stylesheet" href="assets/css/fontes.css?v=20261126.1347">
+    <link rel="stylesheet" href="assets/css/tokens.css?v=20261126.1347">
+    <link rel="stylesheet" href="assets/css/polimento-visual.css?v=20261126.1347">
 </head>
 <body>
 <div id="app">
@@ -225,21 +227,21 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
 <script src="vendor/game-icons.js"></script>
 <script>document.querySelectorAll('[data-icone]').forEach(el => { if (!el.innerHTML) el.innerHTML = icone(el.dataset.icone); });</script>
-<script src="assets/js/paleta.js?v=20261126.1256"></script>
-<script src="assets/js/som-ui.js?v=20261126.1256"></script>
-<script src="assets/js/conquista-unidades.js?v=20261126.1256"></script>
-<script src="assets/js/conquista-mapa.js?v=20261126.1256"></script>
-<script src="assets/js/conquista-extra.js?v=20261126.1256"></script>
-<script src="assets/js/conquista.js?v=20261126.1256"></script>
-<script src="assets/js/conquista-batalha.js?v=20261126.1256"></script>
-<script src="assets/js/conquista-missoes.js?v=20261126.1256"></script>
-<script src="assets/js/conquista-guerra.js?v=20261126.1256"></script>
-<script src="assets/js/conquista-campanha.js?v=20261126.1256"></script>
-<script src="assets/js/conquista-situacao.js?v=20261126.1256"></script>
-<script src="assets/js/conquista-online.js?v=20261126.1256"></script>
-<script src="assets/js/conquista-config.js?v=20261126.1256"></script>
-<script src="assets/js/guia-tutorial.js?v=20261126.1256"></script>
-<script src="assets/js/conquista-guia.js?v=20261126.1256"></script>
+<script src="assets/js/paleta.js?v=20261126.1347"></script>
+<script src="assets/js/som-ui.js?v=20261126.1347"></script>
+<script src="assets/js/conquista-unidades.js?v=20261126.1347"></script>
+<script src="assets/js/conquista-mapa.js?v=20261126.1347"></script>
+<script src="assets/js/conquista-extra.js?v=20261126.1347"></script>
+<script src="assets/js/conquista.js?v=20261126.1347"></script>
+<script src="assets/js/conquista-batalha.js?v=20261126.1347"></script>
+<script src="assets/js/conquista-missoes.js?v=20261126.1347"></script>
+<script src="assets/js/conquista-guerra.js?v=20261126.1347"></script>
+<script src="assets/js/conquista-campanha.js?v=20261126.1347"></script>
+<script src="assets/js/conquista-situacao.js?v=20261126.1347"></script>
+<script src="assets/js/conquista-online.js?v=20261126.1347"></script>
+<script src="assets/js/conquista-config.js?v=20261126.1347"></script>
+<script src="assets/js/guia-tutorial.js?v=20261126.1347"></script>
+<script src="assets/js/conquista-guia.js?v=20261126.1347"></script>
 
 </body>
 </html>

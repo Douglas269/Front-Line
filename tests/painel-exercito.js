@@ -10,7 +10,7 @@ const PRINTS = process.env.PRINTS;
         const p = await b.newPage({ viewport: tela }); p.on('pageerror', e => erros.push(e.message));
         await p.goto(CONQ); await p.evaluate(() => { localStorage.clear(); localStorage.setItem('frontline-conq-guia', 'feito'); }); await p.goto(CONQ); await p.waitForTimeout(600);
         await p.evaluate(() => {
-            esconderTela(); novoJogo(1); G.semSalvar = true; pausar(true); Object.keys(G.pensar).forEach(x => { G.pensar[x] = 1e9; });
+            esconderTela(); novoJogo(3); G.semSalvar = true; // na fase 3 todos os sistemas já estão liberados pausar(true); Object.keys(G.pensar).forEach(x => { G.pensar[x] = 1e9; });
             G.sel = { tipo: 'ex', id: G.ex.find(e => e.dono === 'jogador' && e.prov === G.capitalJogador).id }; renderPainel();
             // quais destes botões aparecem inteiros na parte visível do painel, sem rolar
             window.visiveis = (textos) => { const pn = document.getElementById('painel'), r = pn.getBoundingClientRect(); return textos.filter(t => { const bt = [...pn.querySelectorAll('button')].find(x => x.textContent.includes(t)); if (!bt) return true; const q = bt.getBoundingClientRect(); return !(q.height > 0 && q.top >= r.top && q.bottom <= Math.min(r.bottom, innerHeight) + 0.5); }); };
@@ -40,6 +40,11 @@ const PRINTS = process.env.PRINTS;
         await p.waitForTimeout(700); await foto('batalha');
         const luta = await p.evaluate(() => visiveis(['Avançar', 'Cobertura', 'Recuar', 'Resolver rápido', 'Artilharia']));
         if (luta.length) falhas.push(`${nome}: em batalha, botões fora da área visível: ${luta}`);
+        // com a artilharia inimiga no ar, o aviso e o botão de abrigo continuam à vista
+        await p.evaluate(() => { const bt = G.batalhas[0]; G.fac.neutro.mun = 500; artilhariaNaBatalha(bt, 'def'); renderPainel(); });
+        await p.waitForTimeout(300); await foto('artilharia');
+        const art = await p.evaluate(() => { const a = document.querySelector('#painel .perigo-art'), pn = document.getElementById('painel').getBoundingClientRect(); const q = a && a.getBoundingClientRect(); return !!q && q.top >= pn.top && q.bottom <= Math.min(pn.bottom, innerHeight) && visiveis(['Cobertura']).length === 0; });
+        if (!art) falhas.push(`${nome}: aviso de artilharia ou botão de cobertura fora da área visível`);
         await p.close();
     }
     if (erros.length) falhas.push('erros de JavaScript: ' + erros.slice(0, 2).join(' | '));

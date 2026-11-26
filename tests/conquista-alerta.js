@@ -13,7 +13,7 @@ const CONQ = 'file://' + path.resolve(__dirname, '..', 'prototipo', 'conquista.h
         while (G.t < 59) passoMapa(0.5); o.ordensNaGraca = ordensBot;
         while (G.t < 400 && ordensBot === 0) passoMapa(0.5); o.depoisDaGraca = ordensBot;
         ordem = ord;
-        o.fase2MaisLonga = FASES[1].tempo >= 1000;
+        o.fase2MaisLonga = FASES[1].tempo >= 700 && FASES[1].tempo > FASES[0].tempo; // as partidas ficaram mais curtas; o equilíbrio é medido em conquista-fases.js
         // aviso de ataque: exército de bot marchando contra uma província minha, à vista
         novoJogo(1); Object.keys(G.pensar).forEach(x => { G.pensar[x] = 1e9; });
         const cap = G.prov[G.capitalJogador], bot = G.fase.bots[0];

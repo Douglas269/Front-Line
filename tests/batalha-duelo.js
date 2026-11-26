@@ -9,8 +9,8 @@ const CONQ = 'file://' + path.resolve(__dirname, '..', 'prototipo', 'conquista.h
     const r = await p.evaluate(() => {
         esconderTela(); laco = () => {};
         const o = {};
-        const mk = (nA, nD, trinch, defDono = 'neutro') => {
-            novoJogo(1); Object.keys(G.pensar).forEach(x => { G.pensar[x] = 1e9; });
+        const mk = (nA, nD, trinch, defDono = 'neutro', fase = 1) => {
+            novoJogo(fase); Object.keys(G.pensar).forEach(x => { G.pensar[x] = 1e9; });
             const q = Object.values(G.prov).find(x => x.dono === 'neutro' && !x.capital); G.ex = G.ex.filter(e => e.prov !== q.id); q.trinch = trinch; q.obras = {}; q.dono = defDono;
             const d = criarExercito(defDono, q.id, 0, Array.from({ length: nD }, () => soldado('d'))), a = criarExercito('jogador', q.viz[0], 0, Array.from({ length: nA }, () => soldado('a')));
             G.fac.jogador.mun = 500; const bt = abrirBatalha(a, q, [d]); bt.audivel = false; return bt;
@@ -26,11 +26,11 @@ const CONQ = 'file://' + path.resolve(__dirname, '..', 'prototipo', 'conquista.h
         const taxa = (conf, N = 500, passo = () => {}) => { let v = 0; for (let k = 0; k < N; k++) { const x = mk(8, 6, 40); conf(x); let g = 0; while (!x.terminou && g++ < 5000) { passoBatalha(x, 0.2); passo(x); } if (x.vencedor === 'atq') v++; G.batalhas = []; } return Math.round(100 * v / N); };
         o.base = taxa(() => {}); o.comArt = taxa(x => artilhariaNaBatalha(x, 'atq'));
         o.artContraAbrigo = taxa(x => { x.postDef = 'abrigar'; artilhariaNaBatalha(x, 'atq'); }, 500, x => { if (x.art.atq.cai === null) x.postDef = 'equilibrio'; }); // abriga só enquanto o projétil está no ar
-        o.abrigoSemAssalto = taxa(x => { x.postDef = 'abrigar'; x.postAtq = 'cobertura'; });
-        o.abrigoComAssalto = taxa(x => { x.postDef = 'abrigar'; x.postAtq = 'avancar'; });
+        o.abrigoSemAssalto = taxa(x => { x.postDef = 'abrigar'; x.postAtq = 'cobertura'; }, 2000);
+        o.abrigoComAssalto = taxa(x => { x.postDef = 'abrigar'; x.postAtq = 'avancar'; }, 2000);
         // 4) o bot defensor reage ao aviso se abrigando (na maioria das vezes) e também usa a própria artilharia
         const bot = 'bravo'; let abrigos = 0, atirou = 0, N = 200;
-        for (let k = 0; k < N; k++) { const x = mk(10, 8, 40, bot); G.pensar[bot] = 1e9; G.fac[bot].mun = 500; artilhariaNaBatalha(x, 'atq'); let foi = false, g = 0; while (!x.terminou && g++ < 3000) { passoBatalha(x, 0.2); if (x.art.atq.cai !== null && x.postDef === 'abrigar') foi = true; } if (foi) abrigos++; if (x.art.def && x.art.def.usada) atirou++; G.batalhas = []; }
+        for (let k = 0; k < N; k++) { const x = mk(10, 8, 40, bot, 3); G.pensar[bot] = 1e9; G.fac[bot].mun = 500; artilhariaNaBatalha(x, 'atq'); let foi = false, g = 0; while (!x.terminou && g++ < 3000) { passoBatalha(x, 0.2); if (x.art.atq.cai !== null && x.postDef === 'abrigar') foi = true; } if (foi) abrigos++; if (x.art.def && x.art.def.usada) atirou++; G.batalhas = []; }
         o.botAbriga = Math.round(100 * abrigos / N); o.botAtira = Math.round(100 * atirou / N);
         // 5) milícia não usa tática
         bt = mk(8, 6, 40); for (let i = 0; i < 40; i++) passoBatalha(bt, 0.2); o.milicia = bt.postDef === 'equilibrio' && !(bt.art && bt.art.def && bt.art.def.usada);

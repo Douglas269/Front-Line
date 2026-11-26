@@ -39,7 +39,7 @@ const CONQ = 'file://' + path.resolve(__dirname, '..', 'prototipo', 'conquista.h
         const alvo = base.viz.map(id => G.prov[id]).find(q => !q.capital); G.ex = G.ex.filter(e => e.prov !== alvo.id); alvo.dono = 'jogador';
         anunciarOfensiva({ bot: b0, base: base.id, alvo: alvo.id });
         o.avisa = !!G.vida.ofensiva && /Ofensiva/.test(textoDaFaixa().html + (G.vida.radio ? 'Ofensiva' : '')) && G.noticias.some(n => /OFENSIVA/.test(n.txt) && n.alerta);
-        const t0 = tropaDe(b0); G.t = G.vida.ofensiva.em; passoOfensiva(); o.chegaComReforco = tropaDe(b0) === t0 + reforcosDaOfensiva() && G.vida.ofensiva.lancada && G.ex.some(e => e.id === G.vida.ofensiva.ex && e.rota.includes(alvo.id));
+        const t0 = tropaDe(b0), vem = reforcosDaOfensiva(); G.t = G.vida.ofensiva.em; passoOfensiva(); o.chegaComReforco = tropaDe(b0) === t0 + vem && reforcosDaOfensiva() === vem + 3 && G.vida.ofensiva.lancada && G.ex.some(e => e.id === G.vida.ofensiva.ex && e.rota.includes(alvo.id));
         G.ex = G.ex.filter(e => e.id !== G.vida.ofensiva.ex); const moedas = G.fac.jogador.moedas; passoOfensiva(); o.repelidaPaga = !G.vida.ofensiva && G.fac.jogador.moedas === moedas + OFENSIVA_CQ.PREMIO.moedas && G.vida.repelidas === 1;
         anunciarOfensiva({ bot: b0, base: base.id, alvo: alvo.id }); base.dono = 'jogador'; const m2 = G.fac.jogador.moedas; G.t = G.vida.ofensiva.em; passoOfensiva(); o.tomarBaseDesarma = !G.vida.ofensiva && G.fac.jogador.moedas > m2;
         // 5) ofensiva final e domínio: vence quem segura 60% do mapa por 1 minuto; vale para o inimigo também

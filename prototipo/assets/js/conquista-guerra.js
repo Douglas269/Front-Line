@@ -35,9 +35,10 @@ abrirBatalha = function (e, p, defensores) {
 };
 
 /* ---------- Ofensivas anunciadas: um inimigo avisa onde vai bater; dá tempo de preparar e há prêmio por segurar ---------- */
-const OFENSIVA_CQ = { PRIMEIRA: 230, MIN: 200, VAR: 60, AVISO: 35, JULGA: 60, PREMIO: { moedas: 45, aco: 12 } };
+const OFENSIVA_CQ = { PRIMEIRA: 210, MIN: 150, VAR: 50, AVISO: 35, JULGA: 60, PREMIO: { moedas: 45, aco: 12 } };
 const botsAtivos = () => G.fase.bots.filter(b => !G.eliminados[b] && !(G.semCapital && G.semCapital[b]) && G.pensar[b] !== undefined && G.pensar[b] < 1e6 && emGuerra(b, 'jogador') && provDe(b).length);
-const reforcosDaOfensiva = () => Math.max(2, 2 + Math.round(G.fase.n / 2) + ({ recruta: -2, veterano: 2 })[typeof CONFIG_CONQ !== 'undefined' ? CONFIG_CONQ.dificuldade : ''] || 0) || 2;
+// cada ofensiva vem mais forte que a anterior: ficar parado deixa de ser seguro
+const reforcosDaOfensiva = () => Math.max(2, 3 + Math.round(G.fase.n / 2) + 3 * ((G.vida && G.vida.lancadas) || 0) + (({ recruta: -2, veterano: 2 })[typeof CONFIG_CONQ !== 'undefined' ? CONFIG_CONQ.dificuldade : ''] || 0));
 function planejarOfensiva() {
     const opcoes = [];
     botsAtivos().forEach(b => provDe(b).forEach(base => base.viz.map(id => G.prov[id]).filter(q => q.dono === 'jogador').forEach(alvo => opcoes.push({ bot: b, base: base.id, alvo: alvo.id, peso: (FACCOES[b].perso === 'agressivo' ? 2 : 1) * (alvo.capital ? 0.35 : 1) / (1 + defesaEm(alvo) / 8) }))));
@@ -61,6 +62,7 @@ function lancarOfensiva() {
     }
     const e = exParadosEm(base.id, o.bot)[0] || criarExercito(o.bot, base.id, 0);
     for (let i = 0; i < reforcosDaOfensiva(); i++) e.s.push(soldado('Inimigo'));
+    v.lancadas = (v.lancadas || 0) + 1;
     const manda = ordem(e.id, alvo.id, e.s.length, 'ataque');
     o.lancada = true; o.ex = manda ? manda.id : null; o.julga = G.t + OFENSIVA_CQ.JULGA;
     return !!manda;

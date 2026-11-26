@@ -48,7 +48,8 @@ function quedaDaArtilharia(b) {
 
 /* ---------- Tática dos bots dentro da batalha (os mesmos botões do jogador) ---------- */
 const ehBot = (dono) => !!G && !G.cliente && G.pensar[dono] !== undefined;
-const espertezaBot = () => ({ recruta: 0.3, veterano: 0.85 })[typeof CONFIG_CONQ !== 'undefined' ? CONFIG_CONQ.dificuldade : ''] || 0.6;
+// na fase 1 (quem está aprendendo) os bots demoram mais a reagir
+const espertezaBot = () => (({ recruta: 0.3, veterano: 0.85 })[typeof CONFIG_CONQ !== 'undefined' ? CONFIG_CONQ.dificuldade : ''] || 0.6) * (G && G.fase && G.fase.n === 1 && !G.online ? 0.55 : 1);
 function taticaDosBots(b) {
     ['atq', 'def'].forEach(lado => {
         const dono = donoDoLado(b, lado); if (!ehBot(dono)) return;
