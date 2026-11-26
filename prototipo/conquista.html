@@ -141,6 +141,15 @@
   .acao { padding: 10px 6px; border-radius: 8px; border: 1px solid var(--borda); background: var(--painel); font-weight: 700; font-size: 13px; }
   .acao small { display: block; font-weight: 400; font-size: 10px; color: var(--mudo); }
   .acao.forte { border-color: var(--ambar); background: #2a2214; color: #ffd28a; }
+  .perigo-art { margin-top: 6px; padding: 8px; border-radius: 8px; border: 1px solid #c0392b; background: #4a1717; color: #ffd6cf; font-weight: 700; font-size: 12px; text-align: center; animation: pisca .45s infinite alternate; }
+  .dica-post { font-size: 11px; }
+  .luta { display: flex; align-items: center; gap: 8px; margin: 2px 0 4px; font-size: 11px; font-weight: 700; }
+  .luta-b { flex: 1; height: 10px; border-radius: 5px; overflow: hidden; background: #4a1c16; border: 1px solid var(--borda); }
+  .luta-b i { display: block; height: 100%; transition: width .25s linear; }
+  #resumoBatalha { display: none; position: absolute; left: 50%; top: 44px; transform: translateX(-50%); width: min(300px, calc(100% - 24px)); z-index: 7; padding: 10px 12px; border-radius: 10px; font-size: 12px; line-height: 1.6; background: rgba(19,24,21,.97); border: 2px solid #4c8f45; color: var(--texto); box-shadow: 0 8px 22px rgba(0,0,0,.55); }
+  #resumoBatalha.ruim { border-color: #a8443a; }
+  #resumoBatalha > b { display: block; font-size: 14px; color: #ffd28a; padding-right: 28px; }
+  #resumoBatalha .fechar { position: absolute; right: 4px; top: 4px; width: 32px; height: 32px; border: 0; background: transparent; font-size: 14px; }
   .detalhes { width: 100%; min-height: 34px; margin-top: 6px; border-radius: 8px; border: 1px dashed var(--borda); background: transparent; color: var(--mudo); font-size: 12px; font-weight: 700; }
   .seletor { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 13px; }
   .passo { width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--borda); background: var(--painel); font-size: 18px; font-weight: 700; }
@@ -200,6 +209,7 @@
 <script src="assets/js/conquista-mapa.js?v=20261126.1256"></script>
 <script src="assets/js/conquista-extra.js?v=20261126.1256"></script>
 <script src="assets/js/conquista.js?v=20261126.1256"></script>
+<script src="assets/js/conquista-batalha.js?v=20261126.1256"></script>
 <script src="assets/js/conquista-situacao.js?v=20261126.1256"></script>
 <script src="assets/js/conquista-online.js?v=20261126.1256"></script>
 <script src="assets/js/conquista-config.js?v=20261126.1256"></script>

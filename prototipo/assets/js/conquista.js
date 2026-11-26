@@ -38,7 +38,7 @@ const C = {
     LOTACAO_PISO: 0.7,        // mais soldados do que as províncias sustentam: o exército rende menos em batalha, até este piso
     STACK_LIMITE: 14, STACK_PEN: 0.03, STACK_PISO: 0.6, // excesso de tropas (nomes e penalidade: ver conquista-unidades.js)
     VEL: 12,                  // velocidade dos exércitos (unidades do mapa por segundo)
-    BAT_RITMO: 4,             // a batalha corre no próprio mapa, 4× mais rápido que o relógio de 2 minutos
+    BAT_RITMO: 2.5,           // a batalha corre no próprio mapa, 2,5× mais rápido que o relógio de 2 minutos (dá tempo de decidir)
     BAT_DURACAO: 120, DIST: 300, VELBAT: { avancar: 14, cobertura: 6, recuar: -12 },
     TIRO_DEF: 0.18, TIRO_ATQ: 0.16, DANO_TIRO: 30, TRINCH_PROTEGE: 0.5, TRINCH_PROTEGE_CORPO: 0.2, CORPO_A_CORPO: 0.45, // a trincheira reduz o tiro de quem ataca (e, com o 2º número, o corpo a corpo)
     BLINDADO_RECEBE: 0.35,  // fração do dano que o blindado leva de tiros que não são de artilharia
@@ -78,7 +78,7 @@ let G, MAPA, TERRENO;
 let proxId = 1;
 function soldado(nome, tipo = 'inf') { return { nome, tipo, vida: TROPAS[tipo].vida, fome: 10, cansaco: 0, soldo: 0 }; }
 const vivos = (l) => l.filter(s => s.vida > 0);
-const eficacia = (s) => (s.vida / 100) * (1 - 0.55 * Math.max(0, s.fome - 40) / 60) * (1 - 0.3 * s.cansaco / 100) * (1 - 0.35 * Math.max(0, (s.soldo || 0) - C.ATRASO_EFIC) / 70);
+const eficacia = (s) => (s.vida / 100) * (1 + (typeof patenteDe === 'function' && patenteDe(s) ? patenteDe(s).bonus : 0)) * (1 - 0.55 * Math.max(0, s.fome - 40) / 60) * (1 - 0.3 * s.cansaco / 100) * (1 - 0.35 * Math.max(0, (s.soldo || 0) - C.ATRASO_EFIC) / 70);
 const forca = (lista) => lista.reduce((t, s) => t + (s.vida > 0 ? eficacia(s) : 0), 0);
 const corFome = (s) => s.vida <= 0 ? '#444' : s.fome >= 75 ? '#e0533f' : s.fome >= 50 ? '#e3b04b' : '#7bc96f';
 const provDe = (dono) => Object.values(G.prov).filter(p => p.dono === dono);
@@ -162,9 +162,9 @@ function batalhasParaSalvar() {
     return (G.batalhas || []).filter(b => !b.terminou && G.ex.includes(b.ex)).map(b => {
         const defensores = b.defensores.filter(d => G.ex.includes(d));
         const guardar = (lista, soldados) => lista.map(({ s, ...resto }) => { const i = soldados.indexOf(s); return i >= 0 ? { ...resto, i } : { ...resto, s }; });
-        const { atqDono, defDono, saque, t, postAtq, postDef, usouArt, audivel, genAtq, genDef, effAtq, effDef, forte } = b;
+        const { atqDono, defDono, saque, t, postAtq, postDef, usouArt, audivel, genAtq, genDef, effAtq, effDef, forte, art, ia } = b;
         return { ex: b.ex.id, alvo: b.alvo.id, defensores: defensores.map(d => d.id), atq: guardar(b.atq, b.ex.s), def: guardar(b.def, defensores.flatMap(d => d.s)),
-            atqDono, defDono, saque, t, postAtq, postDef, usouArt, audivel, genAtq, genDef, effAtq, effDef, forte };
+            atqDono, defDono, saque, t, postAtq, postDef, usouArt, audivel, genAtq, genDef, effAtq, effDef, forte, art, ia };
     });
 }
 // Recria as batalhas salvas (sem repetir o que acontece só no começo, como a barragem do general artilheiro) e quem esperava a vez.
@@ -610,7 +610,7 @@ function batalhaEm(provId) {
     if (G.cliente) { // no online o cliente só conhece o placar que o anfitrião mandou
         const v = (G.batalhasVis || []).find(b => b.prov === provId); if (!v) return null;
         const vivo = { s: { vida: 1 } };
-        return { alvo: G.prov[provId], atqDono: v.atq, defDono: v.def, atq: Array(v.nA).fill(vivo), def: Array(v.nD).fill(vivo), t: v.t || 0, postAtq: v.pa, postDef: v.pd, usouArt: !!v.art, ex: { de: v.de } };
+        return { alvo: G.prov[provId], atqDono: v.atq, defDono: v.def, atq: Array(v.nA).fill(vivo), def: Array(v.nD).fill(vivo), t: v.t || 0, postAtq: v.pa, postDef: v.pd, usouArt: !!(v.atq === 'jogador' ? v.ua : v.ud), art: { atq: { usada: !!v.ua, cai: v.ca ? 0 : null }, def: { usada: !!v.ud, cai: v.cd ? 0 : null } }, ex: { de: v.de } };
     }
     return (G.batalhas || []).find(b => b.alvo.id === provId && !b.terminou);
 }
@@ -686,6 +686,11 @@ function placar() { // províncias por facção
 }
 
 /* ---------- Batalha: até 2 minutos na trincheira ---------- */
+// um tiro acerta: se derrubar o alvo, conta o abate para quem atirou
+function acertar(atirador, alvo, dano) {
+    const vivoAntes = alvo.s.vida > 0; alvo.s.vida -= dano;
+    if (vivoAntes && alvo.s.vida <= 0) { atirador.s.abates = (atirador.s.abates || 0) + 1; atirador.abatesLuta = (atirador.abatesLuta || 0) + 1; }
+}
 function criarBatalha(e, alvo, defensores) {
     const defS = defensores.flatMap(d => d.s).filter(s => s.vida > 0);
     const b = {
@@ -705,6 +710,8 @@ function criarBatalha(e, alvo, defensores) {
 function passoBatalha(b, dt) {
     if (b.terminou) return;
     b.t += dt;
+    if (typeof taticaDosBots === 'function') { taticaDosBots(b); quedaDaArtilharia(b); }
+    const assalto = b.postAtq === 'avancar' && b.postDef === 'abrigar' && typeof ASSALTO_NO_ABRIGO !== 'undefined' ? ASSALTO_NO_ABRIGO : 1;
     const fa = G.fac[b.atqDono], fd = G.fac[b.defDono];
     const atqVivos = b.atq.filter(a => a.s.vida > 0), defVivos = b.def.filter(d => d.s.vida > 0);
     atqVivos.forEach(a => { a.dist = Math.max(0, Math.min(C.DIST + 25, a.dist - C.VELBAT[b.postAtq] * dt)); }); // para na beira da trincheira
@@ -718,7 +725,7 @@ function passoBatalha(b, dt) {
         defVivos.forEach(d => {
             const T = TROPAS[d.s.tipo || 'inf'];
             if (Math.random() < C.TIRO_DEF * T.def * eficacia(d.s) * pd.dano * exposicao * munD * cap * b.genDef * b.forte * b.effDef * semComb(d.s, b.defDono) * fatorFaltaAco(d.s, b.defDono) * lotD * bonusTerreno(d.s.tipo || 'inf', b.alvo.tipo, 'def') * dt) {
-                const alvo = noCampo[Math.floor(Math.random() * noCampo.length)]; alvo.s.vida -= dano() * danoContra(d.s.tipo || 'inf', alvo.s.tipo || 'inf'); if (b.audivel) som('tiro', 0.35);
+                const alvo = noCampo[Math.floor(Math.random() * noCampo.length)]; acertar(d, alvo, dano() * danoContra(d.s.tipo || 'inf', alvo.s.tipo || 'inf')); if (b.audivel) som('tiro', 0.35);
             }
         });
         fd.mun = Math.max(0, fd.mun - defVivos.length * 0.5 * dt);
@@ -730,12 +737,12 @@ function passoBatalha(b, dt) {
             const protege = 1 - C.TRINCH_PROTEGE * (T.longe ? 0.4 : 1) * b.alvo.trinch / 100; // artilharia fura a trincheira
             const chance = corpo ? C.CORPO_A_CORPO * T.corpo * eficacia(a.s) * pd.rec * b.genAtq * lotA * fatorFaltaAco(a.s, b.atqDono) * (1 - C.TRINCH_PROTEGE_CORPO * b.alvo.trinch / 100)
                 : C.TIRO_ATQ * T.atq * (b.postAtq === 'cobertura' ? 0.6 : 1) * eficacia(a.s) * munA * protege * pd.rec * b.genAtq * b.effAtq * semComb(a.s, b.atqDono) * fatorFaltaAco(a.s, b.atqDono) * lotA * bonusTerreno(a.s.tipo || 'inf', b.alvo.tipo, 'atq');
-            if (Math.random() < chance * dt) { const alvo = defVivos[Math.floor(Math.random() * defVivos.length)]; alvo.s.vida -= dano() * danoContra(a.s.tipo || 'inf', alvo.s.tipo || 'inf'); if (b.audivel) som('tiro', 0.45); }
+            if (Math.random() < chance * dt) { const alvo = defVivos[Math.floor(Math.random() * defVivos.length)]; acertar(a, alvo, dano() * assalto * danoContra(a.s.tipo || 'inf', alvo.s.tipo || 'inf')); if (b.audivel) som('tiro', 0.45); }
         });
         fa.mun = Math.max(0, fa.mun - atqVivos.length * 0.4 * dt);
     }
     const naTrincheira = atqVivos.filter(a => a.dist <= 0);
-    if (naTrincheira.length && defVivos.length) defVivos.forEach(d => { if (Math.random() < C.CORPO_A_CORPO * TROPAS[d.s.tipo || 'inf'].corpo * eficacia(d.s) * b.genDef * lotD * fatorFaltaAco(d.s, b.defDono) * dt) { const alvo = naTrincheira[Math.floor(Math.random() * naTrincheira.length)]; alvo.s.vida -= dano() * danoContra(d.s.tipo || 'inf', alvo.s.tipo || 'inf'); } });
+    if (naTrincheira.length && defVivos.length) defVivos.forEach(d => { if (Math.random() < C.CORPO_A_CORPO * TROPAS[d.s.tipo || 'inf'].corpo * eficacia(d.s) * b.genDef * lotD * fatorFaltaAco(d.s, b.defDono) * dt) { const alvo = naTrincheira[Math.floor(Math.random() * naTrincheira.length)]; acertar(d, alvo, dano() * danoContra(d.s.tipo || 'inf', alvo.s.tipo || 'inf')); } });
     b.atq.forEach(a => { if (a.s.vida <= 0 && !a.morto) { a.morto = true; b.efeitos.push({ x: a.x, y: a.dist, vida: 0.6, tipo: 'abate' }); if (b.audivel) som('abate'); } });
     b.def.forEach(d => { if (d.s.vida <= 0 && !d.morto) { d.morto = true; b.efeitos.push({ x: d.x, y: -1, vida: 0.6, tipo: 'abate' }); } });
     const sobraA = b.atq.filter(a => a.s.vida > 0), sobraD = b.def.filter(d => d.s.vida > 0);
@@ -743,14 +750,6 @@ function passoBatalha(b, dt) {
     else if (!sobraA.length) { b.terminou = true; b.vencedor = 'def'; }
     else if (b.postAtq === 'recuar' && sobraA.every(a => a.dist >= C.DIST + 20)) { b.terminou = true; b.vencedor = 'def'; b.recuou = true; }
     else if (b.t >= C.BAT_DURACAO) { b.terminou = true; b.vencedor = 'def'; b.tempo = true; }
-}
-function artilhariaNaBatalha(b, lado) {
-    const f = G.fac.jogador;
-    if (f.mun < C.ARTILHARIA_MUN || b.usouArt) return;
-    f.mun -= C.ARTILHARIA_MUN; b.usouArt = true;
-    const alvos = lado === 'atq' ? b.def : b.atq;
-    som('explosao');
-    alvos.filter(x => x.s.vida > 0).forEach(x => { x.s.vida -= 35; b.efeitos.push({ x: x.x, y: lado === 'atq' ? -1 : x.dist, vida: 0.8, tipo: 'explosao' }); });
 }
 // Para onde recua quem perdeu o ataque à província p. Preferência: de onde veio (se ainda for dele), outra província dele
 // ao lado, de onde veio (se for território em paz ou aliado) e outra em paz ao lado. Sem nenhuma, a tropa está cercada.
@@ -1134,15 +1133,17 @@ function painelBatalha(b) {
     const posts = souAtq ? [['avancar', '🏃 Avançar', 'rápido, exposto'], ['cobertura', '🛡 Cobertura', 'lento, protegido'], ['recuar', '↩ Recuar', 'volta para casa']]
                          : [['atacar', '🔥 Atacar', '+dano, +risco'], ['equilibrio', '⚖ Equilíbrio', 'padrão'], ['abrigar', '🛡 Abrigar', '−dano recebido']];
     const atual = souAtq ? b.postAtq : b.postDef, f = G.fac.jogador;
-    return `<div class="info"><b style="color:#ff9f6a">⚔ Batalha em ${b.alvo.nome}</b>: você ${souAtq ? nA : nD} × ${souAtq ? nD : nA} ${FACCOES[outro].nome} · ${Math.ceil(resta / C.BAT_RITMO)}s no máximo</div>
+    const usada = !!b.usouArt;
+    return `<div class="info"><b style="color:#ff9f6a">⚔ Batalha em ${b.alvo.nome}</b>: você ${souAtq ? nA : nD} × ${souAtq ? nD : nA} ${FACCOES[outro].nome} · ${Math.ceil(resta / C.BAT_RITMO)}s no máximo</div>${typeof barraDaBatalha === 'function' ? barraDaBatalha(b, souAtq) : ''}
         <div class="acoes">${posts.map(([id, t, d]) => botao(t, d, `acaoBatalha('${b.alvo.id}','${id}')`, { forte: atual === id })).join('')}
         ${podeResolverRapido(b) ? botao('⏩ Resolver rápido', 'termina já, mesmas regras', `resolverRapido('${b.alvo.id}')`) : ''}
-        ${botao('💥 Artilharia', b.usouArt ? 'já usada' : `${C.ARTILHARIA_MUN} 🔫 · fere todos do outro lado`, `acaoBatalha('${b.alvo.id}','art')`, { off: b.usouArt || f.mun < C.ARTILHARIA_MUN })}</div>`;
+        ${botao('💥 Artilharia', usada ? (artACaminho(b, souAtq ? 'def' : 'atq') ? 'a caminho…' : 'já usada') : `${custoArtilharia('jogador')} 🔫 · avisa antes de cair`, `acaoBatalha('${b.alvo.id}','art')`, { off: usada || f.mun < custoArtilharia('jogador') })}</div>
+        ${artACaminho(b, souAtq ? 'atq' : 'def') ? `<div class="perigo-art">💥 ARTILHARIA A CAMINHO · toque em ${souAtq ? '🛡 Cobertura' : '🛡 Abrigar'}</div>` : `<div class="info dica-post">${souAtq ? 'Avançar pega quem está abrigado. Cobertura protege do fogo forte e da artilharia.' : 'Atacar pune quem avança. Abrigar protege da artilharia, mas o avanço inimigo bate mais.'}</div>`}`;
 }
 const contarTipos = (lista) => { const r = {}; lista.forEach(x => { if (x.s.vida > 0) { const t = x.s.tipo || 'inf'; r[t] = (r[t] || 0) + 1; } }); return r; };
 function batalhasParaDesenho() {
     if (G.cliente) return G.batalhasVis || [];
-    return (G.batalhas || []).filter(b => !b.terminou).map(b => ({ prov: b.alvo.id, atq: b.atqDono, def: b.defDono, de: b.ex.de, nA: b.atq.filter(a => a.s.vida > 0).length, nD: b.def.filter(x => x.s.vida > 0).length, tA: contarTipos(b.atq), tD: contarTipos(b.def), t: Math.round(b.t), pa: b.postAtq, pd: b.postDef, art: b.usouArt ? 1 : 0 }));
+    return (G.batalhas || []).filter(b => !b.terminou).map(b => ({ prov: b.alvo.id, atq: b.atqDono, def: b.defDono, de: b.ex.de, nA: b.atq.filter(a => a.s.vida > 0).length, nD: b.def.filter(x => x.s.vida > 0).length, tA: contarTipos(b.atq), tD: contarTipos(b.def), t: Math.round(b.t), pa: b.postAtq, pd: b.postDef, ...estadoArtilharia(b) }));
 }
 
 /* ---------- Painel de baixo ---------- */
@@ -1183,7 +1184,7 @@ function renderPainel() {
         // em cima, o resumo e as ordens (cabem na tela do celular); o resto fica em "Detalhes"
         const vida = Math.round(100 * e.s.reduce((t, x) => t + Math.max(0, x.vida), 0) / Math.max(1, e.s.reduce((t, x) => t + vidaMax(x), 0)));
         html = `<div class="titulo"><span>${nomeFormacao(e.s.length)}</span><span class="dono" style="color:${FACCOES.jogador.cor}">${e.rota.length ? (e.missao === 'saque' ? 'saqueando' : e.missao === 'voltar' ? 'voltando' : 'em marcha') : 'em ' + p.nome}</span></div>
-            <div class="info">${composicao(e.s)} · ❤ ${vida}% · ${e.s.some(usaComb) ? `⛽ ${Math.floor(G.fac.jogador.comb || 0)} de combustível${(G.fac.jogador.comb || 0) <= 0 ? ' <b style="color:#ff8a7a">(acabou: blindados e artilharia a ' + Math.round(C.COMB_DEFICIT_VEL * 100) + '% de velocidade)</b>' : ''} · ` : ''}${fome ? `<b style="color:#e3b04b">${fome} com fome</b>` : 'tropa alimentada'}${cans ? ` · ${cans} cansados` : ''}${e.rota.length ? ` · indo para ${G.prov[e.rota[e.rota.length - 1]].nome}` : ''}
+            <div class="info">${composicao(e.s)} · ❤ ${vida}%${typeof patenteDe === 'function' && e.s.some(patenteDe) ? ` · <b style="color:#ffd28a">★ ${e.s.filter(patenteDe).length} veterano${e.s.filter(patenteDe).length > 1 ? 's' : ''}</b>` : ''} · ${e.s.some(usaComb) ? `⛽ ${Math.floor(G.fac.jogador.comb || 0)} de combustível${(G.fac.jogador.comb || 0) <= 0 ? ' <b style="color:#ff8a7a">(acabou: blindados e artilharia a ' + Math.round(C.COMB_DEFICIT_VEL * 100) + '% de velocidade)</b>' : ''} · ` : ''}${fome ? `<b style="color:#e3b04b">${fome} com fome</b>` : 'tropa alimentada'}${cans ? ` · ${cans} cansados` : ''}${e.rota.length ? ` · indo para ${G.prov[e.rota[e.rota.length - 1]].nome}` : ''}
             ${e.semSuprimento ? '<br><b style="color:#ff9f43">⚠ Sem suprimento: longe do seu território a tropa não come.</b>' : ''}${G.fac.jogador.faltaAco && e.s.some(x => TROPAS[x.tipo || 'inf'].manutAco) ? '<br><b style="color:#ff9f43">⚠ Falta de aço: tropa pesada não se cura e causa menos dano.</b>' : ''}${fatorLotacao('jogador') < 1 ? `<br><b style="color:#ff9f43">⚠ Sublotação: o exército rende ${Math.round(fatorLotacao('jogador') * 100)}%.</b>` : ''}</div>`;
         const btE = e.emBatalha ? (batalhaEm(e.prov) || batalhaEm(e.aguarda)) : null;
         if (btE && (btE.atqDono === 'jogador' || btE.defDono === 'jogador') && !e.aguarda) html += painelBatalha(btE);
@@ -1191,7 +1192,7 @@ function renderPainel() {
         else html += e.rota.length ? `<div class="acoes">${botao('↪ Mudar destino', 'depois toque no novo destino', `escolherDestino('${e.id}','ataque')`, { forte: true })}${botao('✋ Parar', 'na próxima província', `cancelarMarcha('${e.id}')`)}</div>`
             : `<div class="acoes">${botao('🚶 Mover / ⚔ Atacar', 'toque no destino: sua província ou inimiga', `escolherDestino('${e.id}','ataque')`, { forte: true })}${botao('💰 Saquear', `rouba ${Math.round(C.SAQUE_PARTE * 100)}% das moedas e volta`, `escolherDestino('${e.id}','saque')`)}${botao('🎖 General', e.general ? 'trocar' : 'designar', `G.sel={tipo:'escolherGeneral',id:'${e.id}'};renderPainel()`)}${botao('🚪 Dispensar', 'devolve mão de obra e manutenção', `G.sel={tipo:'dispensar',id:'${e.id}'};renderPainel()`)}</div>`;
         html += `<button class="detalhes" aria-expanded="${!!G.verDetalhes}" onclick="G.verDetalhes=!G.verDetalhes;renderPainel()">${G.verDetalhes ? '▲ Esconder detalhes' : '▼ Detalhes da tropa'}</button>`;
-        if (G.verDetalhes) html += `${painelVidaTropas(e)}
+        if (G.verDetalhes) html += `${typeof textoVeteranos === 'function' ? textoVeteranos(e.s) : ''}${painelVidaTropas(e)}
             ${painelUnidadeDetalhe(e)}
             <div class="soldados">${e.s.map(s => `<span class="sd" title="${s.nome}" style="background:${corFome(s)}"></span>`).join('')}</div>
             <div class="info">Força ${forca(e.s).toFixed(1)}<br>🎖 ${e.general && GENERAIS.find(g => g.id === e.general) ? `${GENERAIS.find(g => g.id === e.general).nome} (${GENERAIS.find(g => g.id === e.general).txt})` : e.general ? 'general do país (+12%)' : 'sem general'}</div>`;
@@ -1326,7 +1327,7 @@ function mostrarInicio() {
         ${botaoMenu()}`);
 }
 function mostrarFim() {
-    apagarSalvamento();
+    apagarSalvamento(); if (typeof esconderResumo === 'function') esconderResumo();
     const venceu = G.fim === 'vitoria' || G.fim === 'pontos';
     som(venceu ? 'vitoria' : 'derrota');
     const est = calcularEstrelas(), antes = lerMeta(), totAntes = totalEstrelas(antes), genAntes = generaisLiberados().length;
@@ -1444,7 +1445,8 @@ function laco(agora) {
     if (G) { desenharMapa(); atualizarTopo(); }
     // salva a cada 5 s de jogo
     if (G && !G.fim && !G.pausado && G.t - (G.salvoT || 0) >= 5) { if (salvarPartida()) G.salvoT = G.t; }
-    if (G && Math.floor(agora / 500) !== Math.floor((agora - dt * 1000) / 500) && !G.pendente) renderPainel();
+    const noAr = G && (G.batalhas || []).some(b => b.art && ((b.art.atq && b.art.atq.cai !== null) || (b.art.def && b.art.def.cai !== null)));
+    if (G && Math.floor(agora / (noAr ? 150 : 500)) !== Math.floor((agora - dt * 1000) / (noAr ? 150 : 500)) && !G.pendente) renderPainel();
     requestAnimationFrame(laco);
 }
 atualizarBotaoSom();
