@@ -75,6 +75,7 @@ const PERSO_TXT = {
 const TIPO_TXT = { capital: '★ Capital', cidade: '🏘 Cidade', campo: '🌾 Campo', floresta: '🌲 Floresta', morro: '⛰ Morro' };
 
 let G, MAPA, TERRENO;
+const GANCHOS_PASSO = []; // módulos que andam junto com o tempo do mapa (missões, acontecimentos, ofensivas, final)
 let proxId = 1;
 function soldado(nome, tipo = 'inf') { return { nome, tipo, vida: TROPAS[tipo].vida, fome: 10, cansaco: 0, soldo: 0 }; }
 const vivos = (l) => l.filter(s => s.vida > 0);
@@ -152,6 +153,7 @@ function salvarPartida() {
         prov: Object.fromEntries(Object.values(G.prov).map(p => [p.id, { dono: p.dono, tipo: p.tipo, trinch: p.trinch, capital: p.capital, moral: p.moral, obras: p.obras, obra: p.obra, conquistadaEm: p.conquistadaEm }])),
         ex: G.ex.map(e => ({ id: e.id, dono: e.dono, s: e.s, prov: e.prov, de: e.de, rota: e.rota, x: e.x, y: e.y, missao: e.missao, origem: e.origem, alertado: e.alertado, general: e.general, aguarda: e.aguarda })),
         batalhas: batalhasParaSalvar(),
+        vida: G.vida || null,
         salvoEm: Date.now()
     };
     try { localStorage.setItem(SAVE_CONQ, JSON.stringify(dados)); return true; } catch (e) { return false; }
@@ -192,7 +194,8 @@ function carregarPartida() {
     Object.entries(d.prov).forEach(([id, q]) => { if (G.prov[id]) Object.assign(G.prov[id], q); });
     Object.assign(G, { t: d.t, fac: d.fac, ciclo: d.ciclo, velocidade: d.velocidade || 1, capitalJogador: d.capitalJogador, espiado: d.espiado || {}, revelado: d.revelado || {},
         espioes: d.espioes || [], ultimoAtaque: d.ultimoAtaque || {}, eliminados: d.eliminados || {}, semCapital: d.semCapital || {}, pensar: d.pensar || G.pensar, noticias: d.noticias || [], ultimoRelatorio: d.ultimoRelatorio,
-        pesq: d.pesq || G.pesq, rel: d.rel || G.rel, genFerido: d.genFerido || {}, genXp: d.genXp || {}, stats: d.stats || {} });
+        pesq: d.pesq || G.pesq, rel: d.rel || G.rel, genFerido: d.genFerido || {}, genXp: d.genXp || {}, stats: d.stats || {},
+        vida: d.vida || { proxMissao: d.t + 6, proxEvento: d.t + 40, proxOfensiva: d.t + 90 } });
     G.ex = d.ex.filter(e => G.prov[e.prov]).map(e => ({ ...e, rota: (e.rota || []).filter(id => G.prov[id]), emBatalha: false, aguarda: null }));
     Object.values(G.fac).forEach(f => { if (f.aco === undefined) f.aco = C.ACO_INICIAL; if (f.atraso === undefined) f.atraso = 0; if (f.comb === undefined) f.comb = C.COMB_INICIAL; }); // partidas salvas antes do aço, do soldo e do combustível
     proxId = Math.max(proxId, d.proxId || 0);
@@ -502,7 +505,8 @@ function pensarBot(dono) {
         if (doador) ordem(doador.id, p.id, Math.ceil(doador.s.length / 2), 'mover');
     });
     // 4) atacar: com pausa, nem sempre, e só com vantagem (com erro de conta)
-    if (G.t < (G.ultimoAtaque[dono] || 0) + C.BOT_PAUSA_ATAQUE || Math.random() > FX.vontade * (typeof DIFC === 'function' ? DIFC() : { vontade: 1, margem: 1, prod: 1 }).vontade) return;
+    const afinco = G.vida && G.vida.final ? 1.6 : 1; // ofensiva final: pausas menores e mais vontade
+    if (G.t < (G.ultimoAtaque[dono] || 0) + C.BOT_PAUSA_ATAQUE / afinco || Math.random() > FX.vontade * afinco * (typeof DIFC === 'function' ? DIFC() : { vontade: 1, margem: 1, prod: 1 }).vontade) return;
     const opcoes = [];
     exDe(dono).filter(e => parado(e) && e.s.length >= 3).forEach(e => {
         const casa = G.prov[e.prov];
@@ -806,6 +810,8 @@ function passoMapa(dt) {
     moverExercitos(dt);
     avancarBatalhas(dt);
     G.confT = (G.confT || 0) + dt; if (G.confT >= 1) { G.confT = 0; resolverConfrontos(); }
+    if (!G.fim) GANCHOS_PASSO.forEach(f => f(dt));
+    if (G.fim) return;
     // espiões viajando
     G.espioes = G.espioes.filter(s => {
         const p = G.prov[s.para], dx = p.x - s.x, dy = p.y - s.y, d = Math.hypot(dx, dy), passo = C.ESPIAO_VEL * dt;
@@ -1319,7 +1325,10 @@ function mostrarInicio() {
         🎖 <b>Generais:</b> dão bônus ao exército, sobem de nível e ficam com você entre as fases. Novos generais saem com as estrelas.<br>
         👁 <b>Espião:</b> viaja e só observa. 💰 <b>Saque:</b> rouba ${Math.round(C.SAQUE_PARTE * 100)}% das moedas e volta.<br>
         ★ Vence quem tomar todas as capitais, ou quem tiver mais províncias quando o tempo acabar. Perder a sua capital é derrota.<br>
-        ⭐ Estrelas: ★ vencer · ★★ tomar as capitais usando até 70% do tempo · ★★★ objetivo da fase.<br>
+        👑 Também vence quem segurar 60% das províncias por 1 minuto (isso vale para o inimigo).<br>
+        🎯 <b>Missões</b> curtas dão prêmios; 📻 os inimigos avisam as <b>ofensivas</b> (segurar rende prêmio) e, de vez em quando, aparece uma <b>escolha</b> com ganho e risco.<br>
+        💥 Na batalha, a artilharia avisa antes de cair: dá para se abrigar.<br>
+        ⭐ Estrelas: ★ vencer · ★★ vencer pelas capitais ou pelo domínio usando até 70% do tempo · ★★★ objetivo da fase.<br>
         🖐 Arraste o mapa; dois dedos (ou ＋ －) dão zoom. ⏸ pausa (dá para dar ordens pausado). 💾 Salva sozinho.</div></details>
         ${sv ? '<div class="sub" style="margin-top:8px">Começar uma fase nova apaga a partida salva.</div>' : ''}
         <div class="sub" style="margin-top:8px">⭐ ${tot} estrelas · 🎖 ${generaisLiberados().length} de ${GENERAIS.length} generais</div>
@@ -1328,19 +1337,21 @@ function mostrarInicio() {
 }
 function mostrarFim() {
     apagarSalvamento(); if (typeof esconderResumo === 'function') esconderResumo();
-    const venceu = G.fim === 'vitoria' || G.fim === 'pontos';
+    const venceu = ['vitoria', 'pontos', 'dominio'].includes(G.fim);
     som(venceu ? 'vitoria' : 'derrota');
     const est = calcularEstrelas(), antes = lerMeta(), totAntes = totalEstrelas(antes), genAntes = generaisLiberados().length;
     guardarProgresso(est);
     const novosGen = generaisLiberados().slice(genAntes);
     const pl = placar(), F = G.fase, mm = Math.floor(G.t / 60), ss = String(Math.floor(G.t % 60)).padStart(2, '0');
     const proxima = F.n < FASES.length && venceu;
-    const titulo = { vitoria: `🏆 FASE ${F.n} VENCIDA!`, pontos: '🏆 VITÓRIA POR TERRITÓRIO', tempo: '⏰ O TEMPO ACABOU', derrota: '✝ SUA CAPITAL CAIU' }[G.fim];
+    const titulo = { vitoria: `🏆 FASE ${F.n} VENCIDA!`, dominio: '👑 VOCÊ DOMINOU O MAPA!', pontos: '🏆 VITÓRIA POR TERRITÓRIO', tempo: '⏰ O TEMPO ACABOU', dominado: '✝ O INIMIGO DOMINOU O MAPA', derrota: '✝ SUA CAPITAL CAIU' }[G.fim];
     const texto = G.fim === 'vitoria' ? `Todas as capitais inimigas tomadas em ${mm}:${ss}.`
+        : G.fim === 'dominio' ? `Você segurou a maior parte do mapa e venceu em ${mm}:${ss}.`
+        : G.fim === 'dominado' ? `${FACCOES[G.vencedorDominio] ? FACCOES[G.vencedorDominio].nome : 'O inimigo'} segurou a maior parte do mapa. Da próxima vez, ataque a fronteira dele quando a contagem começar.`
         : G.fim === 'pontos' ? `O tempo acabou e você tem mais províncias que qualquer inimigo (${pl.jogador || 0}).`
         : G.fim === 'tempo' ? `Você terminou com ${pl.jogador || 0} províncias, menos que o maior inimigo. Para vencer: tome as capitais, ou tenha mais terra quando o tempo acabar.`
         : `Você resistiu ${mm}:${ss} e chegou a ter ${pl.jogador || 0} províncias.`;
-    const linhas = venceu ? `<div class="lista">${est >= 1 ? '★' : '☆'} vencer<br>${est >= 2 && G.fim === 'vitoria' && G.t <= F.tempo * 0.7 ? '★' : '☆'} tomar as capitais em até ${Math.round(F.tempo * 0.7 / 60)} min<br>${OBJETIVOS[F.objetivo].ok() ? '★' : '☆'} ${OBJETIVOS[F.objetivo].txt}</div>` : '';
+    const linhas = venceu ? `<div class="lista">${est >= 1 ? '★' : '☆'} vencer<br>${est >= 2 && ['vitoria', 'dominio'].includes(G.fim) && G.t <= F.tempo * 0.7 ? '★' : '☆'} vencer pelas capitais ou pelo domínio em até ${Math.round(F.tempo * 0.7 / 60)} min<br>${OBJETIVOS[F.objetivo].ok() ? '★' : '☆'} ${OBJETIVOS[F.objetivo].txt}</div>` : '';
     const xp = Object.entries(G.genXp || {}).filter(([, v]) => v).map(([id, v]) => `${GENERAIS.find(g => g.id === id).nome} +${v}`).join(' · ');
     mostrarTela(`<h2>${titulo}</h2><div class="estrelas-grandes">${venceu ? '★'.repeat(est) + '☆'.repeat(3 - est) : ''}</div><div class="sub">${texto}</div>${linhas}
         ${xp ? `<div class="sub" style="margin-top:6px">🎖 Experiência: ${xp}</div>` : ''}

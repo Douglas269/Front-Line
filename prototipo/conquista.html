@@ -120,7 +120,7 @@
   body.online #bPausa, body.online #bVelMapa, body.online #ferramentas button:nth-child(2), body.online #ferramentas button:nth-child(3) { display: none; }
   details.regras { margin-top: 8px; border: 1px solid var(--borda); border-radius: 8px; padding: 6px 10px; }
   details.regras summary { cursor: pointer; font-weight: 700; color: var(--ambar); }
-  #pausaGrande { display: none; position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); z-index: 4; width: 92px; height: 92px; border-radius: 50%; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 0; background: rgba(19,24,21,.78); border: 2px solid var(--ambar); color: #ffd28a; font-size: 40px; line-height: 1; cursor: pointer; box-shadow: 0 0 0 6px rgba(211,154,69,.18), 0 6px 18px rgba(0,0,0,.5); }
+  #pausaGrande { display: none; position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); z-index: 4; width: 82px; height: 82px; border-radius: 50%; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 0; background: rgba(19,24,21,.78); border: 2px solid var(--ambar); color: #ffd28a; font-size: 34px; line-height: 1; cursor: pointer; box-shadow: 0 0 0 6px rgba(211,154,69,.18), 0 6px 18px rgba(0,0,0,.5); }
   #pausaGrande small { font-size: 10px; font-weight: 700; letter-spacing: .08em; }
   #pausaGrande:active { transform: translateX(-50%) scale(.94); }
   #zoom { position: absolute; right: 8px; bottom: 8px; display: flex; flex-direction: column; gap: 6px; }
@@ -143,6 +143,23 @@
   .acao.forte { border-color: var(--ambar); background: #2a2214; color: #ffd28a; }
   .perigo-art { margin-top: 6px; padding: 8px; border-radius: 8px; border: 1px solid #c0392b; background: #4a1717; color: #ffd6cf; font-weight: 700; font-size: 12px; text-align: center; animation: pisca .45s infinite alternate; }
   .dica-post { font-size: 11px; }
+  #faixaMissao { display: none; flex: none; align-items: center; width: 100%; height: 30px; overflow: hidden; padding: 0 10px; border: 0; border-bottom: 1px solid var(--borda); background: #14190f; color: var(--texto); font-size: 11px; line-height: 13px; text-align: left; }
+  #faixaMissao > * { vertical-align: baseline; }
+  #faixaMissao .tx { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  #faixaMissao span { color: var(--mudo); font-size: 11px; }
+  #faixaMissao.ok { background: #16301a; color: #c9f2bd; }
+  #faixaMissao.perigo { background: #4a1c17; color: #ffd6cf; }
+  #faixaMissao.perigo span { color: #ffc2b5; }
+  #faixaMissao.radio { background: #2a2214; color: #ffe2a8; }
+  #faixaMissao.vazia { color: var(--mudo); }
+  #evento { display: none; position: absolute; left: 8px; right: 8px; top: 8px; max-width: 360px; margin: 0 auto; z-index: 6; padding: 8px 10px; border-radius: 10px; border: 2px solid var(--ambar); background: rgba(19,24,21,.97); box-shadow: 0 8px 22px rgba(0,0,0,.55); font-size: 12px; }
+  #evento .ev-t { display: flex; justify-content: space-between; color: #ffd28a; }
+  #evento .ev-x { margin: 2px 0 6px; color: var(--mudo); }
+  #evento .ev-o { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  #evento .ev-o button { padding: 7px 5px; border-radius: 8px; border: 1px solid var(--ambar); background: #2a2214; color: #ffd28a; font-size: 12px; }
+  #evento .ev-o small { display: block; font-weight: 400; font-size: 10px; color: var(--texto); margin-top: 2px; }
+  #evento .ev-i { width: 100%; min-height: 30px; margin-top: 6px; border: 0; background: transparent; color: var(--mudo); font-size: 11px; text-decoration: underline; }
+  body.online #faixaMissao, body.online #evento { display: none !important; }
   .luta { display: flex; align-items: center; gap: 8px; margin: 2px 0 4px; font-size: 11px; font-weight: 700; }
   .luta-b { flex: 1; height: 10px; border-radius: 5px; overflow: hidden; background: #4a1c16; border: 1px solid var(--borda); }
   .luta-b i { display: block; height: 100%; transition: width .25s linear; }
@@ -194,6 +211,7 @@
       <div class="rec" id="rProv" title="Províncias suas / total"><span data-icone="flying-flag" style="color:#ffd28a"></span><b>0</b></div>
     </div>
   </div>
+  <button id="faixaMissao" onclick="tocarFaixa()" aria-live="polite"></button>
   <div id="mapaBox"><canvas id="mapa"></canvas><div id="aviso"></div><div id="ferramentas"><button onclick="abrirSituacao()" title="Situação">📊<small>Situação</small></button><button onclick="G.sel={tipo:'pesquisa'};renderPainel()" title="Pesquisa">🔬<small>Pesquisa</small></button><button onclick="G.sel={tipo:'diplo'};renderPainel()" title="Diplomacia">🤝<small>Diplomacia</small></button><button onclick="G.sel={tipo:'generais'};renderPainel()" title="Generais">🎖<small>Generais</small></button></div><button id="pausaGrande" onclick="pausar(false)" aria-label="Continuar o jogo" title="Continuar"><span aria-hidden="true">▶</span><small>PAUSADO</small></button><div id="faixaPausa">⏸ PAUSADO · dá para dar ordens</div>
     <div id="zoom"><button onclick="zoomEm(1.3, cvM.getBoundingClientRect().width / 2, cvM.getBoundingClientRect().height / 2)" title="Aproximar">＋</button><button onclick="zoomEm(1 / 1.3, cvM.getBoundingClientRect().width / 2, cvM.getBoundingClientRect().height / 2)" title="Afastar">－</button><button onclick="irParaCapital()" title="Ir para a sua capital">★</button></div></div>
   <div id="painel"></div>
@@ -210,6 +228,8 @@
 <script src="assets/js/conquista-extra.js?v=20261126.1256"></script>
 <script src="assets/js/conquista.js?v=20261126.1256"></script>
 <script src="assets/js/conquista-batalha.js?v=20261126.1256"></script>
+<script src="assets/js/conquista-missoes.js?v=20261126.1256"></script>
+<script src="assets/js/conquista-guerra.js?v=20261126.1256"></script>
 <script src="assets/js/conquista-situacao.js?v=20261126.1256"></script>
 <script src="assets/js/conquista-online.js?v=20261126.1256"></script>
 <script src="assets/js/conquista-config.js?v=20261126.1256"></script>

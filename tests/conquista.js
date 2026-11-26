@@ -527,7 +527,7 @@ function jogar({ N, FASE, EST }) {
         const r = await p.evaluate(jogar, { N, FASE, EST });
         if (r.travou) falhas.push(`fase ${FASE} ${EST}: ${r.travou === true ? 'travou' : r.travou}`);
         const cont = {}; r.res.forEach(x => { cont[x.fim] = (cont[x.fim] || 0) + 1; });
-        const venceu = r.res.filter(x => x.fim === 'vitoria' || x.fim === 'pontos').length;
+        const venceu = r.res.filter(x => x.fim === 'vitoria' || x.fim === 'pontos' || x.fim === 'dominio').length;
         info.fases[`fase${FASE}-${EST}`] = { resultados: cont, venceu: `${venceu}/${N}`, provinciasNoFim: +(r.res.reduce((t, x) => t + x.minhas, 0) / N).toFixed(1), ataquesDosBots: +(r.res.reduce((t, x) => t + x.ataquesBot, 0) / N).toFixed(1) };
         if (FASE === 1 && EST === 'esperto' && venceu < 1) falhas.push('quem joga bem quase nunca vence a fase 1: ' + JSON.stringify(cont));
         if (FASE === 1 && EST === 'ingenuo' && venceu > N / 2) falhas.push('quem joga mal vence demais: ' + JSON.stringify(cont));
