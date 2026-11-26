@@ -142,10 +142,39 @@ function salvarPartida() {
         capitalJogador: G.capitalJogador, espiado: G.espiado, revelado: G.revelado, espioes: G.espioes,
         ultimoAtaque: G.ultimoAtaque, eliminados: G.eliminados, semCapital: G.semCapital || {}, pensar: G.pensar, noticias: G.noticias.slice(0, 10), ultimoRelatorio: G.ultimoRelatorio,
         prov: Object.fromEntries(Object.values(G.prov).map(p => [p.id, { dono: p.dono, tipo: p.tipo, trinch: p.trinch, capital: p.capital, moral: p.moral, obras: p.obras, obra: p.obra, conquistadaEm: p.conquistadaEm }])),
-        ex: G.ex.map(e => ({ id: e.id, dono: e.dono, s: e.s, prov: e.prov, de: e.de, rota: e.rota, x: e.x, y: e.y, missao: e.missao, origem: e.origem, alertado: e.alertado, general: e.general })),
+        ex: G.ex.map(e => ({ id: e.id, dono: e.dono, s: e.s, prov: e.prov, de: e.de, rota: e.rota, x: e.x, y: e.y, missao: e.missao, origem: e.origem, alertado: e.alertado, general: e.general, aguarda: e.aguarda })),
+        batalhas: batalhasParaSalvar(),
         salvoEm: Date.now()
     };
     try { localStorage.setItem(SAVE_CONQ, JSON.stringify(dados)); return true; } catch (e) { return false; }
+}
+// Batalhas em andamento. Cada combatente é o mesmo objeto que está no exército, então vai só a posição dele na lista
+// (i); quem já saiu do exército (morto) vai inteiro (s), porque ainda conta nas baixas.
+function batalhasParaSalvar() {
+    return (G.batalhas || []).filter(b => !b.terminou && G.ex.includes(b.ex)).map(b => {
+        const defensores = b.defensores.filter(d => G.ex.includes(d));
+        const guardar = (lista, soldados) => lista.map(({ s, ...resto }) => { const i = soldados.indexOf(s); return i >= 0 ? { ...resto, i } : { ...resto, s }; });
+        const { atqDono, defDono, saque, t, postAtq, postDef, usouArt, audivel, genAtq, genDef, effAtq, effDef, forte } = b;
+        return { ex: b.ex.id, alvo: b.alvo.id, defensores: defensores.map(d => d.id), atq: guardar(b.atq, b.ex.s), def: guardar(b.def, defensores.flatMap(d => d.s)),
+            atqDono, defDono, saque, t, postAtq, postDef, usouArt, audivel, genAtq, genDef, effAtq, effDef, forte };
+    });
+}
+// Recria as batalhas salvas (sem repetir o que acontece só no começo, como a barragem do general artilheiro) e quem esperava a vez.
+function restaurarBatalhas(salvas, exSalvos) {
+    const porId = (id) => G.ex.find(e => e.id === id);
+    (salvas || []).forEach(d => {
+        const atacante = porId(d.ex), alvo = G.prov[d.alvo], defensores = d.defensores.map(porId).filter(Boolean);
+        if (!atacante || !alvo) return;
+        const voltar = (lista, soldados) => lista.map(({ i, s, ...resto }) => ({ ...resto, s: i === undefined ? s : soldados[i] })).filter(x => x.s);
+        const b = { ...d, ex: atacante, alvo, defensores, atq: voltar(d.atq, atacante.s), def: voltar(d.def, defensores.flatMap(x => x.s)), terminou: false, vencedor: null, efeitos: [], rapido: false };
+        b.passo = (dt) => passoBatalha(b, dt);
+        [atacante, ...defensores].forEach(e => { e.emBatalha = true; });
+        G.batalhas.push(b);
+    });
+    exSalvos.filter(d => d.aguarda).forEach(d => {
+        const e = porId(d.id);
+        if (e && G.batalhas.some(b => b.alvo.id === d.aguarda)) Object.assign(e, { emBatalha: true, aguarda: d.aguarda });
+    });
 }
 function lerSalvamento() { try { const d = JSON.parse(localStorage.getItem(SAVE_CONQ) || 'null'); return d && d.v === 2 && FASES[d.fase - 1] ? d : null; } catch (e) { return null; } }
 function apagarSalvamento() { try { localStorage.removeItem(SAVE_CONQ); } catch (e) {} }
@@ -160,7 +189,8 @@ function carregarPartida() {
     Object.values(G.fac).forEach(f => { if (f.aco === undefined) f.aco = C.ACO_INICIAL; if (f.atraso === undefined) f.atraso = 0; if (f.comb === undefined) f.comb = C.COMB_INICIAL; }); // partidas salvas antes do aço, do soldo e do combustível
     proxId = Math.max(proxId, d.proxId || 0);
     G.sel = { tipo: 'prov', id: G.capitalJogador }; G.pausado = true;
-    resolverOcupacoes(); // quem estava lutando dentro de território inimigo volta para a batalha
+    restaurarBatalhas(d.batalhas, d.ex);
+    resolverOcupacoes(); // salvamento antigo (sem batalhas): quem estava lutando dentro de território inimigo recomeça a batalha
     noticia('💾 Partida carregada. Está pausada: toque em ▶ para continuar.');
     const c = G.prov[G.capitalJogador]; centralizar(c.x, c.y);
     return true;
