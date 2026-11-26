@@ -285,9 +285,9 @@ const OBJETIVOS = {
     pesquisa:  { txt: 'terminar 4 pesquisas', ok: () => Object.keys(G.pesq.jogador.feitas).length >= 4 }
 };
 function calcularEstrelas() {
-    if (G.fim !== 'vitoria' && G.fim !== 'pontos') return 0;
+    if (!['vitoria', 'pontos', 'dominio'].includes(G.fim)) return 0;
     let e = 1;
-    if (G.t <= G.fase.tempo * 0.7 && G.fim === 'vitoria') e++;
+    if (G.t <= G.fase.tempo * 0.7 && G.fim !== 'pontos') e++;
     if (OBJETIVOS[G.fase.objetivo].ok()) e++;
     return e;
 }

@@ -175,7 +175,7 @@ function aplicarAcao(m) {
     else if (a.tipo === 'batalha') { // artilharia e postura dentro de uma batalha
         const b = batalhaEm(a.prov); if (!b) return;
         const lado = b.atqDono === dono ? 'atq' : b.defDono === dono ? 'def' : null; if (!lado) return;
-        if (a.acao === 'art') { const f = G.fac[dono]; if (f.mun >= C.ARTILHARIA_MUN && !b.usouArt) { f.mun -= C.ARTILHARIA_MUN; b.usouArt = true; (lado === 'atq' ? b.def : b.atq).filter(x => x.s.vida > 0).forEach(x => { x.s.vida -= 35; }); } }
+        if (a.acao === 'art') artilhariaNaBatalha(b, lado);
         else if (lado === 'atq' && ['avancar', 'cobertura', 'recuar'].includes(a.acao)) b.postAtq = a.acao;
         else if (lado === 'def' && ['atacar', 'equilibrio', 'abrigar'].includes(a.acao)) b.postDef = a.acao;
     }
