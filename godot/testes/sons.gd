@@ -42,6 +42,9 @@ func _rodar() -> void:
 				falhas.append(nome + " com a sobra diferente do começo")
 		if not args.is_empty():
 			w.save_to_wav(args[0].path_join(nome + ".wav"))
+	# com o pico das músicas em -2 dB, isto não deixa a música sumir nem estourar
+	if SonsC.MUSICA_DB < -8.0 or SonsC.MUSICA_DB + SonsC.MUSICA_APERTO_DB > -2.0:
+		falhas.append("volume da música fora da faixa")
 	s.tensao(1.0)
 	for i in 200:
 		s._process(0.05)

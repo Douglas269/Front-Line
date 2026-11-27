@@ -3,7 +3,7 @@ extends Control
 
 const CONFIG := "user://config.json"
 const PARTIDA := "user://partida.json"
-const VERSAO := "0.7"
+const VERSAO := "0.8"
 
 var campanha: CampanhaC
 var jogo: JogoC

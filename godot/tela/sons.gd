@@ -18,7 +18,10 @@ var _tensao := 0.0
 var _tensao_alvo := 0.0
 var _ambiente := AudioStreamPlayer.new()
 var _ambiente_qual := ""
-const MUSICA_DB := -14.0
+## as músicas têm média perto de -19 dB; com -14 sumiam no alto-falante do celular
+const MUSICA_DB := -6.0
+## quanto a música sobe quando a batalha aperta (os picos ficam abaixo do máximo)
+const MUSICA_APERTO_DB := 2.0
 
 ## cada tropa atira com o próprio som
 const SOM_DA_TROPA := {"inf": "tiro", "metr": "rajada", "art": "obus", "cav": "galope", "blind": "canhaozinho"}
@@ -132,7 +135,7 @@ func _process(dt: float) -> void:
 	elif _tambores.playing:
 		_tambores.stop()
 	# a música sobe um pouco junto
-	_musica.volume_db = MUSICA_DB + _tensao * 4.0
+	_musica.volume_db = MUSICA_DB + _tensao * MUSICA_APERTO_DB
 
 static var vibracao := true
 
