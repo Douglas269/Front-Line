@@ -3,7 +3,7 @@ extends Control
 
 const CONFIG := "user://config.json"
 const PARTIDA := "user://partida.json"
-const VERSAO := "0.8"
+const VERSAO := "0.9"
 
 var campanha: CampanhaC
 var jogo: JogoC
@@ -13,7 +13,7 @@ var menus: MenusC
 var recordes: RecordesC
 var operacao: OperacaoC
 var _fim_info := {} # o que a tela de fim precisa lembrar quando é redesenhada
-var config := {"som": true, "musica": true, "dificuldade": "soldado", "batalha_rapida": false, "ver_batalha": true, "guia_feito": false, "vibracao": true, "camera": true, "dicas": {}, "graficos": "auto"}
+var config := {"som": true, "musica": true, "dificuldade": "soldado", "batalha_rapida": false, "ver_batalha": true, "guia_feito": false, "vibracao": true, "camera": true, "dicas": {}, "graficos": "auto", "imersao": true}
 
 var sel := {}
 var modo := {}
@@ -40,6 +40,8 @@ var _recursos := {}
 var _faixa := Button.new()
 var _faixa_texto: Label
 var _faixa_alvo := ""
+var _faixa_rosto: RetratoC
+var _radio_ouvido := ""
 var _area_mapa := Control.new()
 var mapa := MapaVista.new()
 var _painel := PainelC.new()
@@ -93,6 +95,7 @@ func _ready() -> void:
 	_montar_dica()
 	get_window().size_changed.connect(_ajustar_formato)
 	_ajustar_formato()
+	_aplicar_imersao()
 	_tela.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_tela.visible = false
 	add_child(_tela)
@@ -133,6 +136,10 @@ func _montar_jogo() -> void:
 	_faixa_texto.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_faixa_texto.max_lines_visible = 2
 	_faixa.add_child(_faixa_texto)
+	_faixa_rosto = RetratoC.criar("bravo", Color(Dados.FACCOES["bravo"]["cor"]), 50.0)
+	_faixa_rosto.position = Vector2(8, 4)
+	_faixa_rosto.visible = false
+	_faixa.add_child(_faixa_rosto)
 	_base.add_child(_faixa)
 	_corpo.vertical = true
 	_corpo.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -707,6 +714,10 @@ func _medir_fluidez(dt: float) -> void:
 		if jogo and jogo.fim == "":
 			jogo.noticia("Gráficos leves ligados para o jogo não engasgar (dá para mudar nos Ajustes).")
 
+func _aplicar_imersao() -> void:
+	sons.clima_de_guerra = config["imersao"]
+	mapa.imersao = config["imersao"]
+
 func _aplicar_graficos() -> void:
 	ArteC.leve = config["graficos"] == "leve"
 	_lento = 0.0
@@ -716,7 +727,7 @@ func _process(dt: float) -> void:
 		return
 	_medir_fluidez(dt)
 	if not _tela.visible and jogo.fim == "":
-		if not jogo.pausado:
+		if not jogo.pausado and not (_cena and _cena.abrindo):
 			jogo.passo(minf(dt, 0.1) * jogo.velocidade)
 		if jogo.fim == "":
 			# uma batalha sua abre a tela animada sozinha (dá para desligar nos Ajustes)
@@ -766,6 +777,9 @@ func _atualizar() -> void:
 	_painel.mostrar(paineis.blocos(), "%s|%s|%s|%s" % [sel.get("tipo", ""), sel.get("id", ""), "modo" if not modo.is_empty() else "", "ordem" if not pendente.is_empty() else ""])
 	# aviso curto no topo do mapa
 	var mostrar_aviso: bool = not jogo.noticias.is_empty() and jogo.t - jogo.noticias[0]["t"] < (7.0 if jogo.noticias[0]["alerta"] else 4.5) and not _evento.visible and not _guia.visible and not mapa.puxando()
+	# o que já está falando no rádio, na faixa de cima, não se repete sobre o mapa
+	if mostrar_aviso and _faixa_rosto.visible and str(jogo.noticias[0]["txt"]).begins_with("Rádio, "):
+		mostrar_aviso = false
 	_aviso.visible = mostrar_aviso
 	if mostrar_aviso:
 		_aviso_alvo = _provincia_citada(jogo.noticias[0]["txt"])
@@ -793,6 +807,17 @@ func _atualizar_faixa() -> void:
 	for k in ["normal", "hover", "pressed", "focus"]:
 		_faixa.add_theme_stylebox_override(k, s)
 	_faixa_alvo = f[2]
+	# no rádio, o rosto de quem fala e o chiado
+	var no_ar: bool = f[0] == "radio" and jogo.vida.radio.has("cara")
+	_faixa_rosto.visible = no_ar
+	_faixa.custom_minimum_size.y = 58.0 if no_ar else 46.0
+	_faixa_texto.offset_left = 68 if no_ar else 12
+	if no_ar:
+		var r: Dictionary = jogo.vida.radio
+		_faixa_rosto.trocar(r["cara"], Color(Dados.FACCOES[r["pais"]]["cor"]))
+		if _radio_ouvido != r["txt"] and not _tela.visible:
+			_radio_ouvido = r["txt"]
+			sons.tocar("radio", -14.0)
 
 func _atualizar_evento() -> void:
 	var ev: Dictionary = jogo.vida.evento
@@ -1029,9 +1054,9 @@ func mostrar_inicio() -> void:
 			var sub: String = "%d inimigos · %d min%s\n★★★ %s" % [F["bots"].size(), int(F["tempo"] / 60.0), " · " + F["regra_txt"] if F.has("regra_txt") else "", Dados.OBJETIVOS[F["objetivo"]]] if lib else "vença a fase anterior"
 			v.add_child(Estilo.botao("%d. %s   %s" % [n, F["nome"], "★".repeat(est) + "☆".repeat(3 - est) if lib else "(trancada)"], sub, func():
 				if tem_partida():
-					confirmar("Começar uma fase nova apaga a partida salva. Continuar?", func(): comecar_fase(n), func(): mostrar_inicio())
+					confirmar("Começar uma fase nova apaga a partida salva. Continuar?", func(): dar_ordens(n), func(): mostrar_inicio())
 				else:
-					comecar_fase(n), lib, not lib))
+					dar_ordens(n), lib, not lib))
 	_t(v, "%s · %d de %d generais" % [Dados.qtd(campanha.total_estrelas(), "estrela", "estrelas"), campanha.generais_liberados().size(), Dados.GENERAIS.size()], 15)
 	if not campanha.meta["reforcos"].is_empty():
 		_t(v, "SEUS REFORÇOS", 16, Estilo.AMBAR, "titulo")
@@ -1046,6 +1071,37 @@ func mostrar_inicio() -> void:
 		h.add_child(b)
 	v.add_child(h)
 	_t(v, "versão %s (Godot) · o jogo online continua na versão web" % VERSAO, 13, Estilo.MUDO, "normal", true)
+
+## as ordens do comando: a situação da fase e quem está do outro lado
+func dar_ordens(n: int) -> void:
+	if not config["imersao"]:
+		comecar_fase(n)
+		return
+	var F: Dictionary = Dados.FASES[n - 1]
+	var O: Dictionary = HistoriaC.ORDENS[n]
+	var v := _abrir_tela("ordens")
+	sons.tocar("radio", -12.0)
+	_t(v, "ORDENS DO COMANDO", 28, Estilo.AMBAR, "marca", true)
+	_t(v, "FASE %d · %s" % [n, F["nome"].to_upper()], 20, Estilo.TEXTO, "titulo", true)
+	_t(v, O["hora"], 15, Estilo.MUDO, "titulo", true)
+	var papel := PanelContainer.new()
+	papel.add_theme_stylebox_override("panel", Estilo.caixa(Color("e9e0c4"), Color("8d8266"), 2, 4, 14))
+	papel.mouse_filter = Control.MOUSE_FILTER_PASS
+	papel.add_child(Estilo.rotulo(O["texto"], 19, Color("221d12"), "leitura", false, true))
+	v.add_child(papel)
+	_t(v, "DO OUTRO LADO", 17, Estilo.AMBAR, "titulo")
+	for bot in F["bots"]:
+		var linha := HBoxContainer.new()
+		linha.add_theme_constant_override("separation", 10)
+		linha.mouse_filter = Control.MOUSE_FILTER_PASS
+		var cor := Color(Dados.FACCOES[bot]["cor"])
+		linha.add_child(RetratoC.criar(bot, cor, 56.0))
+		linha.add_child(Estilo.texto_rico("[color=#%s][b]%s[/b][/color]
+%s" % [cor.to_html(false), VidaC.COMANDANTES[bot]["nome"], Dados.PERSO_TXT[Dados.FACCOES[bot]["perso"]]], 15, Estilo.TEXTO))
+		v.add_child(linha)
+	_t(v, "Para as 3 estrelas: %s." % Dados.OBJETIVOS[F["objetivo"]], 16, Estilo.AMBAR_CLARO)
+	v.add_child(Estilo.botao("AO COMBATE ▶", "", func(): comecar_fase(n), true))
+	v.add_child(Estilo.botao("← Voltar", "", func(): mostrar_inicio()))
 
 func mostrar_como_jogar() -> void:
 	var v := _abrir_tela("ajuda")
@@ -1086,13 +1142,14 @@ func abrir_ajustes() -> void:
 func _desenhar_ajustes(fechar: Callable) -> void:
 	var v := _abrir_tela("ajustes")
 	_t(v, "AJUSTES", 30, Estilo.AMBAR, "marca")
-	for x in [["som", "Efeitos sonoros"], ["musica", "Música"], ["vibracao", "Vibração"], ["camera", "Câmera mostra o que você conquista"], ["ver_batalha", "Abrir a batalha animada sozinha"], ["batalha_rapida", "Resolver batalhas sem assistir"]]:
+	for x in [["som", "Efeitos sonoros"], ["musica", "Música"], ["vibracao", "Vibração"], ["camera", "Câmera mostra o que você conquista"], ["imersao", "Cenas de cinema e falas"], ["ver_batalha", "Abrir a batalha animada sozinha"], ["batalha_rapida", "Resolver batalhas sem assistir"]]:
 		var chave: String = x[0]
 		v.add_child(Estilo.botao(x[1], "Ligado" if config[chave] else "Desligado", func():
 			config[chave] = not config[chave]
 			gravar_config()
 			sons.efeitos = config["som"]
 			sons.ligar_musica(config["musica"])
+			_aplicar_imersao()
 			SonsC.vibracao = config["vibracao"]
 			jogo.batalha_rapida = config["batalha_rapida"]
 			_desenhar_ajustes.call_deferred(fechar), config[chave]))
@@ -1204,11 +1261,13 @@ func _mostrar_fim() -> void:
 			_t(v, "Seguem com você: %s." % ", ".join(etapa["veteranos"]), 16, Estilo.TEXTO)
 		if etapa["fim"] and not etapa["completa"]:
 			_t(v, "A operação parou na etapa %d." % etapa["etapa"], 17, Estilo.TEXTO)
+	if config["imersao"]:
+		v.add_child(HistoriaC.jornal(jogo))
 	menus.resumo(v, jogo, _fim_info["saida"])
 	var o: Dictionary = jogo.origem.duplicate(true)
 	if tipo == "campanha":
 		if jogo.venceu() and n < Dados.FASES.size():
-			v.add_child(Estilo.botao("FASE %d: %s ▶" % [n + 1, Dados.FASES[n]["nome"].to_upper()], "", func(): comecar_fase(n + 1), true))
+			v.add_child(Estilo.botao("FASE %d: %s ▶" % [n + 1, Dados.FASES[n]["nome"].to_upper()], "", func(): dar_ordens(n + 1), true))
 		v.add_child(Estilo.botao("Jogar a fase %d de novo" % n, "", func(): comecar_fase(n)))
 		v.add_child(Estilo.botao("Escolher fase", "", func(): mostrar_inicio()))
 		return

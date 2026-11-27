@@ -69,6 +69,8 @@ func _rodar() -> void:
 	app.config["sem_dicas"] = true
 	await foto("01-menu")
 	await tocar("1. Fronteira")
+	await foto("00-ordens")
+	await tocar("AO COMBATE")
 	await espera(1.0)
 	await foto("02-tutorial")
 	await tocar("Vamos lá")

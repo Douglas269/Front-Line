@@ -13,6 +13,7 @@ func _rodar() -> void:
 
 	# ---- o tutorial ensina a arrastar
 	await tocar("1. Fronteira")
+	await tocar("AO COMBATE")
 	await espera(1.0)
 	await tocar("Vamos lá")
 	await foto("t01-tutorial-arrastar")

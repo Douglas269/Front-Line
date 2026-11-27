@@ -54,6 +54,7 @@ func _rodar() -> void:
 
 	# ---- arrastar para atacar
 	await tocar("1. Fronteira")
+	await tocar("AO COMBATE")
 	await espera(1.0)
 	var j: JogoC = app.jogo
 	var e: ExercitoC = j.parados_em(j.capital_jogador, "jogador")[0]

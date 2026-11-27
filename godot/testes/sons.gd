@@ -13,7 +13,7 @@ func _rodar() -> void:
 	var args := OS.get_cmdline_user_args()
 	var falhas: Array = []
 	var nomes: Array = s._sons.keys()
-	for nome in SonsC.SOM_DA_TROPA.values() + ["ferrolho", "apito", "fumaca", "chuva", "vento", "tambores"]:
+	for nome in SonsC.SOM_DA_TROPA.values() + ["ferrolho", "apito", "fumaca", "chuva", "vento", "tambores", "longe", "passaro", "radio"]:
 		if not nomes.has(nome):
 			falhas.append("falta o som " + nome)
 	for nome in nomes:
