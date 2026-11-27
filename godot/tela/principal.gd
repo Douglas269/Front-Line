@@ -3,7 +3,7 @@ extends Control
 
 const CONFIG := "user://config.json"
 const PARTIDA := "user://partida.json"
-const VERSAO := "0.4"
+const VERSAO := "0.5"
 
 var campanha: CampanhaC
 var jogo: JogoC
@@ -21,7 +21,17 @@ var pendente := {}
 var ver_detalhes := false
 
 var _base := VBoxContainer.new()
-var _topo := VBoxContainer.new()
+var _topo := BoxContainer.new()
+var _corpo := BoxContainer.new()   # mapa e painel: um sobre o outro no celular, lado a lado no computador
+var _linha := ColorRect.new()
+var _l2: HBoxContainer
+## computador (ou tablet deitado): outra disposição e outra escala
+var deitado := false
+const PROJETO_EM_PE := Vector2i(540, 1170)
+const PROJETO_DEITADO := Vector2i(1200, 720)
+const PAINEL_LADO := 440.0         # largura do painel quando fica à direita
+const COLUNA_TELA := 680.0         # largura máxima dos menus e cartões
+var _margem_tela: MarginContainer
 var _l_fase: Label
 var _l_relogio: Label
 var _b_pausa: Button
@@ -81,6 +91,8 @@ func _ready() -> void:
 	add_child(fundo)
 	_montar_jogo()
 	_montar_dica()
+	get_window().size_changed.connect(_ajustar_formato)
+	_ajustar_formato()
 	_tela.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_tela.visible = false
 	add_child(_tela)
@@ -122,22 +134,25 @@ func _montar_jogo() -> void:
 	_faixa_texto.max_lines_visible = 2
 	_faixa.add_child(_faixa_texto)
 	_base.add_child(_faixa)
+	_corpo.vertical = true
+	_corpo.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_corpo.add_theme_constant_override("separation", 0)
+	_base.add_child(_corpo)
 	_area_mapa.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_area_mapa.size_flags_stretch_ratio = 1.2
 	_area_mapa.clip_contents = true
-	_base.add_child(_area_mapa)
+	_corpo.add_child(_area_mapa)
 	mapa.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_area_mapa.add_child(mapa)
 	mapa.tocou_exercito.connect(func(id): selecionar({"tipo": "ex", "id": id}))
 	mapa.tocou_provincia.connect(_tocou_provincia)
 	mapa.arrastou_ordem.connect(_arrastou_ordem)
-	var linha := ColorRect.new()
-	linha.color = Estilo.BORDA
-	linha.custom_minimum_size = Vector2(0, 2)
-	_base.add_child(linha)
+	_linha.color = Estilo.BORDA
+	_linha.custom_minimum_size = Vector2(0, 2)
+	_corpo.add_child(_linha)
 	_painel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_painel.size_flags_stretch_ratio = 1.0
-	_base.add_child(_painel)
+	_corpo.add_child(_painel)
 	_montar_sobre_o_mapa()
 
 func _montar_topo() -> void:
@@ -148,8 +163,10 @@ func _montar_topo() -> void:
 	margem.add_theme_constant_override("margin_bottom", 4)
 	margem.add_child(_topo)
 	_base.add_child(margem)
+	_topo.vertical = true
 	_topo.add_theme_constant_override("separation", 6)
 	var l1 := HBoxContainer.new()
+	l1.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	l1.add_theme_constant_override("separation", 6)
 	_topo.add_child(l1)
 	l1.add_child(Estilo.botao_simples("Menu", func(): voltar_ao_menu(), 17, true))
@@ -168,6 +185,7 @@ func _montar_topo() -> void:
 	l1.add_child(_l_relogio)
 	var l2 := HBoxContainer.new()
 	l2.add_theme_constant_override("separation", 4)
+	_l2 = l2
 	_topo.add_child(l2)
 	for r in [["comida", "bread", "d9a35a"], ["mun", "bullets", "c8d0c4"], ["moedas", "two-coins", "e6c35a"], ["aco", "cog", "9fb3c8"], ["comb", "jerrycan", "e08a3c"], ["mo", "brodie-helmet", "8fad88"], ["prov", "flying-flag", "ffd28a"]]:
 		var b := Button.new()
@@ -302,9 +320,54 @@ func _montar_sobre_o_mapa() -> void:
 	_pausa_grande.pressed.connect(func(): pausar(false))
 	_area_mapa.add_child(_pausa_grande)
 
+## deitado só em tela grande: um celular virado de lado continua com o desenho de celular
+func _tela_deitada() -> bool:
+	var janela := Vector2(DisplayServer.window_get_size())
+	var escala := maxf(1.0, DisplayServer.screen_get_scale()) if OS.has_feature("web") else 1.0
+	return janela.x > janela.y * 1.1 and janela.y / escala >= 500.0
+
+func _ajustar_formato() -> void:
+	var agora := _tela_deitada()
+	var mudou := agora != deitado
+	deitado = agora
+	get_window().content_scale_size = PROJETO_DEITADO if deitado else PROJETO_EM_PE
+	if mudou:
+		_corpo.vertical = not deitado
+		_topo.vertical = not deitado
+		_l2.custom_minimum_size.x = 560.0 if deitado else 0.0
+		_painel.size_flags_horizontal = Control.SIZE_FILL
+		_painel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		_painel.custom_minimum_size.x = PAINEL_LADO if deitado else 0.0
+		_area_mapa.size_flags_horizontal = Control.SIZE_EXPAND_FILL if deitado else Control.SIZE_FILL
+		_linha.custom_minimum_size = Vector2(2, 0) if deitado else Vector2(0, 2)
+	_depois_de_ajustar.call_deferred(mudou)
+
+## já com os tamanhos novos: centraliza os menus e refaz a batalha aberta
+func _depois_de_ajustar(mudou: bool) -> void:
+	await get_tree().process_frame
+	_margens_da_tela()
+	if _cena and _cena.b and not _cena.b.terminou:
+		var b: BatalhaC = _cena.b
+		_fechar_batalha()
+		abrir_batalha_animada(b)
+	elif _cena and mudou:
+		_fechar_batalha()
+	if mudou and jogo and not _tela.visible:
+		mapa.centralizar(jogo.prov[jogo.capital_jogador].pos)
+
+## os menus ficam numa coluna no meio, em vez de esticados de ponta a ponta
+func _margens_da_tela() -> void:
+	if _margem_tela == null or not is_instance_valid(_margem_tela):
+		return
+	var lado := int(maxf(18.0, (get_viewport_rect().size.x - COLUNA_TELA) / 2.0))
+	_margem_tela.add_theme_constant_override("margin_left", lado)
+	_margem_tela.add_theme_constant_override("margin_right", lado)
+
 ## cartões ocupam a largura do mapa e só a altura que o texto pede
 func _ajustar_cartao(c: Control) -> void:
-	c.size = Vector2(_area_mapa.size.x - 20.0, 0.0)
+	var larg := minf(_area_mapa.size.x - 20.0, COLUNA_TELA)
+	c.size = Vector2(larg, 0.0)
+	c.position.x = (_area_mapa.size.x - larg) / 2.0
 	if c == _guia: # embaixo, para não tampar as províncias de cima
 		c.position.y = _area_mapa.size.y - c.size.y - 8.0
 
@@ -774,7 +837,7 @@ func _escolher_evento(i: int) -> void:
 # ------------------------------------------------------------ tutorial da fase 1
 const GUIA := [
 	["Você é o verde. Vamos aprender jogando. O jogo fica pausado enquanto você aprende.", "Vamos lá"],
-	["Estes bonecos verdes na capital ★ são o seu exército. Encoste o dedo neles, ARRASTE até uma província cinza vizinha e solte.", ""],
+	["Estes bonecos verdes na capital ★ são o seu exército. Segure neles com o dedo (ou o botão do mouse), ARRASTE até uma província cinza vizinha e solte.", ""],
 	["O painel mostra a previsão da batalha. Escolha quantos soldados vão e toque em «Confirmar». Nada sai sem você confirmar.", ""],
 	["A tropa marcha sozinha. Embaixo do topo aparecem as missões, que dão prêmios. Para mover o mapa, arraste fora das suas tropas. Boa sorte!", "Começar"]
 ]
@@ -808,7 +871,7 @@ func dica(id: String) -> bool:
 	v.add_theme_constant_override("separation", 10)
 	v.add_child(Estilo.rotulo(DICAS[id][0], 21, Estilo.AMBAR_CLARO, "titulo", true))
 	var corpo := Estilo.rotulo(DICAS[id][1], 18, Estilo.TEXTO, "normal", false, true)
-	corpo.custom_minimum_size.x = size.x - 56.0
+	corpo.custom_minimum_size.x = minf(size.x - 24.0, COLUNA_TELA) - 32.0
 	v.add_child(corpo)
 	var ok := Estilo.botao_simples("Entendi", func(): fechar_dica(), 19, true)
 	ok.custom_minimum_size = Vector2(0, 54)
@@ -822,8 +885,9 @@ func dica(id: String) -> bool:
 func _colocar_dica() -> void:
 	if _dica_id == "":
 		return
-	_dica.size = Vector2(size.x - 24.0, 0.0)
-	_dica.position = Vector2(12.0, maxf(100.0, (size.y - _dica.size.y) * 0.42))
+	var larg := minf(size.x - 24.0, COLUNA_TELA)
+	_dica.size = Vector2(larg, 0.0)
+	_dica.position = Vector2((size.x - larg) / 2.0, maxf(100.0, (size.y - _dica.size.y) * 0.42))
 
 func fechar_dica() -> void:
 	if _dica_id == "":
@@ -905,6 +969,8 @@ func _abrir_tela(nome: String) -> VBoxContainer:
 	for k in ["margin_left", "margin_right", "margin_top", "margin_bottom"]:
 		m.add_theme_constant_override(k, 18)
 	rolagem.add_child(m)
+	_margem_tela = m
+	_margens_da_tela()
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 10)
 	v.mouse_filter = Control.MOUSE_FILTER_PASS

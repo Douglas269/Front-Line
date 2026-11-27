@@ -200,8 +200,9 @@ func _ready() -> void:
 	fundo.color = Estilo.FUNDO
 	fundo.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(fundo)
-	largura = size.x
-	altura = maxf(380.0, size.y * 0.56)
+	var ao_lado: bool = tela.deitado
+	largura = size.x - tela.PAINEL_LADO if ao_lado else size.x
+	altura = size.y if ao_lado else maxf(380.0, size.y * 0.56)
 	chao = altura * 0.36
 	trincheira_x = largura * 0.7
 	recorte.clip_contents = true
@@ -266,13 +267,13 @@ func _ready() -> void:
 	_clarao.size = Vector2(largura, altura)
 	_clarao.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	recorte.add_child(_clarao)
-	_painel.position = Vector2(0, altura)
-	_painel.size = Vector2(largura, size.y - altura)
+	_painel.position = Vector2(largura, 0) if ao_lado else Vector2(0, altura)
+	_painel.size = Vector2(tela.PAINEL_LADO, size.y) if ao_lado else Vector2(largura, size.y - altura)
 	add_child(_painel)
 	var linha := ColorRect.new()
 	linha.color = Color(Estilo.AMBAR, 0.6)
-	linha.position = Vector2(0, altura)
-	linha.size = Vector2(largura, 2)
+	linha.position = Vector2(largura, 0) if ao_lado else Vector2(0, altura)
+	linha.size = Vector2(2, size.y) if ao_lado else Vector2(largura, 2)
 	add_child(linha)
 	var nome := Estilo.contornar(Estilo.rotulo("BATALHA DE %s" % b.alvo.nome.to_upper(), 24, Color("ffdb94"), "marca", true))
 	nome.position = Vector2(0, 8)
@@ -947,7 +948,7 @@ func _lugar_ao_fundo(c: Node2D) -> void:
 			c.draw_line(Vector2(x0 + 12 + k * 18.0, y - 31), Vector2(x0 + 12 + k * 18.0, y - 23), pedra.lightened(0.12), 2.0)
 	elif amb["lugar"] == "ruinas":
 		var parede := Color(0.2, 0.175, 0.17)
-		for i in 9:
+		for i in int(largura / 62.0) + 1:
 			var x := 4.0 + i * 62.0 + sin(i * 4.1) * 14.0
 			var h := 30.0 + fmod(i * 37.0, 52.0)
 			var lg := 30.0 + fmod(i * 13.0, 20.0)
@@ -959,7 +960,7 @@ func _lugar_ao_fundo(c: Node2D) -> void:
 			for andar in int(h / 22.0):
 				var quente: bool = (i + andar) % 5 == 0
 				c.draw_rect(Rect2(x + 7, chao - 14 - andar * 20.0, 7, 10), Color(1.0, 0.55, 0.18, 0.85) if quente else Color(0.07, 0.06, 0.06))
-		for i in 34: # entulho
+		for i in int(largura / 16.0): # entulho
 			var q := Vector2(fmod(i * 53.0, largura), chao + 2.0 + fmod(i * 11.0, 12.0))
 			c.draw_colored_polygon(PackedVector2Array([q, q + Vector2(5 + i % 4, -5 - i % 5), q + Vector2(13 + i % 6, 0)]), Color(0.25, 0.21, 0.19))
 
@@ -991,14 +992,14 @@ func _desenhar_cenario() -> void:
 		c.draw_colored_polygon(pts, m[1])
 		c.draw_polyline(pts, m[1], 1.2, true)
 	if (tipo == "cidade" or tipo == "capital") and amb["lugar"] != "ruinas":
-		for i in 11:
+		for i in int(largura / 50.0) + 1:
 			var x := 8.0 + i * 50.0 + sin(i * 3.0) * 12.0
 			var h := 22.0 + fmod(i * 29.0, 34.0)
 			c.draw_rect(Rect2(x, chao - h, 34, h + 4), Color(0.17, 0.15, 0.15))
 			c.draw_colored_polygon(PackedVector2Array([Vector2(x - 2, chao - h), Vector2(x + 17, chao - h - 14 - (i % 3) * 4), Vector2(x + 36, chao - h)]), Color(0.21, 0.15, 0.13))
 			if i % 2 == 0:
 				c.draw_rect(Rect2(x + 8, chao - h + 8, 6, 7), Color(0.95, 0.7, 0.3, 0.7))
-	var arvores := 26 if tipo == "floresta" else 7
+	var arvores := int((26 if tipo == "floresta" else 7) * maxf(1.0, largura / 540.0))
 	for i in arvores:
 		var x := fmod(26.0 + i * 78.0 + sin(i * 5.0) * 20.0, largura)
 		if tipo == "floresta":
