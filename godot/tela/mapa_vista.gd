@@ -34,7 +34,15 @@ var _voo: Tween
 var _fundo := Fundo.new()
 var _material_agua: ShaderMaterial
 var _chao := Chao.new()
-var _fumacas: Array = []  # {"prov", "ini"}: fumaça que sobra depois da luta
+var _fumacas: Array = []  # {"prov", "ini"}: marcas que a luta deixa (tempo do jogo)
+## por quanto tempo de jogo o lugar de uma batalha fica marcado
+const CICATRIZ_DURA := 120.0
+## avião de reconhecimento: de quanto em quanto tempo passa e quanto leva para cruzar a tela
+const AVIAO_INTERVALO := 42.0
+const AVIAO_VOO := 9.0
+var imersao := true
+var _aviao_t := 24.0
+var _aviao_voltas := 0
 var _chao_marca := ""
 var _visiveis := {}
 var _visiveis_em := -1000
@@ -100,7 +108,7 @@ func usar(jogo: JogoC) -> void:
 		_tris[p.id] = Geometry2D.triangulate_polygon(p.poli)
 	_fumacas = []
 	_fundo.queue_redraw()
-	j.batalha_resolvida.connect(func(r): _fumacas.append({"prov": r["prov"], "ini": Time.get_ticks_msec()}))
+	j.batalha_resolvida.connect(func(r): marcar_batalha(r["prov"]))
 	j.conquista_feita.connect(func(id, dono, _antigo): _festas.append({"prov": id, "cor": Color(Dados.FACCOES[dono]["cor"]), "ini": Time.get_ticks_msec()}))
 
 func zoom_min() -> float:
@@ -312,7 +320,8 @@ func _desenhar_puxao() -> void:
 		var pos := Vector2(clampf(ate.x, 110.0, size.x - 110.0), maxf(34.0, ate.y - 58.0))
 		_texto(pos, _puxa_info, 17, Color("ffe2a8"), Color(0.05, 0.06, 0.05, 0.9))
 
-func _process(_dt: float) -> void:
+func _process(dt: float) -> void:
+	_passar_tempo_do_aviao(dt)
 	if not (is_visible_in_tree() and j):
 		return
 	if _toques.is_empty():
@@ -415,6 +424,7 @@ func _draw() -> void:
 	_desenhar_chefe()
 	_desenhar_reuniao()
 	_desenhar_festas()
+	_desenhar_aviao()
 	_desenhar_puxao()
 
 func _pintar(onde: CanvasItem, p: ProvinciaC, tri: PackedInt32Array, cor: Color) -> void:
@@ -538,15 +548,66 @@ func _coluna_de_fumaca(base: Vector2, agora: float, semente: int, forca: float) 
 		var tom := 0.16 + fase * 0.34
 		ArteC.elipse(self, q, Vector2(raio, raio * 0.86), Color(tom, tom * 0.96, tom * 0.9, 0.5 * (1.0 - fase) * forca))
 
+## uma luta acabou aqui: o chão fica com crateras e fumaça (outra no mesmo lugar renova)
+func marcar_batalha(prov_id: String) -> void:
+	_fumacas = _fumacas.filter(func(x): return x["prov"] != prov_id)
+	_fumacas.append({"prov": prov_id, "ini": j.t})
+
+## crateras, fogo no começo e fumaça que vai sumindo
 func _desenhar_fumaca_antiga(agora: float) -> void:
-	var ms := Time.get_ticks_msec()
-	_fumacas = _fumacas.filter(func(f): return ms - f["ini"] < 14000)
+	_fumacas = _fumacas.filter(func(x): return j.t - x["ini"] < CICATRIZ_DURA and j.t >= x["ini"])
 	for f in _fumacas:
-		if j.prov.has(f["prov"]):
-			var forca: float = 1.0 - (ms - f["ini"]) / 14000.0
-			var q := para_tela(j.prov[f["prov"]].pos)
-			_coluna_de_fumaca(q + Vector2(26, 10) * z, agora, 1, forca)
-			_coluna_de_fumaca(q + Vector2(-30, 22) * z, agora, 4, forca * 0.7)
+		if not j.prov.has(f["prov"]):
+			continue
+		var idade: float = (j.t - f["ini"]) / CICATRIZ_DURA
+		var resta := 1.0 - idade
+		var q := para_tela(j.prov[f["prov"]].pos)
+		if q.x < -80 or q.y < -80 or q.x > size.x + 80 or q.y > size.y + 80:
+			continue
+		var semente: int = absi(hash(f["prov"]))
+		for k in 7:
+			var onde := q + Vector2(fmod(semente / 7.0 + k * 53.0, 90.0) - 45.0, fmod(semente / 13.0 + k * 31.0, 52.0) - 14.0) * z
+			var raio := (4.0 + (k % 3) * 2.2) * z
+			ArteC.elipse(self, onde, Vector2(raio * 1.35, raio * 0.72), Color(0.45, 0.36, 0.24, 0.55 * minf(1.0, resta * 2.5)))
+			ArteC.elipse(self, onde + Vector2(0, raio * 0.1), Vector2(raio, raio * 0.5), Color(0.09, 0.07, 0.05, 0.8 * minf(1.0, resta * 2.5)))
+		if idade < 0.28:
+			for k in 2:
+				var chama := q + Vector2(30 - k * 62, 14 + k * 9) * z
+				var pulsa := 0.75 + 0.25 * sin(agora * 11.0 + k * 2.0)
+				ArteC.elipse(self, chama, Vector2(4.0, 7.0 * pulsa) * z, Color(1.0, 0.45, 0.12, 0.9 * (1.0 - idade / 0.28)))
+				ArteC.elipse(self, chama + Vector2(0, 2) * z, Vector2(2.2, 3.6 * pulsa) * z, Color(1.0, 0.86, 0.4, 0.9 * (1.0 - idade / 0.28)))
+		_coluna_de_fumaca(q + Vector2(26, 10) * z, agora, 1, resta)
+		_coluna_de_fumaca(q + Vector2(-30, 22) * z, agora, 4, resta * 0.7)
+
+## um avião de reconhecimento cruza o mapa de vez em quando, com a sombra no chão
+func _desenhar_aviao() -> void:
+	if not imersao or ArteC.leve or _aviao_t >= 0.0:
+		return
+	var k := 1.0 + _aviao_t / AVIAO_VOO # 0 ao entrar, 1 ao sair
+	var ida := _aviao_voltas % 2 == 0
+	var x := lerpf(-60.0, size.x + 60.0, k if ida else 1.0 - k)
+	var y := size.y * (0.18 + fmod(_aviao_voltas * 0.31, 0.5)) + sin(k * PI) * 30.0
+	var dir := 1.0 if ida else -1.0
+	for sombra in [true, false]:
+		var centro := Vector2(x, y) + (Vector2(26, 44) if sombra else Vector2.ZERO)
+		var tinta := Color(0, 0, 0, 0.2) if sombra else Color("5d6650")
+		draw_set_transform(centro, 0.0, Vector2(dir, 1.0) * (0.85 if sombra else 1.0))
+		draw_colored_polygon(PackedVector2Array([Vector2(18, 0), Vector2(12, -3), Vector2(-16, -2), Vector2(-20, 0), Vector2(-16, 2), Vector2(12, 3)]), tinta)
+		draw_colored_polygon(PackedVector2Array([Vector2(6, -1), Vector2(-2, -22), Vector2(-7, -22), Vector2(-4, 0), Vector2(-7, 22), Vector2(-2, 22), Vector2(6, 1)]), tinta.lightened(0.0 if sombra else 0.12))
+		draw_colored_polygon(PackedVector2Array([Vector2(-14, 0), Vector2(-19, -8), Vector2(-22, -8), Vector2(-20, 0), Vector2(-22, 8), Vector2(-19, 8)]), tinta)
+		if not sombra:
+			draw_line(Vector2(19, -7), Vector2(19, 7), Color(0.9, 0.9, 0.85, 0.5), 1.5)
+			draw_circle(Vector2(-3, -15), 2.4, Color("c8503c"))
+			draw_circle(Vector2(-3, 15), 2.4, Color("c8503c"))
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+func _passar_tempo_do_aviao(dt: float) -> void:
+	if j == null or j.pausado:
+		return
+	_aviao_t -= dt
+	if _aviao_t < -AVIAO_VOO:
+		_aviao_t = AVIAO_INTERVALO
+		_aviao_voltas += 1
 
 func _desenhar_batalhas(agora: float) -> void:
 	for b in j.batalhas:

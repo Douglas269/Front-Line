@@ -442,7 +442,7 @@ func falar(bot: String, qual: String, alvo := "", urgente := false) -> bool:
 	var falas: Dictionary = Dados.CHEFES[j.chefe_id]["falas"] if eh_chefe else COMANDANTES[bot]
 	var quem: String = Dados.CHEFES[j.chefe_id]["nome"] if eh_chefe else COMANDANTES[bot]["nome"]
 	var txt: String = falas[qual].replace("{alvo}", alvo)
-	radio = {"quem": quem, "txt": txt, "ate": j.t + RADIO_DURA}
+	radio = {"quem": quem, "txt": txt, "ate": j.t + RADIO_DURA, "cara": j.chefe_id if eh_chefe else bot, "pais": bot}
 	j.noticia("Rádio, %s: %s" % [quem, txt])
 	return true
 

@@ -18,7 +18,10 @@ var _tensao := 0.0
 var _tensao_alvo := 0.0
 var _ambiente := AudioStreamPlayer.new()
 var _ambiente_qual := ""
-const MUSICA_DB := -14.0
+## as músicas têm média perto de -19 dB; com -14 sumiam no alto-falante do celular
+const MUSICA_DB := -6.0
+## quanto a música sobe quando a batalha aperta (os picos ficam abaixo do máximo)
+const MUSICA_APERTO_DB := 2.0
 
 ## cada tropa atira com o próprio som
 const SOM_DA_TROPA := {"inf": "tiro", "metr": "rajada", "art": "obus", "cav": "galope", "blind": "canhaozinho"}
@@ -63,6 +66,12 @@ func _ready() -> void:
 	# apito de oficial para a carga
 	_sons["apito"] = _onda(0.9, func(t, k, r): return (sin(TAU * 2350.0 * t + sin(TAU * 38.0 * t) * 2.6) * 0.34 + r * 0.03) * minf(1.0, t / 0.03) * (1.0 - pow(k, 6.0)))
 	_sons["fumaca"] = _onda(1.5, func(_t, k, r): return r * 0.6 * minf(1.0, k * 9.0) * pow(1.0 - k, 1.6), 0.55)
+	# clima de guerra: canhão ao longe, passarinho na calmaria e o chiado do rádio
+	_sons["longe"] = _onda(1.8, func(t, k, r): return (r * 0.45 + sin(TAU * (46.0 - 16.0 * k) * t) * 0.8) * minf(1.0, t / 0.02) * pow(1.0 - k, 2.6), 0.07)
+	_sons["passaro"] = _onda(0.9, _piado)
+	_sons["radio"] = _onda(0.55, func(t, k, r):
+		var bipe := sin(TAU * 1240.0 * t) * 0.3 if (t < 0.07 or (t > 0.43 and t < 0.5)) else 0.0
+		return bipe + r * (0.22 if t > 0.07 and t < 0.43 else 0.0) * (0.55 + 0.45 * sin(TAU * 17.0 * t)) * (1.0 - k * 0.4))
 	_sons["chuva"] = _em_volta(_onda(2.4, func(_t, _k, r): return r * 0.34, 0.6))
 	_sons["vento"] = _em_volta(_onda(4.0, func(t, k, r): return r * (0.3 + 0.22 * sin(TAU * k * 2.0)) + sin(TAU * 62.0 * t) * 0.015, 0.045))
 	_sons["tambores"] = _em_volta(_onda(2.5, _batuque, 0.3))
@@ -106,6 +115,32 @@ static func _em_volta(w: AudioStreamWAV) -> AudioStreamWAV:
 	w.loop_end = n
 	return w
 
+## três piados curtos, cada um subindo um pouco
+func _piado(t: float, _k: float, _r: float) -> float:
+	var v := 0.0
+	for quando in [0.02, 0.2, 0.56]:
+		var d: float = t - quando
+		if d >= 0.0 and d < 0.11:
+			v += sin(TAU * (2900.0 * d + 5200.0 * d * d) + sin(TAU * 31.0 * d) * 1.8) * sin(PI * d / 0.11) * 0.3
+	return v
+
+## canhões distantes o tempo todo; passarinhos só quando não há combate
+var clima_de_guerra := true
+var _proximo_clima := 5.0
+
+func _soar_ao_longe(dt: float) -> void:
+	if not clima_de_guerra or not efeitos:
+		return
+	_proximo_clima -= dt
+	if _proximo_clima > 0.0:
+		return
+	var lutando := _tensao_alvo > 0.02
+	_proximo_clima = randf_range(3.0, 7.0) if lutando else randf_range(6.0, 13.0)
+	if not lutando and _ambiente_qual == "" and randf() < 0.55:
+		tocar("passaro", -19.0, randf_range(0.85, 1.15))
+	else:
+		tocar("longe", -13.0 if lutando else -18.0, randf_range(0.75, 1.15))
+
 ## de 0 (calmo) a 1 (batalha no limite)
 func tensao(v: float) -> void:
 	_tensao_alvo = clampf(v, 0.0, 1.0)
@@ -124,6 +159,7 @@ func ambiente(qual: String) -> void:
 		_ambiente.play()
 
 func _process(dt: float) -> void:
+	_soar_ao_longe(dt)
 	_tensao = move_toward(_tensao, _tensao_alvo if musica_ligada else 0.0, dt * 0.6)
 	if _tensao > 0.02:
 		_tambores.volume_db = linear_to_db(_tensao * 0.75) - 8.0
@@ -132,7 +168,7 @@ func _process(dt: float) -> void:
 	elif _tambores.playing:
 		_tambores.stop()
 	# a música sobe um pouco junto
-	_musica.volume_db = MUSICA_DB + _tensao * 4.0
+	_musica.volume_db = MUSICA_DB + _tensao * MUSICA_APERTO_DB
 
 static var vibracao := true
 

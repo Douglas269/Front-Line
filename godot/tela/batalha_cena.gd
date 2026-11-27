@@ -42,6 +42,7 @@ class Boneco:
 	var deitado := false
 	var agachado := false # defensor abrigado
 	var comemorando := false
+	var fugindo := false
 	var posto := 0
 	var _marca := ""
 
@@ -167,6 +168,23 @@ var _resumo := {}
 var _painel := PainelC.new()
 var _clarao := ColorRect.new()
 var _faixa := Label.new()
+
+# ---- imersão: abertura de cinema, falas e câmera
+const ABERTURA_DURA := 2.8
+## enquanto a abertura passa, o jogo espera (ver principal._process)
+var abrindo := false
+var imersao := true
+var _abertura: Control
+var _abertura_t := 0.0
+var _apitou := false
+var cam_zoom := 1.0
+var cam_foco := Vector2.ZERO
+var _cam_tween: Tween
+var _baloes: Array = []
+var _balao_em := 0.0       # antes disso ninguém fala de novo (as falas urgentes passam)
+var _solto_em := 6.0
+var _postura_vista := ""
+var _disse := {}
 var _fx: Texture2D = preload("res://arte/atlas.png")
 
 func abrir(t, batalha: BatalhaC) -> void:
@@ -294,7 +312,173 @@ func _ready() -> void:
 	onde.position = Vector2(0, 66)
 	onde.size = Vector2(largura, 20)
 	recorte.add_child(onde)
+	imersao = tela.config.get("imersao", true)
+	cam_foco = Vector2(largura, altura) / 2.0
+	_postura_vista = _postura_do_jogador()
+	# só no começo da luta: voltar a uma batalha que já corre não repete a abertura
+	if imersao and b.t < 1.0 and not b.terminou:
+		_montar_abertura()
 	_atualizar_painel()
+
+# ------------------------------------------------------------ abertura de cinema
+func _montar_abertura() -> void:
+	abrindo = true
+	_abertura = Control.new()
+	_abertura.size = Vector2(largura, altura)
+	_abertura.mouse_filter = Control.MOUSE_FILTER_STOP
+	_abertura.gui_input.connect(func(ev):
+		if (ev is InputEventMouseButton or ev is InputEventScreenTouch) and ev.pressed:
+			pular_abertura())
+	for em_cima in [true, false]:
+		var tarja := ColorRect.new()
+		tarja.color = Color.BLACK
+		tarja.size = Vector2(largura, 92)
+		tarja.position = Vector2(0.0, 0.0 if em_cima else altura - 92.0)
+		tarja.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_abertura.add_child(tarja)
+	var titulo := Estilo.rotulo(b.alvo.nome.to_upper(), 34, Color("ffdb94"), "marca", true)
+	titulo.position = Vector2(0, 14)
+	titulo.size = Vector2(largura, 44)
+	_abertura.add_child(titulo)
+	var sub := Estilo.rotulo("%s · %s x %s" % [nome_do_ambiente(), j.nome_de(b.atq_dono), j.nome_de(b.def_dono)], 15, Color("c9d2c4"), "titulo", true)
+	sub.position = Vector2(0, 60)
+	sub.size = Vector2(largura, 22)
+	_abertura.add_child(sub)
+	var pular := Estilo.rotulo("toque para pular", 15, Estilo.TEXTO, "titulo", true)
+	pular.position = Vector2(0, altura - 58)
+	pular.size = Vector2(largura, 24)
+	_abertura.add_child(pular)
+	recorte.add_child(_abertura)
+	tela.sons.tocar("longe", -9.0, 0.9)
+	_passo_abertura(0.0)
+
+## a câmera começa na trincheira inimiga, corre até a nossa tropa e se afasta
+func _passo_abertura(dt: float) -> void:
+	_abertura_t += dt
+	var k := clampf(_abertura_t / ABERTURA_DURA, 0.0, 1.0)
+	var meio := Vector2(largura, altura) / 2.0
+	var baixo := chao + (altura - chao) * 0.45
+	var la := Vector2(trincheira_x + 40.0, baixo)
+	var ca := Vector2(largura * 0.22, baixo)
+	if k < 0.62:
+		cam_zoom = 1.32
+		cam_foco = la.lerp(ca, smoothstep(0.08, 0.62, k))
+	else:
+		var u := smoothstep(0.62, 1.0, k)
+		cam_zoom = lerpf(1.32, 1.0, u)
+		cam_foco = ca.lerp(meio, u)
+	if not _apitou and k >= 0.66:
+		_apitou = true
+		tela.sons.tocar("apito", -10.0)
+		_alguem_fala("inicio", "", true)
+	if k >= 1.0:
+		pular_abertura()
+
+func pular_abertura() -> void:
+	if not abrindo:
+		return
+	abrindo = false
+	cam_zoom = 1.0
+	cam_foco = Vector2(largura, altura) / 2.0
+	if _abertura:
+		_abertura.queue_free()
+		_abertura = null
+
+## aplica a câmera (e o tremor) sem deixar aparecer o que está fora do cenário
+func _aplicar_camera() -> void:
+	var meio := Vector2(largura, altura) / 2.0
+	var folga := meio / cam_zoom
+	var foco := cam_foco.clamp(folga, Vector2(largura, altura) - folga)
+	mundo.scale = Vector2.ONE * cam_zoom
+	mundo.position = meio - foco * cam_zoom + Vector2(randf_range(-1, 1), randf_range(-1, 1)) * tremor
+
+## a trincheira cai: a câmera chega perto e o tempo anda devagar por um instante
+func _momento_decisivo(onde: Vector2) -> void:
+	if not imersao:
+		return
+	Engine.time_scale = 0.4
+	if _cam_tween:
+		_cam_tween.kill()
+	_cam_tween = create_tween().set_ignore_time_scale(true)
+	_cam_tween.tween_property(self, "cam_zoom", 1.15, 0.45).set_trans(Tween.TRANS_SINE)
+	_cam_tween.parallel().tween_property(self, "cam_foco", onde, 0.45).set_trans(Tween.TRANS_SINE)
+	_cam_tween.tween_interval(0.75)
+	_cam_tween.tween_callback(func(): Engine.time_scale = 1.0)
+	_cam_tween.tween_property(self, "cam_zoom", 1.0, 0.7).set_trans(Tween.TRANS_SINE)
+	_cam_tween.parallel().tween_property(self, "cam_foco", Vector2(largura, altura) / 2.0, 0.7).set_trans(Tween.TRANS_SINE)
+
+# ------------------------------------------------------------ falas
+func _postura_do_jogador() -> String:
+	var lado := b.lado_do_jogador()
+	return "" if lado == "" else (b.post_atq if lado == "atq" else b.post_def)
+
+## um soldado de pé, do lado pedido (o seu, se não disser outro)
+func _soldado_para_falar(lado := "", menos: Boneco = null) -> Boneco:
+	var meu := lado if lado != "" else b.lado_do_jogador()
+	if meu == "":
+		return null
+	var l: Array = bonecos.values().filter(func(x): return x.c.lado == meu and not x.morto and x != menos and x.position.x > 20.0 and x.position.x < largura - 20.0)
+	return null if l.is_empty() else l.pick_random()
+
+func _alguem_fala(tipo: String, nome := "", urgente := false, quem: Boneco = null) -> void:
+	var bn := quem if quem != null else _soldado_para_falar()
+	if bn != null:
+		_balao(bn, FalasC.sortear(tipo, nome), urgente)
+
+## balãozinho em cima do soldado: no máximo dois ao mesmo tempo, para não tapar a luta
+func _balao(bn: Boneco, texto: String, urgente := false) -> void:
+	if not imersao:
+		return
+	_baloes = _baloes.filter(func(x): return is_instance_valid(x) and not x.is_queued_for_deletion())
+	if (not urgente and tempo < _balao_em) or _baloes.size() >= 2:
+		return
+	_balao_em = tempo + 2.2
+	var meu := bn.c.lado == b.lado_do_jogador()
+	var frase := "%s: %s" % [bn.c.s.nome, texto] if meu else texto
+	var caixa := PanelContainer.new()
+	caixa.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	caixa.add_theme_stylebox_override("panel", Estilo.caixa(Color("efe8d2") if meu else Color("3a1f1b"), Color("1b1a14") if meu else Color("b0594a"), 2, 8, 5))
+	caixa.add_child(Estilo.rotulo(frase, 15, Color("17150f") if meu else Color("ffd9cf"), "titulo", true))
+	var fonte := Estilo.fonte("titulo")
+	var larg := fonte.get_string_size(frase, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x + 18.0
+	var y := bn.position.y - 46.0 * absf(bn.scale.y) - 40.0
+	# dois balões não ficam um em cima do outro
+	for outro in _baloes:
+		if absf(outro.position.y - y) < 30.0:
+			y = outro.position.y - 32.0
+	caixa.position = Vector2(clampf(bn.position.x - larg / 2.0, 6.0, maxf(6.0, largura - larg - 6.0)), maxf(94.0, y))
+	caixa.size = Vector2(larg, 28)
+	caixa.modulate.a = 0.0
+	efeitos.add_child(caixa)
+	_baloes.append(caixa)
+	var t := caixa.create_tween()
+	t.tween_property(caixa, "modulate:a", 1.0, 0.12)
+	t.tween_interval(1.7)
+	t.tween_property(caixa, "modulate:a", 0.0, 0.3)
+	t.tween_callback(caixa.queue_free)
+
+## falas que acompanham o andamento: ordem nova, aperto, vantagem e conversa solta
+func _falas_do_andamento(dt: float) -> void:
+	var lado := b.lado_do_jogador()
+	if lado == "":
+		return
+	var agora := _postura_do_jogador()
+	if agora != _postura_vista:
+		_postura_vista = agora
+		var tipo: String = {"avancar": "avancar", "atacar": "avancar", "cobertura": "deitar", "abrigar": "deitar", "recuar": "recuar"}.get(agora, "")
+		if tipo != "":
+			_alguem_fala(tipo, "", true)
+	var parte := b.parte_de(lado)
+	if parte < 0.35 and not _disse.has("perdendo") and tempo > 4.0:
+		_disse["perdendo"] = true
+		_alguem_fala("perdendo")
+	elif parte > 0.72 and not _disse.has("ganhando") and tempo > 4.0:
+		_disse["ganhando"] = true
+		_alguem_fala("ganhando")
+	_solto_em -= dt
+	if _solto_em <= 0.0:
+		_solto_em = randf_range(5.0, 9.0)
+		_alguem_fala("solto")
 
 ## quão apertada está a luta: mais forte quando está parelha, quando perdemos gente e com artilharia no ar
 func aperto() -> float:
@@ -372,7 +556,7 @@ func _process(dt: float) -> void:
 	_faixa.text = "PAUSADO: toque em ▶ no topo" if parado and not _acabou and tela._dica_id == "" else "%s x %s" % [j.nome_de(b.atq_dono), j.nome_de(b.def_dono)]
 	var passo := 0.0 if parado else dt * j.velocidade
 	tremor = maxf(0.0, tremor - dt * 28.0)
-	mundo.position = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * tremor
+	_aplicar_camera()
 	for n in nuvens:
 		n[0] += n[3] * dt
 		if n[0] > largura + 100:
@@ -394,6 +578,11 @@ func _process(dt: float) -> void:
 			_sinalizador = randf_range(6.0, 11.0)
 			_lancar_sinalizador()
 	_criar_bonecos()
+	if abrindo:
+		for bn in bonecos.values():
+			bn.atualizar(dt)
+		_passo_abertura(dt)
+		return
 	_tratar_acontecimentos()
 	_mover(passo)
 	for bn in bonecos.values():
@@ -401,6 +590,7 @@ func _process(dt: float) -> void:
 	if not _acabou and not parado:
 		_tiros_de_efeito(passo)
 		_lancar_granadas()
+		_falas_do_andamento(passo)
 		if b.terminou:
 			_fim()
 			_painel_em = 0.0
@@ -450,6 +640,13 @@ func _mover(dt: float) -> void:
 		var lado: String = bn.c.lado
 		var antes: float = bn.position.x
 		bn.andar_ate = maxf(0.0, bn.andar_ate - dt)
+		if bn.fugindo:
+			var para_onde := -1.0 if lado == "atq" else 1.0
+			bn.position.x += para_onde * dt * 120.0
+			bn.scale.x = absf(bn.scale.x) * para_onde
+			bn.passada += dt * 120.0 / maxf(0.1, absf(bn.scale.x)) / 2.3
+			bn.andando = true
+			continue
 		if lado == "atq":
 			var alvo := _alvo_x(bn, lado)
 			bn.deitado = b.post_atq == "cobertura" and not bn.comemorando
@@ -484,6 +681,8 @@ func _tratar_acontecimentos() -> void:
 			"fumaca":
 				tela.sons.tocar("fumaca", -10.0)
 				_cortina_de_fumaca(a["lado"])
+				if a["lado"] == b.lado_do_jogador():
+					_alguem_fala("fumaca", "", true)
 			"carga":
 				tela.sons.tocar("apito", -8.0)
 				# só quem ataca dá carga: se você está defendendo, o aviso é de perigo
@@ -491,6 +690,7 @@ func _tratar_acontecimentos() -> void:
 					_aviso_rapido("CARGA INIMIGA!", "Eles correm para a sua trincheira")
 				else:
 					_aviso_rapido("CARGA!", "Avanço rápido para a trincheira")
+				_alguem_fala("carga_inimiga" if b.lado_do_jogador() == "def" else "carga", "", true)
 				j.tocar("alerta")
 				tremor = maxf(tremor, 5.0)
 				SonsC.vibrar(80)
@@ -503,6 +703,7 @@ func _tratar_acontecimentos() -> void:
 				for bn in bonecos.values():
 					if bn.c.lado == a["contra"] and not bn.morto:
 						_mira(bn, maxf(0.4, Dados.ART_AVISO / Dados.BAT_RITMO / maxf(1.0, j.velocidade)))
+				_alguem_fala("granada" if a["contra"] == b.lado_do_jogador() else "nosso_canhao", "", true)
 				if a["contra"] == b.lado_do_jogador():
 					SonsC.vibrar(200)
 				else:
@@ -567,6 +768,8 @@ func _disparo(de: Boneco, para: Boneco, dano: float, matou: bool) -> void:
 			_numero(peito + Vector2(0, -26), "-%d" % maxi(1, roundi(dano)), Color("ffdc8c") if para.c.lado != b.lado_do_jogador() else Color("ff8c73"))
 			if matou:
 				_derrubar(para, dir)
+				if is_instance_valid(de) and de.c.lado == b.lado_do_jogador() and randf() < 0.25 + 0.2 * de.c.s.patente():
+					_alguem_fala("abate", "", false, de)
 		else:
 			_particulas(destino, Color(0.62, 0.5, 0.33), 5, 90.0, Vector2(-dir * 0.3, -1), 40.0, 340.0, 0.5, 3.0))
 	tela.sons.tocar(SonsC.SOM_DA_TROPA.get(de.c.s.tipo, "tiro"), -10.0 if de.c.s.tipo == "metr" else -8.0)
@@ -581,6 +784,9 @@ func _derrubar(bn: Boneco, dir: float) -> void:
 	j.tocar("abate")
 	if bn.c.lado == b.lado_do_jogador():
 		_numero(bn.position + Vector2(0, -90), "%s caiu" % bn.c.s.nome, Color("cce8c7"), 18)
+		# um companheiro sente a perda; por veterano, sempre
+		if not _acabou and (bn.c.s.patente() > 0 or randf() < 0.55):
+			_alguem_fala("caiu", bn.c.s.nome, bn.c.s.patente() > 0, _soldado_para_falar(bn.c.lado, bn))
 
 func _lancar_granadas() -> void:
 	for lado in ["atq", "def"]:
@@ -606,6 +812,20 @@ func _fim() -> void:
 			bn.comemorando = true
 			bn.deitado = false
 			bn.andando = false
+	# quem perdeu e sobrou de pé foge do campo
+	var fujoes: Array = bonecos.values().filter(func(x): return not x.morto and x.c.lado != venceu_lado)
+	for bn in fujoes:
+		bn.fugindo = true
+		bn.deitado = false
+		bn.agachado = false
+	# as falas antigas saem; as do fim esperam a câmera voltar
+	for balao in _baloes:
+		if is_instance_valid(balao):
+			balao.queue_free()
+	_baloes.clear()
+	get_tree().create_timer(1.7 if imersao else 0.1, true, false, true).timeout.connect(_falas_do_fim.bind(venceu_lado))
+	var meio := chao + (altura - chao) * 0.5
+	_momento_decisivo(Vector2(trincheira_x - (80.0 if venceu_lado == "atq" else 120.0), meio))
 	var cor := Color(Dados.FACCOES[b.dono_do_lado(venceu_lado)]["cor"])
 	if venceu_lado == "atq":
 		_bandeira(Vector2(trincheira_x + 60, chao + (altura - chao) * 0.5), cor)
@@ -615,6 +835,15 @@ func _fim() -> void:
 			get_tree().create_timer(0.22 * i).timeout.connect(func(): _particulas(Vector2(randf_range(60, largura - 60), chao + randf_range(-60, 30)), Color.from_hsv(randf_range(0.1, 0.4), 0.7, 1.0), 24, 180.0, Vector2(0, -1), 180.0, 220.0, 1.2, 3.5))
 	elif b.lado_do_jogador() != "":
 		j.tocar("derrota")
+
+func _falas_do_fim(venceu_lado: String) -> void:
+	if not is_inside_tree():
+		return
+	var fujoes: Array = bonecos.values().filter(func(x): return not x.morto and x.c.lado != venceu_lado and x.position.x > 20.0 and x.position.x < largura - 20.0)
+	if not fujoes.is_empty():
+		_balao(fujoes.pick_random(), FalasC.sortear("foge"), true)
+	if b.lado_do_jogador() != "":
+		_alguem_fala("vitoria" if b.dono_do_lado(venceu_lado) == "jogador" else "derrota", "", true)
 
 func _bandeira(onde: Vector2, cor: Color) -> void:
 	var n := Node2D.new()
