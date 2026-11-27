@@ -36,10 +36,10 @@ func _novo(f := 1) -> JogoC:
 func _regras() -> void:
 	var esperado := [26, 25, 36, 39, 44, 50]
 	for n in range(1, 7):
-		var j := _novo(n)
-		ck(j.lista_prov.size() == esperado[n - 1], "fase %d: quantidade de províncias" % n)
-		ck(j.lista_prov.all(func(p): return p.viz.all(func(v): return j.prov[v].viz.has(p.id))), "fase %d: vizinhança dos dois lados" % n)
-		ck(j.prov[j.capital_jogador].dono == "jogador" and not j.parados_em(j.capital_jogador, "jogador").is_empty(), "fase %d: capital com tropa" % n)
+		var jf := _novo(n)
+		ck(jf.lista_prov.size() == esperado[n - 1], "fase %d: quantidade de províncias" % n)
+		ck(jf.lista_prov.all(func(p): return p.viz.all(func(v): return jf.prov[v].viz.has(p.id))), "fase %d: vizinhança dos dois lados" % n)
+		ck(jf.prov[jf.capital_jogador].dono == "jogador" and not jf.parados_em(jf.capital_jogador, "jogador").is_empty(), "fase %d: capital com tropa" % n)
 	var j := _novo(1)
 	var cap: ProvinciaC = j.prov[j.capital_jogador]
 	# produção da capital igual à do jogo web
@@ -52,7 +52,7 @@ func _regras() -> void:
 	ck(not j.recrutar_em(cap.id, "jogador", "blind"), "tropa sem pesquisa não sai")
 	# mover, dividir e conquistar província sem defesa
 	var alvo: ProvinciaC = j.prov[cap.viz[0]]
-	j.ex = j.ex.filter(func(e): return not (e.prov == alvo.id and e.dono != "jogador"))
+	j.ex = j.ex.filter(func(x): return not (x.prov == alvo.id and x.dono != "jogador"))
 	alvo.dono = "neutro"
 	var e: ExercitoC = j.parados_em(cap.id, "jogador")[0]
 	var vai := j.ordem(e.id, alvo.id, 3, "ataque")
@@ -72,9 +72,6 @@ func _regras() -> void:
 	atq.prov = alvo.id; atq.de = cap.id; atq.pos = alvo.pos
 	j.fac["jogador"]["mun"] = 200.0
 	var b := j.abrir_batalha(atq, alvo, [def])
-	var vida_antes := 0.0
-	for c in b.def:
-		vida_antes += c.s.vida
 	ck(b.atirar_artilharia("atq") and j.fac["jogador"]["mun"] == 160.0 and not b.atirar_artilharia("atq"), "artilharia gasta uma vez")
 	ck(b.art_a_caminho("def"), "artilharia avisa antes de cair")
 	b.post_atq = "recuar"
@@ -123,7 +120,8 @@ func _regras() -> void:
 	if k2.batalhas.size() == 1:
 		var b2: BatalhaC = k2.batalhas[0]
 		ck([snappedf(b2.t, 0.001), b2.post_atq, b2.usou_art, b2.vivos("atq").size(), b2.vivos("def").size(), k2.tropa_de("jogador")] == foto, "batalha igual depois de carregar")
-		ck(b2.atq.all(func(c): return c.s.vida <= 0.0 or b2.ex.s.any(func(s): return is_same(s, c.s))), "soldados da batalha são os do exército")
+		ck(b2.atq.all(func(cb): return cb.s.vida <= 0.0 or b2.ex.s.any(func(s): return is_same(s, cb.s))), "soldados da batalha são os do exército")
+	_dificuldade_e_textos()
 	# missões, eventos, ofensiva, domínio
 	j = _novo(1)
 	j.extras = true
@@ -191,7 +189,7 @@ func _medir(fase: int, partidas: int) -> void:
 		if j.venceu():
 			venceu += 1
 		dur += j.t
-	print("fase %d: venceu %d%% %s dur %ds (%d s de máquina)" % [fase, roundi(100.0 * venceu / partidas), JSON.stringify(fins), roundi(dur / partidas), (Time.get_ticks_msec() - inicio) / 1000])
+	print("fase %d: venceu %d%% %s dur %ds (%d s de máquina)" % [fase, roundi(100.0 * venceu / partidas), JSON.stringify(fins), roundi(dur / partidas), int((Time.get_ticks_msec() - inicio) / 1000.0)])
 
 ## o mesmo robô em mapas gerados na hora
 func _medir_avulsas(partidas: int) -> void:
@@ -224,3 +222,25 @@ func _jogar(j: JogoC) -> void:
 			continue
 		pensa = 3.0
 		RoboC.jogar(j)
+
+## Veterano rende mais para o inimigo, a 3ª estrela pede 2 capitais e o singular sai certo
+func _dificuldade_e_textos() -> void:
+	var ganho := {}
+	for dif in ["soldado", "veterano"]:
+		var j := _novo(6)
+		j.dificuldade = dif
+		var antes: float = j.fac["bravo"]["moedas"]
+		var meu: float = j.fac["jogador"]["moedas"]
+		j.ciclo_economia()
+		ganho[dif] = [j.fac["bravo"]["moedas"] - antes, j.fac["jogador"]["moedas"] - meu]
+	ck(ganho["veterano"][0] > ganho["soldado"][0] + 0.5, "veterano: o inimigo ganha mais moedas")
+	ck(is_equal_approx(ganho["veterano"][1], ganho["soldado"][1]), "veterano: a sua renda não muda")
+	var f := _novo(3)
+	var capitais: Array = f.lista_prov.filter(func(p): return p.capital and p.capital_de != "jogador")
+	f.fim = "pontos"
+	capitais[0].dono = "jogador"
+	ck(not f.objetivo_ok(), "uma capital não dá a estrela")
+	capitais[1].dono = "jogador"
+	ck(f.objetivo_ok(), "duas capitais dão a estrela")
+	ck(Dados.qtd(1, "soldado", "soldados") == "1 soldado" and Dados.qtd(0, "abate", "abates") == "0 abates", "singular e plural")
+

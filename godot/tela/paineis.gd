@@ -41,7 +41,7 @@ func blocos() -> Array:
 	j = tela.jogo
 	if not tela.modo.is_empty():
 		var e := j.ex_por_id(tela.modo["ex"])
-		return [_titulo("Saquear" if tela.modo["missao"] == "saque" else "Mover / Atacar", "%d soldados" % e.s.size() if e else ""),
+		return [_titulo("Saquear" if tela.modo["missao"] == "saque" else "Mover / Atacar", Dados.qtd(e.s.size(), "soldado", "soldados") if e else ""),
 			_txt("Toque no mapa na província de destino. Pode ser sua (a tropa vai por dentro do seu território) ou inimiga."),
 			_grade([_bt("Cancelar", "", func(): tela.cancelar_ordem())])]
 	if not tela.pendente.is_empty():
@@ -174,7 +174,7 @@ func _exercito() -> Array:
 	var nivel := "Regimento" if e.s.size() < 3 else ("Companhia" if e.s.size() < 8 else ("Batalhão" if e.s.size() < 15 else "Exército"))
 	var resumo := "%s · vida %d%%" % [composicao(e.s), roundi(100.0 * hp / maxf(1.0, hp_max))]
 	if vets:
-		resumo += " · [color=#ffd28a][b]★ %d veterano(s)[/b][/color]" % vets
+		resumo += " · [color=#ffd28a][b]★ %s[/b][/color]" % Dados.qtd(vets, "veterano", "veteranos")
 	resumo += " · [color=#e3b04b]%d com fome[/color]" % fome if fome else " · alimentada"
 	if e.s.any(func(s): return j.usa_comb(s)):
 		resumo += " · %d de combustível" % int(j.fac["jogador"]["comb"])
@@ -188,7 +188,7 @@ func _exercito() -> Array:
 		resumo += "\n[color=#ff9f43][b]Falta de aço: tropa pesada não se cura e causa menos dano.[/b][/color]"
 	if j.fator_lotacao("jogador") < 1.0:
 		resumo += "\n[color=#ff9f43][b]Sublotação: o exército rende %d%%.[/b][/color]" % roundi(j.fator_lotacao("jogador") * 100.0)
-	var r: Array = [_titulo("%s · %d soldado(s)" % [e.nome if e.nome != "" else nivel, e.s.size()], estado), _txt(resumo)]
+	var r: Array = [_titulo("%s · %s" % [e.nome if e.nome != "" else nivel, Dados.qtd(e.s.size(), "soldado", "soldados")], estado), _txt(resumo)]
 	var b := j.batalha_em(e.prov if e.aguarda == "" else e.aguarda) if e.em_batalha else null
 	if b and b.lado_do_jogador() != "" and e.aguarda == "":
 		r.append_array(_batalha_blocos(b))
@@ -221,7 +221,7 @@ func _exercito() -> Array:
 		lista_vet.sort_custom(func(a, c): return a.lutas > c.lutas)
 		var tv := "★ Nenhum veterano ainda: quem sobrevive a 2 batalhas ganha +10%, e a 5, +20%." if lista_vet.is_empty() else "[b]Veteranos[/b]"
 		for s in lista_vet.slice(0, 8):
-			tv += "\n%s %s (%s): %d batalhas, %d abates" % ["★★" if s.patente() == 2 else "★", s.nome, Dados.TROPAS[s.tipo]["nome"].to_lower(), s.lutas, s.abates]
+			tv += "\n%s %s (%s): %s, %s" % ["★★" if s.patente() == 2 else "★", s.nome, Dados.TROPAS[s.tipo]["nome"].to_lower(), Dados.qtd(s.lutas, "batalha", "batalhas"), Dados.qtd(s.abates, "abate", "abates")]
 		r.append(_txt(tv, 14))
 		var gen := "sem general"
 		for g in Dados.GENERAIS:
@@ -265,7 +265,7 @@ func _provincia() -> Array:
 		info += "\nNa névoa: mande um espião para ver as tropas."
 	if p.dono != "jogador":
 		if p.dono != "neutro" and j.esta_espiado(p.dono):
-			info += "\nEspião: %s tem %d moedas e %d soldados." % [j.nome_de(p.dono), int(j.fac[p.dono]["moedas"]), j.tropa_de(p.dono)]
+			info += "\nEspião: %s tem %s e %s." % [j.nome_de(p.dono), Dados.qtd(int(j.fac[p.dono]["moedas"]), "moeda", "moedas"), Dados.qtd(j.tropa_de(p.dono), "soldado", "soldados")]
 		else:
 			info += "\n" + Dados.PERSO_TXT[Dados.FACCOES[p.dono]["perso"]]
 	r.append(_txt(info))
@@ -285,7 +285,7 @@ func _provincia() -> Array:
 			l.append(_bt("Tirar reunião" if marcado else "Reunir aqui", "ponto de reunião marcado ⚑" if marcado else "recrutas automáticos vêm para cá", func(): j.marcar_reuniao("" if marcado else p.id), {"forte": marcado}))
 		var meus := j.parados_em(p.id, "jogador")
 		if not meus.is_empty():
-			l.append(_bt("Exército daqui", "%d soldados" % meus[0].s.size(), func(): tela.selecionar({"tipo": "ex", "id": meus[0].id}), {"forte": true}))
+			l.append(_bt("Exército daqui", Dados.qtd(meus[0].s.size(), "soldado", "soldados"), func(): tela.selecionar({"tipo": "ex", "id": meus[0].id}), {"forte": true}))
 		var fora := _mais_perto(p.id, func(e): return e.parado() and e.prov != p.id)
 		for o in fora.slice(0, 2):
 			var eid: String = o[0].id
@@ -381,13 +381,13 @@ func _diplomacia() -> Array:
 				botoes.append(_bt("Aliança", "grátis", func(): j.propor(b2, "alianca"), {"off": espera}))
 			botoes.append(_bt("Guerra", "romper", func(): j.declarar_guerra(b2)))
 		var estado: String = {"guerra": "Guerra", "paz": "Paz (%d s)" % ceili(rl["ate"] - j.t), "alianca": "Aliança"}[rl["estado"]]
-		r.append({"tipo": "linha", "t": "[color=#%s][b]%s[/b][/color]  %s" % [cor, j.nome_de(bot), estado], "sub": "%d províncias · %s%s" % [pl.get(bot, 0), Dados.FACCOES[bot]["perso"], " · espere %d s" % ceili(rl["recusa_ate"] - j.t) if espera else ""], "botoes": botoes})
+		r.append({"tipo": "linha", "t": "[color=#%s][b]%s[/b][/color]  %s" % [cor, j.nome_de(bot), estado], "sub": "%s · %s%s" % [Dados.qtd(int(pl.get(bot, 0)), "província", "províncias"), Dados.FACCOES[bot]["perso"], " · espere %d s" % ceili(rl["recusa_ate"] - j.t) if espera else ""], "botoes": botoes})
 	r.append(_txt("Paz: 4 minutos sem ataques. Aliança: sem prazo, e vocês veem o território um do outro. Alguns traem.", 13))
 	r.append(_voltar({"tipo": "prov", "id": j.capital_jogador}, "Fechar"))
 	return r
 
 func _generais() -> Array:
-	var r: Array = [_titulo("Generais", "%d estrelas" % j.campanha.total_estrelas(), Estilo.AMBAR_CLARO)]
+	var r: Array = [_titulo("Generais", Dados.qtd(j.campanha.total_estrelas(), "estrela", "estrelas"), Estilo.AMBAR_CLARO)]
 	var libs: Array = j.campanha.generais_liberados().map(func(g): return g["id"])
 	for g in Dados.GENERAIS:
 		var lib: bool = libs.has(g["id"])
@@ -398,7 +398,7 @@ func _generais() -> Array:
 			if j.gen_ferido.get(g["id"], 0.0) > j.t:
 				sub += " · ferido (%d s)" % ceili(j.gen_ferido[g["id"]] - j.t)
 			elif not com.is_empty():
-				sub += " · com %d soldados" % com[0].s.size()
+				sub += " · com %s" % Dados.qtd(com[0].s.size(), "soldado", "soldados")
 		r.append({"tipo": "linha", "t": "[b]%s%s[/b]" % [g["nome"], " · nível %d" % CampanhaC.nivel_general(xp) if lib else ""], "sub": sub, "apagada": not lib})
 	r.append(_txt("Toque num exército seu e em General.", 13))
 	r.append(_voltar({"tipo": "prov", "id": j.capital_jogador}, "Fechar"))
@@ -442,12 +442,12 @@ func _veteranos() -> Array:
 		var x: SoldadoC = par[0]
 		var id := str(x.get_instance_id())
 		r.append({"tipo": "linha", "t": "[b]%s%s[/b]  [color=#8f9a8a]%s[/color]" % [_estrelas(x.patente()), x.nome, Dados.TROPAS[x.tipo]["nome"]],
-			"sub": "%d batalha(s) · %d abate(s) · vida %d%% · %s" % [x.lutas, x.abates, roundi(100.0 * x.vida / x.vida_max()), _onde_esta(par[1])],
+			"sub": "%s · %s · vida %d%% · %s" % [Dados.qtd(x.lutas, "batalha", "batalhas"), Dados.qtd(x.abates, "abate", "abates"), roundi(100.0 * x.vida / x.vida_max()), _onde_esta(par[1])],
 			"botoes": [_bt("História", "", func(): tela.selecionar({"tipo": "soldado", "id": id}))]})
 	if not j.memorial.is_empty():
 		r.append(_titulo("Em memória", "%d" % j.memorial.size(), Estilo.MUDO))
 		for m in j.memorial.slice(-8):
-			r.append(_txt("† [b]%s%s[/b], %s · %d batalha(s), %d abate(s) · caiu em %s" % [_estrelas(int(m["patente"])), m["nome"], Dados.TROPAS[m["tipo"]]["nome"].to_lower(), int(m["lutas"]), int(m["abates"]), m["onde"]], 15))
+			r.append(_txt("† [b]%s%s[/b], %s · %s, %s · caiu em %s" % [_estrelas(int(m["patente"])), m["nome"], Dados.TROPAS[m["tipo"]]["nome"].to_lower(), Dados.qtd(int(m["lutas"]), "batalha", "batalhas"), Dados.qtd(int(m["abates"]), "abate", "abates"), m["onde"]], 15))
 	r.append(_voltar({"tipo": "situacao"}))
 	return r
 
@@ -457,8 +457,8 @@ func _soldado() -> Array:
 			if str(x.get_instance_id()) == tela.sel.get("id", ""):
 				var r: Array = [_titulo("%s%s" % [_estrelas(x.patente()), x.nome], Dados.TROPAS[x.tipo]["nome"], Estilo.AMBAR)]
 				var posto: String = ["Recruta", "Veterano: luta 10% melhor", "Elite: luta 20% melhor"][x.patente()]
-				var falta := "" if x.patente() == 2 else "  ·  faltam %d batalha(s) para %s" % [(2 if x.patente() == 0 else 5) - x.lutas, "veterano" if x.patente() == 0 else "elite"]
-				r.append(_txt("[b]%s[/b]%s\n%d batalha(s) · %d abate(s) · vida %d%% · %s" % [posto, falta, x.lutas, x.abates, roundi(100.0 * x.vida / x.vida_max()), _onde_esta(e)], 16, Estilo.TEXTO))
+				var falta := "" if x.patente() == 2 else "  ·  %s para %s" % [Dados.qtd((2 if x.patente() == 0 else 5) - x.lutas, "batalha falta", "batalhas faltam"), "veterano" if x.patente() == 0 else "elite"]
+				r.append(_txt("[b]%s[/b]%s\n%s · %s · vida %d%% · %s" % [posto, falta, Dados.qtd(x.lutas, "batalha", "batalhas"), Dados.qtd(x.abates, "abate", "abates"), roundi(100.0 * x.vida / x.vida_max()), _onde_esta(e)], 16, Estilo.TEXTO))
 				r.append(_txt("\n".join(x.feitos.map(func(f): return "• " + f)) if not x.feitos.is_empty() else "Ainda sem registro.", 15))
 				r.append(_voltar({"tipo": "veteranos"}))
 				return r
@@ -503,7 +503,7 @@ func _situacao() -> Array:
 		for e in vistos:
 			n += e.s.size()
 		linhas.append([j.nome_de(d), "%d/%d" % [pl.get(d, 0), j.lista_prov.size()], str(n) + ("" if vistos.size() == todos.size() else "+")])
-	var r: Array = [_titulo("Situação", "%d:%02d restantes" % [int(resta) / 60, int(resta) % 60], Estilo.MUDO),
+	var r: Array = [_titulo("Situação", "%d:%02d restantes" % [int(resta / 60.0), int(resta) % 60], Estilo.MUDO),
 		_txt("[color=%s][b]%s[/b][/color]\nDomina quem segurar %d províncias por 1 minuto." % ["#9fd08f" if lider == "jogador" else "#ff8a7a", "Você lidera em território." if lider == "jogador" else j.nome_de(lider) + " lidera em território.", j.vida.provincias_para_dominar()]),
 		{"tipo": "tabela", "linhas": linhas}]
 	var riscos: Array = []
@@ -536,11 +536,11 @@ func _dispensar() -> Array:
 	var op := func(q: int, texto: String) -> Dictionary:
 		return _bt(texto, "o exército inteiro" if q >= n else "os mais fracos primeiro", func():
 			if q >= n:
-				tela.confirmar("Dispensar o exército inteiro (%d soldados)?" % n, func(): j.dispensar(e.id, q))
+				tela.confirmar("Dispensar o exército inteiro (%s)?" % Dados.qtd(n, "soldado", "soldados"), func(): j.dispensar(e.id, q))
 			else:
 				j.dispensar(e.id, q))
 	var l: Array = [op.call(1, "Dispensar 1")]
 	if n > 5:
 		l.append(op.call(5, "Dispensar 5"))
 	l.append(op.call(n, "Todos"))
-	return [_titulo("Dispensar tropa", "%d soldados" % n), _txt("Devolve a vaga e economiza o soldo, mas não devolve o que foi gasto."), _grade(l), _voltar({"tipo": "ex", "id": e.id})]
+	return [_titulo("Dispensar tropa", Dados.qtd(n, "soldado", "soldados")), _txt("Devolve a vaga e economiza o soldo, mas não devolve o que foi gasto."), _grade(l), _voltar({"tipo": "ex", "id": e.id})]

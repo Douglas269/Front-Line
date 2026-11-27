@@ -18,7 +18,7 @@ func _rodar() -> void:
 			falhas.append("falta o som " + nome)
 	for nome in nomes:
 		var w: AudioStreamWAV = s._sons[nome]
-		var n := w.data.size() / 2
+		var n := int(w.data.size() / 2.0)
 		var pico := 0.0
 		var soma := 0.0
 		var cheios := 0

@@ -293,14 +293,14 @@ func _efeito(id: String, i: int) -> String:
 				var bots: Array = j.fase["bots"].filter(func(b): return not j.eliminados.has(b))
 				if bots.is_empty():
 					return "O mapa não servia para nada."
-				var b: String = bots[rng.randi() % bots.size()]
-				j.espiado[b] = j.t + 60.0
-				return "Agora vemos os planos de %s por 60 s." % j.nome_de(b)
+				var escolhido: String = bots[rng.randi() % bots.size()]
+				j.espiado[escolhido] = j.t + 60.0
+				return "Agora vemos os planos de %s por 60 s." % j.nome_de(escolhido)
 			var cabem := _alistar(2)
 			if rng.randf() < 0.25:
 				_pagar({"mun": 30})
 				return "Entraram %d, mas um deles sabotou o paiol." % cabem
-			return "%d soldado(s) entraram na tropa da capital." % cabem if cabem else "Não havia vaga de mão de obra."
+			return "%s na tropa da capital." % Dados.qtd(cabem, "soldado entrou", "soldados entraram") if cabem else "Não havia vaga de mão de obra."
 		"mercado":
 			_dar({"aco": 16} if i == 0 else {"moedas": 32})
 			return "Aço no depósito." if i == 0 else "Dinheiro no caixa."
@@ -310,7 +310,7 @@ func _efeito(id: String, i: int) -> String:
 				if cabem == 0:
 					_dar({"comida": 20})
 					return "Sem vaga de mão de obra: ficaram para depois."
-				return "%d voluntários na capital." % cabem
+				return "%s na capital." % Dados.qtd(cabem, "voluntário", "voluntários")
 			_dar({"comida": 22})
 			return "A população dividiu a comida."
 		"descontentes":
@@ -375,7 +375,7 @@ func _efeito(id: String, i: int) -> String:
 						if treinados < 4 and s.patente() == 0:
 							s.lutas += 2
 							treinados += 1
-				return "%d soldado(s) aprenderam com o veterano." % treinados
+				return "%s com o veterano." % Dados.qtd(treinados, "soldado aprendeu", "soldados aprenderam")
 			var c: ProvinciaC = j.prov[j.capital_jogador]
 			c.trinch = minf(100.0, c.trinch + 15.0)
 			return "A capital está mais bem defendida."

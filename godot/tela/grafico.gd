@@ -19,7 +19,7 @@ func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color("10150f"))
 	if historico.size() < 2:
 		return
-	var margem := Rect2(34, 10, size.x - 44, size.y - 34)
+	var margem := Rect2(36, 10, size.x - 46, size.y - 36)
 	var maximo := 4
 	for h in historico:
 		for d in donos:
@@ -30,9 +30,9 @@ func _draw() -> void:
 	for i in 5:
 		var y := margem.end.y - margem.size.y * i / 4.0
 		draw_line(Vector2(margem.position.x, y), Vector2(margem.end.x, y), Color(1, 1, 1, 0.09), 1.0)
-		draw_string(fonte, Vector2(6, y + 4), str(maximo * i / 4), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("8f9a8a"))
-	draw_string(fonte, Vector2(margem.position.x, size.y - 6), "0:00", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("8f9a8a"))
-	draw_string(fonte, Vector2(margem.end.x - 36, size.y - 6), RecordesC.relogio(fim), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("8f9a8a"))
+		draw_string(fonte, Vector2(6, y + 4), str(int(maximo * i / 4.0)), HORIZONTAL_ALIGNMENT_LEFT, -1, Estilo.LETRA_MINIMA, Color("8f9a8a"))
+	draw_string(fonte, Vector2(margem.position.x, size.y - 6), "0:00", HORIZONTAL_ALIGNMENT_LEFT, -1, Estilo.LETRA_MINIMA, Color("8f9a8a"))
+	draw_string(fonte, Vector2(margem.end.x - 42, size.y - 6), RecordesC.relogio(fim), HORIZONTAL_ALIGNMENT_LEFT, -1, Estilo.LETRA_MINIMA, Color("8f9a8a"))
 	# você por último, para a sua linha ficar por cima
 	var ordem: Array = donos.duplicate()
 	ordem.reverse()

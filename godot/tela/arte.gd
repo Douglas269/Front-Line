@@ -306,20 +306,20 @@ static func _queda(k: int, cores: Dictionary, metr: bool) -> String:
 	if k >= 5:
 		# caído de costas, o fuzil ao lado
 		var afunda := 0.0 if k == 6 else -0.8
-		var s := "<ellipse cx='-5' cy='-0.5' rx='23' ry='3.2' fill='#4a0f0c' fill-opacity='%s'/>" % ("0.55" if k == 6 else "0.3")
+		var desenho := "<ellipse cx='-5' cy='-0.5' rx='23' ry='3.2' fill='#4a0f0c' fill-opacity='%s'/>" % ("0.55" if k == 6 else "0.3")
 		if not metr:
-			s += _fuzil(Vector2(7.0, -1.2), 0.12, false)
-		s += _braco(Vector2(-9.0, -4.0), Vector2(-2.0, -1.8 + afunda), cores["longe"])
-		s += _membro([Vector2(-1.0, -3.6 + afunda), Vector2(8.0, -7.0 + afunda), Vector2(14.4, -1.8)], 3.45, cores["longe"])
-		s += _forma("M13.2 -3.4 h3.9 v3.4 h-3.9 Z", BOTA)
-		s += _tronco(Vector2(-1.5, -3.8 + afunda), Vector2(-12.0, -4.0 + afunda), cores)
-		s += _membro([Vector2(-0.5, -3.0), Vector2(9.8, -2.2), Vector2(19.6, -1.8)], 3.75, cores["calca"])
-		s += _forma("M18.5 -4.0 l3.4 -0.4 l0.4 4.4 h-3.4 Z", BOTA)
-		s += "<g transform='translate(-18.4 -4.6) rotate(-82)'>" + _cabeca(Vector2.ZERO, cores, false, false) + "<path d='M1.1 -0.5 l1.5 1.2 M2.6 -0.5 l-1.5 1.2' stroke='#15130e' stroke-width='0.5'/></g>"
+			desenho += _fuzil(Vector2(7.0, -1.2), 0.12, false)
+		desenho += _braco(Vector2(-9.0, -4.0), Vector2(-2.0, -1.8 + afunda), cores["longe"])
+		desenho += _membro([Vector2(-1.0, -3.6 + afunda), Vector2(8.0, -7.0 + afunda), Vector2(14.4, -1.8)], 3.45, cores["longe"])
+		desenho += _forma("M13.2 -3.4 h3.9 v3.4 h-3.9 Z", BOTA)
+		desenho += _tronco(Vector2(-1.5, -3.8 + afunda), Vector2(-12.0, -4.0 + afunda), cores)
+		desenho += _membro([Vector2(-0.5, -3.0), Vector2(9.8, -2.2), Vector2(19.6, -1.8)], 3.75, cores["calca"])
+		desenho += _forma("M18.5 -4.0 l3.4 -0.4 l0.4 4.4 h-3.4 Z", BOTA)
+		desenho += "<g transform='translate(-18.4 -4.6) rotate(-82)'>" + _cabeca(Vector2.ZERO, cores, false, false) + "<path d='M1.1 -0.5 l1.5 1.2 M2.6 -0.5 l-1.5 1.2' stroke='#15130e' stroke-width='0.5'/></g>"
 		# o capacete rolou
-		s += _forma("M-29.6 -0.4 C-29.4 -6.2 -22.6 -6.6 -22.4 -1.4 Z", cores["capacete"]) + _forma("M-31.4 -0.2 Q-26 -2.4 -20.6 -1.4 Q-26 1.0 -31.4 -0.2 Z", cores["capacete"])
-		s += _braco(Vector2(-11.0, -3.4), Vector2(-14.5, -1.0), cores["tunica"])
-		return s
+		desenho += _forma("M-29.6 -0.4 C-29.4 -6.2 -22.6 -6.6 -22.4 -1.4 Z", cores["capacete"]) + _forma("M-31.4 -0.2 Q-26 -2.4 -20.6 -1.4 Q-26 1.0 -31.4 -0.2 Z", cores["capacete"])
+		desenho += _braco(Vector2(-11.0, -3.4), Vector2(-14.5, -1.0), cores["tunica"])
+		return desenho
 	# do impacto até bater no chão: o corpo vai para trás, os joelhos dobram e o fuzil escapa
 	var f: float = [0.08, 0.24, 0.45, 0.68, 0.9][k]
 	var quadril := Vector2(-1.0, -18.6).lerp(Vector2(-2.6, -5.2), f)

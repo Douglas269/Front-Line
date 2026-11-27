@@ -3,7 +3,7 @@ extends Control
 
 const CONFIG := "user://config.json"
 const PARTIDA := "user://partida.json"
-const VERSAO := "0.6"
+const VERSAO := "0.7"
 
 var campanha: CampanhaC
 var jogo: JogoC
@@ -215,7 +215,7 @@ func _montar_topo() -> void:
 
 func _botao_ferramenta(texto: String, icone: String, ao: Callable) -> Button:
 	var b := Estilo.botao_simples("", ao, 12)
-	b.custom_minimum_size = Vector2(74, 58)
+	b.custom_minimum_size = Vector2(86, 60)
 	var v := VBoxContainer.new()
 	v.set_anchors_preset(Control.PRESET_FULL_RECT)
 	v.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -619,7 +619,7 @@ func problemas() -> Array:
 	# tropa grande parada longe de qualquer inimigo
 	for e in jogo.ex_de("jogador"):
 		if e.parado() and e.s.size() >= 5 and e.prov != jogo.capital_jogador and e.prov != jogo.reuniao and jogo.prov[e.prov].viz.all(func(v): return jogo.prov[v].dono == "jogador"):
-			r.append({"t": "%d soldados parados na retaguarda" % e.s.size(), "ex": e.id, "prov": e.prov})
+			r.append({"t": Dados.qtd(e.s.size(), "soldado parado na retaguarda", "soldados parados na retaguarda"), "ex": e.id, "prov": e.prov})
 	return r
 
 func _ir_ao_problema() -> void:
@@ -678,7 +678,7 @@ func _resultado_da_batalha(r: Dictionary) -> void:
 	if not r["ganho"].is_empty():
 		t += "\nPrêmio: " + VidaC.texto_premio(r["ganho"])
 	if not r["destaque"].is_empty():
-		t += "\nDestaque: %s, %d abate(s)" % [r["destaque"]["nome"], r["destaque"]["n"]]
+		t += "\nDestaque: %s, %s" % [r["destaque"]["nome"], Dados.qtd(int(r["destaque"]["n"]), "abate", "abates")]
 	var h := HBoxContainer.new()
 	h.add_child(Estilo.texto_rico(t, 16, Estilo.TEXTO))
 	var fechar := Estilo.botao_simples("X", func(): _resumo.visible = false, 18)
@@ -749,7 +749,7 @@ func _atualizar() -> void:
 	_recursos["mo"].text = "%d/%d" % [tropa, jogo.mao_de_obra_max("jogador")]
 	_recursos["prov"].text = "%d/%d" % [jogo.minhas().size(), jogo.lista_prov.size()]
 	var resta := maxf(0.0, jogo.fase["tempo"] - jogo.t)
-	_l_relogio.text = "%02d:%02d" % [int(resta) / 60, int(resta) % 60]
+	_l_relogio.text = "%02d:%02d" % [int(resta / 60.0), int(resta) % 60]
 	_l_fase.text = ("%d· %s" % [jogo.fase["n"], jogo.fase["nome"].to_upper()]) if jogo.fase["n"] > 0 else jogo.fase["nome"].to_upper()
 	_b_pausa.text = "▶" if jogo.pausado else "II"
 	Estilo.pintar_botao(_b_pausa, jogo.pausado)
@@ -1032,7 +1032,7 @@ func mostrar_inicio() -> void:
 					confirmar("Começar uma fase nova apaga a partida salva. Continuar?", func(): comecar_fase(n), func(): mostrar_inicio())
 				else:
 					comecar_fase(n), lib, not lib))
-	_t(v, "%d estrelas · %d de %d generais" % [campanha.total_estrelas(), campanha.generais_liberados().size(), Dados.GENERAIS.size()], 15)
+	_t(v, "%s · %d de %d generais" % [Dados.qtd(campanha.total_estrelas(), "estrela", "estrelas"), campanha.generais_liberados().size(), Dados.GENERAIS.size()], 15)
 	if not campanha.meta["reforcos"].is_empty():
 		_t(v, "SEUS REFORÇOS", 16, Estilo.AMBAR, "titulo")
 		for id in campanha.meta["reforcos"]:
@@ -1155,49 +1155,49 @@ func _acabou() -> void:
 	_resumo.visible = false
 	_apagar_partida()
 	var o: Dictionary = jogo.origem
-	var modo: String = o.get("modo", "campanha")
+	var tipo: String = o.get("modo", "campanha")
 	var est := jogo.calcular_estrelas()
 	var gen_antes := campanha.generais_liberados().size()
-	if modo == "campanha":
+	if tipo == "campanha":
 		campanha.guardar_progresso(jogo, est)
 	var etapa := {}
-	if modo == "operacao":
+	if tipo == "operacao":
 		etapa = operacao.resultado(jogo.venceu(), int(o.get("etapa", 0)), jogo.melhores())
 	var chave := ""
-	if modo == "campanha":
+	if tipo == "campanha":
 		chave = "fase%d" % jogo.fase["n"]
-	elif modo == "diario":
+	elif tipo == "diario":
 		chave = "diario-" + str(o["dia"])
-	var saida := recordes.registrar(jogo, {"modo": modo, "chave": chave, "dia": o.get("dia", ""), "aleatorio": not o.is_empty() and int(o.get("mapa", 0)) == 0, "operacao_completa": etapa.get("completa", false), "estrelas": campanha.total_estrelas()})
-	_fim_info = {"modo": modo, "estrelas": est, "generais": campanha.generais_liberados().slice(gen_antes), "saida": saida, "etapa": etapa}
+	var saida := recordes.registrar(jogo, {"modo": tipo, "chave": chave, "dia": o.get("dia", ""), "aleatorio": not o.is_empty() and int(o.get("mapa", 0)) == 0, "operacao_completa": etapa.get("completa", false), "estrelas": campanha.total_estrelas()})
+	_fim_info = {"modo": tipo, "estrelas": est, "generais": campanha.generais_liberados().slice(gen_antes), "saida": saida, "etapa": etapa}
 	sons.tocar("vitoria" if jogo.venceu() else "derrota")
 	_mostrar_fim()
 
 func _mostrar_fim() -> void:
 	var v := _abrir_tela("fim")
 	var F: Dictionary = jogo.fase
-	var modo: String = _fim_info["modo"]
+	var tipo: String = _fim_info["modo"]
 	var est: int = _fim_info["estrelas"]
-	var cabeca: String = ("FASE %d VENCIDA!" % F["n"]) if modo == "campanha" else "VITÓRIA!"
+	var cabeca: String = ("FASE %d VENCIDA!" % F["n"]) if tipo == "campanha" else "VITÓRIA!"
 	var titulo: String = {"vitoria": cabeca, "dominio": "VOCÊ DOMINOU O MAPA!", "pontos": "VITÓRIA POR TERRITÓRIO", "tempo": "O TEMPO ACABOU", "dominado": "O INIMIGO DOMINOU O MAPA", "derrota": "SUA CAPITAL CAIU"}[jogo.fim]
 	if _fim_info["etapa"].get("completa", false):
 		titulo = "OPERAÇÃO COMPLETA!"
 	_t(v, titulo, 30, Estilo.AMBAR_CLARO if jogo.venceu() else Color("ff9d8a"), "marca", true)
 	var mm := RecordesC.relogio(jogo.t)
 	var pl := jogo.placar()
-	var texto: String = {"vitoria": "Todas as capitais inimigas tomadas em %s." % mm, "dominio": "Você segurou a maior parte do mapa e venceu em %s." % mm, "pontos": "O tempo acabou e você tem mais províncias (%d)." % pl.get("jogador", 0), "tempo": "Você terminou com %d províncias, menos que o maior inimigo." % pl.get("jogador", 0), "dominado": "%s segurou a maior parte do mapa." % (jogo.nome_de(jogo.vencedor_dominio) if jogo.vencedor_dominio != "" else "O inimigo"), "derrota": "Você resistiu %s." % mm}[jogo.fim]
-	if jogo.venceu() and modo == "campanha":
+	var texto: String = {"vitoria": "Todas as capitais inimigas tomadas em %s." % mm, "dominio": "Você segurou a maior parte do mapa e venceu em %s." % mm, "pontos": "O tempo acabou e você tem mais províncias (%d)." % pl.get("jogador", 0), "tempo": "Você terminou com %s, menos que o maior inimigo." % Dados.qtd(int(pl.get("jogador", 0)), "província", "províncias"), "dominado": "%s segurou a maior parte do mapa." % (jogo.nome_de(jogo.vencedor_dominio) if jogo.vencedor_dominio != "" else "O inimigo"), "derrota": "Você resistiu %s." % mm}[jogo.fim]
+	if jogo.venceu() and tipo == "campanha":
 		_t(v, "★".repeat(est) + "☆".repeat(3 - est), 46, Estilo.AMBAR_CLARO, "titulo", true)
 	_t(v, texto, 18, Estilo.TEXTO, "normal", true)
-	if jogo.venceu() and modo == "campanha":
+	if jogo.venceu() and tipo == "campanha":
 		_t(v, "★ vencer\n%s vencer sem ser por pontos em até %d min\n%s %s" % ["★" if jogo.t <= F["tempo"] * 0.7 and jogo.fim != "pontos" else "☆", roundi(F["tempo"] * 0.7 / 60.0), "★" if jogo.objetivo_ok() else "☆", Dados.OBJETIVOS[F["objetivo"]]], 16)
 	for g in _fim_info["generais"]:
 		_t(v, "Novo general: %s (%s)" % [g["nome"], g["txt"]], 17, Estilo.AMBAR_CLARO)
 	var n: int = F["n"]
-	if jogo.venceu() and modo == "campanha":
+	if jogo.venceu() and tipo == "campanha":
 		_oferta(v, n, func(): _mostrar_fim())
 	var etapa: Dictionary = _fim_info["etapa"]
-	if modo == "operacao" and not etapa.is_empty():
+	if tipo == "operacao" and not etapa.is_empty():
 		for id in etapa["premios"]:
 			v.add_child(Estilo.texto_rico("[b]Reforço ganho: %s[/b]  %s" % [Dados.REFORCOS[id]["nome"], _cartao_reforco(id)], 16, Estilo.TEXTO))
 		if not etapa["fim"] and not etapa.get("veteranos", []).is_empty():
@@ -1206,18 +1206,18 @@ func _mostrar_fim() -> void:
 			_t(v, "A operação parou na etapa %d." % etapa["etapa"], 17, Estilo.TEXTO)
 	menus.resumo(v, jogo, _fim_info["saida"])
 	var o: Dictionary = jogo.origem.duplicate(true)
-	if modo == "campanha":
+	if tipo == "campanha":
 		if jogo.venceu() and n < Dados.FASES.size():
 			v.add_child(Estilo.botao("FASE %d: %s ▶" % [n + 1, Dados.FASES[n]["nome"].to_upper()], "", func(): comecar_fase(n + 1), true))
 		v.add_child(Estilo.botao("Jogar a fase %d de novo" % n, "", func(): comecar_fase(n)))
 		v.add_child(Estilo.botao("Escolher fase", "", func(): mostrar_inicio()))
 		return
-	if modo == "operacao" and operacao.ativa():
+	if tipo == "operacao" and operacao.ativa():
 		v.add_child(Estilo.botao("PRÓXIMA ETAPA ▶", "", func(): menus.mostrar_operacao(), true))
-	elif modo == "rapida":
+	elif tipo == "rapida":
 		v.add_child(Estilo.botao("Jogar de novo neste mapa", "", func(): comecar_origem(o)))
 		v.add_child(Estilo.botao("Montar outra batalha", "", func(): menus.mostrar_rapida(), true))
-	elif modo == "diario":
+	elif tipo == "diario":
 		v.add_child(Estilo.botao("Tentar de novo", "para melhorar o tempo", func(): comecar_origem(o)))
 	v.add_child(Estilo.botao("Menu", "", func(): mostrar_inicio()))
 

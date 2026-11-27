@@ -55,7 +55,7 @@ func _rodar() -> void:
 					cenas = 0
 					batalhas += 1
 			if quadro % 15 == 0:
-				_abrir_um_painel(j, quadro / 15)
+				_abrir_um_painel(j, int(quadro / 15.0))
 				var chave: String = app.sel.get("tipo", "")
 				if chave in ["diplomacia", "generais", "pesquisa", "ex"] and not tiradas.has(chave):
 					tiradas[chave] = true

@@ -4,7 +4,7 @@ extends SceneTree
 
 func _initialize() -> void:
 	var args := OS.get_cmdline_user_args()
-	var tipos: Array = args.slice(1) if args.size() > 1 else ["inf", "metr", "cav", "art", "blind"]
+	var tipos: Array = Array(args.slice(1)) if args.size() > 1 else ["inf", "metr", "cav", "art", "blind"]
 	var linhas: Array = []
 	for tipo in tipos:
 		var anims: Dictionary = ArteC.QUADROS["inf" if tipo == "metr" else tipo]

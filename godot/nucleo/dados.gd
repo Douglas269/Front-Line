@@ -71,8 +71,8 @@ const REFORCO_MAX := 4
 const CAPITULOS := ["Capítulo 1 · A Fronteira", "Capítulo 2 · O Coração do País"]
 const FASES := [
 	{"n": 1, "cap": 0, "nome": "Fronteira", "bots": ["bravo", "charlie", "delta"], "tempo": 600.0, "extra": 1, "milicia": 0, "graca": 60.0, "objetivo": "semPerder"},
-	{"n": 2, "cap": 0, "nome": "O Rio", "bots": ["bravo", "charlie"], "tempo": 720.0, "bot_facil": 0.7, "objetivo": "pesquisa", "regra": "industria", "regra_txt": "região industrial: obras custam metade"},
-	{"n": 3, "cap": 0, "nome": "Região central", "bots": ["bravo", "charlie", "delta", "echo"], "tempo": 720.0, "bot_facil": 0.85, "objetivo": "capitais"},
+	{"n": 2, "cap": 0, "nome": "O Rio", "bots": ["bravo", "charlie"], "tempo": 720.0, "bot_facil": 0.65, "objetivo": "pesquisa", "regra": "industria", "regra_txt": "região industrial: obras custam metade"},
+	{"n": 3, "cap": 0, "nome": "Região central", "bots": ["bravo", "charlie", "delta", "echo"], "tempo": 720.0, "bot_facil": 0.95, "objetivo": "capitais"},
 	{"n": 4, "cap": 1, "nome": "Inverno", "bots": ["bravo", "delta", "echo"], "tempo": 780.0, "bot_facil": 1.08, "objetivo": "baixas", "regra": "inverno", "regra_txt": "inverno: campos produzem 40% menos comida"},
 	{"n": 5, "cap": 1, "nome": "Aliança frágil", "bots": ["bravo", "charlie", "delta", "echo"], "tempo": 900.0, "bot_facil": 0.75, "objetivo": "rebeldes", "regra": "paz", "regra_txt": "começa em paz com Charlie"},
 	{"n": 6, "cap": 1, "nome": "A capital", "bots": ["bravo", "charlie", "delta", "echo"], "tempo": 840.0, "objetivo": "capitais"}
@@ -131,15 +131,21 @@ const GENERAIS := [
 ]
 const OBJETIVOS := {
 	"semPerder": "não perder nenhuma província para o inimigo",
-	"capitais": "tomar todas as capitais (vitória total)",
+	"capitais": "vencer com 2 capitais inimigas nas suas mãos",
 	"baixas": "perder menos de 20 soldados",
 	"rebeldes": "nenhuma província sua se revoltar",
 	"pesquisa": "terminar 4 pesquisas"
 }
+## "1 soldado", "3 soldados": o número com a palavra certa
+static func qtd(n: int, um: String, varios: String) -> String:
+	return "%d %s" % [n, um if n == 1 else varios]
+
+## "renda": moedas e munição a mais para o inimigo ("prod" só mexe na comida)
+const CAPITAIS_DA_ESTRELA := 2
 const DIFICULDADES := {
-	"recruta": {"vontade": 0.75, "margem": 1.15, "prod": 0.9, "esperteza": 0.3},
-	"soldado": {"vontade": 1.0, "margem": 1.0, "prod": 1.0, "esperteza": 0.6},
-	"veterano": {"vontade": 1.2, "margem": 0.9, "prod": 1.1, "esperteza": 0.85}
+	"recruta": {"vontade": 0.75, "margem": 1.15, "prod": 0.9, "renda": 1.0, "esperteza": 0.3},
+	"soldado": {"vontade": 1.0, "margem": 1.0, "prod": 1.0, "renda": 1.0, "esperteza": 0.6},
+	"veterano": {"vontade": 1.2, "margem": 0.9, "prod": 1.1, "renda": 1.25, "esperteza": 0.85}
 }
 ## os generais inimigos que fecham a Operação
 const CHEFES := {

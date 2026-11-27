@@ -73,7 +73,7 @@ static func _relevo(w: int, h: int, tam: Vector2i, semente: int, rng: RandomNumb
 	ruido.frequency = 0.011
 	ruido.fractal_octaves = 4
 	var passo := 4
-	var r := Image.create(w / passo, h / passo, false, Image.FORMAT_RGBA8)
+	var r := Image.create(int(w / float(passo)), int(h / float(passo)), false, Image.FORMAT_RGBA8)
 	for y in r.get_height():
 		for x in r.get_width():
 			# a diferença para o ponto de cima e da esquerda dá a impressão de colinas iluminadas

@@ -49,7 +49,7 @@ func _ganhar(id: String, novas: Array) -> void:
 		novas.append(id)
 
 static func relogio(seg: float) -> String:
-	return "%d:%02d" % [int(seg) / 60, int(seg) % 60]
+	return "%d:%02d" % [int(seg / 60.0), int(seg) % 60]
 
 ## guarda o resultado de uma partida terminada.
 ## `info`: {"modo": campanha|rapida|diario|operacao, "chave": nome do recorde, "aleatorio": bool, "dia": texto, "operacao_completa": bool, "estrelas": total}
