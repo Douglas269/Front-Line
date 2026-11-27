@@ -91,10 +91,19 @@ func _batuque(t: float, _k: float, r: float) -> float:
 			v += r * pow(1.0 - d / 0.07, 3.0) * 0.5
 	return v
 
+## amostras que sobram depois do ponto de volta (cópia do começo do som)
+const FOLGA_DA_VOLTA := 64
+
+## O misturador do Godot lê algumas amostras além do ponto de volta para suavizar o som.
+## Sem essa sobra ele lê fora da memória, e no Android o jogo fechava sozinho na batalha.
 static func _em_volta(w: AudioStreamWAV) -> AudioStreamWAV:
+	var n := w.data.size() / 2
+	var dados := w.data
+	dados.append_array(dados.slice(0, FOLGA_DA_VOLTA * 2))
+	w.data = dados
 	w.loop_mode = AudioStreamWAV.LOOP_FORWARD
 	w.loop_begin = 0
-	w.loop_end = w.data.size() / 2
+	w.loop_end = n
 	return w
 
 ## de 0 (calmo) a 1 (batalha no limite)

@@ -33,8 +33,13 @@ func _rodar() -> void:
 			falhas.append(nome + " quase mudo")
 		if float(cheios) / n > 0.03:
 			falhas.append(nome + " estourando")
-		if w.loop_mode == AudioStreamWAV.LOOP_FORWARD and w.loop_end != n:
-			falhas.append(nome + " com volta errada")
+		# a volta precisa de sobra depois dela (cópia do começo), senão o Android fecha o jogo
+		if w.loop_mode == AudioStreamWAV.LOOP_FORWARD:
+			var folga := SonsC.FOLGA_DA_VOLTA
+			if w.loop_begin != 0 or n - w.loop_end < folga:
+				falhas.append(nome + " sem folga depois da volta")
+			elif w.data.slice(w.loop_end * 2, (w.loop_end + folga) * 2) != w.data.slice(0, folga * 2):
+				falhas.append(nome + " com a sobra diferente do começo")
 		if not args.is_empty():
 			w.save_to_wav(args[0].path_join(nome + ".wav"))
 	s.tensao(1.0)
