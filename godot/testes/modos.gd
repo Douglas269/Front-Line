@@ -69,7 +69,6 @@ func _jogar(j: JogoC) -> void:
 
 func _partidas() -> void:
 	var fins := {}
-	var vitorias := 0
 	var n := 24
 	for k in n:
 		var camp := CampanhaC.new(false)
@@ -87,7 +86,6 @@ func _partidas() -> void:
 		ck(j2.fim != "", "partida avulsa termina")
 		ck(j2.historico.size() > 10, "histórico guardado")
 		fins[j2.fim] = fins.get(j2.fim, 0) + 1
-		vitorias += int(j2.venceu())
 	print("partidas avulsas levadas até o fim: %d, finais %s" % [n, fins])
 	var a := ModosC.origem_diario("2026-11-26")
 	ck(JSON.stringify(a) == JSON.stringify(ModosC.origem_diario("2026-11-26")), "desafio do dia é sempre igual no mesmo dia")
@@ -107,13 +105,13 @@ func _regras_novas() -> void:
 	j.fac["jogador"]["moedas"] = 500.0
 	j.fac["jogador"]["comida"] = 500.0
 	var antes := j.tropa_de("jogador")
-	var no_destino: int = j.parados_em(destino, "jogador").reduce(func(a, e): return a + e.s.size(), 0)
+	var no_destino: int = j.parados_em(destino, "jogador").reduce(func(a, x): return a + x.s.size(), 0)
 	for b in j.pensar:
 		j.pensar[b] = 1.0e9
 	for i in 600:
 		j.passo(0.1)
 	ck(j.tropa_de("jogador") > antes, "recruta sozinho")
-	ck(j.parados_em(destino, "jogador").reduce(func(a, e): return a + e.s.size(), 0) > no_destino, "recrutas vão ao ponto de reunião")
+	ck(j.parados_em(destino, "jogador").reduce(func(a, x): return a + x.s.size(), 0) > no_destino, "recrutas vão ao ponto de reunião")
 	j.auto_rec["reserva"] = 100000
 	var t := j.tropa_de("jogador")
 	for i in 100:

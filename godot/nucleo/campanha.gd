@@ -50,7 +50,7 @@ func xp_general(id: String) -> int:
 	return int(meta["generais"].get(id, 0))
 
 static func nivel_general(xp: int) -> int:
-	return mini(5, 1 + xp / 3)
+	return mini(5, 1 + int(xp / 3.0))
 
 func generais_liberados() -> Array:
 	var tot := total_estrelas()

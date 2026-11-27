@@ -374,6 +374,7 @@ func _desenhar_chao(c: Node2D) -> void:
 					c.draw_line(fechado[i], fechado[i + 1], Color.WHITE, 4.0 / z)
 
 func _texto(pos: Vector2, txt: String, tam: int, cor: Color, fundo := Color(0, 0, 0, 0)) -> Rect2:
+	tam = maxi(tam, Estilo.LETRA_MINIMA)
 	var f := Estilo.fonte("titulo")
 	var w := f.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, tam).x
 	var r := Rect2(pos.x - w / 2.0 - 4, pos.y - tam - 2, w + 8, tam + 7)
@@ -511,7 +512,7 @@ func _desenhar_exercitos(agora: float) -> void:
 			for tipo in Dados.TROPAS:
 				if tipo != "inf" and g["tipos"].has(tipo):
 					draw_rect(Rect2(x, placa.position.y, 15, 19), Color(Dados.TROPAS[tipo]["cor"]))
-					draw_string(Estilo.fonte(), Vector2(x + 3, placa.position.y + 15), Dados.TROPAS[tipo]["letra"], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("111111"))
+					draw_string(Estilo.fonte(), Vector2(x + 3, placa.position.y + 15), Dados.TROPAS[tipo]["letra"], HORIZONTAL_ALIGNMENT_LEFT, -1, Estilo.LETRA_MINIMA, Color("111111"))
 					x += 17.0
 			var v: float = g["hp"] / g["max"] if g["max"] > 0.0 else 1.0
 			draw_rect(Rect2(s.x - 22, s.y + 4, 44, 6), Color(0, 0, 0, 0.75))
@@ -579,7 +580,7 @@ func _desenhar_nomes(visiveis: Dictionary) -> void:
 		var s := para_tela(p.pos)
 		if s.x < -70 or s.y < -40 or s.x > size.x + 70 or s.y > size.y + 60:
 			continue
-		var tam := 16 if p.capital else 13
+		var tam := 16 if p.capital else Estilo.LETRA_MINIMA
 		var txt: String = ("★ " if p.capital else "") + p.nome.to_upper()
 		var w := Estilo.fonte().get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, tam).x
 		var r := Rect2(s.x - w / 2.0 - 4, s.y - 36, w + 8, tam + 7)
@@ -602,17 +603,17 @@ func _desenhar_nomes(visiveis: Dictionary) -> void:
 		# o que a sua província rende, quando o mapa está perto
 		if p.dono == "jogador" and z >= 1.25:
 			var pd := j.producao_de(p)
-			var x := s.x - 60.0
-			var linha := Rect2(s.x - 62, r.position.y - 22, 124, 18)
+			var x := s.x - 68.0
+			var linha := Rect2(s.x - 70, r.position.y - 24, 140, 20)
 			var itens := [["bread", "comida"], ["bullets", "mun"], ["two-coins", "moedas"], ["cog", "aco"]].filter(func(i): return pd[i[1]] > 0.04)
-			linha.size.x = itens.size() * 34.0 + 4.0
+			linha.size.x = itens.size() * 39.0 + 4.0
 			linha.position.x = s.x - linha.size.x / 2.0
 			x = linha.position.x + 3.0
 			draw_rect(linha, Color(0.05, 0.06, 0.05, 0.74))
 			for i in itens:
-				draw_texture_rect(Estilo.icone(i[0]), Rect2(x, linha.position.y + 3, 12, 12), false, Color("e6c35a"))
-				draw_string(Estilo.fonte(), Vector2(x + 13, linha.position.y + 14), str(snappedf(pd[i[1]], 1.0) if pd[i[1]] >= 1.0 else snappedf(pd[i[1]], 0.1)), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("cfe8c8") if p.moral >= 35.0 else Color("ffb36b"))
-				x += 34.0
+				draw_texture_rect(Estilo.icone(i[0]), Rect2(x, linha.position.y + 4, 12, 12), false, Color("e6c35a"))
+				draw_string(Estilo.fonte(), Vector2(x + 13, linha.position.y + 15), str(snappedf(pd[i[1]], 1.0) if pd[i[1]] >= 1.0 else snappedf(pd[i[1]], 0.1)), HORIZONTAL_ALIGNMENT_LEFT, -1, Estilo.LETRA_MINIMA, Color("cfe8c8") if p.moral >= 35.0 else Color("ffb36b"))
+				x += 39.0
 
 func _desenhar_festas() -> void:
 	var agora := Time.get_ticks_msec()

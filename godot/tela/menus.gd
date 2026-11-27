@@ -142,7 +142,7 @@ func mostrar_operacao() -> void:
 		app._t(v, "VETERANOS QUE SEGUEM COM VOCÊ", 15, Estilo.AMBAR, "titulo")
 		for dados_salvos in op.veteranos():
 			var x := SoldadoC.carregar(dados_salvos)
-			app._t(v, "%s%s · %s · %d batalha(s), %d abate(s)" % ["★★ " if x.patente() == 2 else ("★ " if x.patente() == 1 else ""), x.nome, Dados.TROPAS[x.tipo]["nome"], x.lutas, x.abates], 15, Estilo.TEXTO)
+			app._t(v, "%s%s · %s · %s, %s" % ["★★ " if x.patente() == 2 else ("★ " if x.patente() == 1 else ""), x.nome, Dados.TROPAS[x.tipo]["nome"], Dados.qtd(x.lutas, "batalha", "batalhas"), Dados.qtd(x.abates, "abate", "abates")], 15, Estilo.TEXTO)
 	app._t(v, "ESCOLHA O CAMINHO", 18, Estilo.AMBAR, "titulo")
 	for i in op.opcoes().size():
 		var m: Dictionary = op.opcoes()[i]
@@ -160,7 +160,7 @@ func mostrar_conquistas() -> void:
 	var v: VBoxContainer = app._abrir_tela("conquistas")
 	var r: RecordesC = app.recordes
 	app._t(v, "CONQUISTAS", 30, Estilo.AMBAR, "marca")
-	app._t(v, "%d de %d · %d vitórias em %d partidas" % [r.d["conquistas"].size(), RecordesC.CONQUISTAS.size(), int(r.d["vitorias"]), int(r.d["partidas"])], 16, Estilo.TEXTO)
+	app._t(v, "%d de %d · %s em %s" % [r.d["conquistas"].size(), RecordesC.CONQUISTAS.size(), Dados.qtd(int(r.d["vitorias"]), "vitória", "vitórias"), Dados.qtd(int(r.d["partidas"]), "partida", "partidas")], 16, Estilo.TEXTO)
 	for id in RecordesC.CONQUISTAS:
 		var c: Array = RecordesC.CONQUISTAS[id]
 		var tem := r.tem(id)
@@ -187,7 +187,7 @@ func resumo(v: VBoxContainer, j: JogoC, saida: Dictionary) -> void:
 		"Inimigos abatidos: [b]%d[/b]   ·   Soldados perdidos: [b]%d[/b]" % [int(j.stats.get("inimigos", 0)), int(j.stats["baixas"])],
 		"Missões cumpridas: [b]%d[/b]   ·   Ofensivas repelidas: [b]%d[/b]" % [j.vida.feitas, j.vida.repelidas]]
 	if j.stats.get("melhor_n", 0) > 0:
-		linhas.append("Melhor soldado: [b]%s[/b], %d abate(s)" % [j.stats["melhor_nome"], int(j.stats["melhor_n"])])
+		linhas.append("Melhor soldado: [b]%s[/b], %s" % [j.stats["melhor_nome"], Dados.qtd(int(j.stats["melhor_n"]), "abate", "abates")])
 	var virada := RecordesC.virada(j.historico + [[int(j.t), j.placar()]], j.fase["bots"])
 	linhas.append("Você tomou a ponta em [b]%s[/b] e não largou mais." % RecordesC.relogio(virada) if virada >= 0 else "Você terminou sem a ponta em território.")
 	v.add_child(Estilo.texto_rico("\n".join(linhas), 16, Estilo.TEXTO))

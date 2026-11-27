@@ -46,7 +46,7 @@ func _ready() -> void:
 	_sons["obus"] = _onda(0.85, func(t, k, r): return (r * 0.55 * pow(1.0 - k, 6.0) + sin(TAU * (74.0 - 34.0 * k) * t) * 0.95 * pow(1.0 - k, 2.4)), 0.35)
 	_sons["canhaozinho"] = _onda(0.45, func(t, k, r): return (r * 0.6 * pow(1.0 - k, 5.0) + sin(TAU * (130.0 - 60.0 * k) * t) * 0.8 * pow(1.0 - k, 3.0)), 0.5)
 	# cavalaria: o galope e o tiro
-	_sons["galope"] = _onda(0.42, func(t, k, r):
+	_sons["galope"] = _onda(0.42, func(t, _k, r):
 		var batida := 0.0
 		for quando in [0.0, 0.09, 0.2]:
 			var d: float = t - quando
@@ -97,7 +97,7 @@ const FOLGA_DA_VOLTA := 64
 ## O misturador do Godot lê algumas amostras além do ponto de volta para suavizar o som.
 ## Sem essa sobra ele lê fora da memória, e no Android o jogo fechava sozinho na batalha.
 static func _em_volta(w: AudioStreamWAV) -> AudioStreamWAV:
-	var n := w.data.size() / 2
+	var n := int(w.data.size() / 2.0)
 	var dados := w.data
 	dados.append_array(dados.slice(0, FOLGA_DA_VOLTA * 2))
 	w.data = dados

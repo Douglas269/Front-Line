@@ -2,16 +2,19 @@ extends SceneTree
 ## Mede a dificuldade com o robô jogando pelo jogador, com as mesmas configurações do jogo.
 ## O robô é mais fraco que uma pessoa atenta: sirva-se dos números para comparar, não como verdade.
 ## godot --headless --path . -s res://testes/equilibrio.gd -- rapida|operacao <partidas> [filtro]
+## godot --headless --path . -s res://testes/equilibrio.gd -- campanha <partidas> <dificuldade> <fase>
 
 func _initialize() -> void:
 	var a := OS.get_cmdline_user_args()
 	var n := int(a[1])
 	var filtro: String = a[2] if a.size() > 2 else ""
-	if a[0] == "rapida":
+	if a[0] == "campanha":
+		_campanha(n, a[2], int(a[3]))
+	elif a[0] == "rapida":
 		for tam in ["p", "m", "g"]:
 			if filtro != "" and not filtro.contains(tam):
 				continue
-			for bots in (a[3].split(",") if a.size() > 3 else ["1","2","3","4"]):
+			for bots in (Array(a[3].split(",")) if a.size() > 3 else ["1","2","3","4"]):
 				bots = int(bots)
 				var lista: Array = []
 				for k in n:
@@ -54,8 +57,25 @@ func _medir(nome: String, origens: Array) -> void:
 		dur += j.t
 	print("%s: venceu %3d%%  dura %3d s  %s" % [nome, roundi(100.0 * venceu / origens.size()), roundi(dur / origens.size()), JSON.stringify(fins)])
 
+## uma fase da campanha numa dificuldade: vitórias e capitais inimigas tomadas
+func _campanha(n: int, dif: String, fase: int) -> void:
+	var venceu := 0
+	var fins := {}
+	var tomou := [0, 0, 0] # partidas com 0, 1 e 2 ou mais capitais inimigas nas mãos ao mesmo tempo
+	for k in n:
+		var j := JogoC.new(CampanhaC.new(false), 500 + k)
+		j.dificuldade = dif
+		j.novo(fase)
+		j.jogador_automatico = true
+		var mais := [0]
+		_jogar(j, func(): mais[0] = maxi(mais[0], j.lista_prov.filter(func(p): return p.capital and p.capital_de != "jogador" and p.dono == "jogador").size()))
+		venceu += int(j.venceu())
+		fins[j.fim] = fins.get(j.fim, 0) + 1
+		tomou[mini(2, mais[0])] += 1
+	print("CAMP %s %d: venceu %d%% de %d  capitais(0,1,2+) %s  %s" % [dif, fase, roundi(100.0 * venceu / n), n, str(tomou), JSON.stringify(fins)])
+
 ## o mesmo robô "esperto" do teste de regras
-func _jogar(j: JogoC) -> void:
+func _jogar(j: JogoC, olhar := Callable()) -> void:
 	var pensa := 0.0
 	var passos := 0
 	while j.fim == "" and passos < 20000:
@@ -65,4 +85,6 @@ func _jogar(j: JogoC) -> void:
 		if pensa > 0.0 or j.fim != "":
 			continue
 		pensa = 3.0
+		if olhar.is_valid():
+			olhar.call()
 		RoboC.jogar(j)

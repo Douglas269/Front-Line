@@ -14,6 +14,9 @@ const VERDE := Color("7bc96f")
 const AMARELO := Color("e3b04b")
 const VERMELHO := Color("e0533f")
 
+## menor letra do jogo: na tela de um celular (390 de largura) isto dá 10 px
+const LETRA_MINIMA := 14
+
 static var _fontes := {}
 
 static func fonte(nome := "titulo") -> Font:
@@ -43,7 +46,7 @@ static func rotulo(texto: String, tam := 18, cor := TEXTO, qual := "titulo", cen
 	var l := Label.new()
 	l.text = texto
 	l.add_theme_font_override("font", fonte(qual))
-	l.add_theme_font_size_override("font_size", tam)
+	l.add_theme_font_size_override("font_size", maxi(tam, LETRA_MINIMA))
 	l.add_theme_color_override("font_color", cor)
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if centro:
@@ -68,8 +71,8 @@ static func texto_rico(bb: String, tam := 16, cor := MUDO) -> RichTextLabel:
 	r.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	r.add_theme_font_override("normal_font", fonte("normal"))
 	r.add_theme_font_override("bold_font", fonte("titulo"))
-	r.add_theme_font_size_override("normal_font_size", tam)
-	r.add_theme_font_size_override("bold_font_size", tam)
+	r.add_theme_font_size_override("normal_font_size", maxi(tam, LETRA_MINIMA))
+	r.add_theme_font_size_override("bold_font_size", maxi(tam, LETRA_MINIMA))
 	r.add_theme_color_override("default_color", cor)
 	r.text = bb
 	return r
@@ -125,7 +128,7 @@ static func botao_simples(texto: String, ao: Callable, tam := 18, forte := false
 	b.text = texto
 	b.focus_mode = Control.FOCUS_NONE
 	b.add_theme_font_override("font", fonte("titulo"))
-	b.add_theme_font_size_override("font_size", tam)
+	b.add_theme_font_size_override("font_size", maxi(tam, LETRA_MINIMA))
 	pintar_botao(b, forte)
 	b.pressed.connect(ao)
 	return b

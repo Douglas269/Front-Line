@@ -166,7 +166,7 @@ func _trazer_veteranos(lista: Array) -> void:
 		else:
 			e.s.append(v)
 		i += 1
-	noticia("%d veterano(s) da missão anterior estão com você: %s." % [i, ", ".join(e.s.slice(0, i).map(func(x): return x.nome))])
+	noticia("%s: %s." % [Dados.qtd(i, "veterano da missão anterior está com você", "veteranos da missão anterior estão com você"), ", ".join(e.s.slice(0, i).map(func(x): return x.nome))])
 
 ## os melhores soldados vivos: primeiro a patente, depois os abates
 func melhores(quantos := 3) -> Array:
@@ -331,7 +331,7 @@ func esperteza_bot() -> float:
 func difc() -> Dictionary:
 	var d: Dictionary = Dados.DIFICULDADES[dificuldade]
 	var facil: float = fase.get("bot_facil", 1.0)
-	return {"vontade": d["vontade"] * facil, "margem": d["margem"], "prod": d["prod"] * facil}
+	return {"vontade": d["vontade"] * facil, "margem": d["margem"], "prod": d["prod"] * facil, "renda": d["renda"]}
 
 static func forca(lista: Array) -> float:
 	var f := 0.0
@@ -489,7 +489,7 @@ func dispensar(ex_id: String, n: int, dono := "jogador") -> int:
 	if e.s.is_empty():
 		tirar(e)
 	if dono == "jogador":
-		noticia("%d soldado(s) dispensado(s)." % n)
+		noticia("%s." % Dados.qtd(n, "soldado dispensado", "soldados dispensados"))
 	return n
 
 static func _tirar_soldado(lista: Array, s: SoldadoC) -> void:
@@ -503,12 +503,12 @@ func separar(ex_id: String, n := 1) -> ExercitoC:
 	if e == null or e.dono != "jogador" or e.em_batalha or not e.rota.is_empty() or e.s.size() < 2:
 		return null
 	n = clampi(n, 1, e.s.size() - 1)
-	var ord: Array = e.s.duplicate()
-	ord.sort_custom(func(a, b): return a.eficacia() < b.eficacia())
+	var fila: Array = e.s.duplicate()
+	fila.sort_custom(func(a, b): return a.eficacia() < b.eficacia())
 	var saem: Array = []
 	for i in n:
-		saem.append(ord[i])
-		_tirar_soldado(e.s, ord[i])
+		saem.append(fila[i])
+		_tirar_soldado(e.s, fila[i])
 	return criar_exercito("jogador", e.prov, 0, saem)
 
 func fortificar(id: String, dono := "jogador") -> bool:
@@ -666,9 +666,9 @@ func ordem(ex_id: String, destino: String, qtd := 0, missao := "mover", aptos = 
 		return null
 	qtd = e.s.size() if em_marcha else clampi(qtd if qtd > 0 else e.s.size(), 1, e.s.size())
 	if qtd < e.s.size():
-		var ord: Array = (aptos.filter(func(s): return s.vida > 0.0) if aptos != null else e.vivos())
-		ord.sort_custom(func(a, b): return a.eficacia() > b.eficacia())
-		var vao: Array = ord.slice(0, qtd)
+		var fila: Array = (aptos.filter(func(s): return s.vida > 0.0) if aptos != null else e.vivos())
+		fila.sort_custom(func(a, b): return a.eficacia() > b.eficacia())
+		var vao: Array = fila.slice(0, qtd)
 		for s in vao:
 			_tirar_soldado(e.s, s)
 		e = criar_exercito(e.dono, e.prov, 0, vao)
@@ -680,7 +680,7 @@ func ordem(ex_id: String, destino: String, qtd := 0, missao := "mover", aptos = 
 		e.de = e.prov
 	var alvo: ProvinciaC = prov[destino]
 	if e.dono == "jogador":
-		noticia("%s a caminho de %s com %d soldados." % ["Saque" if missao == "saque" else ("Ataque" if alvo.dono != "jogador" else "Tropa"), alvo.nome, e.s.size()])
+		noticia("%s a caminho de %s com %s." % ["Saque" if missao == "saque" else ("Ataque" if alvo.dono != "jogador" else "Tropa"), alvo.nome, Dados.qtd(e.s.size(), "soldado", "soldados")])
 	else:
 		_avisar_se_visivel(e)
 	return e
@@ -691,7 +691,7 @@ func _avisar_se_visivel(e: ExercitoC) -> void:
 	var destino: ProvinciaC = prov[e.rota.back()]
 	if e.rota.any(func(id): return prov[id].dono == "jogador") and (ex_visivel(e) or esta_espiado(e.dono)):
 		e.alertado = true
-		noticia("%s marcha com %d soldados sobre %s!" % [nome_de(e.dono), e.s.size(), destino.nome], true)
+		noticia("%s marcha com %s sobre %s!" % [nome_de(e.dono), Dados.qtd(e.s.size(), "soldado", "soldados"), destino.nome], true)
 
 func cancelar_marcha(ex_id: String) -> void:
 	var e := ex_por_id(ex_id)
@@ -726,15 +726,15 @@ func _mover(dt: float) -> void:
 			continue
 		var alvo: ProvinciaC = prov[e.rota[0]]
 		var d: float = e.pos.distance_to(alvo.pos)
-		var passo := vel_ex(e) * dt
-		if d <= passo:
+		var andado := vel_ex(e) * dt
+		if d <= andado:
 			e.pos = alvo.pos
 			e.de = e.prov
 			e.prov = alvo.id
 			e.rota.pop_front()
 			_chegar_aqui(e, alvo)
 		else:
-			e.pos = e.pos.move_toward(alvo.pos, passo)
+			e.pos = e.pos.move_toward(alvo.pos, andado)
 		if e.dono != "jogador" and not e.rota.is_empty():
 			_avisar_se_visivel(e)
 
@@ -811,9 +811,9 @@ func abrir_batalha(e: ExercitoC, p: ProvinciaC, defs: Array) -> BatalhaC:
 		resolver_agora(b)
 		return b
 	if e.dono == "jogador":
-		noticia("Seus %d soldados atacam %s (%d defendendo)." % [e.s.size(), p.nome, b.def.size()])
+		noticia("%s %s (%d defendendo)." % [Dados.qtd(e.s.size(), "soldado seu ataca", "soldados seus atacam"), p.nome, b.def.size()])
 	elif p.dono == "jogador":
-		noticia("%s ataca %s com %d soldados!" % [nome_de(e.dono), p.nome, e.s.size()], true)
+		noticia("%s ataca %s com %s!" % [nome_de(e.dono), p.nome, Dados.qtd(e.s.size(), "soldado", "soldados")], true)
 	return b
 
 func resolver_agora(b: BatalhaC) -> bool:
@@ -861,7 +861,7 @@ func _saquear(e: ExercitoC, p: ProvinciaC) -> void:
 		fac[p.dono]["moedas"] -= roubo
 		fac[e.dono]["moedas"] += roubo
 	if e.dono == "jogador" or p.dono == "jogador" or esta_espiado(e.dono):
-		noticia("%s saqueou %s: %d moedas." % [nome_de(e.dono), p.nome, int(roubo)], p.dono == "jogador")
+		noticia("%s saqueou %s: %s." % [nome_de(e.dono), p.nome, Dados.qtd(int(roubo), "moeda", "moedas")], p.dono == "jogador")
 	var volta := caminho(e.prov, e.origem)
 	e.rota = volta["rota"] if not volta.is_empty() and prov[e.origem].dono == e.dono else []
 	e.missao = "voltar"
@@ -945,11 +945,15 @@ func venceu() -> bool:
 func objetivo_ok() -> bool:
 	match fase["objetivo"]:
 		"semPerder": return stats["perdidas"] == 0
-		"capitais": return fim == "vitoria"
+		"capitais": return fim == "vitoria" or capitais_tomadas() >= Dados.CAPITAIS_DA_ESTRELA
 		"baixas": return stats["baixas"] < 20
 		"rebeldes": return stats["revoltas"] == 0
 		"pesquisa": return pesq["jogador"]["feitas"].size() >= 4
 	return false
+
+## capitais inimigas que estão com você agora
+func capitais_tomadas() -> int:
+	return lista_prov.filter(func(p): return p.capital and p.capital_de != "jogador" and p.dono == "jogador").size()
 
 func calcular_estrelas() -> int:
 	if not venceu():
@@ -983,7 +987,7 @@ func _concluir_batalha(b: BatalhaC) -> void:
 			s.lutas += 1
 			if dono == "jogador":
 				var venceu_aqui: bool = b.vencedor == lado
-				s.registrar("%s em %s%s" % ["Venceu" if venceu_aqui else "Sobreviveu", b.alvo.nome, " com %d abate(s)" % c.abates_luta if c.abates_luta > 0 else ""])
+				s.registrar("%s em %s%s" % ["Venceu" if venceu_aqui else "Sobreviveu", b.alvo.nome, " com %s" % Dados.qtd(c.abates_luta, "abate", "abates") if c.abates_luta > 0 else ""])
 				if s.patente() != antes:
 					if s.nome == "Recruta" or s.nome == "Voluntário":
 						s.nome = nome_livre()
@@ -1078,7 +1082,7 @@ func _recuar_sobreviventes(e: ExercitoC, p: ProvinciaC) -> void:
 	if destino == null:
 		tirar(e)
 		if not e.s.is_empty() and e.dono == "jogador":
-			noticia("Tropa cercada em %s: os %d sobreviventes se perderam." % [p.nome, e.s.size()], true)
+			noticia("Tropa cercada em %s: %s." % [p.nome, "o último sobrevivente se perdeu" if e.s.size() == 1 else "os %d sobreviventes se perderam" % e.s.size()], true)
 		return
 	if destino.id != e.de and e.dono == "jogador":
 		noticia("Os sobreviventes de %s recuaram para %s." % [p.nome, destino.nome])
@@ -1207,8 +1211,9 @@ func ciclo_economia() -> void:
 				pd[k] *= 0.5
 		var bot: float = difc()["prod"] if pensar.has(p.dono) else 1.0
 		f["comida"] += pd["comida"] * bot
+		var renda: float = difc()["renda"] if pensar.has(p.dono) else 1.0
 		for k in ["mun", "moedas", "aco", "comb"]:
-			f[k] += pd[k]
+			f[k] += pd[k] * (renda if k == "mun" or k == "moedas" else 1.0)
 		var base := Dados.TRINCH_CAPITAL if p.capital else Dados.TRINCH_BASE
 		if p.trinch < base:
 			p.trinch = minf(base, p.trinch + 2.0)
@@ -1247,7 +1252,7 @@ func ciclo_economia() -> void:
 					e.s = e.s.filter(func(_s): return rng.randf() > 0.06)
 				foram += antes - e.s.size()
 			if foram and dono == "jogador":
-				noticia("%d soldado(s) desertaram por falta de pagamento!" % foram, true)
+				noticia("%s por falta de pagamento!" % Dados.qtd(foram, "soldado desertou", "soldados desertaram"), true)
 	for dono in fac:
 		if dono == "neutro":
 			continue
@@ -1390,7 +1395,7 @@ func propor(bot: String, tipo: String) -> bool:
 		noticia("%s aceitou %s." % [nome_de(bot), "a paz por 4 minutos" if tipo == "paz" else "a aliança"])
 	else:
 		r["recusa_ate"] = t + 45.0
-		fac["jogador"]["moedas"] += custo / 2
+		fac["jogador"]["moedas"] += int(custo / 2.0)
 		noticia("%s recusou. Tente de novo em 45 s." % nome_de(bot))
 	return true
 
@@ -1561,10 +1566,10 @@ func _relatorio_espiao(p: ProvinciaC) -> void:
 		var n := 0
 		for e in parados_em(p.id, "neutro"):
 			n += e.s.size()
-		txt += "milícia com %d homens, trincheira %d%%." % [n, roundi(p.trinch)]
+		txt += "milícia com %s, trincheira %d%%." % [Dados.qtd(n, "homem", "homens"), roundi(p.trinch)]
 	else:
 		espiado[p.dono] = ate
-		txt += "%s tem %d soldados e %d moedas." % [nome_de(p.dono), tropa_de(p.dono), int(fac[p.dono]["moedas"])]
+		txt += "%s tem %s e %s." % [nome_de(p.dono), Dados.qtd(tropa_de(p.dono), "soldado", "soldados"), Dados.qtd(int(fac[p.dono]["moedas"]), "moeda", "moedas")]
 	noticia(txt)
 	tocar("espiao")
 
@@ -1634,10 +1639,10 @@ func carregar(d: Dictionary) -> bool:
 				b.set(k, bd[k].duplicate(true))
 		b.art = bd["art"].duplicate(true); b.ia = bd["ia"].duplicate(true)
 		for lado in ["atq", "def"]:
-			var origem: Array = atacante.s if lado == "atq" else soldados_def
+			var de_onde: Array = atacante.s if lado == "atq" else soldados_def
 			for c in bd[lado]:
 				var i := int(c["i"])
-				var s: SoldadoC = origem[i] if i >= 0 else SoldadoC.carregar(c["s"])
+				var s: SoldadoC = de_onde[i] if i >= 0 else SoldadoC.carregar(c["s"])
 				var comb := BatalhaC.entrada(s, c["dist"], c["x"], lado)
 				comb.morto = c["morto"]; comb.abates_luta = int(c["abates"])
 				b.lista(lado).append(comb)

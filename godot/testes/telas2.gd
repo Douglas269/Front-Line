@@ -149,7 +149,7 @@ func _rodar() -> void:
 	# ---- fim da campanha: resumo com gráfico, recorde e conquistas
 	j.t = 215.0
 	for i in range(1, 20):
-		j.historico.append([i * 11, {"jogador": 2 + i / 3, "bravo": 6 - i / 5, "charlie": 4, "delta": 3 + (i % 3)}])
+		j.historico.append([i * 11, {"jogador": 2 + int(i / 3.0), "bravo": 6 - int(i / 5.0), "charlie": 4, "delta": 3 + (i % 3)}])
 	j.stats["melhor_nome"] = "Ferreira"
 	j.stats["melhor_n"] = 7
 	await fim_forcado(j, "dominio")

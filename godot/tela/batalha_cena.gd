@@ -18,6 +18,9 @@ const LUGARES := {"": "", "ruinas": "cidade em ruínas", "ponte": "junto à pont
 ## os testes podem forçar um cenário
 static var forcar := {}
 
+## até quantos veteranos seus têm o nome escrito em cima do boneco
+const NOMES_NO_CAMPO := 3
+
 class Boneco:
 	extends Node2D
 	var cena
@@ -119,11 +122,15 @@ class Boneco:
 			# o texto é desenhado sem a ampliação (e sem espelhar quando o soldado recua)
 			var inverso := Vector2(1.0 / scale.x, 1.0 / absf(scale.y))
 			draw_set_transform(Vector2(0, topo - 3), 0.0, inverso)
-			var texto := ("★★ " if c.s.patente() == 2 else "★ ") + c.s.nome
+			var texto := "★★" if c.s.patente() == 2 else "★"
+			# com muitos veteranos juntos os nomes se atropelam: aí ficam só as estrelas
+			var meus: Array = cena.b.lista(c.lado)
+			if meus.filter(func(x): return x.s.patente() > 0 and x.s.vida > 0.0).size() <= NOMES_NO_CAMPO:
+				texto += " " + c.s.nome
 			var fonte := Estilo.fonte("titulo")
-			var larg := fonte.get_string_size(texto, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x
-			draw_string_outline(fonte, Vector2(-larg / 2.0, 0), texto, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, 4, Color(0, 0, 0, 0.8))
-			draw_string(fonte, Vector2(-larg / 2.0, 0), texto, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("ffd28a"))
+			var larg := fonte.get_string_size(texto, HORIZONTAL_ALIGNMENT_LEFT, -1, Estilo.LETRA_MINIMA).x
+			draw_string_outline(fonte, Vector2(-larg / 2.0, 0), texto, HORIZONTAL_ALIGNMENT_LEFT, -1, Estilo.LETRA_MINIMA, 4, Color(0, 0, 0, 0.8))
+			draw_string(fonte, Vector2(-larg / 2.0, 0), texto, HORIZONTAL_ALIGNMENT_LEFT, -1, Estilo.LETRA_MINIMA, Color("ffd28a"))
 			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 var tela
@@ -344,7 +351,7 @@ func _atualizar_painel() -> void:
 		if not r["ganho"].is_empty():
 			t += "\nPrêmio: " + VidaC.texto_premio(r["ganho"])
 		if not r["destaque"].is_empty():
-			t += "\nDestaque: [b]%s[/b], %d abate(s)" % [r["destaque"]["nome"], r["destaque"]["n"]]
+			t += "\nDestaque: [b]%s[/b], %s" % [r["destaque"]["nome"], Dados.qtd(int(r["destaque"]["n"]), "abate", "abates")]
 		if not r["promovidos"].is_empty():
 			t += "\nPromovidos: " + ", ".join(r["promovidos"].slice(0, 4))
 		if not r["perdidos"].is_empty():
@@ -418,7 +425,7 @@ func _criar_bonecos() -> void:
 			bn.cor = Color(Dados.FACCOES[b.dono_do_lado(lado)]["cor"])
 			bn.posto = i % 3
 			var faixa_y := altura - chao - 62.0
-			var y := chao + 48.0 + faixa_y * (float((i * 7) % maxi(1, mini(13, l.size()))) / maxf(1.0, mini(13, l.size()) - 1.0) if l.size() > 1 else 0.5) + (i / 13) * 7.0
+			var y := chao + 48.0 + faixa_y * (float((i * 7) % maxi(1, mini(13, l.size()))) / maxf(1.0, mini(13, l.size()) - 1.0) if l.size() > 1 else 0.5) + int(i / 13.0) * 7.0
 			bn.position = Vector2(_alvo_x(bn, lado), y)
 			var fundo := remap(y, chao + 48, altura, 0.86, 1.1)
 			bn.scale = Vector2(ESC * fundo * (1.0 if lado == "atq" else -1.0), ESC * fundo)
@@ -479,7 +486,11 @@ func _tratar_acontecimentos() -> void:
 				_cortina_de_fumaca(a["lado"])
 			"carga":
 				tela.sons.tocar("apito", -8.0)
-				_aviso_rapido("CARGA!", "Avanço rápido para a trincheira")
+				# só quem ataca dá carga: se você está defendendo, o aviso é de perigo
+				if b.lado_do_jogador() == "def":
+					_aviso_rapido("CARGA INIMIGA!", "Eles correm para a sua trincheira")
+				else:
+					_aviso_rapido("CARGA!", "Avanço rápido para a trincheira")
 				j.tocar("alerta")
 				tremor = maxf(tremor, 5.0)
 				SonsC.vibrar(80)
@@ -710,7 +721,7 @@ func _particulas(onde: Vector2, cor: Color, qtd: int, vel: float, dir: Vector2, 
 	if ArteC.leve: # sem as nuvenzinhas pequenas, e metade do resto
 		if qtd <= 6:
 			return
-		qtd = maxi(4, qtd / 2)
+		qtd = maxi(4, int(qtd / 2.0))
 	var p := CPUParticles2D.new()
 	p.position = onde
 	p.one_shot = true
