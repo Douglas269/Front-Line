@@ -117,7 +117,7 @@ func limitar() -> void:
 func centralizar(p: Vector2, aproximar := true) -> void:
 	cam = p
 	if aproximar:
-		z = clampf(size.x / 330.0, zoom_min(), 1.8)
+		z = clampf(minf(size.x, size.y * 1.25) / 330.0, zoom_min(), 1.8)
 	limitar()
 
 ## leva a câmera com suavidade até o ponto; qualquer toque interrompe
