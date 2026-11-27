@@ -20,6 +20,11 @@ static func fonte(nome := "titulo") -> Font:
 	if _fontes.is_empty():
 		_fontes = {"titulo": load("res://fontes/ChakraPetch-700.ttf"), "normal": load("res://fontes/ChakraPetch-500.ttf"),
 			"marca": load("res://fontes/BlackOpsOne-400.ttf"), "leitura": load("res://fontes/BarlowCondensed-600.ttf")}
+		# símbolos (★ ▶ ⚠…) que as fontes não têm; no navegador não há fonte do sistema para completar
+		var simbolos: Font = load("res://fontes/Simbolos.ttf")
+		for f in _fontes.values():
+			if not f.fallbacks.has(simbolos):
+				f.fallbacks = [simbolos] + f.fallbacks
 	return _fontes[nome]
 
 static func icone(nome: String) -> Texture2D:

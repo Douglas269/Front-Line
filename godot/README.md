@@ -4,6 +4,8 @@ Versão em Godot 4.7.2 do modo Conquista. O jogo web fica em `../prototipo` e n�
 
 Para abrir: no Godot 4.7.2, importe o arquivo `godot/project.godot`.
 
+Versão para navegador (publicada em `/conquista-godot`): depois de mudar o jogo, rode `GODOT=<caminho do Godot> tools/exportar-godot-web.sh` e envie a pasta `conquista-godot/` gerada.
+
 - `nucleo/`: regras sem tela (jogo, batalha, bots, missões, campanha, operação, modos avulsos, gerador de mapas, recordes).
 - `tela/`: mapa, painéis, batalha animada, menus, desenho das tropas (SVG gerado em `arte.gd`).
 - `testes/`:

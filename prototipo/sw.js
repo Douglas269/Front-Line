@@ -74,6 +74,7 @@ self.addEventListener('fetch', (e) => {
   if (url.pathname.endsWith('.mp3')) return;                      // música: pedidos parciais de áudio
   if (url.pathname.endsWith('versao.json')) return;               // versão publicada: sempre do site
   if (url.pathname.endsWith('sw.js')) return;
+  if (url.pathname.startsWith('/conquista-godot')) return;       // versão Godot: arquivos grandes, sempre do site
 
   const ehPagina = req.mode === 'navigate' || (req.headers.get('accept') || '').includes('text/html');
   if (ehPagina) { e.respondWith(redePrimeiro(req)); return; }
